@@ -348,7 +348,7 @@ Applying scanlines both globally and again inside every card compounds the effec
 ### Preferred fix
 
 1. avoid repeating stripe or scanline textures on shared content surfaces by default
-2. if a theme needs texture, keep it to restrained accents such as corner marks, borders, or hover glints
+2. if a theme needs texture, use limited, purposeful placements such as corner marks, borders, or hover glints
 3. validate the theme on dense working pages like `module-system-dashboard` and `project-units`, not only on simpler pages
 4. if a texture draws attention before the content does, remove it
 

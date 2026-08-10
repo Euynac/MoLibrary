@@ -25,22 +25,26 @@
         </div>
 
         <div class="module-summary" aria-label="@L["Modules:Summary:Label"]">
-            <article class="module-summary__active">
+            <article class="mo-card-surface" data-mo-card-tone="success">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
                 <span>@L["Modules:Summary:Active"]</span>
                 <strong>@ActiveModuleCount</strong>
             </article>
-            <article class="module-summary__ui">
+            <article class="mo-card-surface" data-mo-card-tone="secondary">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" />
                 <span>@L["Modules:Summary:Ui"]</span>
                 <strong>@UiModuleCount</strong>
             </article>
-            <article class="module-summary__web">
+            <article class="mo-card-surface" data-mo-card-tone="info">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.Language" />
                 <span>@L["Modules:Summary:Web"]</span>
                 <strong>@WebModuleCount</strong>
             </article>
-            <article class="module-summary__depth">
+            <article class="mo-card-surface" data-mo-card-tone="primary">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.Layers" />
                 <span>@L["Modules:Summary:MaximumDepth"]</span>
                 <strong>@MaximumDependencyDepth</strong>

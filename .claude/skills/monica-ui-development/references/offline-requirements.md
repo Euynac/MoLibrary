@@ -82,6 +82,9 @@ This skill includes a font downloader script at `scripts/font_downloader.py`.
 # Download a single font from Google Fonts CSS URL
 python font_downloader.py "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
 
+# Download only the named unicode ranges when the CSS exposes subset labels
+python font_downloader.py "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" --subsets latin,latin-ext
+
 # Download all project fonts (predefined in script)
 python font_downloader.py --download-all
 
@@ -90,9 +93,16 @@ python font_downloader.py "CSS_URL" -o ./fonts
 
 # Filter specific font weights
 python font_downloader.py "CSS_URL" --weights 400,500,600
+
+# Choose a different companion CSS manifest name
+python font_downloader.py "CSS_URL" -o ./fonts --manifest theme-font-faces.css
 ```
 
 **Requirements:** Python 3.6+, requests library (`pip install requests`)
+
+Every successful run writes the WOFF2 files and a companion `font-faces.css` manifest in the output directory. The manifest points at the local files and preserves each face's `font-style`, `font-display`, `font-weight`, and `unicode-range` descriptors, so it can be loaded directly at runtime after copying the output as one unit. Use `--manifest` to choose a different manifest path relative to the output directory.
+
+Google Fonts CSS commonly returns several `@font-face` rules for the same family and weight, one per unicode range. The downloader preserves each range with a collision-safe suffix and a matching rule in the generated manifest. Variable descriptors such as `font-weight: 100 700` remain ranges; `--weights 400` includes that face because the requested weight falls inside the range. Select every required subset deliberately, keep the manifest beside its shards (or update all relative URLs together), and inspect glyph coverage before committing. Never rename one downloaded shard as if it were the complete family.
 
 ### Font Configuration
 
@@ -108,7 +118,7 @@ If a third-party source only provides TTF or OTF files, convert those source fil
 
 #### Step 3: Configure @font-face
 
-Add `@font-face` rules in theme CSS to reference local font files:
+When fonts came from `font_downloader.py`, copy the generated manifest with its WOFF2 files and import or bundle that manifest from the theme. It already contains the exact weight ranges and unicode coverage returned by the provider. If the files came from another source, add equivalent `@font-face` rules in theme CSS:
 
 ```css
 @font-face {

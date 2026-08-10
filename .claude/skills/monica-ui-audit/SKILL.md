@@ -1,6 +1,6 @@
 ---
 name: monica-ui-audit
-description: Audit and fix Monica Blazor UI compliance, including async lifetime, JS interop ownership, Precision visual hierarchy, unnecessary gradients or decoration, full-width operational layouts, prototype fidelity, local fonts, theme tokens, MudBlazor primitives, responsive containment, CLR type formatting, and duplicate utilities. Use for UI audits, theme reviews, prototype comparisons, disposal failures, visual-quality regressions, clipping, wasted width, or broken responsive sizing.
+description: Audit and fix Monica Blazor UI compliance, including async lifetime, JS interop ownership, Precision visual hierarchy, subject-specific design direction, palette and typography roles, unnecessary effects or decoration, full-width operational layouts, prototype fidelity, offline fonts, theme tokens, MudBlazor primitives, responsive containment, CLR type formatting, and duplicate utilities. Use for UI audits, theme reviews, prototype comparisons, disposal failures, visual-quality regressions, clipping, wasted width, or broken responsive sizing.
 ---
 
 # Blazor UI Compliance Audit
@@ -66,19 +66,25 @@ Indicators:
 - Hardcoded color, shadow, radius, or background values instead of MudBlazor parameters, `var(--mud-palette-*)`, or approved `var(--mo-color-*)` tokens
 - Semantically distinct statuses, severities, categories, or progress states collapse into visually identical neutral surfaces when scanability requires differentiation
 - Multiple hierarchy levels and semantic states rely on the same neutral surface plus one accent, producing a flat or monotonous page
+- The page has no subject-specific design thesis or palette/type/layout/signature plan, and its composition could be reused unchanged for an unrelated AI administration product
+- Light or dark mode is excessively dark, low-contrast, or monotone, so canvas, structural surfaces, borders, text hierarchy, or semantic states collapse together
+- Success, warning, error, information, selection, and runtime states are not meaningfully differentiated when the task requires rapid scanning
 - Repeated facts, properties, metrics, or records are each wrapped in cards instead of rows, lists, definition groups, or tables
-- A page or component uses a gradient without functional continuous-data encoding or explicit user/prototype direction
-- A page shell, app bar, header, hero or identity surface, KPI card, panel, filter, table, data group, or status surface uses a decorative gradient
-- Ordinary surfaces use elevation or hover lift even though they are neither raised nor interactive
+- More than one visual system competes as the page's signature treatment, or a gradient/glow/pattern is not backed by the accepted prototype or continuous-data semantics
+- A page shell, app bar, navigation surface, ordinary card, KPI tile, panel, filter, table, data group, or status surface uses a decorative gradient
+- Actionable controls, rows, or cards lack visible hover, focus, pressed, or selected feedback
+- Informational surfaces translate, scale, change the cursor, or use strong lift on hover, falsely implying an unavailable action; subtle border, tonal, or low-shadow spatial-focus feedback is valid
+- Motion uses large travel, bouncing, repeated flourishes, continuous ambient effects, or ignores `prefers-reduced-motion`
 - A surface stacks more than two decorative cues, such as top stripe + ring + shadow, or repeats stripes/rings across every card
 - Border radii fall outside the 6/8/12 scale, multiply a base radius, or grow across nested surfaces
 - The implementation loses the prototype's typography, density, spacing rhythm, composition, surface roles, width utilization, or responsive reflow
-- A font declared by the prototype/source is missing from local WOFF2 assets, lacks `@font-face`, fails to load, or is silently replaced by a fallback
+- Interface, hierarchy, and diagnostic text have no deliberate font-role separation, or monospace is used broadly as decoration
+- A font declared by the prototype/source is missing from local WOFF2 assets, lacks `@font-face`, fails offline, has no explicit fallback stack/CJK coverage, or is silently replaced by a fallback
 - Component CSS repainting global MudBlazor behavior that should be consistent across modules
 - Component CSS painting route `.active`, `:hover`, or `:focus` states for menu items, nav links, or list items that are themed globally
 - Dark-mode overrides inside component CSS (`[data-theme*="dark"]` in `.razor.css`)
 
-Fix: rebuild hierarchy with typography and spacing first; assign explicit surface roles; flatten ordinary surfaces; convert repeated data cards to rows/lists/tables; enforce the 6/8/12 radius scale; and remove gradients, static hover lift, repeated stripes/rings, and incidental shadows. Use a uniform approved semantic tint when state differentiation is needed. Retain a gradient only for functional continuous-data encoding or explicit user/prototype direction and document that exception. Vendor the declared font locally as WOFF2 and verify it loads. Compare the prototype and browser side by side at widths 1440, 929, and 390 in light and dark modes. Keep component-owned layout and token-based presentation in component CSS; move only shared MudBlazor behavior to theme CSS.
+Fix: articulate the subject-specific thesis and palette/type/layout/signature plan; rebuild hierarchy with typography and spacing; assign explicit surface and semantic-color roles; keep ordinary surfaces structurally simple; convert repeated data cards to rows/lists/tables; enforce the 6/8/12 radius scale; restore useful hover/focus/pressed/selected feedback; and simplify flamboyant, repetitive, or misleading effects. Keep one coherent prototype-backed signature system concentrated in identity/readiness, with only limited non-competing recurrence, and use gradients elsewhere only for continuous-data encoding. Use short purposeful motion, test `prefers-reduced-motion`, vendor role-appropriate fonts locally as WOFF2, and verify both primary and fallback paths. Compare prototype and browser at widths 1440, 929, and 390 in light and dark modes, then self-critique for generic AI-dashboard styling. Keep component-owned layout and token-based presentation in component CSS; move only shared MudBlazor behavior to theme CSS.
 
 ### P4 — Private component classes that force theme coupling
 
@@ -111,9 +117,9 @@ Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Moni
 7. **Clean up**: Delete any `.razor.css` file only when the component no longer owns layout or localized presentation rules. Remove unused `@using` directives.
 8. **Build**: Build the affected project with the WSL Windows-path rule, for example `dotnet build '<windows-project-path>' -m` for the specific UI module project. The build must produce 0 warnings.
 9. **Verify lifetime deterministically**: When P0 applies, test the teardown interleaving rather than relying only on manual navigation. Block an initialization or JS invocation, begin disposal, then release the blocked continuation; assert that no disposed reference is invoked, a late-created reference is disposed instead of published, late continuations perform no state mutation, JS invocation, or render request beyond required cleanup of their own late-created resource, and repeated disposal is safe. In browser verification, rapidly navigate away/remount during first render and refresh work. For Blazor Server, also exercise circuit loss where feasible and assert no unhandled `ObjectDisposedException` or `JSDisconnectedException`.
-10. **Verify layout and fidelity in browser**: Capture side-by-side prototype/browser evidence at viewport widths 1440, 929, and 390 in light and dark modes. Compare hierarchy, typography, density, spacing, surface roles, width utilization, radii, decoration count, and reflow. Verify the expected local font in computed styles and network loading. For the document, dialog surface, and every element not intentionally designated as a local horizontal scroller, assert `scrollWidth <= clientWidth`. For every operational page root and surface intended to fill its owner, compare its rendered width with the owner's available content width. Record the intended local scroll owner and exercise short and long content.
+10. **Verify layout and fidelity in browser**: Capture side-by-side prototype/browser evidence at viewport widths 1440, 929, and 390 in light and dark modes. Compare the thesis, signature treatment, palette and semantic roles, typography roles, density, spacing, surface roles, width utilization, radii, decoration count, interaction feedback, motion, and reflow. Exercise hover, keyboard focus, pressed, and selected states; emulate `prefers-reduced-motion` and confirm nonessential transforms and decorative animation stop without losing visible state meaning. Verify local WOFF2 loading plus the declared offline fallback path; confirm no runtime font/CDN dependency. For the document, dialog surface, and every element not intentionally designated as a local horizontal scroller, assert `scrollWidth <= clientWidth`. For every operational page root and surface intended to fill its owner, compare its rendered width with the owner's available content width. Record the intended local scroll owner and exercise short and long content.
 11. **Verify type display**: Inspect rendered type labels and their tooltips. Outside explicit assembly-diagnostics views, confirm generic types contain no CLR backticks, `[[...]]` arguments, `Version=`, `Culture=`, or `PublicKeyToken=` metadata, and confirm the producing boundary uses `GetCleanFullName()` rather than a Razor-local formatter.
-12. **Report**: List what changed, lifetime interleavings tested, fidelity comparisons, font-loading evidence, browser assertions, type-display assertions, intentional local scrolling, any justified gradient or page-width exceptions, and remaining manual verification.
+12. **Report**: List what changed, the design thesis and signature system with its placements, palette/semantic checks, font-role and offline-fallback evidence, lifetime interleavings tested, fidelity comparisons, browser assertions, type-display assertions, intentional local scrolling, any continuous-data gradient or page-width exceptions, and remaining manual verification.
 
 ## Report Template
 
@@ -121,7 +127,7 @@ Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Moni
 |---|---|---|---|---|
 | P0–P5 | File and line | Rendered or source-level failure | Component/state/theme/layout owner | Build plus category-appropriate lifetime or browser verification |
 
-When P0 is in scope, include the tested initialization/invocation/disposal ordering and rapid navigation/remount result. For visual work, include 1440/929/390 light/dark fidelity results, the loaded font, operational-page width utilization, `scrollWidth <= clientWidth`, intentional local horizontal scrollers, and every justified gradient or retained page-width constraint.
+When P0 is in scope, include the tested initialization/invocation/disposal ordering and rapid navigation/remount result. For visual work, include the thesis, signature system and placements, palette/semantic and font-role evidence, 1440/929/390 light/dark fidelity results, operational-page width utilization, `scrollWidth <= clientWidth`, intentional local horizontal scrollers, and every continuous-data gradient or retained page-width constraint.
 
 ## Constraints
 
@@ -129,9 +135,10 @@ When P0 is in scope, include the tested initialization/invocation/disposal order
 - Do NOT catch `ObjectDisposedException` from a locally owned interop reference. Repair ownership, cancellation, post-await guards, in-flight user coordination, callback shutdown order, and idempotent teardown.
 - Do NOT dispose a `DotNetObjectReference` while JavaScript can still invoke it. Stop every callback producer before releasing the reference.
 - Do NOT use JS interop from component disposal to perform DOM cleanup. Use client-side `MutationObserver` cleanup; reserve disposal for releasing owned interop references and non-DOM resources.
-- Do NOT add a gradient to default Monica page or component CSS unless it functionally encodes continuous data or explicit user/prototype direction requires it. A named expressive theme may own an illustrative gradient, but it must not leak into first-party component CSS or the default theme.
+- Do NOT add gradients to operational shells, ordinary cards, KPI tiles, panels, filters, tables, repeated data, or status surfaces. Permit one focused prototype-backed signature system concentrated in identity/readiness, with limited non-competing recurrence, plus gradients that encode continuous data; keep supporting surfaces coherent and document the role.
 - Do NOT constrain an operational page shell with an arbitrary `max-width`; constrain only the local editorial or text region that needs readable line length.
 - Do NOT add decoration before hierarchy and surface roles are clear. Permit purposeful token-based effects only within the Precision decoration budget.
+- Do NOT remove interaction feedback in the name of restraint. Prefer short, moderate, state-explaining transitions and always provide a reduced-motion path.
 - Do NOT break existing responsive or compact-mode behavior.
 - Do NOT treat `overflow-x: hidden` on the page or dialog as a containment fix; repair the child width contract and keep scrolling on the smallest surface that needs it.
 - Do NOT render `Type.FullName`, `Type.AssemblyQualifiedName`, or `Type.ToString()` directly in ordinary UI. Use `GetCleanFullName()` at the producing boundary; reserve assembly identity for views explicitly about assemblies or binding provenance.

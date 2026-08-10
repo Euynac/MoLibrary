@@ -19,11 +19,11 @@
     "Options": {
       "MudBlazor": {
         "Name": "MudBlazor 默认",
-        "Description": "保留原始 MudBlazor 风格"
+        "Description": "保留 MudBlazor 风格，并使用 Monica 的离线字体回退"
       },
       "Default": {
         "Name": "默认主题",
-        "Description": "以冷静中性色、清晰边界和克制层次构建的精密运维界面"
+        "Description": "以鲜明信号色、技术字体和清晰信息层次构建的精密运维界面"
       },
       "HermesTeal": {
         "Name": "Hermes Teal",

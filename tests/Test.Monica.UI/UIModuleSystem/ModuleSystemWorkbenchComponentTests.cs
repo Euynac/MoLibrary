@@ -168,6 +168,30 @@ public sealed class ModuleSystemWorkbenchComponentTests
     }
 
     [Fact]
+    public async Task Module_catalog_summary_uses_the_shared_theme_aware_surface_and_rail_contract()
+    {
+        await using var context = new ModuleSystemWorkbenchUiTestContext();
+        await using var session = new ModuleSystemWorkbenchSession(ModuleSystemWorkbenchTestData.Calls());
+        await session.InitializeAsync();
+
+        var cut = context.Render<ModuleWorkbenchModules>(parameters => parameters
+            .Add(component => component.Session, session));
+
+        var cards = cut.FindAll(".module-summary > article.mo-card-surface");
+
+        cards.Should().HaveCount(4);
+        cards.Select(card => card.GetAttribute("data-mo-card-tone"))
+            .Should().Equal("success", "secondary", "info", "primary");
+        cards.Should().AllSatisfy(card =>
+        {
+            var rail = card.QuerySelector(".mo-card-surface__rail");
+            rail.Should().NotBeNull();
+            rail!.ParentElement.Should().BeSameAs(card);
+            rail.GetAttribute("aria-hidden").Should().Be("true");
+        });
+    }
+
+    [Fact]
     public async Task Module_catalog_cost_meter_preserves_total_and_work_kind_proportions()
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext();

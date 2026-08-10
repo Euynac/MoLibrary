@@ -193,11 +193,16 @@ Always specify `T` for generic MudBlazor components:
 ### 9. Precision Visual Language and Component Responsibility
 
 - Read `references/monica-precision-design-language.md` before default-theme, global visual-language, or prototype-handoff work. Apply it as an acceptance contract.
+- Before styling, write a subject-specific design thesis and a compact plan for palette roles, typography roles and fallbacks, layout rhythm, and one signature treatment. The plan must explain how the page's actual Monica task—not a generic admin-dashboard aesthetic—drives those choices.
 - Establish hierarchy through typography, spacing, alignment, density, and explicit surface roles before adding decoration.
-- Keep ordinary surfaces flat, render repeated data as rows/lists/tables instead of cards, and reserve elevation or hover motion for genuinely raised or interactive elements.
-- Default page and component CSS to flat colors. Do not use gradients on operational page shells, headers, hero or identity surfaces, KPI cards, panels, filters, data groups, or semantic states. Permit a gradient only for functional continuous-data encoding or an explicit user/prototype requirement, and document the exception.
+- Keep ordinary surfaces structurally simple and render repeated data as rows/lists/tables instead of cards. Give interactive controls, rows, and cards clear, proportionate hover, focus, pressed, and selected feedback; give noninteractive grouped content only optional token-based border, tonal, or low-shadow spatial-focus feedback that does not imply a click action.
+- Use solid or tonal surfaces as the operational default. One coherent prototype-backed signature system may use a focused token-based glow, gradient, or pattern, concentrated in the identity/readiness region with limited non-competing recurrence when the prototype connects the hierarchy that way; continuous-data visualizations may use gradients that encode their scale. Keep supporting surfaces coherent rather than inert, and document either exception.
+- Use short, purposeful, moderate motion that communicates interaction or state. Avoid large travel, bouncing, repeated flourishes, and continuous ambient animation; honor `prefers-reduced-motion` without removing the visible state change.
 - Let dashboards, workbenches, administration pages, and diagnostics pages consume their owner's full available width. Apply readable line-length limits to text regions, not the page shell; retain a page-level `max-width` only for an explicitly editorial or reading-focused layout.
+- Give light and dark palettes distinct canvas, surface, border, text, brand, and semantic roles. Do not make dark mode uniformly near-black or collapse success, warning, error, information, selection, and runtime states into one accent.
+- Assign fonts by role: interface text, hierarchy/display text when needed, and diagnostics/code. Ship local WOFF2 assets, declare explicit offline-capable fallbacks (including CJK coverage where relevant), and avoid using monospace as general interface typography.
 - Use the 6/8/12 radius scale without derived radius multiplication. Keep each surface within the decoration budget defined by the Precision contract.
+- Let standard `MudCard` instances use the shared baseline hover. Reuse `mo-card-surface` for genuine independent native cards and its direct-child rail plus `data-mo-card-tone` for semantic KPI accents. Do not apply the hook to tables, rows, overlays, visualizations, or structural panels, and do not recreate the rail with page-private full-height borders or pseudo-elements.
 - Use `var(--mud-palette-*)`, approved `var(--mo-color-*)` tokens, and MudBlazor semantic parameters for meaningful status, selection, severity, or progress—not ambient ornament.
 - Keep component-specific token-based presentation and layout in component CSS. Keep the shared MudBlazor visual language in theme CSS; do not create a page-private color system.
 - Fix container layout (`display`, alignment, `min-height`, `min-width`) before adding margin or padding hacks. Stretch related cards at the row level instead of assigning fixed heights.
@@ -332,7 +337,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `scripts/check_mudblazor_source.py` - Invoke `inspect-dependency-source resolve MudBlazor --ref 9.0.0 --json`, validate the returned path, and verify that the required source marker exists.
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON into `.tmp/monica-ui-development/mudblazor-css-variables.json`.
 - `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes using the generated `.tmp` variable list by default.
-- `scripts/font_downloader.py` - Download fonts for offline WOFF2 usage.
+- `scripts/font_downloader.py` - Download collision-safe unicode-range WOFF2 files and generate a runtime-ready `font-faces.css` manifest. Variable `font-weight` ranges remain intact, and `--weights` selects a variable face when the requested weight falls inside its range. Select and verify required subsets such as `--subsets latin,latin-ext` instead of assuming one Google Fonts URL maps to one file.
 - `scripts/subset_ui_font.py` - Generate or check localization-driven WOFF2 subsets from source fonts stored outside Monica UI packages.
 
 ## Quick Checklist
@@ -350,7 +355,10 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Use `IBrowserStorage` for browser persistence
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use `$monica-ui-localization` for any user-facing text or i18n resource changes
-- [ ] Apply the Precision hierarchy, full-width operational-shell, flat-color, radius, decoration, data-density, and local-font rules
+- [ ] Record the subject-specific design thesis, palette/type/layout plan, and one justified signature treatment
+- [ ] Apply the Precision hierarchy, full-width operational-shell, responsive-surface, radius, decoration, data-density, and offline-font rules
+- [ ] Verify hover, focus, pressed, and selected feedback plus `prefers-reduced-motion` behavior
+- [ ] Self-critique the result for generic AI-dashboard styling before handoff
 - [ ] Compare prototype and browser side by side at widths 1440, 929, and 390 in light and dark modes
 
 ## Page Complexity Checklist

@@ -5,7 +5,7 @@
 @using Monica.UI.UISystemInfo.Models
 @using Monica.UI.UISystemInfo.Support
 @inject IDialogService DialogService
-@inject NavigationManager Navigation
+@inject IScrollManager ScrollManager
 @inject IStringLocalizer<SystemInfoResource> L
 
 <section class="system-info-dossier">
@@ -17,21 +17,21 @@
         <nav class="system-info-dossier__desktop-nav">
             @foreach (var dossierSection in Sections)
             {
-                <a class="@(_selectedSection == dossierSection.Id ? "is-active" : null)"
-                   href="#@dossierSection.Id"
-                   aria-current="@(_selectedSection == dossierSection.Id ? "location" : null)"
-                   @onclick="@(() => _selectedSection = dossierSection.Id)">
+                <button type="button"
+                        class="system-info-dossier__nav-item @(_selectedSection == dossierSection.Id ? "is-active" : null)"
+                        aria-current="@(_selectedSection == dossierSection.Id ? "location" : null)"
+                        @onclick="@(() => NavigateToSectionAsync(dossierSection.Id))">
                     <span>@dossierSection.Number</span>
                     <MudIcon Icon="@dossierSection.Icon" Size="Size.Small" />
                     <b>@L[dossierSection.TitleKey]</b>
-                </a>
+                </button>
             }
         </nav>
         <div class="system-info-dossier__mobile-nav">
             <MudSelect T="string"
                        Label="@L["Page:Index:Hint"]"
                        Value="@_selectedSection"
-                       ValueChanged="NavigateToSection"
+                       ValueChanged="NavigateToSectionAsync"
                        FullWidth="true">
                 @foreach (var dossierSection in Sections)
                 {
@@ -46,7 +46,7 @@
     </aside>
 
     <div class="system-info-dossier__canvas">
-        <section class="system-info-evidence system-info-evidence--runtime" id="runtime-section">
+        <section class="system-info-evidence system-info-evidence--runtime mo-card-surface" id="runtime-section">
             <EvidenceHeader Number="01"
                             Title="@L["Page:Sections:Runtime:Title"]"
                             Description="@L["Page:Sections:Runtime:Description"]"
@@ -61,15 +61,17 @@
                     <EvidenceRow Icon="@Icons.Material.Filled.TouchApp" Label="@L["Page:Sections:Runtime:UserInteractive"]" Value="@Interactive" />
                 </dl>
                 <div class="system-info-memory-plate">
-                    <div><span>@L["Page:Pulse:WorkingSet"]</span><b>@L["Page:Status:Snapshot"]</b></div>
-                    <strong class="system-info-metric">@SystemInfoDisplayFormatter.FormatScaledBytes(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</strong>
+                    <div class="system-info-memory-plate__topline"><span>@L["Page:Pulse:WorkingSet"]</span><b>@L["Page:Status:Snapshot"]</b></div>
+                    <div class="system-info-memory-reading">
+                        <strong class="system-info-metric">@SystemInfoDisplayFormatter.FormatScaledBytes(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</strong>
+                    </div>
                     <code>@SystemInfoDisplayFormatter.FormatByteCount(Snapshot.Process.WorkingSetBytes, CultureInfo.CurrentCulture)</code>
                     <p>@L["Page:Sections:Runtime:WorkingSetAtCapture"]</p>
                 </div>
             </div>
         </section>
 
-        <section class="system-info-evidence" id="environment-section">
+        <section class="system-info-evidence mo-card-surface" id="environment-section">
             <EvidenceHeader Number="02"
                             Title="@L["Page:Sections:Environment:Title"]"
                             Description="@L["Page:Sections:Environment:Description"]"
@@ -84,7 +86,7 @@
             </dl>
         </section>
 
-        <section class="system-info-evidence system-info-evidence--wide" id="endpoints-section">
+        <section class="system-info-evidence system-info-evidence--wide mo-card-surface" id="endpoints-section">
             <EvidenceHeader Number="03"
                             Title="@L["Page:Sections:Endpoints:Title"]"
                             Description="@L["Page:Sections:Endpoints:Description"]"
@@ -120,7 +122,7 @@
             }
         </section>
 
-        <section class="system-info-evidence" id="artifact-section">
+        <section class="system-info-evidence mo-card-surface" id="artifact-section">
             <EvidenceHeader Number="04"
                             Title="@L["Page:Sections:Artifact:Title"]"
                             Description="@L["Page:Sections:Artifact:Description"]" />
@@ -170,11 +172,10 @@
 
     private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
-    private void NavigateToSection(string section)
+    private async Task NavigateToSectionAsync(string section)
     {
         _selectedSection = section;
-        var pageUri = Navigation.Uri.Split('#', 2)[0];
-        Navigation.NavigateTo($"{pageUri}#{section}", replace: true);
+        await ScrollManager.ScrollIntoViewAsync($"#{section}", ScrollBehavior.Auto);
     }
 
     private Task InspectEndpointAsync(SystemInfoEndpoint endpoint)

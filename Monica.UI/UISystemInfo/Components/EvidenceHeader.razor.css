@@ -19,6 +19,7 @@
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 34%, var(--mud-palette-lines-default));
     border-radius: 6px;
     background: var(--mud-palette-primary-hover);
+    font-family: var(--mud-typography-h6-family, var(--mo-font-family-display));
     font-size: 0.68rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
@@ -31,6 +32,7 @@
 
 .system-info-evidence-header h2 {
     color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-h6-family, var(--mo-font-family-display));
     font-size: 1rem;
     font-weight: 750;
 }
@@ -49,6 +51,7 @@
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 34%, var(--mud-palette-lines-default));
     border-radius: 6px;
     background: var(--mud-palette-primary-hover);
+    font-family: var(--mud-typography-h6-family, var(--mo-font-family-display));
     font-size: 0.72rem;
     font-weight: 750;
 }

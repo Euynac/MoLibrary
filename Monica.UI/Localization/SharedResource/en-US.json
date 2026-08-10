@@ -19,11 +19,11 @@
     "Options": {
       "MudBlazor": {
         "Name": "MudBlazor",
-        "Description": "Original MudBlazor styling"
+        "Description": "MudBlazor styling with Monica's offline typography fallback"
       },
       "Default": {
         "Name": "Default",
-        "Description": "A precise operational theme with cool neutral surfaces, crisp borders, and restrained depth"
+        "Description": "A precise operational theme with vivid signal colors, technical typography, and clear information hierarchy"
       },
       "HermesTeal": {
         "Name": "Hermes Teal",

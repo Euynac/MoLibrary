@@ -15,7 +15,8 @@
             @if (applicationStartupDurationMs is { } startupDurationMs)
             {
                 var compositionShare = CompositionShare(snapshot.Summary.TotalCompositionDurationMs, startupDurationMs);
-                <article class="startup-kpi-card">
+                <article class="startup-kpi-card mo-card-surface" data-mo-card-tone="primary">
+                    <span class="mo-card-surface__rail" aria-hidden="true"></span>
                     <header class="startup-kpi-card__header">
                         <span class="kpi-icon" aria-hidden="true">
                             <MudIcon Icon="@Icons.Material.Filled.RocketLaunch" />
@@ -62,7 +63,8 @@
             }
             else
             {
-                <article class="kpi-card kpi-card--composition">
+                <article class="kpi-card kpi-card--composition mo-card-surface" data-mo-card-tone="primary">
+                    <span class="mo-card-surface__rail" aria-hidden="true"></span>
                     <header class="kpi-card__header">
                         <span class="kpi-icon" aria-hidden="true">
                             <MudIcon Icon="@Icons.Material.Filled.Speed" />
@@ -74,7 +76,8 @@
                     <small class="kpi-detail">@CompositionDetail()</small>
                 </article>
             }
-            <article class="kpi-card kpi-card--modules">
+            <article class="kpi-card kpi-card--modules mo-card-surface" data-mo-card-tone="success">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <header class="kpi-card__header">
                     <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Widgets" /></span>
                     <span class="kpi-badge">@L["Overview:Kpis:Declared", snapshot.Summary.ModuleCount]</span>
@@ -83,7 +86,8 @@
                 <strong class="kpi-value">@snapshot.Summary.ActiveModuleCount</strong>
                 <small class="kpi-detail">@L["Overview:Kpis:DirectEdges", snapshot.Topology.Edges.Length]</small>
             </article>
-            <article class="kpi-card kpi-card--registration">
+            <article class="kpi-card kpi-card--registration mo-card-surface" data-mo-card-tone="info">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <header class="kpi-card__header">
                     <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.AppRegistration" /></span>
                     <span class="kpi-badge">@L["Overview:Kpis:Exact"]</span>
@@ -92,7 +96,8 @@
                 <strong class="kpi-value">@ModuleDiagnosticsDisplay.ExactMilliseconds(snapshot.Summary.ServiceRegistrationDurationMs)</strong>
                 <small class="kpi-detail">@L["Overview:Kpis:CompositionShareValue", FormatPercentage(CompositionShare(snapshot.Summary.ServiceRegistrationDurationMs, snapshot.Summary.TotalCompositionDurationMs))]</small>
             </article>
-            <article class="kpi-card kpi-card--discovery">
+            <article class="kpi-card kpi-card--discovery mo-card-surface" data-mo-card-tone="secondary">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <header class="kpi-card__header">
                     <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.ManageSearch" /></span>
                     <span class="kpi-badge">@L["Overview:Kpis:Queries", snapshot.TypeDiscovery.Statistics.DistinctQueryCount]</span>
@@ -101,7 +106,9 @@
                 <strong class="kpi-value">@ModuleDiagnosticsDisplay.Duration(snapshot.Summary.TypeDiscoveryDurationMs)</strong>
                 <small class="kpi-detail">@L["Overview:Kpis:Matches", snapshot.TypeDiscovery.Statistics.MatchCount]</small>
             </article>
-            <article class="kpi-card @findingsPresentation.KpiClass">
+            <article class="kpi-card @findingsPresentation.KpiClass mo-card-surface"
+                     data-mo-card-tone="@findingsPresentation.Tone">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <header class="kpi-card__header">
                     <span class="kpi-icon" aria-hidden="true"><MudIcon Icon="@findingsPresentation.Icon" /></span>
                     <span class="kpi-badge">@L["Overview:Kpis:Errors", snapshot.Summary.ErrorCount]</span>
@@ -115,7 +122,7 @@
         <ModuleWorkbenchCriticalPathRibbon Session="@Session" ModuleSelected="@ModuleSelected" />
 
         <div class="overview-evidence-grid">
-            <section class="evidence-panel" aria-labelledby="findings-title">
+            <section class="evidence-panel mo-card-surface" aria-labelledby="findings-title">
                 <div class="panel-heading">
                     <div>
                         <MudText Typo="Typo.overline">@L["Overview:Findings:Eyebrow"]</MudText>
@@ -168,7 +175,7 @@
                 }
             </section>
 
-            <section class="evidence-panel" aria-labelledby="hotspots-title">
+            <section class="evidence-panel mo-card-surface" aria-labelledby="hotspots-title">
                 <div class="panel-heading">
                     <div>
                         <MudText Typo="Typo.overline">@L["Overview:Hotspots:Eyebrow"]</MudText>
@@ -222,17 +229,17 @@
         _ => L["Comparison:Unchanged"]
     };
 
-    private static (Color Color, string KpiClass, string Icon) GetFindingsPresentation(
+    private static (Color Color, string Tone, string KpiClass, string Icon) GetFindingsPresentation(
         IReadOnlyList<ModuleDiagnosticFinding> findings)
     {
         if (findings.Any(static finding => finding.Severity == ModuleDiagnosticFindingSeverity.Error))
         {
-            return (Color.Error, "kpi-card--findings-error", Icons.Material.Filled.Error);
+            return (Color.Error, "error", "kpi-card--findings-error", Icons.Material.Filled.Error);
         }
 
         return findings.Any(static finding => finding.Severity == ModuleDiagnosticFindingSeverity.Warning)
-            ? (Color.Warning, "kpi-card--findings-warning", Icons.Material.Filled.Warning)
-            : (Color.Success, "kpi-card--findings-healthy", Icons.Material.Filled.Verified);
+            ? (Color.Warning, "warning", "kpi-card--findings-warning", Icons.Material.Filled.Warning)
+            : (Color.Success, "success", "kpi-card--findings-healthy", Icons.Material.Filled.Verified);
     }
 
     private static Color FindingColor(ModuleDiagnosticFindingSeverity severity) => severity switch

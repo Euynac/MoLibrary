@@ -17,6 +17,7 @@
     gap: 8px;
     margin: 0 0 8px;
     color: var(--mud-palette-primary);
+    font-family: var(--mud-typography-h6-family, var(--mo-font-family-display));
     font-size: 0.68rem;
     font-weight: 750;
     letter-spacing: 0.14em;
@@ -32,6 +33,7 @@
 .system-info-masthead h1 {
     margin: 0;
     color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-h1-family, var(--mo-font-family-display));
     font-size: clamp(1.85rem, 3vw, 2.55rem);
     font-weight: 750;
     letter-spacing: -0.03em;

@@ -33,27 +33,32 @@
         </section>
 
         <section class="topology-overview" aria-label="@L["Dependencies:Overview:Label"]">
-            <article class="overview-nodes">
+            <article class="mo-card-surface" data-mo-card-tone="primary">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.Hub" />
                 <span>@L["Dependencies:Overview:Modules"]</span>
                 <strong>@Session.VisibleDependencyModules.Count</strong>
             </article>
-            <article class="overview-edges">
+            <article class="mo-card-surface" data-mo-card-tone="info">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.Link" />
                 <span>@L["Dependencies:Overview:Edges"]</span>
                 <strong>@Session.VisibleDependencyEdges.Count</strong>
             </article>
-            <article class="overview-depth">
+            <article class="mo-card-surface" data-mo-card-tone="warning">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.Layers" />
                 <span>@L["Dependencies:Overview:Depth"]</span>
                 <strong>@Session.VisibleDependencyModules.Select(static module => module.DependencyDepth).DefaultIfEmpty().Max()</strong>
             </article>
-            <article class="overview-ui">
+            <article class="mo-card-surface" data-mo-card-tone="info">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" />
                 <span>@L["Dependencies:Overview:UiModules"]</span>
                 <strong>@Session.VisibleDependencyModules.Count(static module => module.IsUiModule)</strong>
             </article>
-            <article class="overview-web">
+            <article class="mo-card-surface" data-mo-card-tone="secondary">
+                <span class="mo-card-surface__rail" aria-hidden="true"></span>
                 <MudIcon Icon="@Icons.Material.Filled.Language" />
                 <span>@L["Dependencies:Overview:WebModules"]</span>
                 <strong>@Session.VisibleDependencyModules.Count(static module => module.IsWebModule)</strong>

@@ -6,7 +6,6 @@
 }
 
 .kpi-strip {
-    --kpi-accent: var(--mud-palette-primary);
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: .55rem;
@@ -20,10 +19,12 @@
 
 .kpi-card,
 .startup-kpi-card {
+    --kpi-accent: var(--mo-card-accent);
+
     min-width: 0;
     min-height: 8.75rem;
     padding: .95rem;
-    border: 1px solid color-mix(in srgb, var(--kpi-accent) 26%, var(--mud-palette-lines-default));
+    border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
     background: var(--mud-palette-surface);
 }
@@ -248,31 +249,6 @@
 
 .kpi-badge--comparison {
     margin-top: .55rem;
-}
-
-.kpi-card--composition {
-    --kpi-accent: var(--mud-palette-primary);
-}
-
-.kpi-card--modules,
-.kpi-card--findings-healthy {
-    --kpi-accent: var(--mud-palette-success);
-}
-
-.kpi-card--registration {
-    --kpi-accent: var(--mud-palette-info);
-}
-
-.kpi-card--discovery {
-    --kpi-accent: var(--mud-palette-secondary);
-}
-
-.kpi-card--findings-warning {
-    --kpi-accent: var(--mud-palette-warning);
-}
-
-.kpi-card--findings-error {
-    --kpi-accent: var(--mud-palette-error);
 }
 
 .overview-evidence-grid {

@@ -48,8 +48,8 @@
     gap: .2rem .7rem;
     min-width: 0;
     padding: 1rem;
-    border-inline-start: .22rem solid var(--mud-palette-primary);
-    background: var(--mud-palette-surface);
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--mo-card-accent) 4%, var(--mud-palette-surface));
 }
 
 .topology-overview article + article {
@@ -59,36 +59,7 @@
 .topology-overview article ::deep .mud-icon-root {
     grid-row: 1 / 3;
     align-self: center;
-    color: var(--mud-palette-primary);
-}
-
-.topology-overview .overview-edges {
-    border-inline-start-color: var(--mud-palette-info);
-}
-
-.topology-overview .overview-edges ::deep .mud-icon-root,
-.topology-overview .overview-ui ::deep .mud-icon-root {
-    color: var(--mud-palette-info);
-}
-
-.topology-overview .overview-depth {
-    border-inline-start-color: var(--mud-palette-warning);
-}
-
-.topology-overview .overview-depth ::deep .mud-icon-root {
-    color: var(--mud-palette-warning);
-}
-
-.topology-overview .overview-ui {
-    border-inline-start-color: var(--mud-palette-info);
-}
-
-.topology-overview .overview-web {
-    border-inline-start-color: var(--mud-palette-secondary);
-}
-
-.topology-overview .overview-web ::deep .mud-icon-root {
-    color: var(--mud-palette-secondary);
+    color: var(--mo-card-accent);
 }
 
 .topology-overview span {

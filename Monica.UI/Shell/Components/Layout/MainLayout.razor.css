@@ -38,9 +38,9 @@
     margin-inline: auto;
     padding: 14px 44px 14px 16px;
     color: var(--mud-palette-error-text);
-    border: 1px solid var(--mud-palette-error);
+    border: 1px solid var(--mud-palette-error-darken);
     border-radius: var(--mud-default-borderradius);
-    background: var(--mud-palette-error-hover);
+    background: var(--mud-palette-error);
     box-shadow: var(--mud-elevation-8);
 }
 

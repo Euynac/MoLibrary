@@ -19,6 +19,7 @@ public class FreshTheme : ThemeDefinitionBase
     {
         return new MudTheme()
         {
+            Typography = MonicaTypographyDefaults.CreateFallback(),
             PaletteLight = new PaletteLight()
             {
                 // Main color: Mint Green (Fresh & Natural)

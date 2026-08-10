@@ -1,39 +1,12 @@
-/* Monica Precision: the restrained default language for operational interfaces. */
-
-@font-face {
-    font-family: 'MoDefaultText';
-    src: url('../../fonts/SourceSansPro-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'MoDefaultText';
-    src: url('../../fonts/SourceSansPro-SemiBold.woff2') format('woff2');
-    font-weight: 600;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'MoDefaultMono';
-    src: url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'MoDefaultMono';
-    src: url('../../fonts/IBMPlexMono-Medium.woff2') format('woff2');
-    font-weight: 500;
-    font-display: swap;
-}
+/* Monica Precision: a vivid signal system for operational interfaces. */
 
 :root[data-theme="default-light"],
 :root[data-theme="default-dark"],
 .mo-theme-default-light,
 .mo-theme-default-dark {
-    --mo-default-font-body: 'MoDefaultText', 'Source Sans Pro', 'Segoe UI', sans-serif;
-    --mo-default-font-mono: 'MoDefaultMono', 'IBM Plex Mono', ui-monospace, monospace;
+    --mo-default-font-body: var(--mud-typography-default-family, var(--mo-font-family-body));
+    --mo-default-font-display: var(--mud-typography-h1-family, var(--mo-font-family-display));
+    --mo-default-font-mono: var(--mo-font-family-mono);
     --mo-default-radius-control: 6px;
     --mo-default-radius-surface: 8px;
     --mo-default-radius-overlay: 12px;
@@ -75,32 +48,32 @@
         border-color var(--mo-default-motion-fast),
         color var(--mo-default-motion-fast);
 
-    --mo-color-page-hero-background: #171d2a;
-    --mo-color-page-hero-text: #f7f9fc;
-    --mo-color-page-hero-action: #f7f9fc;
+    --mo-color-page-hero-background: #151b2b;
+    --mo-color-page-hero-text: #f4f6fb;
+    --mo-color-page-hero-action: #f4f6fb;
 }
 
 :root[data-theme="default-light"],
 .mo-theme-default-light {
-    --mo-default-focus-ring: rgba(102, 87, 217, 0.2);
+    --mo-default-focus-ring: rgba(114, 87, 245, 0.22);
     --mo-default-raised-shadow: 0 8px 24px -14px rgba(18, 25, 39, 0.24);
     --mo-default-overlay-shadow: 0 22px 56px -22px rgba(18, 25, 39, 0.38);
-    --mo-tooltip-bg: #171d2a;
-    --mo-tooltip-text: #f7f9fc;
+    --mo-tooltip-bg: #151b2b;
+    --mo-tooltip-text: #f4f6fb;
     --mo-tooltip-border: rgba(255, 255, 255, 0.12);
     --mo-tooltip-shadow: 0 16px 36px -18px rgba(18, 25, 39, 0.45);
 }
 
 :root[data-theme="default-dark"],
 .mo-theme-default-dark {
-    --mo-default-focus-ring: rgba(166, 149, 255, 0.26);
+    --mo-default-focus-ring: rgba(140, 117, 255, 0.3);
     --mo-default-raised-shadow: 0 10px 28px -14px rgba(0, 0, 0, 0.58);
     --mo-default-overlay-shadow: 0 24px 64px -22px rgba(0, 0, 0, 0.78);
-    --mo-tooltip-bg: #edf2fa;
-    --mo-tooltip-text: #161e2b;
+    --mo-tooltip-bg: #edf2fb;
+    --mo-tooltip-text: #141d2c;
     --mo-tooltip-border: rgba(255, 255, 255, 0.2);
     --mo-tooltip-shadow: 0 18px 42px -18px rgba(0, 0, 0, 0.72);
-    --mo-color-page-hero-background: #101827;
+    --mo-color-page-hero-background: #111a29;
 }
 
 .mo-theme-default-light,
@@ -108,6 +81,11 @@
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-background);
     font-family: var(--mo-default-font-body);
+}
+
+.mo-theme-default-light :is(h1, h2, h3, h4, h5, h6),
+.mo-theme-default-dark :is(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--mo-default-font-display);
 }
 
 .mo-theme-default-light :is(code, kbd, samp, pre),
@@ -265,6 +243,17 @@
     border: 1px solid var(--mud-palette-lines-default) !important;
     border-radius: var(--mo-card-border-radius) !important;
     box-shadow: none !important;
+    transition:
+        border-color var(--mo-card-hover-duration) ease,
+        box-shadow var(--mo-card-hover-duration) ease !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .mo-theme-default-light .mud-card:not(.mo-self-painted):hover,
+    .mo-theme-default-dark .mud-card:not(.mo-self-painted):hover {
+        border-color: var(--mo-card-hover-border) !important;
+        box-shadow: var(--mo-card-hover-shadow) !important;
+    }
 }
 
 .mo-theme-default-light .mud-card-content,

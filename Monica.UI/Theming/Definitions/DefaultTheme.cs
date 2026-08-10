@@ -3,13 +3,13 @@ using MudBlazor;
 namespace Monica.UI.Theming.Definitions;
 
 /// <summary>
-/// The default Monica Precision theme for dense operational and developer-facing interfaces.
+/// The default Monica Precision theme for vivid, information-dense operational interfaces.
 /// </summary>
 public sealed class DefaultTheme : ThemeDefinitionBase
 {
     public override MonicaThemeKind Kind => MonicaThemeKind.Default;
     public override string DisplayName => "默认主题";
-    public override string Description => "以冷静中性色、清晰边界和克制层次构建的精密运维界面";
+    public override string Description => "以鲜明信号色、技术字体和清晰信息层次构建的精密运维界面";
 
     public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
     public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;
@@ -28,163 +28,163 @@ public sealed class DefaultTheme : ThemeDefinitionBase
             AppbarHeight = "56px"
         },
         Shadows = new Shadow { Elevation = CreateElevationScale() },
-        Typography = CreateTypography()
+        Typography = MonicaTypographyDefaults.CreatePrecision()
     };
 
     private static PaletteLight CreateLightPalette() => new()
     {
-        Primary = "#6657d9",
-        PrimaryLighten = "#8377e6",
-        PrimaryDarken = "#5042bc",
+        Primary = "#7257f5",
+        PrimaryLighten = "#8b74ff",
+        PrimaryDarken = "#5841d2",
         PrimaryContrastText = "#ffffff",
 
         Secondary = "#526f89",
-        SecondaryLighten = "#7590a8",
-        SecondaryDarken = "#3e586f",
+        SecondaryLighten = "#718ca5",
+        SecondaryDarken = "#3d566d",
         SecondaryContrastText = "#ffffff",
 
-        Tertiary = "#e9edf3",
-        TertiaryContrastText = "#303949",
+        Tertiary = "#eeeafd",
+        TertiaryContrastText = "#4e3cb2",
 
-        Info = "#1188b8",
-        InfoLighten = "#3da5cc",
-        InfoDarken = "#0b6c94",
+        Info = "#118fc9",
+        InfoLighten = "#3baddb",
+        InfoDarken = "#0b70a0",
         InfoContrastText = "#ffffff",
 
-        Success = "#0a8f69",
-        SuccessLighten = "#2aaa82",
-        SuccessDarken = "#087254",
+        Success = "#0b9f73",
+        SuccessLighten = "#2db88d",
+        SuccessDarken = "#087d5a",
         SuccessContrastText = "#ffffff",
 
-        Warning = "#b86f08",
-        WarningLighten = "#d58d2a",
-        WarningDarken = "#925706",
+        Warning = "#b97806",
+        WarningLighten = "#d89525",
+        WarningDarken = "#925e05",
         WarningContrastText = "#ffffff",
 
-        Error = "#d0445d",
-        ErrorLighten = "#e36a7e",
-        ErrorDarken = "#ad3049",
+        Error = "#d5445e",
+        ErrorLighten = "#e86b82",
+        ErrorDarken = "#b1324b",
         ErrorContrastText = "#ffffff",
 
-        Dark = "#171d2a",
-        DarkLighten = "#293244",
-        DarkDarken = "#0d111a",
-        DarkContrastText = "#f7f9fc",
+        Dark = "#151b2b",
+        DarkLighten = "#293247",
+        DarkDarken = "#0d1220",
+        DarkContrastText = "#f4f6fb",
 
-        Background = "#f3f5f8",
-        BackgroundGray = "#e9edf3",
-        Surface = "#fcfdff",
+        Background = "#f1f3f7",
+        BackgroundGray = "#eef1f6",
+        Surface = "#ffffff",
 
-        DrawerBackground = "#fcfdff",
-        DrawerText = "#4f5b6d",
-        DrawerIcon = "#687587",
+        DrawerBackground = "#ffffff",
+        DrawerText = "#516078",
+        DrawerIcon = "#68768c",
 
-        AppbarBackground = "rgba(252, 253, 255, 0.94)",
-        AppbarText = "#303949",
+        AppbarBackground = "rgba(255, 255, 255, 0.94)",
+        AppbarText = "#151b2b",
 
-        TextPrimary = "#181d29",
-        TextSecondary = "#5d6879",
-        TextDisabled = "#919aaa",
+        TextPrimary = "#151b2b",
+        TextSecondary = "#516078",
+        TextDisabled = "#7f8ca2",
 
-        ActionDefault = "#687587",
-        ActionDisabled = "#b8bfca",
-        ActionDisabledBackground = "#e9edf3",
+        ActionDefault = "#68768c",
+        ActionDisabled = "#aeb7c6",
+        ActionDisabledBackground = "#e8ecf2",
 
-        Divider = "#d7dce5",
-        DividerLight = "#e7eaf0",
-        LinesDefault = "#d7dce5",
-        LinesInputs = "#bec6d2",
+        Divider = "#d9deea",
+        DividerLight = "#e8ebf1",
+        LinesDefault = "#d9deea",
+        LinesInputs = "#c3cada",
 
-        TableStriped = "#f6f7fa",
-        TableHover = "#edf0f5",
+        TableStriped = "#f8f9fb",
+        TableHover = "#f5f3ff",
 
-        OverlayDark = "rgba(13, 17, 26, 0.56)",
-        OverlayLight = "rgba(252, 253, 255, 0.76)",
+        OverlayDark = "rgba(21, 27, 43, 0.58)",
+        OverlayLight = "rgba(255, 255, 255, 0.78)",
         HoverOpacity = 0.055,
 
-        GrayDefault = "#919aaa",
-        GrayLight = "#bec6d2",
-        GrayLighter = "#e9edf3",
-        GrayDark = "#4f5b6d",
-        GrayDarker = "#303949"
+        GrayDefault = "#7f8ca2",
+        GrayLight = "#c3cada",
+        GrayLighter = "#eef1f6",
+        GrayDark = "#516078",
+        GrayDarker = "#303a4d"
     };
 
     private static PaletteDark CreateDarkPalette() => new()
     {
-        Primary = "#a695ff",
-        PrimaryLighten = "#bcaeff",
-        PrimaryDarken = "#8773eb",
+        Primary = "#8c75ff",
+        PrimaryLighten = "#a995ff",
+        PrimaryDarken = "#7259eb",
         PrimaryContrastText = "#17122b",
 
-        Secondary = "#8aa6bf",
-        SecondaryLighten = "#a9bfd2",
-        SecondaryDarken = "#68859f",
+        Secondary = "#8fa9c2",
+        SecondaryLighten = "#aec3d6",
+        SecondaryDarken = "#6d8aa4",
         SecondaryContrastText = "#101720",
 
-        Tertiary = "#202a39",
-        TertiaryContrastText = "#dce4ef",
+        Tertiary = "#292348",
+        TertiaryContrastText = "#ddd7ff",
 
-        Info = "#4cbbe7",
-        InfoLighten = "#78cbed",
-        InfoDarken = "#299bc7",
+        Info = "#39bdf6",
+        InfoLighten = "#6bcdf9",
+        InfoDarken = "#169bd4",
         InfoContrastText = "#071820",
 
-        Success = "#35c696",
-        SuccessLighten = "#63d5ad",
-        SuccessDarken = "#1ba878",
+        Success = "#34d5a2",
+        SuccessLighten = "#64e2ba",
+        SuccessDarken = "#17b786",
         SuccessContrastText = "#071b14",
 
-        Warning = "#e7aa45",
-        WarningLighten = "#f0c271",
-        WarningDarken = "#c88a27",
+        Warning = "#f1b84b",
+        WarningLighten = "#f7cc75",
+        WarningDarken = "#d4972e",
         WarningContrastText = "#231706",
 
-        Error = "#f06f85",
-        ErrorLighten = "#f494a4",
-        ErrorDarken = "#d34d68",
+        Error = "#ff7189",
+        ErrorLighten = "#ff98a9",
+        ErrorDarken = "#df506c",
         ErrorContrastText = "#26090f",
 
-        Dark = "#080d15",
-        DarkLighten = "#161f2c",
-        DarkDarken = "#04070c",
-        DarkContrastText = "#edf2fa",
+        Dark = "#111a29",
+        DarkLighten = "#202c40",
+        DarkDarken = "#090e18",
+        DarkContrastText = "#edf2fb",
 
-        Background = "#0c111a",
-        BackgroundGray = "#111925",
-        Surface = "#161e2b",
+        Background = "#0b101a",
+        BackgroundGray = "#1b2638",
+        Surface = "#141d2c",
 
-        DrawerBackground = "#111925",
-        DrawerText = "#d8e0eb",
-        DrawerIcon = "#9ca9bb",
+        DrawerBackground = "#101724",
+        DrawerText = "#dce4f0",
+        DrawerIcon = "#9eabc0",
 
-        AppbarBackground = "rgba(12, 17, 26, 0.94)",
-        AppbarText = "#eef3fb",
+        AppbarBackground = "rgba(11, 16, 26, 0.94)",
+        AppbarText = "#edf2fb",
 
-        TextPrimary = "#edf2fa",
-        TextSecondary = "#a5b0c1",
-        TextDisabled = "#687487",
+        TextPrimary = "#edf2fb",
+        TextSecondary = "#a9b6ca",
+        TextDisabled = "#77859b",
 
-        ActionDefault = "#9ca9bb",
-        ActionDisabled = "#4a5668",
-        ActionDisabledBackground = "#202a39",
+        ActionDefault = "#9eabc0",
+        ActionDisabled = "#59667a",
+        ActionDisabledBackground = "#202c40",
 
-        Divider = "#2a3546",
-        DividerLight = "#202a39",
-        LinesDefault = "#2a3546",
-        LinesInputs = "#3a4659",
+        Divider = "#293449",
+        DividerLight = "#222d40",
+        LinesDefault = "#293449",
+        LinesInputs = "#3a4860",
 
-        TableStriped = "#111925",
-        TableHover = "#1d2735",
+        TableStriped = "#101724",
+        TableHover = "#211f42",
 
         OverlayDark = "rgba(0, 0, 0, 0.78)",
-        OverlayLight = "rgba(22, 30, 43, 0.72)",
+        OverlayLight = "rgba(20, 29, 44, 0.72)",
         HoverOpacity = 0.075,
 
-        GrayDefault = "#788598",
-        GrayLight = "#9ca9bb",
-        GrayLighter = "#cad3df",
-        GrayDark = "#4a5668",
-        GrayDarker = "#2f3b4d"
+        GrayDefault = "#77859b",
+        GrayLight = "#9eabc0",
+        GrayLighter = "#d0d9e6",
+        GrayDark = "#526078",
+        GrayDarker = "#303d52"
     };
 
     private static string[] CreateElevationScale() =>
@@ -217,28 +217,4 @@ public sealed class DefaultTheme : ThemeDefinitionBase
         "0 32px 84px -17px rgba(10, 16, 28, 0.32)"
     ];
 
-    private static Typography CreateTypography() => new()
-    {
-        Default = new DefaultTypography
-        {
-            FontFamily = ["MoDefaultText", "Source Sans Pro", "Segoe UI", "Noto Sans CJK SC", "sans-serif"],
-            FontSize = "0.9375rem",
-            FontWeight = "400",
-            LineHeight = "1.5",
-            LetterSpacing = "0"
-        },
-        H1 = new H1Typography { FontSize = "2.5rem", FontWeight = "600", LineHeight = "1.08", LetterSpacing = "-0.035em" },
-        H2 = new H2Typography { FontSize = "2rem", FontWeight = "600", LineHeight = "1.12", LetterSpacing = "-0.03em" },
-        H3 = new H3Typography { FontSize = "1.625rem", FontWeight = "600", LineHeight = "1.18", LetterSpacing = "-0.025em" },
-        H4 = new H4Typography { FontSize = "1.375rem", FontWeight = "600", LineHeight = "1.25", LetterSpacing = "-0.02em" },
-        H5 = new H5Typography { FontSize = "1.125rem", FontWeight = "600", LineHeight = "1.35", LetterSpacing = "-0.012em" },
-        H6 = new H6Typography { FontSize = "1rem", FontWeight = "600", LineHeight = "1.4", LetterSpacing = "-0.006em" },
-        Subtitle1 = new Subtitle1Typography { FontSize = "1rem", FontWeight = "600", LineHeight = "1.5", LetterSpacing = "0" },
-        Subtitle2 = new Subtitle2Typography { FontSize = "0.875rem", FontWeight = "600", LineHeight = "1.4", LetterSpacing = "0" },
-        Body1 = new Body1Typography { FontSize = "0.95rem", FontWeight = "400", LineHeight = "1.55", LetterSpacing = "0" },
-        Body2 = new Body2Typography { FontSize = "0.875rem", FontWeight = "400", LineHeight = "1.5", LetterSpacing = "0" },
-        Button = new ButtonTypography { FontSize = "0.875rem", FontWeight = "600", LineHeight = "1.25", LetterSpacing = "0", TextTransform = "none" },
-        Caption = new CaptionTypography { FontSize = "0.75rem", FontWeight = "400", LineHeight = "1.35", LetterSpacing = "0.01em" },
-        Overline = new OverlineTypography { FontSize = "0.6875rem", FontWeight = "600", LineHeight = "1.25", LetterSpacing = "0.09em", TextTransform = "uppercase" }
-    };
 }
