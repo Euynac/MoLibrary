@@ -8,7 +8,6 @@ using Monica.UI.Pages;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
 using Monica.UI.UIModuleSystem.State;
-using Monica.UI.UIModuleSystem.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -38,7 +37,7 @@ public static class ModuleSystemUIBuilderExtensions
                     BuiltInNavigationCategoryIds.Module,
                     addToNav: true,
                     navOrder: 10,
-                    accessPolicyType: typeof(ModuleSystemWorkbenchAccess)));
+                    accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>)));
             return registration;
         }
     }
@@ -50,39 +49,31 @@ public static class ModuleSystemUIBuilderExtensions
 public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
 {
     /// <inheritdoc />
-    public override void ValidateOptions(ModuleSystemUIOption options, string? profileName)
+    public override void Describe(ModuleDescriptor module)
     {
-        if (options.EnableOutsideDevelopment && string.IsNullOrWhiteSpace(options.AuthorizationPolicy))
-        {
-            throw new InvalidOperationException(
-                $"{nameof(ModuleSystemUIOption.AuthorizationPolicy)} must name a non-empty host authorization policy " +
-                $"when {nameof(ModuleSystemUIOption.EnableOutsideDevelopment)} is enabled.");
-        }
+        module.Require<ModuleSystem, ModuleSystemOption>();
+        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
     }
 
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleSystemUIOption> context)
     {
         context.Services.AddSingleton<ModuleSystemWorkbenchSessionFactory>();
-        context.Services.TryAddScoped<ModuleSystemWorkbenchAccess>();
+        context.Services.TryAddScoped<OperationalPageAccessPolicy<ModuleSystemUIOption>>();
     }
 }
 
 /// <summary>
 /// Options for the module system dashboard UI module.
 /// </summary>
-public class ModuleSystemUIOption : ModuleOptions<ModuleSystemUI>, IDevelopmentPageAccessOptions
+public class ModuleSystemUIOption : ModuleOptions<ModuleSystemUI>, IOperationalPageAccessOptions
 {
     /// <summary>
-    /// Gets or sets whether the read-only workbench may be exposed outside the Development environment.
-    /// Defaults to <see langword="false"/>. Enabling it also requires a non-empty
-    /// <see cref="AuthorizationPolicy"/> registered by the host.
+    /// Gets or sets the host authorization policy that overrides the shell-wide operational policy for this page.
+    /// The default is <see langword="null"/>. A missing or blank value inherits
+    /// <see cref="OperationalPageAccessOption.AuthorizationPolicy"/>. Configure an override only when this page needs
+    /// a different policy; Development access and operational Debug mode ignore it.
     /// </summary>
-    public bool EnableOutsideDevelopment { get; set; }
-
-    /// <summary>
-    /// Gets or sets the host authorization policy evaluated before Core diagnostics are invoked and before the shell
-    /// shows navigation. When configured, the policy is honored in every environment, including Development.
-    /// </summary>
-    public string? AuthorizationPolicy { get; set; }
+    public string? AuthorizationPolicyOverride { get; set; }
 }

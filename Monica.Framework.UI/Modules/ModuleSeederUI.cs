@@ -1,7 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -42,7 +40,7 @@ public static class ModuleSeederUIBuilderExtensions
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 15,
-                    accessPolicyType: typeof(SeederPageAccess)));
+                    accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSeederUIOption>)));
             return registration;
         }
     }
@@ -62,20 +60,9 @@ public sealed class ModuleSeederUI : MonicaModule<ModuleSeederUIOption>, IUIModu
     }
 
     /// <inheritdoc />
-    public override void ValidateOptions(ModuleSeederUIOption options, string? profileName)
-    {
-        if (options.EnableOutsideDevelopment && string.IsNullOrWhiteSpace(options.AuthorizationPolicy))
-        {
-            throw new InvalidOperationException(
-                $"{nameof(ModuleSeederUIOption.AuthorizationPolicy)} must name a non-empty host authorization " +
-                $"policy when {nameof(ModuleSeederUIOption.EnableOutsideDevelopment)} is enabled.");
-        }
-    }
-
-    /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleSeederUIOption> context)
     {
-        context.Services.TryAddScoped<SeederPageAccess>();
+        context.Services.TryAddScoped<OperationalPageAccessPolicy<ModuleSeederUIOption>>();
         context.Services.TryAddSingleton<SeederPageSessionFactory>();
     }
 }
@@ -83,26 +70,13 @@ public sealed class ModuleSeederUI : MonicaModule<ModuleSeederUIOption>, IUIModu
 /// <summary>
 /// Configures access to the Seeder operations dashboard.
 /// </summary>
-public sealed class ModuleSeederUIOption : ModuleOptions<ModuleSeederUI>, IDevelopmentPageAccessOptions
+public sealed class ModuleSeederUIOption : ModuleOptions<ModuleSeederUI>, IOperationalPageAccessOptions
 {
     /// <summary>
-    /// Gets or sets whether the dashboard may be exposed outside Development. The default is <see langword="false"/>.
-    /// Enabling it also requires a valid named <see cref="AuthorizationPolicy"/> from the host.
+    /// Gets or sets the host authorization policy that overrides the shell-wide operational policy for this page.
+    /// The default is <see langword="null"/>. A missing or blank value inherits
+    /// <see cref="OperationalPageAccessOption.AuthorizationPolicy"/>. Configure an override only when this page needs
+    /// a different policy; Development access and operational Debug mode ignore it.
     /// </summary>
-    public bool EnableOutsideDevelopment { get; set; }
-
-    /// <summary>
-    /// Gets or sets the host authorization policy evaluated for the current Blazor circuit outside Development.
-    /// Missing, empty, and unregistered policies deny access.
-    /// </summary>
-    public string? AuthorizationPolicy { get; set; }
+    public string? AuthorizationPolicyOverride { get; set; }
 }
-
-/// <summary>
-/// Applies the Seeder dashboard's Development-first, policy-gated access contract.
-/// </summary>
-public sealed class SeederPageAccess(
-    IHostEnvironment environment,
-    IOptions<ModuleSeederUIOption> options,
-    IServiceProvider services)
-    : DevelopmentPageAccessPolicy<ModuleSeederUIOption>(environment, options, services);

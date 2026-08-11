@@ -80,6 +80,30 @@ public sealed class HealthCheckPageSessionTests
     }
 
     [Fact]
+    public async Task RefreshAsync_WhenAuthorizationIsRevoked_ShouldPreserveSnapshotAndSkipFacade()
+    {
+        var authorized = true;
+        var facadeCalls = 0;
+        await using var session = CreateSession(
+            (_, _) =>
+            {
+                facadeCalls++;
+                return Task.FromResult(Res.Ok(CreateSnapshot()));
+            },
+            authorize: _ => Task.FromResult(authorized));
+
+        await session.InitializeAsync();
+        var snapshot = session.Snapshot;
+        authorized = false;
+
+        (await session.RefreshAsync()).Should().BeFalse();
+
+        session.IsAccessDenied.Should().BeTrue();
+        session.Snapshot.Should().BeSameAs(snapshot);
+        facadeCalls.Should().Be(1);
+    }
+
+    [Fact]
     public async Task DisposeAsync_ShouldCancelAndAwaitTheTrackedRefresh()
     {
         var facadeEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

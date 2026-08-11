@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -15,7 +14,6 @@ using Monica.UI.Shell.Models;
 using Monica.UI.Localization;
 using Monica.Framework.UI.UIEventBus.State;
 using Monica.Framework.UI.UIEventBus.Support;
-using Monica.UI.UIModuleSystem.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -56,6 +54,8 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleEventBus, ModuleEventBusOption>();
+        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
     }
 
     public override void ConfigureServices(ModuleContext<ModuleEventBusUIOption> context)
@@ -69,9 +69,6 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
 
         // Register the Provider Discovery Service
         services.AddSingleton<EventBusProviderDiscoveryService>();
-
-        // Provider option diagnostics share the same host authorization boundary as the module workbench.
-        services.TryAddScoped<ModuleSystemWorkbenchAccess>();
     }
 
     public override void ConfigureEndpoints(WebModuleContext<ModuleEventBusUIOption> context)

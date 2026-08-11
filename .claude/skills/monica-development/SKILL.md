@@ -174,7 +174,8 @@ public override void DeclareTypeDiscovery(TypeDiscoveryPlan<ModuleExampleOption>
 - Every public, non-indexed option property remains cataloged by clean type name. Auto-property values are bounded; computed, runtime-shaped, or unsafe values remain metadata-only. Mark secrets with `[ModuleOptionDiagnosticsSensitive]` or `ConfigureModuleOptionDiagnostics(...MarkSensitive(...))`.
 - Redacted sensitive content becomes a presence, count, or protected-address representation as appropriate. `ModuleOptionDiagnosticsExposureMode.RevealSensitive` reveals only bounded sensitive scalars, is Development-only, and is intended for dedicated local debugging. It is not cached and never changes the sanitized export boundary.
 - Configure `StartupPerformanceBudgets` only when the host owns a real threshold. Unconfigured budgets produce measurements, not a synthetic health or efficiency score.
-- The Module System UI is Development-only by default. Outside Development, require both `EnableOutsideDevelopment = true` and a non-empty host `AuthorizationPolicy`.
+- Module System, Health Check, Seeder, and protected provider-option diagnostics are available automatically in Development. Outside Development, they inherit `ModuleShellUIOption.OperationalPageAccess.AuthorizationPolicy`; page modules may set `AuthorizationPolicyOverride` when they need a different named policy.
+- `ModuleShellUIOption.OperationalPageAccess.DebugMode` bypasses the shared operational authorization boundary in every environment and takes precedence over global and page-specific policies. Keep it separate from `ModuleShellUIOption.EnableDebug`, which controls detailed Blazor and SignalR errors, and treat the bypass as unsafe for production-reachable hosts unless they are deliberately isolated.
 
 ### Required Feature Configuration
 

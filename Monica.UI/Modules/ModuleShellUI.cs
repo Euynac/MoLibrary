@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -151,6 +152,13 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
         services.AddSingleton<IPageCatalog>(
             static serviceProvider => serviceProvider.GetRequiredService<PageRegistry>());
         services.AddScoped<PageAccessEvaluator>();
+        services.AddScoped<OperationalPageAccessEvaluator>();
+
+        if (Option.OperationalPageAccess.DebugMode)
+        {
+            Logger.LogWarning(
+                "OperationalPageAccess.DebugMode is enabled. Monica operational diagnostics bypass authorization in every environment.");
+        }
 
         // Register for browser storage service
         services.AddScoped<IBrowserStorage, BrowserStorage>();
@@ -270,6 +278,16 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// Keep this disabled for production because detailed errors can expose sensitive information to clients.
     /// </remarks>
     public bool EnableDebug { get; set; } = EnableDebugDefault;
+
+    /// <summary>
+    /// Gets the shared authorization configuration for Monica operational pages and protected diagnostics surfaces.
+    /// </summary>
+    /// <remarks>
+    /// Development is accessible by default. Outside Development, pages use their optional policy override and then
+    /// <see cref="OperationalPageAccessOption.AuthorizationPolicy"/>. Enabling
+    /// <see cref="OperationalPageAccessOption.DebugMode"/> bypasses both policies in every environment.
+    /// </remarks>
+    public OperationalPageAccessOption OperationalPageAccess { get; } = new();
 
     /// <summary>
     /// Enable Markdown support

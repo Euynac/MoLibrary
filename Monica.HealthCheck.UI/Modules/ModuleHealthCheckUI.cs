@@ -1,7 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -44,7 +42,7 @@ public static class ModuleHealthCheckUIBuilderExtensions
                     BuiltInNavigationCategoryIds.Monitor,
                     addToNav: true,
                     navOrder: 10,
-                    accessPolicyType: typeof(HealthCheckPageAccess)));
+                    accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleHealthCheckUIOption>)));
             return registration;
         }
     }
@@ -64,20 +62,9 @@ public sealed class ModuleHealthCheckUI : MonicaModule<ModuleHealthCheckUIOption
     }
 
     /// <inheritdoc />
-    public override void ValidateOptions(ModuleHealthCheckUIOption options, string? profileName)
-    {
-        if (options.EnableOutsideDevelopment && string.IsNullOrWhiteSpace(options.AuthorizationPolicy))
-        {
-            throw new InvalidOperationException(
-                $"{nameof(ModuleHealthCheckUIOption.AuthorizationPolicy)} must name a non-empty host authorization " +
-                $"policy when {nameof(ModuleHealthCheckUIOption.EnableOutsideDevelopment)} is enabled.");
-        }
-    }
-
-    /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleHealthCheckUIOption> context)
     {
-        context.Services.TryAddScoped<HealthCheckPageAccess>();
+        context.Services.TryAddScoped<OperationalPageAccessPolicy<ModuleHealthCheckUIOption>>();
         context.Services.TryAddSingleton<HealthCheckPageSessionFactory>();
     }
 }
@@ -85,26 +72,13 @@ public sealed class ModuleHealthCheckUI : MonicaModule<ModuleHealthCheckUIOption
 /// <summary>
 /// Configures access to the Health Check dashboard.
 /// </summary>
-public sealed class ModuleHealthCheckUIOption : ModuleOptions<ModuleHealthCheckUI>, IDevelopmentPageAccessOptions
+public sealed class ModuleHealthCheckUIOption : ModuleOptions<ModuleHealthCheckUI>, IOperationalPageAccessOptions
 {
     /// <summary>
-    /// Gets or sets whether the dashboard may be exposed outside the Development environment. Defaults to
-    /// <see langword="false"/>. Enabling it also requires a valid named <see cref="AuthorizationPolicy"/> from the host.
+    /// Gets or sets the host authorization policy that overrides the shell-wide operational policy for this page.
+    /// The default is <see langword="null"/>. A missing or blank value inherits
+    /// <see cref="OperationalPageAccessOption.AuthorizationPolicy"/>. Configure an override only when this page needs
+    /// a different policy; Development access and operational Debug mode ignore it.
     /// </summary>
-    public bool EnableOutsideDevelopment { get; set; }
-
-    /// <summary>
-    /// Gets or sets the host authorization policy evaluated for the current Blazor circuit outside Development.
-    /// A missing, empty, or unregistered policy denies access.
-    /// </summary>
-    public string? AuthorizationPolicy { get; set; }
+    public string? AuthorizationPolicyOverride { get; set; }
 }
-
-/// <summary>
-/// Applies the Health Check dashboard's Development-first, policy-gated access contract.
-/// </summary>
-public sealed class HealthCheckPageAccess(
-    IHostEnvironment environment,
-    IOptions<ModuleHealthCheckUIOption> options,
-    IServiceProvider services)
-    : DevelopmentPageAccessPolicy<ModuleHealthCheckUIOption>(environment, options, services);

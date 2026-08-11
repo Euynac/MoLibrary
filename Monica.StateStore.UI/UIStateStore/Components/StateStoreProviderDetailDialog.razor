@@ -4,11 +4,11 @@
 @using Monica.Core.Modularity.Diagnostics.Facades
 @using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Results
+@using Monica.UI.Shell.Support
 @using Monica.UI.UIModuleSystem.Components
-@using Monica.UI.UIModuleSystem.Support
 @implements IDisposable
 @inject IServiceProvider Services
-@inject ModuleSystemWorkbenchAccess WorkbenchAccess
+@inject OperationalPageAccessEvaluator OperationalPageAccess
 @inject IStringLocalizer<StateStoreResource> L
 
 <MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
@@ -225,7 +225,7 @@
         _optionDiagnosticsFailed = false;
         _optionDiagnosticsAccessDenied = false;
 
-        var isAuthorized = await WorkbenchAccess.IsAuthorizedAsync();
+        var isAuthorized = await OperationalPageAccess.IsAuthorizedAsync();
         if (!CanApplyOptionLoad(requestVersion, providerIdentity))
         {
             return;

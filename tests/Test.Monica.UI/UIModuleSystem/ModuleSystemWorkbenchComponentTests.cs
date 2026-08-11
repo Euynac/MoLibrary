@@ -17,10 +17,12 @@ using Monica.Core.Results;
 using Monica.Modules;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
+using Monica.UI.Shell.Support;
 using Monica.UI.UIModuleSystem.Components;
 using Monica.UI.UIModuleSystem.State;
 using Monica.UI.UIModuleSystem.Support;
 using MudBlazor;
+using Test.Monica.UI.Shell.Support;
 using Xunit;
 
 namespace Test.Monica.UI.UIModuleSystem;
@@ -33,9 +35,7 @@ public sealed class ModuleSystemWorkbenchComponentTests
         var facadeCalls = 0;
         await using var context = new ModuleSystemWorkbenchUiTestContext(configureServices: services =>
         {
-            services.AddSingleton<IHostEnvironment>(new TestHostEnvironment(Environments.Production));
-            services.AddSingleton<IOptions<ModuleSystemUIOption>>(Options.Create(new ModuleSystemUIOption()));
-            services.AddSingleton<ModuleSystemWorkbenchAccess>();
+            AddOperationalAccess(services, Environments.Production);
             services.AddSingleton(new ModuleSystemWorkbenchSessionFactory(
                 ModuleSystemWorkbenchTestData.Calls(snapshot: () =>
                 {
@@ -55,9 +55,7 @@ public sealed class ModuleSystemWorkbenchComponentTests
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext(configureServices: services =>
         {
-            services.AddSingleton<IHostEnvironment>(new TestHostEnvironment(Environments.Development));
-            services.AddSingleton<IOptions<ModuleSystemUIOption>>(Options.Create(new ModuleSystemUIOption()));
-            services.AddSingleton<ModuleSystemWorkbenchAccess>();
+            AddOperationalAccess(services, Environments.Development);
             services.AddSingleton(new ModuleSystemWorkbenchSessionFactory(
                 ModuleSystemWorkbenchTestData.Calls()));
         });
@@ -88,9 +86,7 @@ public sealed class ModuleSystemWorkbenchComponentTests
     {
         await using var context = new ModuleSystemWorkbenchUiTestContext(configureServices: services =>
         {
-            services.AddSingleton<IHostEnvironment>(new TestHostEnvironment(Environments.Development));
-            services.AddSingleton<IOptions<ModuleSystemUIOption>>(Options.Create(new ModuleSystemUIOption()));
-            services.AddSingleton<ModuleSystemWorkbenchAccess>();
+            AddOperationalAccess(services, Environments.Development);
             services.AddSingleton(new ModuleSystemWorkbenchSessionFactory(
                 ModuleSystemWorkbenchTestData.Calls()));
         });
@@ -735,6 +731,15 @@ public sealed class ModuleSystemWorkbenchComponentTests
         ParseSvgNumber(cut.Find("section.timeline-waterfall").GetAttribute("data-axis-width"))
             .Should().BeApproximately(12, .001);
         cut.Find("rect.timeline-bar-selected[data-span-id='span-alpha']").Should().NotBeNull();
+    }
+
+    private static void AddOperationalAccess(IServiceCollection services, string environmentName)
+    {
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment(environmentName));
+        services.AddSingleton<IOptions<ModuleShellUIOption>>(Options.Create(new ModuleShellUIOption()));
+        services.AddSingleton<IOptions<ModuleSystemUIOption>>(Options.Create(new ModuleSystemUIOption()));
+        services.AddSingleton<OperationalPageAccessEvaluator>();
+        services.AddSingleton<OperationalPageAccessPolicy<ModuleSystemUIOption>>();
     }
 
     private static double ParseSvgNumber(string? value) =>

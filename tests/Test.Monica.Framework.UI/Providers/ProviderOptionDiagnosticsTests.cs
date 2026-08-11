@@ -25,8 +25,8 @@ using Monica.StateStore.UI.Models;
 using Monica.StateStore.UI.UIStateStore.Components;
 using Monica.Testing.Localization;
 using Monica.UI.Localization;
+using Monica.UI.Shell.Support;
 using Monica.UI.UIModuleSystem.Components;
-using Monica.UI.UIModuleSystem.Support;
 using MudBlazor.Services;
 using Xunit;
 
@@ -145,6 +145,27 @@ public sealed class ProviderOptionDiagnosticsTests
         {
             surface.Markup.Should().Contain("Providers:Detail:Options:AccessDenied");
             surface.Markup.Should().NotContain("Providers:Detail:Options:LoadFailed");
+        });
+    }
+
+    [Fact]
+    public async Task EventBus_provider_dialog_WhenOperationalDebugModeIsEnabled_ShouldBypassProductionPolicy()
+    {
+        var shellOptions = new ModuleShellUIOption();
+        shellOptions.OperationalPageAccess.DebugMode = true;
+        await using var context = CreateContext(Environments.Production, shellOptions);
+        var surface = context.Render<MudBlazor.MudDialogProvider>();
+        _ = context.Render<EventBusProviderDetailDialog>(parameters => parameters
+            .Add(component => component.IsVisible, true)
+            .Add(component => component.Provider, CreateEventBusProvider()));
+        surface.WaitForAssertion(() => FindTab(surface, "Providers:Detail:Tabs:Options").Should().NotBeNull());
+
+        FindTab(surface, "Providers:Detail:Tabs:Options").Click();
+
+        surface.WaitForAssertion(() =>
+        {
+            surface.Markup.Should().Contain("Providers:Detail:Options:LoadFailed");
+            surface.Markup.Should().NotContain("Providers:Detail:Options:AccessDenied");
         });
     }
 
@@ -329,14 +350,15 @@ public sealed class ProviderOptionDiagnosticsTests
 
     private static BunitContext CreateContext(
         string environmentName = "Development",
-        ModuleSystemUIOption? options = null)
+        ModuleShellUIOption? shellOptions = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddMudServices();
         context.Services.AddSingleton<IHostEnvironment>(new ProviderTestHostEnvironment(environmentName));
-        context.Services.AddSingleton<IOptions<ModuleSystemUIOption>>(Options.Create(options ?? new ModuleSystemUIOption()));
-        context.Services.AddScoped<ModuleSystemWorkbenchAccess>();
+        context.Services.AddSingleton<IOptions<ModuleShellUIOption>>(
+            Options.Create(shellOptions ?? new ModuleShellUIOption()));
+        context.Services.AddScoped<OperationalPageAccessEvaluator>();
         context.Services.AddSingleton<IStringLocalizer<EventBusResource>, EchoStringLocalizer<EventBusResource>>();
         context.Services.AddSingleton<IStringLocalizer<StateStoreResource>, EchoStringLocalizer<StateStoreResource>>();
         context.Services.AddSingleton<IStringLocalizer<ModuleSystemResource>, EchoStringLocalizer<ModuleSystemResource>>();
@@ -345,13 +367,9 @@ public sealed class ProviderOptionDiagnosticsTests
 
     private static BunitContext CreateContextWithPolicy(CountingAuthorizationService authorization)
     {
-        var context = CreateContext(
-            Environments.Production,
-            new ModuleSystemUIOption
-            {
-                EnableOutsideDevelopment = true,
-                AuthorizationPolicy = "module-diagnostics"
-            });
+        var shellOptions = new ModuleShellUIOption();
+        shellOptions.OperationalPageAccess.AuthorizationPolicy = "module-diagnostics";
+        var context = CreateContext(Environments.Production, shellOptions);
         context.Services.AddAuthorizationCore(options => options.AddPolicy(
             "module-diagnostics",
             policy => policy.RequireAssertion(_ => true)));

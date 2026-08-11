@@ -1,11 +1,11 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Monica.Modules;
 using Monica.Testing.Localization;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
 using Monica.UI.Shell.Support;
-using Monica.UI.UIModuleSystem.Support;
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -27,7 +27,7 @@ internal sealed class ModuleSystemWorkbenchUiTestContext : BunitContext
         pages.RegisterPage<ModuleSystemPage>(
             ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
             "Module system",
-            accessPolicyType: typeof(ModuleSystemWorkbenchAccess));
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>));
         pages.Seal();
         Services.AddSingleton<IPageCatalog>(pages);
         Services.AddScoped<PageAccessEvaluator>();

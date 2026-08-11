@@ -27,33 +27,22 @@ public sealed class ModuleSeederUITests
     }
 
     [Fact]
-    public void ValidateOptions_WhenExternalAccessHasNoPolicy_ShouldFailClosed()
+    public void Options_WhenNoPagePolicyIsConfigured_ShouldInheritShellPolicy()
     {
-        var module = new ModuleSeederUI();
-        var options = new ModuleSeederUIOption
-        {
-            EnableOutsideDevelopment = true
-        };
+        var options = new ModuleSeederUIOption();
 
-        var act = () => module.ValidateOptions(options, profileName: null);
-
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{nameof(ModuleSeederUIOption.AuthorizationPolicy)}*");
+        options.AuthorizationPolicyOverride.Should().BeNull();
     }
 
     [Fact]
-    public void ValidateOptions_WhenExternalAccessNamesPolicy_ShouldSucceed()
+    public void Options_WhenPagePolicyIsConfigured_ShouldRetainOverride()
     {
-        var module = new ModuleSeederUI();
         var options = new ModuleSeederUIOption
         {
-            EnableOutsideDevelopment = true,
-            AuthorizationPolicy = "SystemDiagnostics"
+            AuthorizationPolicyOverride = "SeederDiagnostics"
         };
 
-        var act = () => module.ValidateOptions(options, profileName: null);
-
-        act.Should().NotThrow();
+        options.AuthorizationPolicyOverride.Should().Be("SeederDiagnostics");
     }
 
     [Fact]
@@ -75,9 +64,12 @@ public sealed class ModuleSeederUITests
         using var firstScope = app.Services.CreateScope();
         using var secondScope = app.Services.CreateScope();
 
-        var firstAccess = firstScope.ServiceProvider.GetRequiredService<SeederPageAccess>();
-        firstScope.ServiceProvider.GetRequiredService<SeederPageAccess>().Should().BeSameAs(firstAccess);
-        secondScope.ServiceProvider.GetRequiredService<SeederPageAccess>().Should().NotBeSameAs(firstAccess);
+        var firstAccess = firstScope.ServiceProvider
+            .GetRequiredService<OperationalPageAccessPolicy<ModuleSeederUIOption>>();
+        firstScope.ServiceProvider.GetRequiredService<OperationalPageAccessPolicy<ModuleSeederUIOption>>()
+            .Should().BeSameAs(firstAccess);
+        secondScope.ServiceProvider.GetRequiredService<OperationalPageAccessPolicy<ModuleSeederUIOption>>()
+            .Should().NotBeSameAs(firstAccess);
 
         var firstFactory = firstScope.ServiceProvider.GetRequiredService<SeederPageSessionFactory>();
         secondScope.ServiceProvider.GetRequiredService<SeederPageSessionFactory>().Should().BeSameAs(firstFactory);
@@ -95,7 +87,7 @@ public sealed class ModuleSeederUITests
         page.ComponentType.Should().Be(typeof(UISeederPage));
         page.DisplayName.ResourceType.Should().Be(typeof(SeederResource));
         page.DisplayName.Key.Should().Be("Navigation:Title");
-        page.AccessPolicyType.Should().Be(typeof(SeederPageAccess));
+        page.AccessPolicyType.Should().Be(typeof(OperationalPageAccessPolicy<ModuleSeederUIOption>));
         navigation.Page.Should().BeSameAs(page);
         navigation.CategoryId.Should().Be(BuiltInNavigationCategoryIds.Monitor);
         navigation.Order.Should().Be(15);
