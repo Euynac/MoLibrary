@@ -17,18 +17,29 @@ public sealed class SeederGraphTests
         {
             DefaultExecutionMode = SeederExecutionMode.Exclusive,
             DefaultCriticality = SeederCriticality.Optional,
-            DefaultMaxAttempts = 4
+            DefaultMaxAttempts = 4,
+            DefaultFailureBehavior = SeederFailureBehavior.FailFast
         };
 
         var graph = SeederGraph.Create([typeof(ZDefaultSeeder), typeof(AExplicitSeeder)], options);
 
         graph.Nodes.Select(static node => node.SeederType).Should().Equal(typeof(AExplicitSeeder), typeof(ZDefaultSeeder));
         graph.Nodes[0].ExecutionMode.Should().Be(SeederExecutionMode.Concurrent);
+        graph.Nodes[0].ExecutionModeSource.Should().Be(SeederPolicySource.SeederOverride);
         graph.Nodes[0].Criticality.Should().Be(SeederCriticality.Required);
+        graph.Nodes[0].CriticalitySource.Should().Be(SeederPolicySource.SeederOverride);
+        graph.Nodes[0].FailureBehavior.Should().Be(SeederFailureBehavior.ContinueAndRecord);
+        graph.Nodes[0].FailureBehaviorSource.Should().Be(SeederPolicySource.SeederOverride);
         graph.Nodes[0].MaxAttempts.Should().Be(2);
+        graph.Nodes[0].MaxAttemptsSource.Should().Be(SeederPolicySource.SeederOverride);
         graph.Nodes[1].ExecutionMode.Should().Be(SeederExecutionMode.Exclusive);
+        graph.Nodes[1].ExecutionModeSource.Should().Be(SeederPolicySource.ModuleDefault);
         graph.Nodes[1].Criticality.Should().Be(SeederCriticality.Optional);
+        graph.Nodes[1].CriticalitySource.Should().Be(SeederPolicySource.ModuleDefault);
+        graph.Nodes[1].FailureBehavior.Should().Be(SeederFailureBehavior.FailFast);
+        graph.Nodes[1].FailureBehaviorSource.Should().Be(SeederPolicySource.ModuleDefault);
         graph.Nodes[1].MaxAttempts.Should().Be(4);
+        graph.Nodes[1].MaxAttemptsSource.Should().Be(SeederPolicySource.ModuleDefault);
     }
 
     [Fact]
@@ -77,9 +88,20 @@ public sealed class SeederGraphTests
         create.Should().Throw<InvalidOperationException>().WithMessage("*cannot depend on optional seeder*");
     }
 
+    [Fact]
+    public void Create_WhenDefaultFailureBehaviorInherits_ShouldRejectOptions()
+    {
+        var options = new ModuleSeederOption { DefaultFailureBehavior = SeederFailureBehavior.Inherit };
+
+        Action create = () => SeederGraph.Create([typeof(ZDefaultSeeder)], options);
+
+        create.Should().Throw<InvalidOperationException>().WithMessage("*DefaultFailureBehavior*");
+    }
+
     [SeederPolicy(
         ExecutionMode = SeederExecutionMode.Concurrent,
         Criticality = SeederCriticality.Required,
+        FailureBehavior = SeederFailureBehavior.ContinueAndRecord,
         MaxAttempts = 2)]
     private sealed class AExplicitSeeder : NoOpSeeder;
 

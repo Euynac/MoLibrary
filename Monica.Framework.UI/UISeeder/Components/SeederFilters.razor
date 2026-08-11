@@ -1,0 +1,56 @@
+@inject IStringLocalizer<SeederResource> L
+
+<section class="seeder-filters" aria-label="@L["Filters:AriaLabel"]">
+    <MudTextField T="string"
+                  Value="@Session.SearchText"
+                  ValueChanged="@Session.SetSearchTextAsync"
+                  Label="@L["Filters:SearchLabel"]"
+                  Placeholder="@L["Filters:SearchPlaceholder"]"
+                  Immediate="true"
+                  Clearable="true"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" />
+
+    <MudSelect T="SeederStatus?"
+               Value="@Session.StatusFilter"
+               ValueChanged="@Session.SetStatusFilterAsync"
+               Label="@L["Filters:StatusLabel"]"
+               Clearable="true">
+        <MudSelectItem T="SeederStatus?" Value="@(null)">@L["Filters:AnyStatus"]</MudSelectItem>
+        @foreach (var status in Enum.GetValues<SeederStatus>())
+        {
+            <MudSelectItem T="SeederStatus?" Value="@status">@L.GetText(status)</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudSelect T="SeederCriticality?"
+               Value="@Session.CriticalityFilter"
+               ValueChanged="@Session.SetCriticalityFilterAsync"
+               Label="@L["Filters:CriticalityLabel"]"
+               Clearable="true">
+        <MudSelectItem T="SeederCriticality?" Value="@(null)">@L["Filters:AnyCriticality"]</MudSelectItem>
+        <MudSelectItem T="SeederCriticality?" Value="@SeederCriticality.Required">@L.GetText(SeederCriticality.Required)</MudSelectItem>
+        <MudSelectItem T="SeederCriticality?" Value="@SeederCriticality.Optional">@L.GetText(SeederCriticality.Optional)</MudSelectItem>
+    </MudSelect>
+
+    <MudSelect T="SeederFailureBehavior?"
+               Value="@Session.FailureBehaviorFilter"
+               ValueChanged="@Session.SetFailureBehaviorFilterAsync"
+               Label="@L["Filters:FailureBehaviorLabel"]"
+               Clearable="true">
+        <MudSelectItem T="SeederFailureBehavior?" Value="@(null)">@L["Filters:AnyFailureBehavior"]</MudSelectItem>
+        <MudSelectItem T="SeederFailureBehavior?" Value="@SeederFailureBehavior.ContinueAndRecord">@L.GetText(SeederFailureBehavior.ContinueAndRecord)</MudSelectItem>
+        <MudSelectItem T="SeederFailureBehavior?" Value="@SeederFailureBehavior.FailFast">@L.GetText(SeederFailureBehavior.FailFast)</MudSelectItem>
+    </MudSelect>
+
+    <div class="seeder-filter-results" aria-live="polite">
+        <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Secondary" Size="Size.Small" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            @L.FormatSeederFilterResults(Session.FilteredSeeders.Count, Session.Snapshot?.Run.TotalCount ?? 0)
+        </MudText>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public SeederPageSession Session { get; set; } = default!;
+}

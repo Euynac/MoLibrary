@@ -1,0 +1,214 @@
+.seeder-detail-focus-boundary,
+.seeder-detail-focus-boundary ::deep .mud-focus-trap,
+.seeder-detail-focus-boundary ::deep .mud-focus-trap-child-container {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+
+.seeder-detail-drawer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--mud-palette-surface);
+}
+
+.seeder-detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.seeder-detail-header > div {
+    min-width: 0;
+}
+
+.seeder-detail-header ::deep .seeder-detail-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.seeder-detail-type {
+    display: block;
+    min-width: 0;
+    margin-top: .25rem;
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-secondary);
+}
+
+.seeder-detail-content {
+    display: grid;
+    align-content: start;
+    gap: 1.25rem;
+    min-width: 0;
+    min-height: 0;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.seeder-detail-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    min-width: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+.seeder-detail-section {
+    display: grid;
+    gap: .65rem;
+    min-width: 0;
+}
+
+.seeder-detail-section-heading,
+.seeder-attempt-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    min-width: 0;
+}
+
+.seeder-detail-facts,
+.seeder-attempt-facts,
+.seeder-detail-error {
+    display: grid;
+    gap: 0;
+    min-width: 0;
+    margin: 0;
+}
+
+.seeder-detail-facts > div,
+.seeder-detail-error > div {
+    display: grid;
+    grid-template-columns: minmax(7rem, .7fr) minmax(0, 1.3fr);
+    gap: .75rem;
+    min-width: 0;
+    padding-block: .55rem;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.seeder-detail-facts dt,
+.seeder-attempt-facts dt,
+.seeder-detail-error dt {
+    color: var(--mud-palette-text-secondary);
+}
+
+.seeder-detail-facts dd,
+.seeder-attempt-facts dd,
+.seeder-detail-error dd {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    min-width: 0;
+    margin: 0;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+}
+
+.seeder-dependency-list,
+.seeder-attempt-list {
+    display: grid;
+    gap: .5rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.seeder-dependency-list li {
+    display: grid;
+    gap: .35rem;
+    min-width: 0;
+    padding: .6rem .75rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 6px;
+    background: var(--mud-palette-background);
+}
+
+.seeder-dependency-list code {
+    overflow-wrap: anywhere;
+}
+
+.seeder-dependency-evidence {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    min-width: 0;
+}
+
+.seeder-dependency-evidence code {
+    min-width: 0;
+}
+
+.seeder-dependency-diagnostic {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+    overflow-wrap: anywhere;
+}
+
+.seeder-attempt-list {
+    counter-reset: seeder-attempt;
+}
+
+.seeder-attempt-list > li {
+    display: grid;
+    gap: .55rem;
+    min-width: 0;
+    padding: .75rem 0 .75rem 1rem;
+    border-inline-start: 2px solid var(--mud-palette-lines-inputs);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.seeder-attempt-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .5rem;
+}
+
+.seeder-attempt-facts > div {
+    display: grid;
+    gap: .15rem;
+    min-width: 0;
+}
+
+.seeder-attempt-error {
+    display: grid;
+    gap: .25rem;
+    min-width: 0;
+    padding: .65rem;
+    border-radius: 6px;
+    background: var(--mud-palette-error-hover);
+    color: var(--mud-palette-error);
+    overflow-wrap: anywhere;
+}
+
+.seeder-detail-error code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+    .seeder-detail-status,
+    .seeder-detail-section-heading,
+    .seeder-attempt-heading,
+    .seeder-dependency-evidence {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .seeder-detail-facts > div,
+    .seeder-detail-error > div,
+    .seeder-attempt-facts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

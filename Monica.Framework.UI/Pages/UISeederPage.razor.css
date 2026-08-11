@@ -1,0 +1,111 @@
+.seeder-page {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+
+.seeder-page ::deep .seeder-drawer-container {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    padding: clamp(.75rem, 2vw, 2rem);
+    background: var(--mud-palette-background);
+}
+
+/* MudBlazor's closed fixed drawer transform must not expand the page scroll width. */
+.seeder-page ::deep .mud-drawer.mud-drawer-pos-right.mud-drawer--closed {
+    display: none;
+}
+
+.seeder-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 1rem;
+}
+
+.seeder-page-heading {
+    min-width: 0;
+    max-width: 58rem;
+}
+
+.seeder-page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .75rem;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.seeder-page-content {
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.seeder-page-state {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 2rem;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: .75rem;
+    text-align: center;
+}
+
+.seeder-page ::deep .seeder-page-refresh-alert,
+.seeder-page ::deep .seeder-page-refresh-alert .mud-alert-message {
+    min-width: 0;
+}
+
+.seeder-page ::deep .seeder-page-refresh-alert .mud-alert-message,
+.seeder-page ::deep .seeder-page-error {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .seeder-page ::deep .mud-progress-circular.mud-progress-indeterminate,
+    .seeder-page ::deep .mud-progress-circular-indeterminate-child,
+    .seeder-page ::deep .mud-progress-circular-circle.mud-progress-indeterminate {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .seeder-page ::deep .mud-drawer.mud-drawer-temporary,
+    .seeder-page ::deep .mud-overlay,
+    .seeder-page ::deep .mud-overlay-scrim {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+@media (max-width: 700px) {
+    .seeder-page ::deep .seeder-drawer-container {
+        padding: .75rem;
+    }
+
+    .seeder-page-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .seeder-page-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

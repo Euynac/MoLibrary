@@ -12,30 +12,41 @@ internal sealed class SeederHealthCheck(ISeederState seederState) : IHealthCheck
     {
         cancellationToken.ThrowIfCancellationRequested();
         var snapshot = seederState.GetSnapshot();
-        var requiredUnsuccessful = snapshot.Seeders.Count(static seeder =>
-            seeder.Criticality == SeederCriticality.Required && seeder.Status != SeederStatus.Succeeded);
-        var optionalUnsuccessful = snapshot.Seeders.Count(static seeder =>
-            seeder.Criticality == SeederCriticality.Optional &&
-            seeder.Status is SeederStatus.Failed or SeederStatus.Blocked or SeederStatus.Cancelled);
         var data = new Dictionary<string, object>
         {
             ["total"] = snapshot.Seeders.Length,
-            ["requiredUnsuccessful"] = requiredUnsuccessful,
-            ["optionalUnsuccessful"] = optionalUnsuccessful,
-            ["completed"] = snapshot.IsCompleted
+            ["requiredUnsuccessful"] = snapshot.RequiredUnsuccessfulCount,
+            ["optionalUnsuccessful"] = snapshot.OptionalUnsuccessfulCount,
+            ["completed"] = snapshot.IsCompleted,
+            ["runStatus"] = snapshot.Status.ToString(),
+            ["readinessStatus"] = snapshot.ReadinessStatus.ToString()
         };
 
-        if (requiredUnsuccessful > 0)
+        if (snapshot.FailFastTriggerSeederTypeName is not null)
+        {
+            data["failFastTrigger"] = snapshot.FailFastTriggerSeederTypeName;
+        }
+
+        if (snapshot.Status is SeederRunStatus.Aborting or SeederRunStatus.Aborted)
         {
             return Task.FromResult(HealthCheckResult.Unhealthy(
-                $"{requiredUnsuccessful} required seeders are pending, running, failed, blocked, or cancelled.",
+                snapshot.Status == SeederRunStatus.Aborting
+                    ? "Seeder execution is aborting after a fail-fast failure."
+                    : $"Seeder execution was aborted by '{snapshot.FailFastTriggerSeederTypeName}'.",
                 data: data));
         }
 
-        if (optionalUnsuccessful > 0)
+        if (snapshot.ReadinessStatus == SeederReadinessStatus.Unhealthy)
+        {
+            return Task.FromResult(HealthCheckResult.Unhealthy(
+                $"{snapshot.RequiredUnsuccessfulCount} required seeders are pending, running, failed, blocked, or cancelled.",
+                data: data));
+        }
+
+        if (snapshot.ReadinessStatus == SeederReadinessStatus.Degraded)
         {
             return Task.FromResult(HealthCheckResult.Degraded(
-                $"{optionalUnsuccessful} optional seeders failed, were blocked, or were cancelled.",
+                $"{snapshot.OptionalUnsuccessfulCount} optional seeders failed, were blocked, or were cancelled.",
                 data: data));
         }
 

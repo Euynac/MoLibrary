@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Execution;
 using Monica.Framework.Seeder.Abstractions;
@@ -8,6 +9,8 @@ using Monica.Framework.Seeder.Models;
 using Monica.Framework.Seeder.Models.Internal;
 using Monica.Framework.Seeder.Services.Support;
 using Monica.Modules;
+using Monica.Testing.Hosting;
+using Monica.Tool.Extensions;
 using Xunit;
 
 namespace Test.Monica.Framework.Seeder;
@@ -89,6 +92,13 @@ public sealed class SeederSchedulerTests
         retryDelay.DelayCount.Should().Be(2);
         harness.State.GetSnapshot().Seeders.Should().ContainSingle().Which.Should().Match<SeederExecutionSnapshot>(
             static seeder => seeder.Status == SeederStatus.Succeeded && seeder.Attempts == 3);
+        var history = harness.State.GetSnapshot().Seeders.Single().AttemptHistory;
+        history.Select(static attempt => attempt.Status).Should().Equal(
+            SeederAttemptStatus.Failed,
+            SeederAttemptStatus.Failed,
+            SeederAttemptStatus.Succeeded);
+        harness.Logger.Entries.Count(static entry => entry.Level == LogLevel.Warning).Should().Be(2);
+        harness.Logger.Entries.Should().NotContain(static entry => entry.Level == LogLevel.Error);
     }
 
     [Fact]
@@ -107,6 +117,182 @@ public sealed class SeederSchedulerTests
         GetStatus<FailingRootSeeder>(snapshot).Should().Be(SeederStatus.Failed);
         GetStatus<BlockedDependentSeeder>(snapshot).Should().Be(SeederStatus.Blocked);
         GetStatus<IndependentSeeder>(snapshot).Should().Be(SeederStatus.Succeeded);
+        snapshot.Status.Should().Be(SeederRunStatus.CompletedWithFailures);
+        harness.Logger.Entries.Count(static entry => entry.Level == LogLevel.Error).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenOptionalFailFastSeederExhaustsRetries_ShouldAbortAndKeepHostTokenActive()
+    {
+        var retryDelay = new ImmediateRetryDelay();
+        await using var harness = CreateHarness(
+            [typeof(FailFastARootSeeder), typeof(FailFastBDependentSeeder), typeof(FailFastZIndependentSeeder)],
+            new ModuleSeederOption { MaxConcurrency = 1 },
+            retryDelay: retryDelay);
+        using var hostCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            TestContext.Current.CancellationToken);
+
+        await harness.Scheduler.RunAsync(hostCancellation.Token);
+
+        hostCancellation.IsCancellationRequested.Should().BeFalse();
+        retryDelay.DelayCount.Should().Be(1);
+        var snapshot = harness.State.GetSnapshot();
+        snapshot.Status.Should().Be(SeederRunStatus.Aborted);
+        snapshot.FailFastTriggerSeederTypeName.Should().Be(typeof(FailFastARootSeeder).GetCleanFullName());
+        GetStatus<FailFastARootSeeder>(snapshot).Should().Be(SeederStatus.Failed);
+        GetStatus<FailFastBDependentSeeder>(snapshot).Should().Be(SeederStatus.Blocked);
+        GetStatus<FailFastZIndependentSeeder>(snapshot).Should().Be(SeederStatus.Cancelled);
+        snapshot.Seeders.Single(seeder =>
+            seeder.SeederTypeName == typeof(FailFastARootSeeder).GetCleanFullName())
+            .AttemptHistory.Select(static attempt => attempt.Status)
+            .Should().Equal(SeederAttemptStatus.Failed, SeederAttemptStatus.Failed);
+        harness.Logger.Entries.Count(static entry => entry.Level == LogLevel.Warning).Should().Be(1);
+        harness.Logger.Entries.Count(static entry => entry.Level == LogLevel.Error).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenFailFastCancelsInFlightSeeder_ShouldExposeAbortingUntilItDrains()
+    {
+        var gate = new FailFastDrainGate();
+        await using var harness = CreateHarness(
+            [
+                typeof(AbortATriggerSeeder),
+                typeof(AbortBDrainingSeeder),
+                typeof(AbortCQuickCancellingSeeder),
+                typeof(AbortDDependentSeeder)
+            ],
+            new ModuleSeederOption { MaxConcurrency = 3 },
+            services => services.AddSingleton(gate));
+
+        var run = harness.Scheduler.RunAsync(TestContext.Current.CancellationToken);
+        await gate.CancellationObserved.WaitAsync(TestContext.Current.CancellationToken);
+
+        run.IsCompleted.Should().BeFalse();
+        var aborting = harness.State.GetSnapshot();
+        aborting.Status.Should().Be(SeederRunStatus.Aborting);
+        aborting.FailFastTriggerSeederTypeName.Should().Be(typeof(AbortATriggerSeeder).GetCleanFullName());
+        var triggerWhileDraining = aborting.Seeders.Single(seeder =>
+            seeder.SeederTypeName == typeof(AbortATriggerSeeder).GetCleanFullName());
+        triggerWhileDraining.Status.Should().Be(SeederStatus.Failed);
+        triggerWhileDraining.CompletedAtUtc.Should().NotBeNull();
+        GetStatus<AbortDDependentSeeder>(aborting).Should().Be(SeederStatus.Blocked);
+        await WaitFor.UntilAsync(
+            _ => Task.FromResult(
+                GetStatus<AbortCQuickCancellingSeeder>(harness.State.GetSnapshot()) == SeederStatus.Cancelled),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var quickWhileDraining = harness.State.GetSnapshot().Seeders.Single(seeder =>
+            seeder.SeederTypeName == typeof(AbortCQuickCancellingSeeder).GetCleanFullName());
+        quickWhileDraining.CompletedAtUtc.Should().NotBeNull();
+
+        gate.AllowDrain();
+        await run;
+        var aborted = harness.State.GetSnapshot();
+        aborted.Status.Should().Be(SeederRunStatus.Aborted);
+        GetStatus<AbortBDrainingSeeder>(aborted).Should().Be(SeederStatus.Cancelled);
+        aborted.Seeders.Single(seeder =>
+                seeder.SeederTypeName == typeof(AbortATriggerSeeder).GetCleanFullName())
+            .Duration.Should().Be(triggerWhileDraining.Duration);
+        aborted.Seeders.Single(seeder =>
+                seeder.SeederTypeName == typeof(AbortCQuickCancellingSeeder).GetCleanFullName())
+            .Duration.Should().Be(quickWhileDraining.Duration);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenFailFastFailuresCompleteTogether_ShouldChooseLowestFullTypeName()
+    {
+        var gate = new SynchronousCompletionFailureGate(requiredParticipants: 2);
+        await using var harness = CreateHarness(
+            [typeof(SimultaneousBFailureSeeder), typeof(SimultaneousAFailureSeeder)],
+            new ModuleSeederOption { MaxConcurrency = 2 },
+            services => services.AddSingleton(gate));
+
+        await harness.Scheduler.RunAsync(TestContext.Current.CancellationToken);
+
+        var snapshot = harness.State.GetSnapshot();
+        snapshot.FailFastTriggerSeederTypeName.Should().Be(typeof(SimultaneousAFailureSeeder).GetCleanFullName());
+        snapshot.FailedCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenFailFastSeederFailsSynchronously_ShouldNotStartLaterReadySeeders()
+    {
+        var recorder = new ExecutionRecorder();
+        await using var harness = CreateHarness(
+            [typeof(SynchronousFailFastASeeder), typeof(SynchronousFailFastBSeeder)],
+            new ModuleSeederOption { MaxConcurrency = 2 },
+            services => services.AddSingleton(recorder));
+
+        await harness.Scheduler.RunAsync(TestContext.Current.CancellationToken);
+
+        harness.State.GetSnapshot().Status.Should().Be(SeederRunStatus.Aborted);
+        recorder.Events.Should().BeEmpty();
+        GetStatus<SynchronousFailFastBSeeder>(harness.State.GetSnapshot()).Should().Be(SeederStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenCancellationCallbackThrows_ShouldStillDrainAndPublishAbortedState()
+    {
+        var gate = new ThrowingCancellationGate();
+        await using var harness = CreateHarness(
+            [typeof(ThrowingCancellationATriggerSeeder), typeof(ThrowingCancellationBDrainingSeeder)],
+            new ModuleSeederOption { MaxConcurrency = 2 },
+            services => services.AddSingleton(gate));
+
+        await harness.Scheduler.RunAsync(TestContext.Current.CancellationToken);
+
+        harness.State.GetSnapshot().Status.Should().Be(SeederRunStatus.Aborted);
+        harness.Logger.Entries.Should().ContainSingle(entry =>
+            entry.Level == LogLevel.Warning &&
+            entry.Message.Contains("error while signalling cancellation", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenUnrequestedCancellationFails_ShouldRetainTheActualException()
+    {
+        await using var harness = CreateHarness(
+            [typeof(DiagnosticCancellationSeeder)],
+            new ModuleSeederOption());
+
+        await harness.Scheduler.RunAsync(TestContext.Current.CancellationToken);
+
+        var seeder = harness.State.GetSnapshot().Seeders.Should().ContainSingle().Which;
+        seeder.Status.Should().Be(SeederStatus.Failed);
+        seeder.ErrorType.Should().Be(typeof(DiagnosticCancellationException).GetCleanFullName());
+        seeder.ErrorMessage.Should().Contain("outer cancellation").And.Contain("inner reason");
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenSeederFailsTerminally_ShouldLogStructuredMetadataOnce()
+    {
+        await using var harness = CreateHarness(
+            [typeof(FailingRootSeeder)],
+            new ModuleSeederOption());
+
+        await harness.Scheduler.RunAsync(TestContext.Current.CancellationToken);
+
+        var error = harness.Logger.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Error).Which;
+        error.Exception.Should().BeOfType<InvalidOperationException>();
+        error.Properties["SeederTypeName"].Should().Be(typeof(FailingRootSeeder).GetCleanFullName());
+        error.Properties["Attempt"].Should().Be(1);
+        error.Properties["MaxAttempts"].Should().Be(1);
+        error.Properties["FailureBehavior"].Should().Be(SeederFailureBehavior.ContinueAndRecord);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenLowerNamedSeederFailsDuringAbortDrain_ShouldKeepInitialTrigger()
+    {
+        var gate = new TriggerSelectionGate();
+        await using var harness = CreateHarness(
+            [typeof(TriggerSelectionALateFailureSeeder), typeof(TriggerSelectionBInitialFailureSeeder)],
+            new ModuleSeederOption { MaxConcurrency = 2 },
+            services => services.AddSingleton(gate));
+
+        await harness.Scheduler.RunAsync(TestContext.Current.CancellationToken);
+
+        var snapshot = harness.State.GetSnapshot();
+        snapshot.FailFastTriggerSeederTypeName.Should().Be(
+            typeof(TriggerSelectionBInitialFailureSeeder).GetCleanFullName());
+        snapshot.FailedCount.Should().Be(2);
     }
 
     [Fact]
@@ -131,7 +317,7 @@ public sealed class SeederSchedulerTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenSeederReturnsCancellation_ShouldNotRetryIt()
+    public async Task RunAsync_WhenSeederThrowsUnrequestedCancellation_ShouldTreatItAsFailure()
     {
         var attempts = new CancellationAttemptRecorder();
         var retryDelay = new ImmediateRetryDelay();
@@ -143,14 +329,14 @@ public sealed class SeederSchedulerTests
 
         await harness.Scheduler.RunAsync(TestContext.Current.CancellationToken);
 
-        attempts.Count.Should().Be(1);
-        retryDelay.DelayCount.Should().Be(0);
-        GetStatus<SelfCancellingSeeder>(harness.State.GetSnapshot()).Should().Be(SeederStatus.Cancelled);
+        attempts.Count.Should().Be(3);
+        retryDelay.DelayCount.Should().Be(2);
+        GetStatus<SelfCancellingSeeder>(harness.State.GetSnapshot()).Should().Be(SeederStatus.Failed);
     }
 
     private static SeederStatus GetStatus<TSeeder>(SeederStateSnapshot snapshot)
     {
-        return snapshot.Seeders.Single(seeder => seeder.SeederTypeName == typeof(TSeeder).FullName).Status;
+        return snapshot.Seeders.Single(seeder => seeder.SeederTypeName == typeof(TSeeder).GetCleanFullName()).Status;
     }
 
     private static SchedulerHarness CreateHarness(
@@ -161,6 +347,7 @@ public sealed class SeederSchedulerTests
     {
         var graph = SeederGraph.Create(seederTypes, options);
         var services = new ServiceCollection();
+        var logger = new RecordingLogger<SeederScheduler>();
         services.AddLogging();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(graph);
@@ -168,6 +355,7 @@ public sealed class SeederSchedulerTests
         services.AddSingleton<IOptions<ModuleSeederOption>>(Options.Create(options));
         services.AddSingleton<ISeederRetryDelay>(retryDelay ?? new ImmediateRetryDelay());
         services.AddSingleton<SeederScheduler>();
+        services.AddSingleton<ILogger<SeederScheduler>>(logger);
         services.AddScoped<IExecutionPipeline, PassThroughExecutionPipeline>();
         foreach (var seederType in seederTypes)
         {
@@ -175,13 +363,16 @@ public sealed class SeederSchedulerTests
         }
 
         configure?.Invoke(services);
-        return new SchedulerHarness(services.BuildServiceProvider(validateScopes: true));
+        return new SchedulerHarness(services.BuildServiceProvider(validateScopes: true), logger);
     }
 
-    private sealed class SchedulerHarness(ServiceProvider services) : IAsyncDisposable
+    private sealed class SchedulerHarness(
+        ServiceProvider services,
+        RecordingLogger<SeederScheduler> logger) : IAsyncDisposable
     {
         public SeederScheduler Scheduler { get; } = services.GetRequiredService<SeederScheduler>();
         public SeederState State { get; } = services.GetRequiredService<SeederState>();
+        public RecordingLogger<SeederScheduler> Logger { get; } = logger;
 
         public ValueTask DisposeAsync() => services.DisposeAsync();
     }
@@ -469,6 +660,270 @@ public sealed class SeederSchedulerTests
         {
             attempts.Record();
             return Task.FromCanceled(new CancellationToken(canceled: true));
+        }
+    }
+
+    [SeederPolicy(
+        Criticality = SeederCriticality.Optional,
+        FailureBehavior = SeederFailureBehavior.FailFast,
+        MaxAttempts = 2)]
+    private sealed class FailFastARootSeeder : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) =>
+            Task.FromException(new InvalidOperationException("Expected fail-fast failure."));
+    }
+
+    [SeederPolicy(Criticality = SeederCriticality.Optional)]
+    [SeederDependsOn<FailFastARootSeeder>]
+    private sealed class FailFastBDependentSeeder : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class FailFastZIndependentSeeder : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class FailFastDrainGate
+    {
+        private readonly TaskCompletionSource _drainersStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _cancellationObserved =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _allowDrain =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _drainers;
+
+        public Task CancellationObserved => _cancellationObserved.Task;
+
+        public async Task FailAsync()
+        {
+            await _drainersStarted.Task;
+            throw new InvalidOperationException("Expected fail-fast failure.");
+        }
+
+        public async Task DrainAsync(CancellationToken cancellationToken)
+        {
+            RegisterDrainer();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _cancellationObserved.TrySetResult();
+                await _allowDrain.Task;
+                throw;
+            }
+        }
+
+        public async Task CancelQuicklyAsync(CancellationToken cancellationToken)
+        {
+            RegisterDrainer();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        }
+
+        public void AllowDrain() => _allowDrain.TrySetResult();
+
+        private void RegisterDrainer()
+        {
+            if (Interlocked.Increment(ref _drainers) == 2)
+            {
+                _drainersStarted.TrySetResult();
+            }
+        }
+    }
+
+    [SeederPolicy(FailureBehavior = SeederFailureBehavior.FailFast)]
+    private sealed class AbortATriggerSeeder(FailFastDrainGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.FailAsync();
+    }
+
+    private sealed class AbortBDrainingSeeder(FailFastDrainGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.DrainAsync(cancellationToken);
+    }
+
+    private sealed class AbortCQuickCancellingSeeder(FailFastDrainGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.CancelQuicklyAsync(cancellationToken);
+    }
+
+    [SeederDependsOn<AbortATriggerSeeder>]
+    private sealed class AbortDDependentSeeder : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class SynchronousCompletionFailureGate(int requiredParticipants)
+    {
+        // Continuations intentionally execute inline. The second participant completes both seeder tasks before
+        // control returns to the scheduler, creating a deterministic concurrent completion cohort.
+        private readonly TaskCompletionSource _failure = new();
+        private int _participants;
+
+        public Task FailAsync()
+        {
+            if (Interlocked.Increment(ref _participants) == requiredParticipants)
+            {
+                _failure.SetException(new InvalidOperationException("Expected simultaneous failure."));
+            }
+
+            return _failure.Task;
+        }
+    }
+
+    [SeederPolicy(FailureBehavior = SeederFailureBehavior.FailFast)]
+    private sealed class SimultaneousAFailureSeeder(SynchronousCompletionFailureGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.FailAsync();
+    }
+
+    [SeederPolicy(FailureBehavior = SeederFailureBehavior.FailFast)]
+    private sealed class SimultaneousBFailureSeeder(SynchronousCompletionFailureGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.FailAsync();
+    }
+
+    [SeederPolicy(FailureBehavior = SeederFailureBehavior.FailFast)]
+    private sealed class SynchronousFailFastASeeder : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) =>
+            Task.FromException(new InvalidOperationException("Expected fail-fast failure."));
+    }
+
+    private sealed class SynchronousFailFastBSeeder(ExecutionRecorder recorder) : RecordingSeeder(recorder, "started");
+
+    private sealed class ThrowingCancellationGate
+    {
+        private readonly TaskCompletionSource _registered =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task FailAfterRegistrationAsync()
+        {
+            await _registered.Task;
+            throw new InvalidOperationException("Expected fail-fast failure.");
+        }
+
+        public async Task WaitForCancellationAsync(CancellationToken cancellationToken)
+        {
+            using var registration = cancellationToken.Register(static () =>
+                throw new InvalidOperationException("Expected cancellation callback failure."));
+            _registered.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        }
+    }
+
+    [SeederPolicy(FailureBehavior = SeederFailureBehavior.FailFast)]
+    private sealed class ThrowingCancellationATriggerSeeder(ThrowingCancellationGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.FailAfterRegistrationAsync();
+    }
+
+    private sealed class ThrowingCancellationBDrainingSeeder(ThrowingCancellationGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.WaitForCancellationAsync(cancellationToken);
+    }
+
+    private sealed class DiagnosticCancellationSeeder : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => Task.FromException(
+            new DiagnosticCancellationException(
+                "outer cancellation",
+                new InvalidOperationException("inner reason")));
+    }
+
+    private sealed class DiagnosticCancellationException(string message, Exception innerException)
+        : OperationCanceledException(message, innerException);
+
+    private sealed class TriggerSelectionGate
+    {
+        private readonly TaskCompletionSource _lateSeederStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task FailAfterCancellationAsync(CancellationToken cancellationToken)
+        {
+            _lateSeederStarted.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new InvalidOperationException("Late failure during abort drain.", exception);
+            }
+        }
+
+        public async Task FailInitiallyAsync()
+        {
+            await _lateSeederStarted.Task;
+            throw new InvalidOperationException("Initial fail-fast failure.");
+        }
+    }
+
+    [SeederPolicy(FailureBehavior = SeederFailureBehavior.FailFast)]
+    private sealed class TriggerSelectionALateFailureSeeder(TriggerSelectionGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.FailAfterCancellationAsync(cancellationToken);
+    }
+
+    [SeederPolicy(FailureBehavior = SeederFailureBehavior.FailFast)]
+    private sealed class TriggerSelectionBInitialFailureSeeder(TriggerSelectionGate gate) : ISeeder
+    {
+        public Task SeedAsync(CancellationToken cancellationToken) => gate.FailInitiallyAsync();
+    }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        private readonly object _sync = new();
+        private readonly List<LogEntry> _entries = [];
+
+        public IReadOnlyList<LogEntry> Entries
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return _entries.ToArray();
+                }
+            }
+        }
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => RecordingScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var properties = state is IEnumerable<KeyValuePair<string, object?>> values
+                ? values.ToDictionary(static pair => pair.Key, static pair => pair.Value, StringComparer.Ordinal)
+                : new Dictionary<string, object?>(StringComparer.Ordinal);
+            lock (_sync)
+            {
+                _entries.Add(new LogEntry(logLevel, formatter(state, exception), exception, properties));
+            }
+        }
+    }
+
+    private sealed record LogEntry(
+        LogLevel Level,
+        string Message,
+        Exception? Exception,
+        IReadOnlyDictionary<string, object?> Properties);
+
+    private sealed class RecordingScope : IDisposable
+    {
+        public static RecordingScope Instance { get; } = new();
+
+        public void Dispose()
+        {
         }
     }
 }

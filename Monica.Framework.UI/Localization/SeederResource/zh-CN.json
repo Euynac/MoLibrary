@@ -1,0 +1,189 @@
+{
+  "Navigation": {
+    "Title": "数据播种"
+  },
+  "Page": {
+    "Title": "Seeder 运行监控",
+    "Eyebrow": "应用初始化",
+    "Heading": "Seeder 运行监控",
+    "Subtitle": "查看当前主机的初始化依赖图、有效策略、执行尝试与失败证据。",
+    "CurrentHost": "主机 · {0}"
+  },
+  "Access": {
+    "Checking": "正在检查仪表板访问权限…",
+    "DeniedTitle": "Seeder 诊断信息受保护",
+    "DeniedDescription": "此仪表板默认仅在开发环境开放；在其他环境中，主机还必须显式启用并且当前身份满足指定授权策略。"
+  },
+  "Actions": {
+    "Refresh": "刷新",
+    "Retry": "重试",
+    "Close": "关闭",
+    "Details": "查看详情",
+    "DetailsFor": "查看 {0}"
+  },
+  "State": {
+    "Loading": "正在加载 Seeder 诊断信息",
+    "LoadingDescription": "正在读取当前主机的有效配置和运行记录。",
+    "LoadFailed": "无法加载 Seeder 诊断信息",
+    "RefreshFailed": "最新一次刷新失败：{0}。界面继续显示上一次快照。"
+  },
+  "Overview": {
+    "RunLabel": "当前运行",
+    "ProgressSummary": {
+      "Singular": "{1} 个 Seeder 中已有 {0} 个进入终态",
+      "Plural": "{1} 个 Seeder 中已有 {0} 个进入终态"
+    },
+    "Duration": "耗时 · {0}",
+    "CapturedAt": "采集于 · {0}",
+    "FailFastTrigger": "触发快速失败的 Seeder：{0}",
+    "Readiness": "就绪状态 · {0}"
+  },
+  "Configuration": {
+    "Eyebrow": "有效默认值",
+    "Title": "运行时配置",
+    "Subtitle": "Seeder 上的注解可以覆盖继承值。",
+    "MaxConcurrency": "最大并发数",
+    "ExecutionMode": "执行模式",
+    "Criticality": "关键性",
+    "MaxAttempts": "最大尝试次数",
+    "RetryBaseDelay": "初始重试延迟",
+    "RetryMaxDelay": "最大重试延迟",
+    "FailureBehavior": "失败策略"
+  },
+  "Filters": {
+    "AriaLabel": "Seeder 筛选条件",
+    "SearchLabel": "搜索",
+    "SearchPlaceholder": "名称、依赖项或诊断信息",
+    "StatusLabel": "状态",
+    "AnyStatus": "全部状态",
+    "CriticalityLabel": "关键性",
+    "AnyCriticality": "全部关键性",
+    "FailureBehaviorLabel": "失败策略",
+    "AnyFailureBehavior": "全部策略",
+    "Results": {
+      "Singular": "正在显示 {1} 个 Seeder 中的 {0} 个",
+      "Plural": "正在显示 {1} 个 Seeder 中的 {0} 个"
+    }
+  },
+  "Table": {
+    "Eyebrow": "执行记录",
+    "Title": "已发现的 Seeder",
+    "Subtitle": "当前进程中解析后的策略、依赖证据、执行尝试和耗时。",
+    "Columns": {
+      "Name": "Seeder",
+      "Status": "状态",
+      "Criticality": "关键性",
+      "ExecutionMode": "执行方式",
+      "FailureBehavior": "失败时",
+      "Attempts": "尝试次数",
+      "Duration": "耗时",
+      "Dependencies": "依赖项",
+      "Actions": "详情"
+    },
+    "AttemptsValue": "{0} / {1}",
+    "DependencyCount": {
+      "Singular": "{0} 个依赖项",
+      "Plural": "{0} 个依赖项"
+    },
+    "Empty": "没有 Seeder 符合当前筛选条件",
+    "EmptyDescription": "请调整搜索或策略筛选条件，以查看执行记录的其他部分。",
+    "NoSeeders": "未发现任何 Seeder",
+    "NoSeedersDescription": "当前主机的类型发现范围没有生成 Seeder 依赖图。"
+  },
+  "Details": {
+    "Eyebrow": "SEEDER 证据",
+    "AttemptsSummary": {
+      "Singular": "已开始 {0} / {1} 次尝试",
+      "Plural": "已开始 {0} / {1} 次尝试"
+    },
+    "Policy": {
+      "Title": "有效策略",
+      "ExecutionMode": "执行模式",
+      "Criticality": "关键性",
+      "FailureBehavior": "失败策略",
+      "MaxAttempts": "最大尝试次数"
+    },
+    "Timing": {
+      "Title": "时间信息",
+      "StartedAt": "开始时间",
+      "CompletedAt": "完成时间",
+      "Duration": "耗时"
+    },
+    "Dependencies": {
+      "Title": "直接依赖项",
+      "None": "此 Seeder 没有直接依赖项。"
+    },
+    "Attempts": {
+      "Title": "尝试时间线",
+      "Count": {
+        "Singular": "已记录 {0} 次",
+        "Plural": "已记录 {0} 次"
+      },
+      "None": "尚未开始执行尝试。",
+      "Number": "第 {0} 次尝试"
+    },
+    "Error": {
+      "Title": "最终诊断信息",
+      "Type": "类型",
+      "Message": "消息",
+      "LogsHint": "此处仅显示长度受限的诊断摘要；完整异常证据请查看结构化日志。"
+    }
+  },
+  "RunStatus": {
+    "Waiting": "正在等待主机启动",
+    "Running": "正在执行 Seeder 依赖图",
+    "Aborting": "正在取消并等待任务退出",
+    "Succeeded": "Seeder 运行成功",
+    "CompletedWithFailures": "已完成，但存在失败",
+    "Aborted": "Seeder 运行已中止",
+    "Cancelled": "Seeder 运行已取消"
+  },
+  "ReadinessStatus": {
+    "Healthy": "已就绪",
+    "Degraded": "已降级",
+    "Unhealthy": "未就绪"
+  },
+  "SeederStatus": {
+    "Pending": "等待中",
+    "Running": "运行中",
+    "Succeeded": "成功",
+    "Failed": "失败",
+    "Blocked": "被阻止",
+    "Cancelled": "已取消"
+  },
+  "AttemptStatus": {
+    "Running": "运行中",
+    "Succeeded": "成功",
+    "Failed": "失败",
+    "Cancelled": "已取消"
+  },
+  "ExecutionMode": {
+    "Inherit": "继承",
+    "Concurrent": "并发",
+    "Exclusive": "独占"
+  },
+  "Criticality": {
+    "Inherit": "继承",
+    "Required": "必要",
+    "Optional": "可选"
+  },
+  "FailureBehavior": {
+    "Inherit": "继承",
+    "ContinueAndRecord": "继续并记录",
+    "FailFast": "快速失败"
+  },
+  "PolicySource": {
+    "ModuleDefault": "模块默认值",
+    "SeederOverride": "Seeder 覆盖值"
+  },
+  "Common": {
+    "Unknown": "未知",
+    "NotAvailable": "暂无",
+    "None": "无",
+    "UtcTimestamp": "{0} UTC",
+    "DurationMilliseconds": "{0:0} 毫秒",
+    "DurationSeconds": "{0:0.0} 秒",
+    "DurationMinutesSeconds": "{0} 分 {1} 秒",
+    "DurationHoursMinutes": "{0} 小时 {1} 分"
+  }
+}

@@ -1,0 +1,168 @@
+@attribute [Route(PAGE_URL)]
+@implements IAsyncDisposable
+@inject SeederPageSessionFactory SessionFactory
+@inject PageAccessEvaluator PageAccess
+@inject IStringLocalizer<SeederResource> L
+
+<PageTitle>@L["Page:Title"]</PageTitle>
+
+<div class="seeder-page">
+    @if (!_accessChecked)
+    {
+        <div class="seeder-page-state" role="status">
+            <MudProgressCircular Indeterminate="true"
+                                 Color="Color.Primary"
+                                 aria-labelledby="seeder-access-check-label" />
+            <MudText Typo="Typo.body1" id="seeder-access-check-label">@L["Access:Checking"]</MudText>
+        </div>
+    }
+    else if (!_isAuthorized || _session?.IsAccessDenied == true)
+    {
+        <div class="seeder-page-state" role="alert">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
+            <MudText Typo="Typo.h5">@L["Access:DeniedTitle"]</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Access:DeniedDescription"]</MudText>
+        </div>
+    }
+    else if (_session is { } session)
+    {
+        <MudDrawerContainer Class="seeder-drawer-container">
+            <header class="seeder-page-header">
+                <div class="seeder-page-heading">
+                    <MudText Typo="Typo.overline">@L["Page:Eyebrow"]</MudText>
+                    <MudText Typo="Typo.h4">@L["Page:Heading"]</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+                </div>
+                <div class="seeder-page-actions">
+                    <MudChip T="string"
+                             Icon="@Icons.Material.Filled.Dns"
+                             Variant="Variant.Outlined"
+                             Color="Color.Info">
+                        @L["Page:CurrentHost", session.HostName]
+                    </MudChip>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="@session.IsRefreshing"
+                               OnClick="@(() => RefreshAsync(session))">
+                        @L["Actions:Refresh"]
+                    </MudButton>
+                </div>
+            </header>
+
+            @if (session.RefreshError is { } refreshError)
+            {
+                <MudAlert Severity="Severity.Warning"
+                          Variant="Variant.Outlined"
+                          Dense="true"
+                          Class="seeder-page-refresh-alert"
+                          role="alert">
+                    @L["State:RefreshFailed", refreshError]
+                </MudAlert>
+            }
+
+            @switch (session.LoadState)
+            {
+                case SeederPageLoadState.InitialLoading:
+                    <div class="seeder-page-state" role="status">
+                        <MudProgressCircular Indeterminate="true"
+                                             Color="Color.Primary"
+                                             aria-labelledby="seeder-loading-label" />
+                        <MudText Typo="Typo.h6" id="seeder-loading-label">@L["State:Loading"]</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["State:LoadingDescription"]</MudText>
+                    </div>
+                    break;
+                case SeederPageLoadState.Failed:
+                    <div class="seeder-page-state" role="alert">
+                        <MudIcon Icon="@Icons.Material.Filled.CloudOff" Color="Color.Error" Size="Size.Large" />
+                        <MudText Typo="Typo.h6">@L["State:LoadFailed"]</MudText>
+                        <MudText Typo="Typo.body2"
+                                 Color="Color.Secondary"
+                                 Class="seeder-page-error">
+                            @session.LoadError
+                        </MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   OnClick="@(() => RefreshAsync(session))">
+                            @L["Actions:Retry"]
+                        </MudButton>
+                    </div>
+                    break;
+                case SeederPageLoadState.Ready when session.Snapshot is not null:
+                    <div class="seeder-page-content">
+                        <SeederRunOverview Session="@session" />
+                        <SeederConfigurationPanel Session="@session" />
+                        <SeederFilters Session="@session" />
+                        <SeederExecutionTable Session="@session" />
+                    </div>
+                    break;
+            }
+
+            <SeederDetailsDrawer Session="@session" />
+        </MudDrawerContainer>
+    }
+</div>
+
+@code {
+    public const string PAGE_URL = "/seeders";
+
+    private SeederPageSession? _session;
+    private bool _accessChecked;
+    private bool _isAuthorized;
+    private bool _disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var isAuthorized = await PageAccess.IsAuthorizedAsync(PAGE_URL);
+        if (_disposed)
+        {
+            return;
+        }
+
+        _isAuthorized = isAuthorized;
+        _accessChecked = true;
+        if (!isAuthorized)
+        {
+            return;
+        }
+
+        var session = SessionFactory.Create(
+            cancellationToken => PageAccess.IsAuthorizedAsync(PAGE_URL, cancellationToken));
+        _session = session;
+        session.Changed += HandleSessionChangedAsync;
+        await session.InitializeAsync();
+    }
+
+    private Task HandleSessionChangedAsync()
+    {
+        return InvokeAsync(() =>
+        {
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
+        });
+    }
+
+    private static Task RefreshAsync(SeederPageSession session) => session.RefreshAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        var session = _session;
+        _session = null;
+        if (session is null)
+        {
+            return;
+        }
+
+        session.Changed -= HandleSessionChangedAsync;
+        await session.DisposeAsync();
+    }
+}

@@ -6,6 +6,7 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.TypeDiscovery.Models;
 using Monica.Framework.Seeder.Abstractions;
+using Monica.Framework.Seeder.Facades;
 using Monica.Framework.Seeder.Models;
 using Monica.Framework.Seeder.Models.Internal;
 using Monica.Framework.Seeder.Services;
@@ -84,6 +85,7 @@ public sealed class ModuleSeeder : MonicaModule<ModuleSeederOption>
         services.AddSingleton(_graph);
         services.AddSingleton<SeederState>();
         services.AddSingleton<ISeederState>(static provider => provider.GetRequiredService<SeederState>());
+        services.AddSingleton<SeederFacade>();
         services.TryAddSingleton<ISeederRetryDelay, SeederRetryDelay>();
         services.AddSingleton<SeederScheduler>();
         services.AddHostedService<SeederBackgroundService>();
@@ -115,6 +117,13 @@ public sealed class ModuleSeederOption : ModuleOptions<ModuleSeeder>
     /// <see cref="SeederCriticality.Required"/>.
     /// </summary>
     public SeederCriticality DefaultCriticality { get; set; } = SeederCriticality.Required;
+
+    /// <summary>
+    /// Gets or sets the behavior used after a seeder without an explicit override exhausts its attempts. The
+    /// default is <see cref="SeederFailureBehavior.ContinueAndRecord"/>, which preserves independent work and
+    /// retains diagnostics without aborting the run.
+    /// </summary>
+    public SeederFailureBehavior DefaultFailureBehavior { get; set; } = SeederFailureBehavior.ContinueAndRecord;
 
     /// <summary>
     /// Gets or sets the maximum attempt count inherited by seeders without an explicit policy. The default is one,

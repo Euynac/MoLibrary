@@ -30,8 +30,16 @@ internal sealed class SeederBackgroundService(
         RecordState(
             "Waiting for the application to finish starting before scheduling seeders.",
             HostedServiceState.WaitingDependency);
-        await WaitForApplicationStartedAsync(applicationLifetime.ApplicationStarted, stoppingToken)
-            .ConfigureAwait(false);
+        try
+        {
+            await WaitForApplicationStartedAsync(applicationLifetime.ApplicationStarted, stoppingToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            seederState.MarkSchedulerCancelled();
+            return;
+        }
 
         RecordState("Scheduling the seeder dependency graph.", HostedServiceState.Executing);
         await scheduler.RunAsync(stoppingToken).ConfigureAwait(false);
@@ -42,22 +50,24 @@ internal sealed class SeederBackgroundService(
         }
 
         var snapshot = seederState.GetSnapshot();
-        var requiredFailures = snapshot.Seeders.Count(static seeder =>
-            seeder.Criticality == SeederCriticality.Required && seeder.Status != SeederStatus.Succeeded);
-        var optionalFailures = snapshot.Seeders.Count(static seeder =>
-            seeder.Criticality == SeederCriticality.Optional &&
-            seeder.Status is SeederStatus.Failed or SeederStatus.Blocked or SeederStatus.Cancelled);
-
-        if (requiredFailures > 0)
+        if (snapshot.Status == SeederRunStatus.Aborted)
         {
             RecordState(
-                $"Seeder run completed with {requiredFailures} unsuccessful required seeders.",
+                $"Seeder run was aborted by fail-fast seeder '{snapshot.FailFastTriggerSeederTypeName}'.",
+                HostedServiceState.Faulted);
+            return;
+        }
+
+        if (snapshot.RequiredUnsuccessfulCount > 0)
+        {
+            RecordState(
+                $"Seeder run completed with {snapshot.RequiredUnsuccessfulCount} unsuccessful required seeders.",
                 HostedServiceState.Faulted);
         }
-        else if (optionalFailures > 0)
+        else if (snapshot.OptionalUnsuccessfulCount > 0)
         {
             RecordState(
-                $"Seeder run completed with {optionalFailures} unsuccessful optional seeders.",
+                $"Seeder run completed with {snapshot.OptionalUnsuccessfulCount} unsuccessful optional seeders.",
                 HostedServiceState.Degraded);
         }
         else

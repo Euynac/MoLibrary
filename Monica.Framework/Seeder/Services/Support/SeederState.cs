@@ -1,29 +1,42 @@
 using System.Collections.Immutable;
+using Monica.Core.Extensions;
 using Monica.Framework.Seeder.Abstractions;
 using Monica.Framework.Seeder.Models;
 using Monica.Framework.Seeder.Models.Internal;
+using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Seeder.Services.Support;
 
 internal sealed class SeederState(SeederGraph graph, TimeProvider timeProvider) : ISeederState
 {
+    private const int MAX_ERROR_TYPE_LENGTH = 512;
+    private const int MAX_ERROR_MESSAGE_LENGTH = 2048;
     private readonly object _sync = new();
     private readonly Dictionary<Type, MutableSeederState> _seeders = graph.Nodes.ToDictionary(
         static node => node.SeederType,
         static _ => new MutableSeederState());
+    private SeederRunStatus _status = SeederRunStatus.Waiting;
     private DateTimeOffset? _startedAtUtc;
     private DateTimeOffset? _completedAtUtc;
+    private long? _startedTimestamp;
+    private long? _completedTimestamp;
+    private string? _failFastTriggerSeederTypeName;
 
     public SeederStateSnapshot GetSnapshot()
     {
         lock (_sync)
         {
+            var capturedAtUtc = timeProvider.GetUtcNow();
+            var capturedTimestamp = timeProvider.GetTimestamp();
             return new SeederStateSnapshot
             {
-                CapturedAtUtc = timeProvider.GetUtcNow(),
+                CapturedAtUtc = capturedAtUtc,
+                Status = _status,
                 StartedAtUtc = _startedAtUtc,
                 CompletedAtUtc = _completedAtUtc,
-                Seeders = graph.Nodes.Select(CreateSnapshot).ToImmutableArray()
+                Duration = GetDuration(_startedTimestamp, _completedTimestamp, capturedTimestamp),
+                FailFastTriggerSeederTypeName = _failFastTriggerSeederTypeName,
+                Seeders = graph.Nodes.Select(descriptor => CreateSnapshot(descriptor, capturedTimestamp)).ToImmutableArray()
             };
         }
     }
@@ -40,7 +53,82 @@ internal sealed class SeederState(SeederGraph graph, TimeProvider timeProvider) 
     {
         lock (_sync)
         {
-            _startedAtUtc ??= timeProvider.GetUtcNow();
+            if (_status != SeederRunStatus.Waiting)
+            {
+                return;
+            }
+
+            _startedAtUtc = timeProvider.GetUtcNow();
+            _startedTimestamp = timeProvider.GetTimestamp();
+            _status = SeederRunStatus.Running;
+        }
+    }
+
+    public void MarkFailFastTriggered(
+        Type seederType,
+        Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(seederType);
+        ArgumentNullException.ThrowIfNull(exception);
+        var (errorType, errorMessage) = GetBoundedDiagnostics(exception);
+        lock (_sync)
+        {
+            if (_status == SeederRunStatus.Running)
+            {
+                // Keep the trigger's terminal evidence and the unhealthy run transition indivisible to snapshots.
+                var seeder = GetMutableState(seederType);
+                CompleteActiveAttemptIfNecessary(
+                    seeder,
+                    SeederAttemptStatus.Failed,
+                    errorType,
+                    errorMessage);
+                MarkTerminal(seeder, SeederStatus.Failed, errorType, errorMessage);
+                _status = SeederRunStatus.Aborting;
+                _failFastTriggerSeederTypeName = graph.NodesByType[seederType].SeederTypeName;
+            }
+        }
+    }
+
+    public void MarkSchedulerAborted()
+    {
+        lock (_sync)
+        {
+            if (_failFastTriggerSeederTypeName is null)
+            {
+                throw new InvalidOperationException("A Seeder run cannot be aborted before a FailFast trigger is recorded.");
+            }
+
+            CompleteRun(SeederRunStatus.Aborted);
+        }
+    }
+
+    public void MarkSchedulerCancelled()
+    {
+        lock (_sync)
+        {
+            var completedAtUtc = timeProvider.GetUtcNow();
+            var completedTimestamp = timeProvider.GetTimestamp();
+            foreach (var seeder in _seeders.Values.Where(static seeder => seeder.Status == SeederStatus.Pending))
+            {
+                seeder.Status = SeederStatus.Cancelled;
+                seeder.CompletedAtUtc = completedAtUtc;
+                seeder.CompletedTimestamp = completedTimestamp;
+                seeder.ErrorType = typeof(OperationCanceledException).GetCleanFullName();
+                seeder.ErrorMessage = "Seeder execution was cancelled before it could start.";
+            }
+
+            CompleteRun(SeederRunStatus.Cancelled);
+        }
+    }
+
+    public void MarkSchedulerCompleted()
+    {
+        lock (_sync)
+        {
+            var status = _seeders.Values.All(static seeder => seeder.Status == SeederStatus.Succeeded)
+                ? SeederRunStatus.Succeeded
+                : SeederRunStatus.CompletedWithFailures;
+            CompleteRun(status);
         }
     }
 
@@ -49,77 +137,240 @@ internal sealed class SeederState(SeederGraph graph, TimeProvider timeProvider) 
         lock (_sync)
         {
             var state = GetMutableState(seederType);
+            var startedAtUtc = timeProvider.GetUtcNow();
+            var startedTimestamp = timeProvider.GetTimestamp();
             state.Status = SeederStatus.Running;
             state.Attempts = attempt;
-            state.StartedAtUtc ??= timeProvider.GetUtcNow();
+            state.StartedAtUtc ??= startedAtUtc;
+            state.StartedTimestamp ??= startedTimestamp;
             state.CompletedAtUtc = null;
+            state.CompletedTimestamp = null;
             state.ErrorType = null;
             state.ErrorMessage = null;
+            state.AttemptHistory.Add(new MutableAttemptState(attempt, startedAtUtc, startedTimestamp));
         }
+    }
+
+    public void MarkAttemptSucceeded(Type seederType)
+    {
+        CompleteAttempt(seederType, SeederAttemptStatus.Succeeded, null, null);
+    }
+
+    public void MarkAttemptFailed(Type seederType, Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        var (errorType, errorMessage) = GetBoundedDiagnostics(exception);
+        CompleteAttempt(
+            seederType,
+            SeederAttemptStatus.Failed,
+            errorType,
+            errorMessage);
+    }
+
+    public void MarkAttemptCancelled(Type seederType, OperationCanceledException exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        var (errorType, errorMessage) = GetBoundedDiagnostics(exception);
+        CompleteAttempt(
+            seederType,
+            SeederAttemptStatus.Cancelled,
+            errorType,
+            errorMessage);
     }
 
     public void MarkSucceeded(Type seederType)
     {
-        MarkTerminal(seederType, SeederStatus.Succeeded, null, null);
+        TransitionToTerminal(
+            seederType,
+            SeederStatus.Succeeded,
+            SeederAttemptStatus.Succeeded,
+            null,
+            null);
     }
 
     public void MarkFailed(Type seederType, Exception exception)
     {
-        MarkTerminal(seederType, SeederStatus.Failed, exception.GetType().FullName, exception.Message);
+        ArgumentNullException.ThrowIfNull(exception);
+        var (errorType, errorMessage) = GetBoundedDiagnostics(exception);
+        TransitionToTerminal(
+            seederType,
+            SeederStatus.Failed,
+            SeederAttemptStatus.Failed,
+            errorType,
+            errorMessage);
     }
 
     public void MarkBlocked(Type seederType, IReadOnlyCollection<string> dependencyNames)
     {
-        MarkTerminal(
+        ArgumentNullException.ThrowIfNull(dependencyNames);
+        TransitionToTerminal(
             seederType,
             SeederStatus.Blocked,
+            null,
             "SeederDependencyFailure",
-            $"Blocked by unsuccessful dependencies: {string.Join(", ", dependencyNames)}.");
+            Bound($"Blocked by unsuccessful dependencies: {string.Join(", ", dependencyNames)}.", MAX_ERROR_MESSAGE_LENGTH));
     }
 
     public void MarkCancelled(Type seederType, string message)
     {
-        MarkTerminal(seederType, SeederStatus.Cancelled, typeof(OperationCanceledException).FullName, message);
+        var errorType = typeof(OperationCanceledException).GetCleanFullName();
+        var boundedMessage = Bound(message, MAX_ERROR_MESSAGE_LENGTH);
+        TransitionToTerminal(
+            seederType,
+            SeederStatus.Cancelled,
+            SeederAttemptStatus.Cancelled,
+            errorType,
+            boundedMessage);
     }
 
-    public void MarkSchedulerCompleted()
+    public void MarkCancelled(Type seederType, OperationCanceledException exception)
     {
-        lock (_sync)
-        {
-            _completedAtUtc ??= timeProvider.GetUtcNow();
-        }
+        ArgumentNullException.ThrowIfNull(exception);
+        var (errorType, errorMessage) = GetBoundedDiagnostics(exception);
+        TransitionToTerminal(
+            seederType,
+            SeederStatus.Cancelled,
+            SeederAttemptStatus.Cancelled,
+            errorType,
+            errorMessage);
     }
 
-    private SeederExecutionSnapshot CreateSnapshot(SeederDescriptor descriptor)
+    private SeederExecutionSnapshot CreateSnapshot(SeederDescriptor descriptor, long capturedTimestamp)
     {
         var state = GetMutableState(descriptor.SeederType);
         return new SeederExecutionSnapshot
         {
+            SeederName = descriptor.SeederName,
             SeederTypeName = descriptor.SeederTypeName,
             ExecutionMode = descriptor.ExecutionMode,
+            ExecutionModeSource = descriptor.ExecutionModeSource,
             Criticality = descriptor.Criticality,
+            CriticalitySource = descriptor.CriticalitySource,
+            FailureBehavior = descriptor.FailureBehavior,
+            FailureBehaviorSource = descriptor.FailureBehaviorSource,
             Status = state.Status,
             Attempts = state.Attempts,
             MaxAttempts = descriptor.MaxAttempts,
+            MaxAttemptsSource = descriptor.MaxAttemptsSource,
             Dependencies = descriptor.Dependencies
                 .Select(dependency => graph.NodesByType[dependency].SeederTypeName)
                 .ToImmutableArray(),
             StartedAtUtc = state.StartedAtUtc,
             CompletedAtUtc = state.CompletedAtUtc,
+            Duration = GetDuration(state.StartedTimestamp, state.CompletedTimestamp, capturedTimestamp),
+            AttemptHistory = state.AttemptHistory
+                .Select(attempt => CreateAttemptSnapshot(attempt, capturedTimestamp))
+                .ToImmutableArray(),
             ErrorType = state.ErrorType,
             ErrorMessage = state.ErrorMessage
         };
     }
 
-    private void MarkTerminal(Type seederType, SeederStatus status, string? errorType, string? errorMessage)
+    private SeederAttemptSnapshot CreateAttemptSnapshot(
+        MutableAttemptState attempt,
+        long capturedTimestamp)
+    {
+        return new SeederAttemptSnapshot
+        {
+            AttemptNumber = attempt.AttemptNumber,
+            Status = attempt.Status,
+            StartedAtUtc = attempt.StartedAtUtc,
+            CompletedAtUtc = attempt.CompletedAtUtc,
+            Duration = timeProvider.GetElapsedTime(
+                attempt.StartedTimestamp,
+                attempt.CompletedTimestamp ?? capturedTimestamp),
+            ErrorType = attempt.ErrorType,
+            ErrorMessage = attempt.ErrorMessage
+        };
+    }
+
+    private void CompleteAttempt(
+        Type seederType,
+        SeederAttemptStatus status,
+        string? errorType,
+        string? errorMessage)
+    {
+        lock (_sync)
+        {
+            CompleteActiveAttempt(GetMutableState(seederType), status, errorType, errorMessage);
+        }
+    }
+
+    private void TransitionToTerminal(
+        Type seederType,
+        SeederStatus status,
+        SeederAttemptStatus? activeAttemptStatus,
+        string? errorType,
+        string? errorMessage)
     {
         lock (_sync)
         {
             var state = GetMutableState(seederType);
-            state.Status = status;
-            state.CompletedAtUtc = timeProvider.GetUtcNow();
-            state.ErrorType = errorType;
-            state.ErrorMessage = errorMessage;
+            if (activeAttemptStatus is { } attemptStatus)
+            {
+                CompleteActiveAttemptIfNecessary(state, attemptStatus, errorType, errorMessage);
+            }
+
+            MarkTerminal(state, status, errorType, errorMessage);
+        }
+    }
+
+    private void CompleteActiveAttemptIfNecessary(
+        MutableSeederState state,
+        SeederAttemptStatus status,
+        string? errorType,
+        string? errorMessage)
+    {
+        if (state.AttemptHistory.Count > 0 && state.AttemptHistory[^1].Status == SeederAttemptStatus.Running)
+        {
+            CompleteActiveAttempt(state, status, errorType, errorMessage);
+        }
+    }
+
+    private void CompleteActiveAttempt(
+        MutableSeederState state,
+        SeederAttemptStatus status,
+        string? errorType,
+        string? errorMessage)
+    {
+        if (state.AttemptHistory.Count == 0 || state.AttemptHistory[^1].Status != SeederAttemptStatus.Running)
+        {
+            throw new InvalidOperationException("No running seeder attempt is available to complete.");
+        }
+
+        var attempt = state.AttemptHistory[^1];
+        attempt.Status = status;
+        attempt.CompletedAtUtc = timeProvider.GetUtcNow();
+        attempt.CompletedTimestamp = timeProvider.GetTimestamp();
+        attempt.ErrorType = errorType;
+        attempt.ErrorMessage = errorMessage;
+    }
+
+    private void MarkTerminal(
+        MutableSeederState state,
+        SeederStatus status,
+        string? errorType,
+        string? errorMessage)
+    {
+        var attempt = state.AttemptHistory.LastOrDefault();
+        var useAttemptCompletion = attempt is { CompletedAtUtc: not null, CompletedTimestamp: not null } &&
+            MatchesTerminalAttempt(status, attempt.Status);
+        state.Status = status;
+        state.CompletedAtUtc = useAttemptCompletion ? attempt!.CompletedAtUtc : timeProvider.GetUtcNow();
+        state.CompletedTimestamp = useAttemptCompletion
+            ? attempt!.CompletedTimestamp
+            : timeProvider.GetTimestamp();
+        state.ErrorType = errorType;
+        state.ErrorMessage = errorMessage;
+    }
+
+    private void CompleteRun(SeederRunStatus status)
+    {
+        _status = status;
+        if (_completedAtUtc is null)
+        {
+            _completedAtUtc = timeProvider.GetUtcNow();
+            _completedTimestamp = timeProvider.GetTimestamp();
         }
     }
 
@@ -130,12 +381,68 @@ internal sealed class SeederState(SeederGraph graph, TimeProvider timeProvider) 
             : throw new InvalidOperationException($"Seeder '{seederType.FullName}' does not belong to this host's graph.");
     }
 
+    private TimeSpan? GetDuration(
+        long? startedTimestamp,
+        long? completedTimestamp,
+        long capturedTimestamp)
+    {
+        return startedTimestamp is null
+            ? null
+            : timeProvider.GetElapsedTime(startedTimestamp.Value, completedTimestamp ?? capturedTimestamp);
+    }
+
+    private static bool MatchesTerminalAttempt(SeederStatus status, SeederAttemptStatus attemptStatus)
+    {
+        return (status, attemptStatus) switch
+        {
+            (SeederStatus.Succeeded, SeederAttemptStatus.Succeeded) => true,
+            (SeederStatus.Failed, SeederAttemptStatus.Failed) => true,
+            (SeederStatus.Cancelled, SeederAttemptStatus.Cancelled) => true,
+            _ => false
+        };
+    }
+
+    private static string? Bound(string? value, int maximumLength)
+    {
+        if (value is null || value.Length <= maximumLength)
+        {
+            return value;
+        }
+
+        return value[..maximumLength];
+    }
+
+    private static (string? ErrorType, string? ErrorMessage) GetBoundedDiagnostics(Exception exception)
+    {
+        return (
+            Bound(exception.GetType().GetCleanFullName(), MAX_ERROR_TYPE_LENGTH),
+            Bound(exception.GetMessageRecursively(), MAX_ERROR_MESSAGE_LENGTH));
+    }
+
     private sealed class MutableSeederState
     {
         public SeederStatus Status { get; set; }
         public int Attempts { get; set; }
         public DateTimeOffset? StartedAtUtc { get; set; }
         public DateTimeOffset? CompletedAtUtc { get; set; }
+        public long? StartedTimestamp { get; set; }
+        public long? CompletedTimestamp { get; set; }
+        public string? ErrorType { get; set; }
+        public string? ErrorMessage { get; set; }
+        public List<MutableAttemptState> AttemptHistory { get; } = [];
+    }
+
+    private sealed class MutableAttemptState(
+        int attemptNumber,
+        DateTimeOffset startedAtUtc,
+        long startedTimestamp)
+    {
+        public int AttemptNumber { get; } = attemptNumber;
+        public SeederAttemptStatus Status { get; set; } = SeederAttemptStatus.Running;
+        public DateTimeOffset StartedAtUtc { get; } = startedAtUtc;
+        public DateTimeOffset? CompletedAtUtc { get; set; }
+        public long StartedTimestamp { get; } = startedTimestamp;
+        public long? CompletedTimestamp { get; set; }
         public string? ErrorType { get; set; }
         public string? ErrorMessage { get; set; }
     }

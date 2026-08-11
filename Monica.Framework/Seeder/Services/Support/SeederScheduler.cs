@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core.Extensions;
 using Monica.Core.Execution;
 using Monica.Framework.Seeder.Abstractions;
 using Monica.Framework.Seeder.Models;
@@ -12,7 +14,8 @@ internal sealed class SeederScheduler(
     SeederGraph graph,
     SeederState state,
     ISeederRetryDelay retryDelay,
-    IOptions<Monica.Modules.ModuleSeederOption> options)
+    IOptions<Monica.Modules.ModuleSeederOption> options,
+    ILogger<SeederScheduler> logger)
 {
     private readonly Monica.Modules.ModuleSeederOption _options = options.Value;
 
@@ -21,47 +24,103 @@ internal sealed class SeederScheduler(
         state.MarkSchedulerStarted();
         var pending = graph.Nodes.ToDictionary(static node => node.SeederType);
         var running = new Dictionary<Type, RunningSeeder>();
+        using var runCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
+        while (pending.Count > 0 || running.Count > 0)
+        {
+            BlockDependents(pending);
+
+            if (!runCancellation.IsCancellationRequested)
+            {
+                ScheduleReadySeeders(pending, running, runCancellation.Token);
+            }
+
+            if (running.Count == 0)
+            {
+                if (pending.Count == 0)
+                {
+                    break;
+                }
+
+                if (runCancellation.IsCancellationRequested)
+                {
+                    CancelPending(pending, "Seeder execution was cancelled before it could start.");
+                    break;
+                }
+
+                throw new InvalidOperationException(
+                    "Seeder scheduler reached a deadlock even though the dependency graph passed validation.");
+            }
+
+            var finished = await WaitForFinishedSeedersAsync(running).ConfigureAwait(false);
+            var failFastTrigger = finished
+                .Where(static execution =>
+                    execution.Result.Status == SeederStatus.Failed &&
+                    execution.Descriptor.FailureBehavior == SeederFailureBehavior.FailFast)
+                .OrderBy(static execution => execution.Descriptor.SeederTypeName, StringComparer.Ordinal)
+                .FirstOrDefault();
+            if (failFastTrigger is not null)
+            {
+                running.Remove(failFastTrigger.Descriptor.SeederType);
+                state.MarkFailFastTriggered(
+                    failFastTrigger.Descriptor.SeederType,
+                    failFastTrigger.Result.Exception!);
+                ApplyResults(
+                    finished.Where(execution => execution.Descriptor.SeederType !=
+                        failFastTrigger.Descriptor.SeederType).ToArray(),
+                    running);
+                BlockDependents(pending);
+                await AbortAsync(pending, running, runCancellation, failFastTrigger.Descriptor)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            ApplyResults(finished, running);
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            CancelPending(pending, "Seeder execution was cancelled before it could start.");
+            state.MarkSchedulerCancelled();
+            return;
+        }
+
+        state.MarkSchedulerCompleted();
+    }
+
+    private async Task AbortAsync(
+        Dictionary<Type, SeederDescriptor> pending,
+        Dictionary<Type, RunningSeeder> running,
+        CancellationTokenSource runCancellation,
+        SeederDescriptor trigger)
+    {
         try
         {
-            while (pending.Count > 0 || running.Count > 0)
-            {
-                BlockDependents(pending);
-
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    ScheduleReadySeeders(pending, running, cancellationToken);
-                }
-
-                if (running.Count == 0)
-                {
-                    if (pending.Count == 0)
-                    {
-                        break;
-                    }
-
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        CancelPending(pending);
-                        break;
-                    }
-
-                    throw new InvalidOperationException(
-                        "Seeder scheduler reached a deadlock even though the dependency graph passed validation.");
-                }
-
-                await CompleteFinishedSeedersAsync(running).ConfigureAwait(false);
-            }
+            await runCancellation.CancelAsync().ConfigureAwait(false);
         }
-        finally
+        catch (Exception exception)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                CancelPending(pending);
-            }
-
-            state.MarkSchedulerCompleted();
+            // Cancellation callbacks are application code. One failing callback must not prevent the scheduler from
+            // draining every owned scope and publishing a terminal aborted snapshot.
+            logger.LogWarning(
+                exception,
+                "Seeder fail-fast trigger {SeederTypeName} encountered an error while signalling cancellation.",
+                trigger.SeederTypeName);
         }
+
+        // Fail-fast is cooperative: apply each completed result as it drains so live diagnostics retain the
+        // individual seeder's terminal timing instead of inheriting the slowest in-flight operation's duration.
+        while (running.Count > 0)
+        {
+            var drained = await WaitForFinishedSeedersAsync(running).ConfigureAwait(false);
+            ApplyResults(drained, running);
+            BlockDependents(pending);
+        }
+
+        CancelPending(
+            pending,
+            $"Seeder run was aborted by fail-fast seeder '{trigger.SeederTypeName}'.");
+        state.MarkSchedulerAborted();
     }
 
     private void ScheduleReadySeeders(
@@ -81,6 +140,11 @@ internal sealed class SeederScheduler(
 
         foreach (var descriptor in ready)
         {
+            if (cancellationToken.IsCancellationRequested || HasCompletedFailFastFailure(running))
+            {
+                return;
+            }
+
             if (running.Count >= _options.MaxConcurrency)
             {
                 return;
@@ -103,6 +167,14 @@ internal sealed class SeederScheduler(
         }
     }
 
+    private static bool HasCompletedFailFastFailure(Dictionary<Type, RunningSeeder> running)
+    {
+        return running.Values.Any(static execution =>
+            execution.Descriptor.FailureBehavior == SeederFailureBehavior.FailFast &&
+            execution.Task.IsCompletedSuccessfully &&
+            execution.Task.Result.Status == SeederStatus.Failed);
+    }
+
     private bool IsReady(SeederDescriptor descriptor)
     {
         return descriptor.Dependencies.All(dependency => state.GetStatus(dependency) == SeederStatus.Succeeded);
@@ -120,33 +192,62 @@ internal sealed class SeederScheduler(
             new RunningSeeder(descriptor, ExecuteWithRetryAsync(descriptor, cancellationToken)));
     }
 
-    private async Task CompleteFinishedSeedersAsync(Dictionary<Type, RunningSeeder> running)
+    private static async Task<CompletedSeeder[]> WaitForFinishedSeedersAsync(
+        Dictionary<Type, RunningSeeder> running)
     {
         await Task.WhenAny(running.Values.Select(static execution => execution.Task)).ConfigureAwait(false);
+        // The completion cohort is the set already terminal when the scheduler observes its first completed task.
+        // Stable type-name ordering below makes trigger selection deterministic within that observable cohort.
+        return await CollectFinishedSeedersAsync(running).ConfigureAwait(false);
+    }
+
+    private static async Task<CompletedSeeder[]> CollectFinishedSeedersAsync(
+        Dictionary<Type, RunningSeeder> running)
+    {
         var finished = running.Values
             .Where(static execution => execution.Task.IsCompleted)
             .OrderBy(static execution => execution.Descriptor.SeederTypeName, StringComparer.Ordinal)
             .ToArray();
-
-        foreach (var execution in finished)
+        var completed = new CompletedSeeder[finished.Length];
+        for (var index = 0; index < finished.Length; index++)
         {
-            var result = await execution.Task.ConfigureAwait(false);
+            completed[index] = new CompletedSeeder(
+                finished[index].Descriptor,
+                await finished[index].Task.ConfigureAwait(false));
+        }
+
+        return completed;
+    }
+
+    private void ApplyResults(
+        IReadOnlyCollection<CompletedSeeder> completed,
+        Dictionary<Type, RunningSeeder> running)
+    {
+        foreach (var execution in completed)
+        {
             running.Remove(execution.Descriptor.SeederType);
-            switch (result.Status)
+            switch (execution.Result.Status)
             {
                 case SeederStatus.Succeeded:
                     state.MarkSucceeded(execution.Descriptor.SeederType);
                     break;
                 case SeederStatus.Failed:
-                    state.MarkFailed(execution.Descriptor.SeederType, result.Exception!);
+                    state.MarkFailed(execution.Descriptor.SeederType, execution.Result.Exception!);
                     break;
                 case SeederStatus.Cancelled:
-                    state.MarkCancelled(
-                        execution.Descriptor.SeederType,
-                        result.Exception?.Message ?? "Seeder execution was cancelled.");
+                    if (execution.Result.Exception is OperationCanceledException cancellationException)
+                    {
+                        state.MarkCancelled(execution.Descriptor.SeederType, cancellationException);
+                    }
+                    else
+                    {
+                        state.MarkCancelled(
+                            execution.Descriptor.SeederType,
+                            execution.Result.Exception?.GetMessageRecursively() ?? "Seeder execution was cancelled.");
+                    }
                     break;
                 default:
-                    throw new InvalidOperationException($"Unexpected terminal seeder status '{result.Status}'.");
+                    throw new InvalidOperationException($"Unexpected terminal seeder status '{execution.Result.Status}'.");
             }
         }
     }
@@ -161,19 +262,35 @@ internal sealed class SeederScheduler(
             try
             {
                 await ExecuteAttemptAsync(descriptor.SeederType, cancellationToken).ConfigureAwait(false);
+                state.MarkAttemptSucceeded(descriptor.SeederType);
                 return SeederExecutionResult.Succeeded;
             }
-            catch (OperationCanceledException exception)
+            catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
             {
+                state.MarkAttemptCancelled(descriptor.SeederType, exception);
                 return new SeederExecutionResult(SeederStatus.Cancelled, exception);
             }
             catch (Exception exception)
             {
+                state.MarkAttemptFailed(descriptor.SeederType, exception);
                 if (attempt == descriptor.MaxAttempts)
                 {
+                    logger.LogError(
+                        exception,
+                        "Seeder {SeederTypeName} failed terminal attempt {Attempt} of {MaxAttempts} with behavior {FailureBehavior}.",
+                        descriptor.SeederTypeName,
+                        attempt,
+                        descriptor.MaxAttempts,
+                        descriptor.FailureBehavior);
                     return new SeederExecutionResult(SeederStatus.Failed, exception);
                 }
 
+                logger.LogWarning(
+                    exception,
+                    "Seeder {SeederTypeName} failed attempt {Attempt} of {MaxAttempts}; retrying.",
+                    descriptor.SeederTypeName,
+                    attempt,
+                    descriptor.MaxAttempts);
                 try
                 {
                     await retryDelay.DelayAsync(attempt, _options, cancellationToken).ConfigureAwait(false);
@@ -239,17 +356,19 @@ internal sealed class SeederScheduler(
         } while (changed);
     }
 
-    private void CancelPending(Dictionary<Type, SeederDescriptor> pending)
+    private void CancelPending(Dictionary<Type, SeederDescriptor> pending, string message)
     {
-        foreach (var descriptor in pending.Values)
+        foreach (var descriptor in pending.Values.OrderBy(static descriptor => descriptor.SeederTypeName, StringComparer.Ordinal))
         {
-            state.MarkCancelled(descriptor.SeederType, "Seeder execution was cancelled before it could start.");
+            state.MarkCancelled(descriptor.SeederType, message);
         }
 
         pending.Clear();
     }
 
     private sealed record RunningSeeder(SeederDescriptor Descriptor, Task<SeederExecutionResult> Task);
+
+    private sealed record CompletedSeeder(SeederDescriptor Descriptor, SeederExecutionResult Result);
 
     private sealed record SeederExecutionResult(SeederStatus Status, Exception? Exception)
     {

@@ -1,0 +1,56 @@
+@inject IStringLocalizer<SeederResource> L
+
+@if (Session.Snapshot is { Configuration: { } configuration })
+{
+    <section class="seeder-configuration" aria-labelledby="seeder-configuration-title">
+        <div class="seeder-configuration-heading">
+            <div>
+                <MudText Typo="Typo.overline">@L["Configuration:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6" id="seeder-configuration-title">@L["Configuration:Title"]</MudText>
+            </div>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Configuration:Subtitle"]</MudText>
+        </div>
+
+        <dl class="seeder-configuration-facts">
+            <div>
+                <dt>@L["Configuration:MaxConcurrency"]</dt>
+                <dd>@configuration.MaxConcurrency</dd>
+            </div>
+            <div>
+                <dt>@L["Configuration:ExecutionMode"]</dt>
+                <dd>@L.GetText(configuration.DefaultExecutionMode)</dd>
+            </div>
+            <div>
+                <dt>@L["Configuration:Criticality"]</dt>
+                <dd>@L.GetText(configuration.DefaultCriticality)</dd>
+            </div>
+            <div>
+                <dt>@L["Configuration:MaxAttempts"]</dt>
+                <dd>@configuration.DefaultMaxAttempts</dd>
+            </div>
+            <div>
+                <dt>@L["Configuration:RetryBaseDelay"]</dt>
+                <dd>@L.FormatSeederDuration(configuration.RetryBaseDelay)</dd>
+            </div>
+            <div>
+                <dt>@L["Configuration:RetryMaxDelay"]</dt>
+                <dd>@L.FormatSeederDuration(configuration.RetryMaxDelay)</dd>
+            </div>
+            <div>
+                <dt>@L["Configuration:FailureBehavior"]</dt>
+                <dd>
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="@SeederDisplay.Color(configuration.DefaultFailureBehavior)">
+                        @L.GetText(configuration.DefaultFailureBehavior)
+                    </MudChip>
+                </dd>
+            </div>
+        </dl>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public SeederPageSession Session { get; set; } = default!;
+}

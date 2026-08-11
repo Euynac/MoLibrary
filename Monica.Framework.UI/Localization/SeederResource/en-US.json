@@ -1,0 +1,189 @@
+{
+  "Navigation": {
+    "Title": "Seeders"
+  },
+  "Page": {
+    "Title": "Seeder Operations",
+    "Eyebrow": "APPLICATION INITIALIZATION",
+    "Heading": "Seeder Operations",
+    "Subtitle": "Inspect the current host's initialization graph, effective policies, attempts, and failure evidence.",
+    "CurrentHost": "Host · {0}"
+  },
+  "Access": {
+    "Checking": "Checking dashboard access…",
+    "DeniedTitle": "Seeder diagnostics are protected",
+    "DeniedDescription": "This dashboard is available in Development, or outside Development when the host explicitly enables it and your current identity satisfies its named policy."
+  },
+  "Actions": {
+    "Refresh": "Refresh",
+    "Retry": "Try again",
+    "Close": "Close",
+    "Details": "Inspect details",
+    "DetailsFor": "Inspect {0}"
+  },
+  "State": {
+    "Loading": "Loading Seeder diagnostics",
+    "LoadingDescription": "Reading the current host's effective configuration and run ledger.",
+    "LoadFailed": "Seeder diagnostics could not be loaded",
+    "RefreshFailed": "The latest refresh failed: {0}. The previous snapshot remains visible."
+  },
+  "Overview": {
+    "RunLabel": "CURRENT RUN",
+    "ProgressSummary": {
+      "Singular": "{0} of {1} seeder reached a terminal state",
+      "Plural": "{0} of {1} seeders reached a terminal state"
+    },
+    "Duration": "Elapsed · {0}",
+    "CapturedAt": "Captured · {0}",
+    "FailFastTrigger": "Fail-fast trigger: {0}",
+    "Readiness": "Readiness · {0}"
+  },
+  "Configuration": {
+    "Eyebrow": "EFFECTIVE DEFAULTS",
+    "Title": "Runtime configuration",
+    "Subtitle": "Seeder-level annotations can override inherited values.",
+    "MaxConcurrency": "Max concurrency",
+    "ExecutionMode": "Execution mode",
+    "Criticality": "Criticality",
+    "MaxAttempts": "Max attempts",
+    "RetryBaseDelay": "Initial retry delay",
+    "RetryMaxDelay": "Maximum retry delay",
+    "FailureBehavior": "Failure behavior"
+  },
+  "Filters": {
+    "AriaLabel": "Seeder filters",
+    "SearchLabel": "Search",
+    "SearchPlaceholder": "Name, dependency, or diagnostic",
+    "StatusLabel": "Status",
+    "AnyStatus": "Any status",
+    "CriticalityLabel": "Criticality",
+    "AnyCriticality": "Any criticality",
+    "FailureBehaviorLabel": "Failure behavior",
+    "AnyFailureBehavior": "Any behavior",
+    "Results": {
+      "Singular": "Showing {0} of {1} seeder",
+      "Plural": "Showing {0} of {1} seeders"
+    }
+  },
+  "Table": {
+    "Eyebrow": "EXECUTION LEDGER",
+    "Title": "Discovered seeders",
+    "Subtitle": "Resolved policies, dependency evidence, attempts, and timing for this process.",
+    "Columns": {
+      "Name": "Seeder",
+      "Status": "Status",
+      "Criticality": "Criticality",
+      "ExecutionMode": "Execution",
+      "FailureBehavior": "On failure",
+      "Attempts": "Attempts",
+      "Duration": "Duration",
+      "Dependencies": "Dependencies",
+      "Actions": "Details"
+    },
+    "AttemptsValue": "{0} / {1}",
+    "DependencyCount": {
+      "Singular": "{0} dependency",
+      "Plural": "{0} dependencies"
+    },
+    "Empty": "No seeders match these filters",
+    "EmptyDescription": "Adjust the search or policy filters to inspect another part of the execution ledger.",
+    "NoSeeders": "No seeders were discovered",
+    "NoSeedersDescription": "The current host's type-discovery scope did not produce a Seeder graph."
+  },
+  "Details": {
+    "Eyebrow": "SEEDER EVIDENCE",
+    "AttemptsSummary": {
+      "Singular": "{0} of {1} attempt started",
+      "Plural": "{0} of {1} attempts started"
+    },
+    "Policy": {
+      "Title": "Effective policy",
+      "ExecutionMode": "Execution mode",
+      "Criticality": "Criticality",
+      "FailureBehavior": "Failure behavior",
+      "MaxAttempts": "Maximum attempts"
+    },
+    "Timing": {
+      "Title": "Timing",
+      "StartedAt": "Started",
+      "CompletedAt": "Completed",
+      "Duration": "Duration"
+    },
+    "Dependencies": {
+      "Title": "Direct dependencies",
+      "None": "This Seeder has no direct dependencies."
+    },
+    "Attempts": {
+      "Title": "Attempt timeline",
+      "Count": {
+        "Singular": "{0} attempt recorded",
+        "Plural": "{0} attempts recorded"
+      },
+      "None": "No attempt has started.",
+      "Number": "Attempt {0}"
+    },
+    "Error": {
+      "Title": "Final diagnostic",
+      "Type": "Type",
+      "Message": "Message",
+      "LogsHint": "This is a bounded diagnostic summary. Use structured logs for the complete exception evidence."
+    }
+  },
+  "RunStatus": {
+    "Waiting": "Waiting for host startup",
+    "Running": "Running Seeder graph",
+    "Aborting": "Cancelling and draining work",
+    "Succeeded": "Seeder run succeeded",
+    "CompletedWithFailures": "Completed with failures",
+    "Aborted": "Seeder run aborted",
+    "Cancelled": "Seeder run cancelled"
+  },
+  "ReadinessStatus": {
+    "Healthy": "Ready",
+    "Degraded": "Degraded",
+    "Unhealthy": "Unready"
+  },
+  "SeederStatus": {
+    "Pending": "Pending",
+    "Running": "Running",
+    "Succeeded": "Succeeded",
+    "Failed": "Failed",
+    "Blocked": "Blocked",
+    "Cancelled": "Cancelled"
+  },
+  "AttemptStatus": {
+    "Running": "Running",
+    "Succeeded": "Succeeded",
+    "Failed": "Failed",
+    "Cancelled": "Cancelled"
+  },
+  "ExecutionMode": {
+    "Inherit": "Inherit",
+    "Concurrent": "Concurrent",
+    "Exclusive": "Exclusive"
+  },
+  "Criticality": {
+    "Inherit": "Inherit",
+    "Required": "Required",
+    "Optional": "Optional"
+  },
+  "FailureBehavior": {
+    "Inherit": "Inherit",
+    "ContinueAndRecord": "Continue and record",
+    "FailFast": "Fail fast"
+  },
+  "PolicySource": {
+    "ModuleDefault": "Module default",
+    "SeederOverride": "Seeder override"
+  },
+  "Common": {
+    "Unknown": "Unknown",
+    "NotAvailable": "Not available",
+    "None": "None",
+    "UtcTimestamp": "{0} UTC",
+    "DurationMilliseconds": "{0:0} ms",
+    "DurationSeconds": "{0:0.0} s",
+    "DurationMinutesSeconds": "{0} min {1} s",
+    "DurationHoursMinutes": "{0} hr {1} min"
+  }
+}

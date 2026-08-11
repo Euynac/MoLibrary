@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Monica.Framework.Seeder.Abstractions;
 using Monica.Framework.Seeder.Annotations;
+using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Seeder.Models.Internal;
 
@@ -55,8 +56,12 @@ internal sealed class SeederGraph
         {
             ValidateSeederType(seederType);
             var policy = seederType.GetCustomAttribute<SeederPolicyAttribute>(inherit: true);
-            var executionMode = ResolveExecutionMode(policy?.ExecutionMode ?? SeederExecutionMode.Inherit, options);
-            var criticality = ResolveCriticality(policy?.Criticality ?? SeederCriticality.Inherit, options);
+            var declaredExecutionMode = policy?.ExecutionMode ?? SeederExecutionMode.Inherit;
+            var declaredCriticality = policy?.Criticality ?? SeederCriticality.Inherit;
+            var declaredFailureBehavior = policy?.FailureBehavior ?? SeederFailureBehavior.Inherit;
+            var executionMode = ResolveExecutionMode(declaredExecutionMode, options);
+            var criticality = ResolveCriticality(declaredCriticality, options);
+            var failureBehavior = ResolveFailureBehavior(declaredFailureBehavior, options);
             var maxAttempts = policy is { MaxAttempts: > 0 } ? policy.MaxAttempts : options.DefaultMaxAttempts;
             if (policy is { MaxAttempts: < 0 })
             {
@@ -68,10 +73,16 @@ internal sealed class SeederGraph
             ValidateDependencies(seederType, dependencies, discoveredSet);
             nodes.Add(new SeederDescriptor(
                 seederType,
+                seederType.GetCleanName(),
                 GetTypeName(seederType),
                 executionMode,
+                GetSource(declaredExecutionMode == SeederExecutionMode.Inherit),
                 criticality,
+                GetSource(declaredCriticality == SeederCriticality.Inherit),
+                failureBehavior,
+                GetSource(declaredFailureBehavior == SeederFailureBehavior.Inherit),
                 maxAttempts,
+                GetSource(policy is not { MaxAttempts: > 0 }),
                 dependencies));
         }
 
@@ -98,6 +109,13 @@ internal sealed class SeederGraph
             !Enum.IsDefined(options.DefaultCriticality))
         {
             throw new InvalidOperationException("Seeder DefaultCriticality must be Required or Optional.");
+        }
+
+        if (options.DefaultFailureBehavior is SeederFailureBehavior.Inherit ||
+            !Enum.IsDefined(options.DefaultFailureBehavior))
+        {
+            throw new InvalidOperationException(
+                "Seeder DefaultFailureBehavior must be ContinueAndRecord or FailFast.");
         }
 
         if (options.DefaultMaxAttempts <= 0)
@@ -147,6 +165,23 @@ internal sealed class SeederGraph
         }
 
         return declared == SeederCriticality.Inherit ? options.DefaultCriticality : declared;
+    }
+
+    private static SeederFailureBehavior ResolveFailureBehavior(
+        SeederFailureBehavior declared,
+        Monica.Modules.ModuleSeederOption options)
+    {
+        if (!Enum.IsDefined(declared))
+        {
+            throw new InvalidOperationException($"Seeder policy contains unknown failure behavior value '{declared}'.");
+        }
+
+        return declared == SeederFailureBehavior.Inherit ? options.DefaultFailureBehavior : declared;
+    }
+
+    private static SeederPolicySource GetSource(bool inherited)
+    {
+        return inherited ? SeederPolicySource.ModuleDefault : SeederPolicySource.SeederOverride;
     }
 
     private static ImmutableArray<Type> GetDependencies(Type seederType)
@@ -255,5 +290,5 @@ internal sealed class SeederGraph
             $"Seeder dependency graph contains a cycle involving: {string.Join(", ", cycleMembers)}.");
     }
 
-    private static string GetTypeName(Type type) => type.FullName ?? type.Name;
+    private static string GetTypeName(Type type) => type.GetCleanFullName();
 }

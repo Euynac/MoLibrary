@@ -16,7 +16,8 @@ public enum SeederCriticality
     Required,
 
     /// <summary>
-    /// Reports a degraded state when the seeder fails without making application readiness unhealthy.
+    /// Reports a degraded state for an ordinary failure. A run aborted by an effective
+    /// <see cref="SeederFailureBehavior.FailFast"/> policy remains unhealthy regardless of this criticality.
     /// </summary>
     Optional
 }
