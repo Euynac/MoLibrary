@@ -5,7 +5,7 @@ description: This skill should be used when the user asks to "write docs", "docu
 
 # Monica Docs Authoring
 
-Standardize how Codex writes Monica user documentation. Treat current source code and `$monica-architecture` as the source of truth. The Monica documentation project lives in `../Monica.Docs`, and the markdown source lives under `../Monica.Docs/docs`.
+Standardize Monica user documentation. Treat current source code and `$monica-architecture` as the source of truth. Before assuming sibling checkout paths, use `$monica-guide source resolve` for `monica` and `docs`; treat returned paths as lookup-only unless the current task separately authorizes edits.
 
 ## Workflow
 
@@ -21,6 +21,8 @@ Start by choosing one of these output types:
 ### 2. Rebuild truth from source before writing
 
 Follow `references/source-of-truth-checklist.md`.
+
+Resolve the global Monica binding before inspecting framework source and the Monica.Docs binding before selecting the publication tree. If a required binding is unavailable or incompatible with an exact claim, report it rather than cloning or selecting a default branch.
 
 At minimum, inspect:
 
@@ -41,7 +43,7 @@ Always extract and verify:
 - Host-facing public surface and notable providers
 - For generated Web APIs, request-owned `[ApiEndpoint]` declarations, `WebApiGenerationConfig`, and the namespace boundary that determines RPC publication
 
-Existing docs under `../Monica.Docs/docs` are the current publication target. Revise them in place when they already exist, but never trust them over current code.
+Existing docs under the resolved Monica.Docs root's `docs/` directory are the current publication target. Revise them in place when authorized, but never trust them over current code.
 
 ### 3. Choose the output shape
 
@@ -49,8 +51,8 @@ Use `references/docs-information-architecture.md`.
 
 Default rules:
 
-- Keep documentation under `../Monica.Docs/docs/`
-- Treat `../Monica.Docs/docs/en-US/` as the canonical launch language and `../Monica.Docs/docs/zh-CN/` as a first-class localized tree
+- Keep documentation under `<resolved-monica-docs>/docs/`
+- Treat `<resolved-monica-docs>/docs/en-US/` as the canonical launch language and `<resolved-monica-docs>/docs/zh-CN/` as a first-class localized tree
 - For new public concepts and launch-critical guides, create or update both locales unless the user explicitly narrows the scope
 - Use **module-level slugs** in kebab-case, derived from the public module name / registration name
 - Give each module its own documentation pack instead of mixing multiple modules into one large page

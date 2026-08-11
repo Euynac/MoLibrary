@@ -106,7 +106,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
         self.assertIn("monica-development", application_ui)
         self.assertNotIn("monica-framework", application_ui)
 
-    def test_bootstrap_prompt_manifest_covers_every_locale_host_and_goal(self) -> None:
+    def test_bootstrap_prompt_manifest_has_one_universal_prompt_per_locale(self) -> None:
         bootstrap = json.loads(
             (
                 REPOSITORY_ROOT
@@ -131,9 +131,14 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             schema_path,
         )
         self.assertEqual([], validation.errors)
-        self.assertEqual(12, len(list(validator.bootstrap_prompt_entries(bootstrap))))
+        self.assertEqual(
+            {"en-US", "zh-CN"},
+            {locale for locale, _ in validator.bootstrap_prompt_entries(bootstrap)},
+        )
+        self.assertNotIn("hosts", bootstrap)
+        self.assertNotIn("goals", bootstrap)
 
-    def test_bootstrap_prompt_manifest_rejects_apply_in_init_command(self) -> None:
+    def test_bootstrap_prompt_manifest_rejects_fixed_host_or_init_path(self) -> None:
         bootstrap = json.loads(
             (
                 REPOSITORY_ROOT
@@ -143,10 +148,8 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 / "bootstrap-prompts.json"
             ).read_text(encoding="utf-8")
         )
-        prompt = bootstrap["locales"]["en-US"]["hosts"]["codex"]["goals"][
-            "application"
-        ]
-        prompt["prompt"] += " Run `init --apply` immediately."
+        prompt = bootstrap["locales"]["en-US"]
+        prompt["prompt"] += " Run `init --profile application --agent codex` immediately."
         validation = validator.Validation()
         validator.validate_bootstrap_prompts(
             validation,
@@ -159,7 +162,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             / "bootstrap-prompts.schema.json",
         )
         self.assertTrue(
-            any("preview-only" in error for error in validation.errors),
+            any("must not select a host, profile, or initialization path" in error for error in validation.errors),
             validation.errors,
         )
 
@@ -173,11 +176,9 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
                 / "bootstrap-prompts.json"
             ).read_text(encoding="utf-8")
         )
-        prompt = bootstrap["locales"]["en-US"]["hosts"]["codex"]["goals"][
-            "application"
-        ]
+        prompt = bootstrap["locales"]["en-US"]
         prompt["prompt"] = prompt["prompt"].replace(
-            "This global installation changes your user-level skill directory. ",
+            "This installation changes my user-level skill directory. ",
             "",
         )
         validation = validator.Validation()
@@ -192,11 +193,89 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             / "bootstrap-prompts.schema.json",
         )
         self.assertTrue(
-            any("user-directory" in error for error in validation.errors),
+            any("toolbox safety or discovery guidance" in error for error in validation.errors),
             validation.errors,
         )
 
-    def test_source_resolver_distribution_is_exact_and_profile_scoped(self) -> None:
+    def test_bootstrap_prompt_manifest_scopes_file_restrictions_after_installation(self) -> None:
+        bootstrap = json.loads(
+            (
+                REPOSITORY_ROOT
+                / "skills"
+                / "monica-guide"
+                / "assets"
+                / "bootstrap-prompts.json"
+            ).read_text(encoding="utf-8")
+        )
+        bootstrap["locales"]["en-US"]["prompt"] = bootstrap["locales"]["en-US"]["prompt"].replace(
+            "After that installation, these restrictions apply until I choose an operation and approve its preview: ",
+            "",
+        )
+        bootstrap["locales"]["zh-CN"]["prompt"] = bootstrap["locales"]["zh-CN"]["prompt"].replace(
+            "完成这次安装后，",
+            "",
+        )
+        validation = validator.Validation()
+        validator.validate_bootstrap_prompts(
+            validation,
+            self.catalog,
+            bootstrap,
+            REPOSITORY_ROOT
+            / "skills"
+            / "monica-guide"
+            / "assets"
+            / "bootstrap-prompts.schema.json",
+        )
+        self.assertTrue(
+            any("toolbox safety or discovery guidance" in error for error in validation.errors),
+            validation.errors,
+        )
+
+    def test_source_registry_and_profile_minimums_are_global_and_authority_free(self) -> None:
+        self.assertEqual(
+            {"Tairitsua/Monica", "Tairitsua/Monica.Docs"},
+            set(self.catalog["sourceRepositories"]),
+        )
+        self.assertEqual(
+            {"monica", "docs"},
+            {
+                alias
+                for entry in self.catalog["sourceRepositories"].values()
+                for alias in entry["aliases"]
+            },
+        )
+        application = self.catalog["profiles"]["application"]
+        self.assertEqual([], application["sourceRequirements"])
+
+        extension = self.catalog["profiles"]["extension-author"]["sourceRequirements"]
+        self.assertEqual(
+            [{
+                "repository": "Tairitsua/Monica",
+                "requirement": "conditional",
+                "compatibility": "framework-version",
+                "condition": "framework-internal-work",
+            }],
+            extension,
+        )
+
+        docs = self.catalog["profiles"]["docs-contributor"]["sourceRequirements"]
+        self.assertEqual(
+            {"Tairitsua/Monica", "Tairitsua/Monica.Docs"},
+            {requirement["repository"] for requirement in docs},
+        )
+        for profile in self.catalog["profiles"].values():
+            for requirement in profile["sourceRequirements"]:
+                self.assertNotIn("access", requirement)
+
+    def test_managed_instruction_v2_routes_source_lookup_through_guide(self) -> None:
+        instructions = self.catalog["managedInstructions"]
+        self.assertEqual(2, instructions["version"])
+        for profile_name, template in instructions["templates"].items():
+            rules = "\n".join(template["rules"])
+            self.assertIn("$monica-guide source resolve", rules, profile_name)
+            self.assertIn("not write permission", rules, profile_name)
+
+    def test_source_resolver_distribution_is_exact_and_capability_scoped(self) -> None:
         distribution = self.catalog["externalSkills"]["inspect-dependency-source"][
             "distribution"
         ]
@@ -211,8 +290,8 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
         )
         self.assertRegex(distribution["digest"], r"^sha256:[0-9a-f]{64}$")
         self.assertEqual(
-            {"extension-author", "docs-contributor"},
-            set(distribution["requiredByProfiles"]),
+            ["cached-source-resolution"],
+            distribution["requiredFor"],
         )
 
     def test_router_skill_references_exactly_match_catalog_routes(self) -> None:

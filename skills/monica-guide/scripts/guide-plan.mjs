@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import {
   GuideError,
@@ -9,6 +8,7 @@ import {
   compareOrdinalUtf8,
   digest,
   ensureClaudeImport,
+  externalCommandTimeout,
   exists,
   fileDigest,
   gitWorkspaceFingerprint,
@@ -48,7 +48,15 @@ import {
   skillsCliSpec,
 } from './guide-catalog.mjs';
 import { assertProjectReferenceRelease, profileRepositoryIssues, workspaceDetection } from './guide-detect.mjs';
-import { assertSourceContractClean, sourceBindingForProfile, resolveCachedSource, verifyLocalSource } from './guide-source.mjs';
+import {
+  SOURCE_REPOSITORIES,
+  assertSourceContractClean,
+  normalizeSourceRepository,
+  observeSourceBinding,
+  resolveCachedSource,
+  verifySourceBinding,
+  verifyLocalSource,
+} from './guide-source.mjs';
 import {
   buildSourceManifest,
   compareManagedSkillRecords,
@@ -63,8 +71,13 @@ import {
 
 const MUTATING_INTENTS = new Set(['init', 'update', 'configure', 'source', 'contribute', 'forget']);
 const VALID_PROFILES = new Set(['application', 'extension-author', 'framework-contributor', 'docs-contributor']);
-const VALID_AGENTS = new Set(['codex', 'claude-code']);
 const APPLICATION_ARCHITECTURES = ['microservice', 'modular-monolith'];
+const APPLY_TIME_SENTINEL = '<apply-time>';
+
+function sourceRequirementIsRequired(requirement, capabilities) {
+  return requirement?.requirement === 'required'
+    || (requirement?.requirement === 'conditional' && capabilities.includes(requirement.condition));
+}
 
 export function applicationArchitectureSelection(profile, capabilities = []) {
   if (profile !== 'application') return { selected: null, issue: null };
@@ -91,10 +104,32 @@ export function applicationArchitectureSelection(profile, capabilities = []) {
 }
 
 function normalizeAgents(values) {
-  const aliases = { claude: 'claude-code', 'claude_code': 'claude-code' };
-  const agents = [...new Set((values || []).map((value) => aliases[value] || value))];
-  for (const agent of agents) if (!VALID_AGENTS.has(agent)) throw new GuideError('invalid_agent', `Unsupported agent target: ${agent}.`);
-  return agents.sort();
+  const agents = [...new Set((values || []).map(normalizeSkillsCliAgent))];
+  if (agents.includes(null)) throw new GuideError('invalid_agent', 'Agent targets must be pinned npx skills identifiers such as codex, claude-code, or cursor.');
+  return agents.sort(compareOrdinalUtf8);
+}
+
+function validateAgentTargets(agents, catalog, offline, timeoutMs, runner = run) {
+  const executable = process.env.MONICA_GUIDE_NPX || 'npx';
+  const cliSpec = skillsCliSpec(catalog);
+  for (const agent of agents) {
+    const result = runner(executable, [...(offline ? ['--offline'] : []), '--yes', cliSpec, 'ls', '-g', '-a', agent, '--json'], { timeout: timeoutMs });
+    if (result.error?.code === 'ETIMEDOUT') {
+      throw new GuideError(
+        'skills_cli_timeout',
+        `Pinned skills CLI timed out after ${timeoutMs} ms while validating global agent target ${agent}. Verify the local CLI/cache and retry; offline mode never fetches a substitute.`,
+        { agent, timeoutMs },
+      );
+    }
+    if (result.error || result.status !== 0) {
+      throw new GuideError('agent_target_unavailable', `Pinned skills CLI could not query global agent target ${agent}.`, { agent, exitCode: result.status });
+    }
+    let payload;
+    try { payload = JSON.parse(result.stdout); } catch (error) {
+      throw new GuideError('agent_target_contract_invalid', `Pinned skills CLI returned invalid JSON for agent target ${agent}: ${error.message}`, { agent });
+    }
+    if (!Array.isArray(payload)) throw new GuideError('agent_target_contract_invalid', `Pinned skills CLI discovery for ${agent} must return a top-level array.`, { agent });
+  }
 }
 
 function normalizeTargetSkills(values = []) {
@@ -171,21 +206,22 @@ function validateNestedClaudeSibling(workspace, siblingAgents, detection) {
   return discovered.has(path.resolve(siblingAgents)) ? null : 'undiscovered';
 }
 
-function discoverInstalledManagedSkills(agents, catalog, cliSpec, offline) {
+function discoverInstalledManagedSkills(agents, catalog, cliSpec, offline, timeoutMs, runner = run) {
   const canonical = new Set(Object.entries(catalog.skills)
     .filter(([, entry]) => entry.ownership === 'monica' && entry.managed !== false)
     .map(([name]) => name));
   const discovered = new Set();
   const payloads = {};
   for (const agent of agents) {
-    if (offline) {
-      const payload = offlineDiscoveryPayloadForPlanning(agent);
-      payloads[agent] = payload;
-      for (const { name } of payload) if (canonical.has(name)) discovered.add(name);
-      continue;
-    }
     const executable = process.env.MONICA_GUIDE_NPX || 'npx';
-    const result = run(executable, ['--yes', cliSpec, 'ls', '-g', '-a', agent, '--json']);
+    const result = runner(executable, [...(offline ? ['--offline'] : []), '--yes', cliSpec, 'ls', '-g', '-a', agent, '--json'], { timeout: timeoutMs });
+    if (result.error?.code === 'ETIMEDOUT') {
+      throw new GuideError(
+        'skills_cli_timeout',
+        `Pinned skills CLI timed out after ${timeoutMs} ms while discovering ${agent}. Verify the local CLI/cache and retry; offline mode never fetches a substitute.`,
+        { agent, timeoutMs },
+      );
+    }
     if (result.status !== 0) throw new GuideError('global_skill_discovery_failed', `Cannot enumerate ${agent} global skills before switching or updating the one active Monica release.`);
     let payload;
     try { payload = JSON.parse(result.stdout); } catch { throw new GuideError('global_skill_discovery_contract_invalid', `${agent} returned invalid skills ls --json output.`); }
@@ -194,23 +230,6 @@ function discoverInstalledManagedSkills(agents, catalog, cliSpec, offline) {
     for (const entry of payload) if (canonical.has(entry?.name)) discovered.add(entry.name);
   }
   return { skills: [...discovered].sort(compareOrdinalUtf8), payloads };
-}
-
-function offlineDiscoveryPayloadForPlanning(agent) {
-  const roots = agent === 'claude-code'
-    ? [path.join(os.homedir(), '.claude', 'skills')]
-    : [path.join(os.homedir(), '.agents', 'skills'), path.join(os.homedir(), '.codex', 'skills')];
-  const payload = [];
-  const seen = new Set();
-  for (const root of roots) {
-    if (!exists(root)) continue;
-    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-      if (!entry.isDirectory() || seen.has(entry.name)) continue;
-      seen.add(entry.name);
-      payload.push({ name: entry.name, path: path.join(root, entry.name), scope: 'global', agents: [agent] });
-    }
-  }
-  return payload;
 }
 
 function installedSkillDrift(skills, agents, payloads, manifest, offline) {
@@ -303,6 +322,161 @@ function fileAction(filePath, before, after, purpose, mode = 0o600) {
   };
 }
 
+function assertActiveSourceBinding(binding, state, catalogInfo) {
+  const observation = observeSourceBinding(binding);
+  const activeSourceCommit = binding.repository === SOURCE_REPOSITORIES.monica
+    && String(state.activeRelease?.id || '').startsWith('source:')
+    ? state.activeRelease.commit?.toLowerCase() || null
+    : null;
+  if (!activeSourceCommit) return observation;
+  if (binding.commit !== activeSourceCommit) {
+    throw new GuideError(
+      'active_source_binding_required',
+      `Active global source release ${state.activeRelease.id} requires Monica binding ${activeSourceCommit}; preview an explicit global update/switch before binding another commit.`,
+    );
+  }
+  if (observation.dirty) throw new GuideError('dirty_exact_source', 'The binding backing an active source release must be clean.', observation);
+  if (state.activeRelease.catalogDigest && state.activeRelease.catalogDigest !== catalogInfo.catalogDigest) {
+    throw new GuideError('source_catalog_mismatch', 'The bundled catalog does not match the active source release catalog; preview an explicit global update/switch first.');
+  }
+  assertSourceContractClean(binding.sourcePath);
+  const boundCatalogPath = path.join(binding.sourcePath, '.monica', 'agent-skill-catalog.json');
+  if (!exists(boundCatalogPath) || fileDigest(boundCatalogPath) !== state.activeRelease.catalogDigest) {
+    throw new GuideError('source_catalog_mismatch', 'Proposed binding does not contain the catalog bytes recorded for the active source release.');
+  }
+  const manifest = buildSourceManifest(binding.sourcePath, catalogInfo.catalog);
+  const mismatches = Object.entries(state.managedSkills)
+    .filter(([skill, record]) => record.digest && manifest.skillDigests?.[skill] !== record.digest)
+    .map(([skill]) => skill);
+  if (mismatches.length) {
+    throw new GuideError('source_manifest_mismatch', `Proposed binding does not contain the active source-release bytes for: ${mismatches.join(', ')}.`, { mismatches });
+  }
+  return observation;
+}
+
+function revalidateProposedSourceBinding(binding, options) {
+  if (binding.provenance === 'local-git') {
+    try {
+      return verifyLocalSource(binding.sourcePath, {
+        repository: binding.repository,
+        exactRef: binding.ref,
+      });
+    } catch (error) {
+      if (!(error instanceof GuideError)) throw error;
+      throw new GuideError(
+        'source_binding_drift',
+        `Proposed local ${binding.repository} binding changed after preview. Generate and approve a new plan.`,
+        { proposed: binding, cause: { code: error.code, message: error.message, details: error.details } },
+      );
+    }
+  }
+  if (binding.provenance?.resolver === 'inspect-dependency-source') {
+    return resolveCachedSource({
+      exactRef: binding.ref,
+      repository: binding.repository,
+      resolverPath: options.sourceResolver,
+      timeoutMs: externalCommandTimeout(options.timeoutMs),
+    });
+  }
+  throw new GuideError('source_binding_drift', `Proposed ${binding.repository} binding has unsupported provenance. Generate and approve a new plan.`);
+}
+
+function buildGlobalSourcePlan(options) {
+  const action = options.sourceAction;
+  if (!['bind', 'unbind'].includes(action)) throw new GuideError('source_action_invalid', 'Mutating source operations must be bind or unbind.');
+  const repository = normalizeSourceRepository(options.repository);
+  const statePath = stateFilePath(options.state);
+  const state = loadState(statePath);
+  const catalogInfo = loadCatalog({ catalogPath: options.catalog, indexPath: options.index });
+  const timeoutMs = externalCommandTimeout(options.timeoutMs);
+  if (!Object.hasOwn(catalogInfo.catalog.sourceRepositories || {}, repository)) {
+    throw new GuideError('source_repository_unavailable', `Catalog does not declare first-party source repository ${repository}.`);
+  }
+  const plan = {
+    schemaVersion: 1,
+    intent: 'source',
+    sourceAction: action,
+    scope: 'global',
+    workspace: null,
+    dryRun: true,
+    context: {
+      repository,
+      activeGlobalRelease: comparableRelease(state.activeRelease),
+      currentBinding: state.sourceBindings[repository] || null,
+    },
+    actions: [],
+    warnings: [],
+    blockers: [],
+  };
+  const unresolvedRepositories = Object.keys(state.sourceBindingCandidates).filter((candidate) => candidate !== repository);
+  if (unresolvedRepositories.length) {
+    addBlocker(
+      plan,
+      'source_binding_migration_required',
+      `Resolve conflicting legacy bindings for ${unresolvedRepositories.join(', ')} before changing ${repository}.`,
+      Object.fromEntries(unresolvedRepositories.map((candidate) => [candidate, state.sourceBindingCandidates[candidate]])),
+    );
+  }
+  const nextState = structuredClone(state);
+  if (action === 'bind') {
+    let binding;
+    try {
+      if (options.sourcePath) {
+        binding = verifyLocalSource(options.sourcePath, { repository, exactRef: options.sourceRef || null });
+      } else {
+        if (!options.sourceRef) throw new GuideError('source_ref_required', 'Cached source binding requires --source-ref <exact-ref>.');
+        binding = resolveCachedSource({ exactRef: options.sourceRef, repository, resolverPath: options.sourceResolver, timeoutMs });
+      }
+      const observation = assertActiveSourceBinding(binding, state, catalogInfo);
+      plan.context.proposedBinding = binding;
+      plan.context.observation = observation;
+      for (const warning of observation.warnings) addWarning(plan, warning.code, warning.message, observation);
+      nextState.sourceBindings[repository] = binding;
+      delete nextState.sourceBindingCandidates[repository];
+    } catch (error) {
+      if (!(error instanceof GuideError)) throw error;
+      addBlocker(plan, error.code, error.message, error.details);
+    }
+  } else {
+    if (repository === SOURCE_REPOSITORIES.monica && String(state.activeRelease?.id || '').startsWith('source:')) {
+      addBlocker(
+        plan,
+        'active_source_binding_required',
+        `Cannot unbind Monica while active global skills use ${state.activeRelease.id}; preview an explicit global update/switch first.`,
+      );
+    }
+    if (!state.sourceBindings[repository] && !state.sourceBindingCandidates[repository]) {
+      addWarning(plan, 'source_not_bound', `${repository} has no global source binding or migration candidates.`);
+    }
+    delete nextState.sourceBindings[repository];
+    delete nextState.sourceBindingCandidates[repository];
+  }
+  if (!plan.blockers.length) {
+    const before = exists(statePath) ? readText(statePath) : null;
+    const after = stableJson(nextState, 2);
+    const stateAction = fileAction(
+      statePath,
+      before,
+      after,
+      action === 'bind'
+        ? `Bind verified ${repository} source globally as a lookup-only locator.`
+        : `Remove the global ${repository} source binding and legacy migration candidates.`,
+    );
+    if (stateAction) plan.actions.push(stateAction);
+  }
+  plan.preconditions = {
+    scope: 'global',
+    statePath,
+    stateDigest: fileDigest(statePath),
+    catalogDigest: catalogInfo.catalogDigest,
+    indexDigest: catalogInfo.indexDigest,
+    localSkillSource: null,
+    proposedSourceBinding: action === 'bind' ? plan.context.proposedBinding || null : null,
+  };
+  plan.planDigest = digest({ ...plan, planDigest: undefined });
+  return plan;
+}
+
 function comparableRelease(release) {
   if (!release) return null;
   return {
@@ -344,31 +518,22 @@ function workspaceFingerprint(workspace, statePath, catalogInfo) {
   });
 }
 
-function refreshStoredSource(binding, release, profile, resolverPath) {
+function refreshStoredSource(binding, expectedCommit, { resolverPath = null, requireClean = false, timeoutMs = undefined } = {}) {
   if (!binding) return null;
-  if (binding.commit !== release?.commit) throw new GuideError('stored_source_release_mismatch', `Stored source commit ${binding.commit || 'missing'} does not match release ${release?.commit || 'missing'}.`);
-  if (!binding.sourcePath || !exists(binding.sourcePath)) throw new GuideError('stored_source_unavailable', 'Stored source path is unavailable.', { sourcePath: binding.sourcePath });
-  if (binding.verificationState !== 'verified') throw new GuideError('stored_source_unverified', 'Stored source binding is not verified.');
-  if (binding.provenance === 'local-git' || profile === 'framework-contributor') {
-    return verifyLocalSource(binding.sourcePath, {
-      access: profile === 'framework-contributor' ? 'read-write' : 'read-only',
-      expectedCommit: release.commit,
-    });
+  if (!expectedCommit || binding.commit.toLowerCase() !== expectedCommit.toLowerCase()) {
+    throw new GuideError('stored_source_release_mismatch', `Stored source commit ${binding.commit || 'missing'} does not match required commit ${expectedCommit || 'missing'}.`);
   }
-  if (binding.access !== 'read-only'
-    || binding.dirty === true
-    || binding.provenance?.resolver !== 'inspect-dependency-source'
-    || !['exact_commit', 'exact_tag'].includes(binding.resolutionKind)) {
-    throw new GuideError('stored_source_provenance_invalid', 'Stored source binding has unsupported provenance or access.');
-  }
-  return resolveCachedSource({ exactRef: release.commit, access: 'read-only', resolverPath });
+  const observation = verifySourceBinding(binding, { expectedCommit, resolverPath, timeoutMs });
+  if (observation.compatibility !== 'compatible') throw new GuideError('stored_source_release_mismatch', `Stored source commit does not match required commit ${expectedCommit}.`, observation);
+  if (requireClean && observation.dirty) throw new GuideError('dirty_exact_source', `Exact ${binding.repository} source contains local changes.`, observation);
+  return binding;
 }
 
 function cliArguments(cliSpec, offline) {
   return [...(offline ? ['--offline'] : []), '--yes', cliSpec];
 }
 
-function installAction(skill, release, agents, cliSpec, { offline = false, localSourceRoot = null, catalog } = {}) {
+function installAction(skill, release, agents, cliSpec, { offline = false, localSourceRoot = null, catalog, timeoutMs } = {}) {
   if ((offline || release.channel === 'source') && !localSourceRoot) throw new GuideError('local_skill_source_required', 'Offline and source-channel installs require an exact verified local Monica skill source.');
   const source = localSourceRoot ? path.resolve(localSourceRoot, catalog.skills[skill].path) : canonicalSkillUrl(release.installRef, skill);
   const args = [...cliArguments(cliSpec, offline), 'add', source, '-g'];
@@ -382,13 +547,32 @@ function installAction(skill, release, agents, cliSpec, { offline = false, local
     skill,
     source,
     offline,
+    timeoutMs,
     command: shellDisplay('npx', args),
     executable: 'npx',
     args,
   };
 }
 
-function verificationAction(skills, agents, release, cliSpec, manifest, canonicalSkills, rejectUnexpected, offline) {
+function removeAgentTargetsAction(skill, agents, cliSpec, offline, timeoutMs) {
+  const args = [...cliArguments(cliSpec, offline), 'remove', skill, '-g'];
+  for (const agent of agents) args.push('-a', agent);
+  args.push('-y');
+  return {
+    type: 'remove-skill-targets',
+    purpose: `Remove catalog-managed Monica skill ${skill} only from replaced global agent targets: ${agents.join(', ')}.`,
+    skill,
+    agents,
+    cliSpec,
+    offline,
+    timeoutMs,
+    executable: 'npx',
+    args,
+    command: shellDisplay('npx', args),
+  };
+}
+
+function verificationAction(skills, agents, release, cliSpec, manifest, canonicalSkills, rejectUnexpected, offline, timeoutMs) {
   const prefixes = skills.map((skill) => `skills/${skill}/`);
   const selectedManifest = {
     schemaVersion: manifest?.schemaVersion || 2,
@@ -408,16 +592,31 @@ function verificationAction(skills, agents, release, cliSpec, manifest, canonica
     canonicalSkills,
     rejectUnexpected,
     offline,
+    timeoutMs,
     manifest: selectedManifest,
-    commands: [shellDisplay('npx', [...cliArguments(cliSpec, offline), 'ls', '-g', '--json'])],
+    commands: agents.map((agent) => shellDisplay('npx', [...cliArguments(cliSpec, offline), 'ls', '-g', '-a', agent, '--json'])),
   };
 }
 
-function transactionGuardAction(skills, agents, cliSpec, offline, installActions, restoreReference) {
-  const installSources = Object.fromEntries(installActions.map((action) => [action.skill, action.source]));
-  const restoreSources = Object.fromEntries(installActions.map((action) => [
-    action.skill,
-    restoreReference ? canonicalSkillUrl(restoreReference, action.skill) : action.source,
+function removedTargetsVerificationAction(skills, agents, cliSpec, offline, timeoutMs) {
+  return {
+    type: 'verify-removed-agent-targets',
+    purpose: `Verify replaced global agent targets no longer discover catalog-managed Monica skills: ${agents.join(', ')}.`,
+    skills,
+    agents,
+    cliSpec,
+    offline,
+    timeoutMs,
+    commands: agents.map((agent) => shellDisplay('npx', [...cliArguments(cliSpec, offline), 'ls', '-g', '-a', agent, '--json'])),
+  };
+}
+
+function transactionGuardAction(skills, agents, cliSpec, offline, installActions, restoreReference, timeoutMs) {
+  const actionBySkill = new Map(installActions.map((action) => [action.skill, action]));
+  const installSources = Object.fromEntries(skills.map((skill) => [skill, actionBySkill.get(skill)?.source || null]));
+  const restoreSources = Object.fromEntries(skills.map((skill) => [
+    skill,
+    restoreReference ? canonicalSkillUrl(restoreReference, skill) : actionBySkill.get(skill)?.source || null,
   ]));
   return {
     type: 'protect-global-skills',
@@ -426,6 +625,7 @@ function transactionGuardAction(skills, agents, cliSpec, offline, installActions
     agents,
     cliSpec,
     offline,
+    timeoutMs,
     installSources,
     restoreSources,
     guarantee: 'best-effort-compensation',
@@ -460,7 +660,6 @@ function prepareForget(plan, context) {
   if (project.config) plan.actions.push(fileAction(project.filePath, readText(project.filePath), null, 'Remove repository-shared Monica Guide configuration.'));
   const nextState = structuredClone(state);
   delete nextState.workspacePreferences[key];
-  delete nextState.sourceBindings[key];
   delete nextState.contributionPreferences[key];
   delete nextState.observations[key];
   const beforeState = exists(statePath) ? readText(statePath) : null;
@@ -475,6 +674,7 @@ function prepareContribution(plan, context, options) {
   if (!['never', 'prepare', 'ask'].includes(preference)) throw new GuideError('invalid_contribution_preference', `Contribution preference must be never, prepare, or ask; found ${preference}.`);
   const nextState = structuredClone(context.state);
   nextState.contributionPreferences[context.key] = preference;
+  recordWorkspaceObservation(nextState, context, 'contribute');
   const before = exists(context.statePath) ? readText(context.statePath) : null;
   const after = stableJson(nextState, 2);
   const action = fileAction(context.statePath, before, after, `Set local contribution preparation preference to ${preference}.`);
@@ -484,6 +684,25 @@ function prepareContribution(plan, context, options) {
     preference,
     remoteMutationAuthorized: false,
     message: preference === 'never' ? 'Do not prepare an upstream contribution.' : 'Use $monica-contribution for local classification and drafting; request fresh approval before every remote mutation.',
+  };
+}
+
+function recordWorkspaceObservation(state, context, intent) {
+  state.observations[context.key] = {
+    schemaVersion: 1,
+    // The approved preview contains this sentinel. applyPlan materializes the
+    // actual UTC timestamp under the state lock, after every precondition passes.
+    observedAt: APPLY_TIME_SENTINEL,
+    intent,
+    repositoryIdentity: context.detection.repository.identity || null,
+    candidateProfile: context.detection.repository.candidateProfile || null,
+    selectedProfile: context.profile || context.project.config?.profile || null,
+    channel: context.channel || context.project.config?.channel || null,
+    capabilities: [...(context.capabilities || context.project.config?.capabilities || [])],
+    frameworkVersion: context.detection.frameworkVersion.version || null,
+    versionSource: context.detection.frameworkVersion.tier || null,
+    targetRelease: context.release?.id || context.project.config?.expectedCatalogRelease?.id || null,
+    detectionTruncated: Boolean(context.detection.repository.detectionScan?.truncated),
   };
 }
 
@@ -511,16 +730,24 @@ async function prepareReleaseContext(context, plan, options) {
         frameworkVersion: context.detection.frameworkVersion.version,
         sourceRef: options.sourceRef || context.project.config?.expectedCatalogRelease?.commit,
       });
-      const policyAccess = context.profile === 'framework-contributor' ? 'read-write' : 'read-only';
       let binding;
       if (options.sourcePath || context.profile === 'framework-contributor') {
         const selectedPath = options.sourcePath || context.workspace;
-        const exact = verifyLocalSource(selectedPath, { access: policyAccess, expectedCommit: context.release.commit });
+        const exact = verifyLocalSource(selectedPath, { repository: SOURCE_REPOSITORIES.monica, expectedCommit: context.release.commit });
         assertSourceContractClean(exact.sourcePath);
-        binding = { ...exact, access: policyAccess };
+        binding = exact;
+      } else if (context.state.sourceBindings[SOURCE_REPOSITORIES.monica]?.commit === context.release.commit) {
+        binding = refreshStoredSource(context.state.sourceBindings[SOURCE_REPOSITORIES.monica], context.release.commit, {
+          resolverPath: options.sourceResolver,
+          requireClean: true,
+          timeoutMs: context.timeoutMs,
+        });
+        assertSourceContractClean(binding.sourcePath);
       } else {
-        binding = resolveCachedSource({ exactRef: context.release.commit, access: 'read-only', resolverPath: options.sourceResolver });
+        binding = resolveCachedSource({ exactRef: context.release.commit, repository: SOURCE_REPOSITORIES.monica, resolverPath: options.sourceResolver, timeoutMs: context.timeoutMs });
       }
+      const exactObservation = observeSourceBinding(binding, { expectedCommit: context.release.commit });
+      if (exactObservation.dirty) throw new GuideError('dirty_exact_source', 'The source channel requires a clean exact Monica checkout.', exactObservation);
       const catalogPath = path.join(binding.sourcePath, '.monica', 'agent-skill-catalog.json');
       const skillsPath = path.join(binding.sourcePath, 'skills');
       if (!exists(catalogPath) || !exists(skillsPath)) throw new GuideError('source_catalog_unavailable', 'Exact source channel requires .monica/agent-skill-catalog.json and skills/ at the selected commit.');
@@ -615,22 +842,24 @@ async function prepareReleaseContext(context, plan, options) {
 
 export async function buildPlan(intent, options = {}) {
   if (!MUTATING_INTENTS.has(intent)) throw new GuideError('invalid_intent', `Cannot build a mutating plan for ${intent}.`);
+  if (intent === 'source') return buildGlobalSourcePlan(options);
   if (options.skills?.length && intent !== 'update') throw new GuideError('targeted_skill_intent_invalid', '--skill is supported only by update.');
   if (options.nestedInstructions?.length && !['init', 'configure', 'update'].includes(intent)) {
     throw new GuideError('nested_instruction_intent_invalid', '--nested-instruction is supported only by init, configure, and update.');
   }
-  const workspace = normalizePath(options.workspace);
+  const workspace = normalizePath(options.workspace || process.cwd());
   if (!exists(workspace) || !fs.statSync(workspace).isDirectory()) throw new GuideError('workspace_unavailable', `Workspace is not a directory: ${workspace}.`);
   const statePath = stateFilePath(options.state);
   const state = loadState(statePath);
   const project = loadProjectConfig(workspace);
   const catalogInfo = loadCatalog({ catalogPath: options.catalog, indexPath: options.index });
+  const timeoutMs = externalCommandTimeout(options.timeoutMs);
   let catalog = catalogInfo.catalog;
   const detection = workspaceDetection(workspace);
   const key = workspaceKey(workspace, detection.repository.identity);
   const context = {
     workspace, statePath, state, project, catalogInfo, catalog, index: catalogInfo.index, detection, key,
-    release: null, releaseIndex: null, releaseArtifacts: null, installManifest: null, catalogDigest: catalogInfo.catalogDigest, sourceBinding: null, intent,
+    release: null, releaseIndex: null, releaseArtifacts: null, installManifest: null, catalogDigest: catalogInfo.catalogDigest, sourceBinding: null, intent, timeoutMs,
   };
   const plan = {
     schemaVersion: 1,
@@ -649,6 +878,18 @@ export async function buildPlan(intent, options = {}) {
     warnings: [],
     blockers: [],
   };
+  if (project.migration) {
+    addWarning(plan, 'project_config_migration_pending', project.migration.message, project.migration);
+    plan.context.projectConfigMigration = project.migration;
+  }
+  if (Object.keys(state.sourceBindingCandidates).length) {
+    addBlocker(
+      plan,
+      'source_binding_migration_required',
+      'Conflicting legacy workspace source bindings require explicit global source bind or unbind decisions before other mutations.',
+      state.sourceBindingCandidates,
+    );
+  }
   if (intent === 'forget') {
     if (prepareForget(plan, context)) addWarning(plan, 'instruction_reload_required', 'AGENTS.md or CLAUDE.md will change; start a new agent run or session after applying.');
   } else if (intent === 'contribute') {
@@ -661,9 +902,8 @@ export async function buildPlan(intent, options = {}) {
       addBlocker(plan, 'profile_confirmation_required', `Detected ${profile || 'no unambiguous profile'}; rerun with --profile after user confirmation.`);
     }
     if (intent === 'update' && !project.config) addBlocker(plan, 'initialization_required', 'Run and approve init before update.');
-    if (intent === 'source' && !profileConfirmed) addBlocker(plan, 'profile_confirmation_required', 'Confirm --profile before creating the first source binding.');
     if (profile === 'extension-author' && (detection.repository.characteristics.projectReference || detection.frameworkVersion.entries.some((entry) => entry.origin === 'ProjectReference'))) {
-      addBlocker(plan, 'extension_project_reference_forbidden', 'Extension projects must consume Monica through immutable NuGet packages; a Monica ProjectReference was detected. Bind read-only source separately.');
+      addBlocker(plan, 'extension_project_reference_forbidden', 'Extension projects must consume Monica through immutable NuGet packages; a Monica ProjectReference was detected. Bind exact Monica source separately as a lookup locator; the binding grants no write permission.');
     }
     for (const issue of profileRepositoryIssues(workspace, profile, detection.repository)) addBlocker(plan, issue.code, issue.message, issue.details);
     if (profile && detection.repository.candidateProfile && profile !== detection.repository.candidateProfile) {
@@ -677,7 +917,9 @@ export async function buildPlan(intent, options = {}) {
       const issue = context.applicationArchitecture.issue;
       addBlocker(plan, issue.code, issue.message, issue.details);
     }
-    context.agents = normalizeAgents(options.agents?.length ? options.agents : (project.config?.agentTargets || ['codex', 'claude-code']));
+    context.agentTargetsExplicit = Boolean(options.agentTargetsExplicit || options.agents?.length);
+    context.agents = normalizeAgents(context.agentTargetsExplicit ? options.agents : state.agentTargets);
+    if (!context.agents.length) addBlocker(plan, 'agent_target_required', 'Select at least one pinned npx skills agent target with --agent.');
     context.targetSkills = normalizeTargetSkills(options.skills || []);
     context.nestedInstructionSelections = resolveNestedInstructionSelections(workspace, detection, options.nestedInstructions || []);
     for (const selection of context.nestedInstructionSelections.filter((entry) => entry.kind === 'claude')) {
@@ -702,8 +944,17 @@ export async function buildPlan(intent, options = {}) {
     plan.context.capabilities = context.capabilities;
     plan.context.applicationArchitecture = context.applicationArchitecture.selected;
     plan.context.agentTargets = context.agents;
+    plan.context.agentTargetsExplicit = context.agentTargetsExplicit;
     plan.context.requestedSkills = context.targetSkills;
     await prepareReleaseContext(context, plan, options);
+    if (context.agents.length && context.catalog) {
+      try {
+        validateAgentTargets(context.agents, context.catalog, Boolean(options.offline), context.timeoutMs, options.agentValidationRunner || run);
+      } catch (error) {
+        if (!(error instanceof GuideError)) throw error;
+        addBlocker(plan, error.code, error.message, error.details);
+      }
+    }
     plan.context.channel = context.channel;
     if (context.release) {
       try { assertProjectReferenceRelease(detection.frameworkVersion, context.release); }
@@ -721,21 +972,24 @@ export async function buildPlan(intent, options = {}) {
         addBlocker(plan, 'global_release_conflict', `Global Monica release ${active.id} is active, while this repository requires ${context.release.id}. Rerun with --switch-global only after explicitly choosing the switch.`);
       }
     }
-    if (intent === 'source' && context.release && state.activeRelease?.id !== context.release.id) {
-      addBlocker(plan, 'global_release_not_verified', `Source binding requires already-installed global release ${context.release.id}; active release is ${state.activeRelease?.id || 'none'}.`);
-    }
     let sourceBinding = context.sourceBinding;
-    let discardStoredSource = false;
     if (context.closure && context.release && context.installManifest) {
-      const existingBinding = state.sourceBindings[key];
+      const monicaRequirement = context.closure.sourceRequirements.find((entry) => entry.repository === SOURCE_REPOSITORIES.monica) || null;
+      const monicaExpectedCommit = monicaRequirement?.compatibility === 'workspace-commit'
+        ? detection.repository.git?.commit?.toLowerCase() || null
+        : context.release.commit;
+      const existingBinding = state.sourceBindings[SOURCE_REPOSITORIES.monica];
       let refreshedStoredSource = null;
       if (existingBinding && !options.sourcePath && !sourceBinding) {
         try {
-          refreshedStoredSource = refreshStoredSource(existingBinding, context.release, profile, options.sourceResolver);
+          refreshedStoredSource = refreshStoredSource(existingBinding, monicaExpectedCommit, {
+            resolverPath: options.sourceResolver,
+            requireClean: sourceRequirementIsRequired(monicaRequirement, context.capabilities) || Boolean(options.offline) || context.channel === 'source',
+            timeoutMs: context.timeoutMs,
+          });
         } catch (error) {
           if (!(error instanceof GuideError)) throw error;
-          discardStoredSource = true;
-          addWarning(plan, 'stored_source_invalid', `Stored exact source binding is no longer valid and will not be retained: ${error.message}`, error.details);
+          addWarning(plan, 'stored_source_invalid', `Stored global source binding cannot satisfy this exact workflow and remains available only as a lookup locator: ${error.message}`, error.details);
         }
       }
       const projectReferenceSources = [...new Set(detection.frameworkVersion.entries
@@ -750,7 +1004,7 @@ export async function buildPlan(intent, options = {}) {
           addBlocker(plan, 'multiple_project_reference_sources', 'Monica ProjectReferences resolve to more than one local source checkout; select one exact source explicitly.', projectReferenceSources);
         } else {
           try {
-            sourceBinding = verifyLocalSource(projectReferenceSources[0], { access: 'read-only', expectedCommit: context.release.commit });
+            sourceBinding = verifyLocalSource(projectReferenceSources[0], { repository: SOURCE_REPOSITORIES.monica, expectedCommit: monicaExpectedCommit });
           } catch (error) {
             if (!(error instanceof GuideError)) throw error;
             addBlocker(plan, error.code, error.message, error.details);
@@ -758,18 +1012,10 @@ export async function buildPlan(intent, options = {}) {
         }
       } else if (options.offline && !options.sourcePath && profile !== 'framework-contributor') {
         try {
-          sourceBinding = sourceBindingForProfile({
-            workspace,
-            profile,
-            profileClosure: { ...context.closure, source: { ...context.closure.source, required: true } },
-            release: context.release,
-            sourceAccess: options.sourceAccess,
-            resolverPath: options.sourceResolver,
-          });
+          sourceBinding = resolveCachedSource({ exactRef: context.release.commit, repository: SOURCE_REPOSITORIES.monica, resolverPath: options.sourceResolver, timeoutMs: context.timeoutMs });
         } catch (error) {
           if (!(error instanceof GuideError)) throw error;
-          if (error.code === 'source_access_forbidden') addBlocker(plan, error.code, error.message, error.details);
-          else if (error.code === 'source_resolver_unavailable') addSourceResolutionBlocker(plan, error, context, { offline: true });
+          if (error.code === 'source_resolver_unavailable') addSourceResolutionBlocker(plan, error, context, { offline: true });
           else addBlocker(
             plan,
             'offline_local_skill_source_required',
@@ -777,25 +1023,52 @@ export async function buildPlan(intent, options = {}) {
             { cause: { code: error.code, message: error.message, details: error.details } },
           );
         }
-      } else if (context.closure.source.required || options.sourcePath || intent === 'source') {
+      } else if (context.closure.sourceRequirements.some((entry) => entry.repository === SOURCE_REPOSITORIES.monica && sourceRequirementIsRequired(entry, context.capabilities)) || options.sourcePath) {
         try {
-          sourceBinding = sourceBindingForProfile({
-            workspace,
-            profile,
-            profileClosure: intent === 'source'
-              ? { ...context.closure, source: { ...context.closure.source, required: true } }
-              : context.closure,
-            release: context.release,
-            sourcePath: options.sourcePath,
-            sourceAccess: options.sourceAccess,
-            resolverPath: options.sourceResolver,
-          });
+          sourceBinding = profile === 'framework-contributor' && !options.sourcePath
+            ? verifyLocalSource(workspace, { repository: SOURCE_REPOSITORIES.monica, expectedCommit: monicaExpectedCommit })
+            : options.sourcePath
+              ? verifyLocalSource(options.sourcePath, { repository: SOURCE_REPOSITORIES.monica, expectedCommit: monicaExpectedCommit })
+              : resolveCachedSource({ exactRef: monicaExpectedCommit, repository: SOURCE_REPOSITORIES.monica, resolverPath: options.sourceResolver, timeoutMs: context.timeoutMs });
         } catch (error) {
           if (!(error instanceof GuideError)) throw error;
           addSourceResolutionBlocker(plan, error, context);
         }
-      } else if (context.closure.source.recommended) {
-        addWarning(plan, 'source_recommended', 'Exact read-only Monica source is recommended for behavior that depends on framework internals.');
+      } else if (context.closure.sourceRequirements.some((entry) => entry.repository === SOURCE_REPOSITORIES.monica && entry.requirement === 'conditional' && !sourceRequirementIsRequired(entry, context.capabilities))) {
+        addWarning(plan, 'source_available_on_demand', 'A global Monica source binding can be added later when work depends on framework internals.');
+      }
+      const cleanMonicaSourceRequired = sourceRequirementIsRequired(monicaRequirement, context.capabilities) || Boolean(options.offline) || context.channel === 'source';
+      if (sourceBinding && cleanMonicaSourceRequired) {
+        const observation = observeSourceBinding(sourceBinding, { expectedCommit: monicaExpectedCommit });
+        if (observation.dirty) addBlocker(plan, 'dirty_exact_source', 'This exact operation requires a clean Monica source checkout.', observation);
+      }
+      for (const requirement of context.closure.sourceRequirements.filter((entry) => sourceRequirementIsRequired(entry, context.capabilities) && entry.repository !== SOURCE_REPOSITORIES.monica)) {
+        const binding = state.sourceBindings[requirement.repository];
+        const expectedCommit = requirement.compatibility === 'workspace-commit' ? detection.repository.git?.commit?.toLowerCase() || null : context.release.commit;
+        if (requirement.compatibility === 'workspace-commit' && !expectedCommit) {
+          addBlocker(
+            plan,
+            'source_commit_unresolved',
+            `Cannot identify the exact ${requirement.repository} workspace HEAD required by ${profile}.`,
+            { repository: requirement.repository },
+          );
+          continue;
+        }
+        if (!binding) {
+          addBlocker(plan, 'source_binding_required', `${profile} requires a global ${requirement.repository} source binding.`, { repository: requirement.repository, expectedCommit });
+          continue;
+        }
+        try {
+          const observation = verifySourceBinding(binding, { expectedCommit, resolverPath: options.sourceResolver, timeoutMs: context.timeoutMs });
+          if (observation.compatibility === 'mismatch') {
+            addBlocker(plan, 'source_binding_incompatible', `Global ${requirement.repository} source binding cannot satisfy this exact workflow.`, observation);
+          } else if (observation.dirty) {
+            addBlocker(plan, 'dirty_exact_source', `${profile} requires a clean exact ${requirement.repository} source checkout.`, observation);
+          }
+        } catch (error) {
+          if (!(error instanceof GuideError)) throw error;
+          addBlocker(plan, error.code, error.message, error.details);
+        }
       }
     }
     const requiresLocalSkillSource = intent !== 'source'
@@ -831,12 +1104,31 @@ export async function buildPlan(intent, options = {}) {
 
     if (context.release && context.closure && plan.blockers.length === 0) {
       const cliSpec = skillsCliSpec(catalog);
-      const managedAgents = [...new Set([...state.agentTargets, ...context.agents])].sort();
+      const previousAgents = [...state.agentTargets];
+      const desiredAgents = [...context.agents];
+      const affectedAgents = [...new Set([...previousAgents, ...desiredAgents])].sort(compareOrdinalUtf8);
+      const addedAgents = desiredAgents.filter((agent) => !previousAgents.includes(agent));
+      const removedAgents = previousAgents.filter((agent) => !desiredAgents.includes(agent));
+      const agentTargetsChanged = !sameStringSet(previousAgents, desiredAgents);
+      plan.context.previousAgentTargets = previousAgents;
+      plan.context.desiredAgentTargets = desiredAgents;
+      plan.context.addedAgentTargets = addedAgents;
+      plan.context.removedAgentTargets = removedAgents;
+      if (context.agentTargetsExplicit && agentTargetsChanged) {
+        addWarning(plan, 'global_agent_targets_replaced', `The explicit --agent selection replaces the global target set; added: ${addedAgents.join(', ') || 'none'}, removed: ${removedAgents.join(', ') || 'none'}.`);
+      }
       let installationDiscovery = { skills: [], payloads: {} };
-      const enforceGlobalInventory = intent === 'update' || Boolean(state.activeRelease && state.activeRelease.id !== context.release.id);
+      const enforceGlobalInventory = intent === 'update' || agentTargetsChanged || Boolean(state.activeRelease && state.activeRelease.id !== context.release.id);
       if (enforceGlobalInventory) {
         try {
-          installationDiscovery = discoverInstalledManagedSkills(managedAgents, catalog, cliSpec, Boolean(options.offline));
+          installationDiscovery = discoverInstalledManagedSkills(
+            affectedAgents,
+            catalog,
+            cliSpec,
+            Boolean(options.offline),
+            context.timeoutMs,
+            options.agentValidationRunner || run,
+          );
         } catch (error) {
           if (!(error instanceof GuideError)) throw error;
           addBlocker(plan, error.code, error.message, error.details);
@@ -854,7 +1146,7 @@ export async function buildPlan(intent, options = {}) {
         managedSkills = resolveRequiredSkillClosure(catalog, managedRoots);
         skillChanges = compareManagedSkillRecords(state.managedSkills, managedSkills, context.release, context.installManifest);
         const drift = enforceGlobalInventory
-          ? installedSkillDrift(managedSkills, managedAgents, installationDiscovery.payloads, context.installManifest, Boolean(options.offline))
+          ? installedSkillDrift(managedSkills, desiredAgents, installationDiscovery.payloads, context.installManifest, Boolean(options.offline))
           : [];
         const driftNames = new Set(drift.map((entry) => entry.name));
         plan.context.installedSkillDrift = drift;
@@ -870,7 +1162,6 @@ export async function buildPlan(intent, options = {}) {
           } else {
             const targetClosure = resolveRequiredSkillClosure(catalog, context.targetSkills);
             const targetSet = new Set(targetClosure);
-            const agentTargetsChanged = !sameStringSet(state.agentTargets, managedAgents);
             const sourceInstallRequired = requiresSourceReinstall(context, state, skillChanges);
             if (agentTargetsChanged) {
               addBlocker(plan, 'targeted_update_agent_change', 'A targeted update cannot change global agent targets. Run a full update so every managed skill is installed for the new target set.');
@@ -904,7 +1195,6 @@ export async function buildPlan(intent, options = {}) {
             plan.context.targetedSkillClosure = targetClosure;
           }
         } else if (intent === 'update') {
-          const agentTargetsChanged = !sameStringSet(state.agentTargets, managedAgents);
           const metadataUnknown = skillChanges.some((entry) => entry.changeState === 'unknown');
           const sourceInstallRequired = requiresSourceReinstall(context, state, skillChanges);
           installSkills = agentTargetsChanged || metadataUnknown || sourceInstallRequired
@@ -927,32 +1217,47 @@ export async function buildPlan(intent, options = {}) {
       plan.context.skillChanges = skillChanges;
       plan.context.installSkills = installSkills;
       if (intent !== 'source' && plan.blockers.length === 0) {
-        const installActions = installSkills.map((skill) => installAction(skill, context.release, managedAgents, cliSpec, {
+        const installActions = installSkills.map((skill) => installAction(skill, context.release, desiredAgents, cliSpec, {
           offline: Boolean(options.offline),
           localSourceRoot: context.localSkillSource?.path || null,
           catalog,
+          timeoutMs: context.timeoutMs,
         }));
+        const removalSkills = removedAgents.length ? managedSkills : [];
+        const removalActions = removalSkills.map((skill) => removeAgentTargetsAction(
+          skill,
+          removedAgents,
+          cliSpec,
+          Boolean(options.offline),
+          context.timeoutMs,
+        ));
+        const protectedSkills = [...new Set([...installSkills, ...removalSkills])].sort(compareOrdinalUtf8);
         const restoreReference = state.activeRelease?.tag || state.activeRelease?.commit || context.release.installRef;
         plan.actions.push(transactionGuardAction(
-          installSkills,
-          managedAgents,
+          protectedSkills,
+          affectedAgents,
           cliSpec,
           Boolean(options.offline),
           installActions,
           restoreReference,
+          context.timeoutMs,
         ));
         plan.actions.push(...installActions);
+        plan.actions.push(...removalActions);
         const canonicalSkills = Object.entries(catalog.skills)
           .filter(([, entry]) => entry.ownership === 'monica' && entry.managed !== false)
           .map(([name]) => name)
           .sort();
-        plan.actions.push(verificationAction(managedSkills, managedAgents, context.release, cliSpec, context.installManifest, canonicalSkills, enforceGlobalInventory, Boolean(options.offline)));
+        plan.actions.push(verificationAction(managedSkills, desiredAgents, context.release, cliSpec, context.installManifest, canonicalSkills, enforceGlobalInventory, Boolean(options.offline), context.timeoutMs));
+        if (removedAgents.length) {
+          plan.actions.push(removedTargetsVerificationAction(managedSkills, removedAgents, cliSpec, Boolean(options.offline), context.timeoutMs));
+        }
       }
       const nextState = structuredClone(state);
       if (intent !== 'source') {
         nextState.activeRelease = comparableRelease(context.release);
         nextState.managedSkills = Object.fromEntries(skillChanges.map((entry) => [entry.name, entry.target]));
-        nextState.agentTargets = managedAgents;
+        nextState.agentTargets = desiredAgents;
       }
       nextState.workspacePreferences[key] = {
         workspace,
@@ -961,8 +1266,8 @@ export async function buildPlan(intent, options = {}) {
         channel: context.channel,
         capabilities: context.capabilities,
       };
-      if (sourceBinding) nextState.sourceBindings[key] = sourceBinding;
-      else if (discardStoredSource) delete nextState.sourceBindings[key];
+      recordWorkspaceObservation(nextState, context, intent);
+      if (sourceBinding) nextState.sourceBindings[SOURCE_REPOSITORIES.monica] = sourceBinding;
       if (!(key in nextState.contributionPreferences)) nextState.contributionPreferences[key] = 'ask';
       if (context.releaseIndex?.needsCache) {
         nextState.verifiedReleaseIndexes[context.releaseIndex.tag] = {
@@ -1005,7 +1310,6 @@ export async function buildPlan(intent, options = {}) {
           profile,
           channel: context.channel,
           capabilities: context.capabilities,
-          agentTargets: context.agents,
           expectedCatalogRelease: expectedRelease,
           instructionBlockVersion: catalog.managedInstructions?.version || 1,
           managedClaudeImport,
@@ -1088,7 +1392,22 @@ export async function buildPlan(intent, options = {}) {
 
 function applyInstall(action) {
   const executable = process.env.MONICA_GUIDE_NPX || action.executable;
-  runChecked(executable, action.args, { code: 'skill_install_failed' });
+  runChecked(executable, action.args, {
+    code: 'skill_install_failed',
+    timeout: action.timeoutMs,
+    timeoutCode: 'skills_cli_timeout',
+    timeoutMessage: `Pinned skills CLI timed out after ${action.timeoutMs} ms while installing ${action.skill}. Verify the local CLI/cache and retry; offline mode never fetches a substitute.`,
+  });
+}
+
+function applyTargetRemoval(action) {
+  const executable = process.env.MONICA_GUIDE_NPX || action.executable;
+  runChecked(executable, action.args, {
+    code: 'skill_target_remove_failed',
+    timeout: action.timeoutMs,
+    timeoutCode: 'skills_cli_timeout',
+    timeoutMessage: `Pinned skills CLI timed out after ${action.timeoutMs} ms while removing ${action.skill} from ${action.agents.join(', ')}. Verify the local CLI/cache and retry.`,
+  });
 }
 
 function applyFileAction(action) {
@@ -1099,31 +1418,82 @@ function applyFileAction(action) {
 
 function applyVerification(action) {
   const executable = process.env.MONICA_GUIDE_NPX || 'npx';
-  const result = runChecked(executable, [...cliArguments(action.cliSpec, action.offline), 'ls', '-g', '--json'], { code: 'skill_discovery_failed' });
-  let payload;
-  try { payload = JSON.parse(result.stdout); } catch (error) { throw new GuideError('skill_discovery_contract_invalid', `Global skills discovery returned invalid JSON: ${error.message}`); }
-  if (!Array.isArray(payload)) throw new GuideError('skill_discovery_contract_invalid', 'Global skills discovery must return a top-level array.');
-  if (action.rejectUnexpected) {
-    const canonical = new Set(action.canonicalSkills);
-    const expected = new Set(action.skills);
-    const extras = payload.map((entry) => entry?.name).filter((name) => canonical.has(name) && !expected.has(name)).sort();
-    if (extras.length) throw new GuideError('global_skill_set_drift', `Global discovery gained catalog-managed Monica skills after preview: ${extras.join(', ')}. Generate a new update preview so they can be adopted at the active release.`, { extras });
-  }
-  verifyDiscoveryPayload(payload, action.skills, action.manifest);
-  for (const skill of action.skills) {
-    const entry = payload.find((candidate) => candidate?.name === skill);
-    if (!Array.isArray(entry?.agents)) throw new GuideError('skill_discovery_contract_invalid', `${skill} discovery has no agent membership list.`);
-    const actualAgents = new Set(entry.agents.map(normalizeSkillsCliAgent).filter(Boolean));
-    const missingAgents = action.agents.filter((agent) => !actualAgents.has(agent));
-    if (missingAgents.length) {
-      throw new GuideError('skill_agent_membership_mismatch', `${skill} is not discovered for every planned agent target.`, {
-        skill,
-        expectedAgents: action.agents,
-        actualAgents: [...actualAgents].sort(),
-        missingAgents,
-      });
+  for (const agent of action.agents) {
+    const result = runChecked(executable, [...cliArguments(action.cliSpec, action.offline), 'ls', '-g', '-a', agent, '--json'], {
+      code: 'skill_discovery_failed',
+      timeout: action.timeoutMs,
+      timeoutCode: 'skills_cli_timeout',
+      timeoutMessage: `Pinned skills CLI timed out after ${action.timeoutMs} ms while verifying ${agent}. Verify the local CLI/cache and retry; offline mode never fetches a substitute.`,
+    });
+    let payload;
+    try { payload = JSON.parse(result.stdout); } catch (error) { throw new GuideError('skill_discovery_contract_invalid', `${agent} global skills discovery returned invalid JSON: ${error.message}`); }
+    if (!Array.isArray(payload)) throw new GuideError('skill_discovery_contract_invalid', `${agent} global skills discovery must return a top-level array.`);
+    if (action.rejectUnexpected) {
+      const canonical = new Set(action.canonicalSkills);
+      const expected = new Set(action.skills);
+      const extras = payload.map((entry) => entry?.name).filter((name) => canonical.has(name) && !expected.has(name)).sort();
+      if (extras.length) throw new GuideError('global_skill_set_drift', `${agent} discovery gained catalog-managed Monica skills after preview: ${extras.join(', ')}. Generate a new update preview so they can be adopted at the active release.`, { agent, extras });
+    }
+    verifyDiscoveryPayload(payload, action.skills, action.manifest);
+    for (const skill of action.skills) {
+      const entry = payload.find((candidate) => candidate?.name === skill);
+      if (!Array.isArray(entry?.agents)) throw new GuideError('skill_discovery_contract_invalid', `${skill} discovery has no agent membership list.`);
+      const actualAgents = new Set(entry.agents.map(normalizeSkillsCliAgent).filter(Boolean));
+      if (!actualAgents.has(agent)) {
+        throw new GuideError('skill_agent_membership_mismatch', `${skill} is not discovered for planned agent target ${agent}.`, {
+          skill,
+          expectedAgent: agent,
+          actualAgents: [...actualAgents].sort(),
+        });
+      }
     }
   }
+}
+
+function applyRemovedTargetsVerification(action) {
+  const executable = process.env.MONICA_GUIDE_NPX || 'npx';
+  for (const agent of action.agents) {
+    const result = runChecked(executable, [...cliArguments(action.cliSpec, action.offline), 'ls', '-g', '-a', agent, '--json'], {
+      code: 'skill_discovery_failed',
+      timeout: action.timeoutMs,
+      timeoutCode: 'skills_cli_timeout',
+      timeoutMessage: `Pinned skills CLI timed out after ${action.timeoutMs} ms while verifying removed target ${agent}. Verify the local CLI/cache and retry.`,
+    });
+    let payload;
+    try { payload = JSON.parse(result.stdout); } catch (error) {
+      throw new GuideError('skill_discovery_contract_invalid', `${agent} global skills discovery returned invalid JSON: ${error.message}`);
+    }
+    if (!Array.isArray(payload)) throw new GuideError('skill_discovery_contract_invalid', `${agent} global skills discovery must return a top-level array.`);
+    const remaining = action.skills.filter((skill) => payload.some((entry) => entry?.name === skill
+      && (!Array.isArray(entry.agents) || entry.agents.map(normalizeSkillsCliAgent).includes(agent))));
+    if (remaining.length) {
+      throw new GuideError(
+        'skill_target_remove_incomplete',
+        `Removed global agent target ${agent} still discovers managed Monica skills: ${remaining.join(', ')}.`,
+        { agent, remaining },
+      );
+    }
+  }
+}
+
+function materializeApplyTime(plan, statePath, observedAt = new Date().toISOString()) {
+  const materialized = structuredClone(plan);
+  for (const action of materialized.actions.filter((entry) => entry.type === 'write-file' && path.resolve(entry.path) === path.resolve(statePath))) {
+    let payload;
+    try { payload = JSON.parse(action.content); } catch { continue; }
+    let changed = false;
+    for (const observation of Object.values(payload.observations || {})) {
+      if (observation?.observedAt === APPLY_TIME_SENTINEL) {
+        observation.observedAt = observedAt;
+        changed = true;
+      }
+    }
+    if (!changed) continue;
+    action.content = stableJson(payload, 2);
+    action.afterDigest = digest(action.content);
+    action.diff = textDiff(action.path, exists(action.path) ? readText(action.path) : null, action.content);
+  }
+  return materialized;
 }
 
 export async function applyPlan(intent, options) {
@@ -1133,10 +1503,10 @@ export async function applyPlan(intent, options) {
     // Returning a promise from the lock callback would release too early, so the
     // caller supplies a precomputed plan and all recomputation is synchronous
     // except immutable-index acquisition, which occurred before taking the lock.
-    const plan = options.precomputedPlan;
-    if (!plan) throw new GuideError('plan_missing', 'Internal error: apply requires a precomputed plan.');
-    if (plan.planDigest !== options.planDigest) throw new GuideError('plan_digest_mismatch', `Plan changed: expected ${options.planDigest}, current ${plan.planDigest}.`);
-    if (plan.blockers.length) throw new GuideError('plan_blocked', 'The approved plan contains blockers and cannot be applied.', plan.blockers);
+    const approvedPlan = options.precomputedPlan;
+    if (!approvedPlan) throw new GuideError('plan_missing', 'Internal error: apply requires a precomputed plan.');
+    if (approvedPlan.planDigest !== options.planDigest) throw new GuideError('plan_digest_mismatch', `Plan changed: expected ${options.planDigest}, current ${approvedPlan.planDigest}.`);
+    if (approvedPlan.blockers.length) throw new GuideError('plan_blocked', 'The approved plan contains blockers and cannot be applied.', approvedPlan.blockers);
     const retainedTransactions = retainedGlobalSkillTransactions(statePath);
     if (retainedTransactions.length) {
       throw new GuideError(
@@ -1146,29 +1516,39 @@ export async function applyPlan(intent, options) {
       );
     }
     const currentCatalog = loadCatalog({ catalogPath: options.catalog, indexPath: options.index });
-    const currentFingerprint = workspaceFingerprint(plan.workspace, statePath, currentCatalog);
-    if (currentFingerprint !== plan.preconditions.fingerprint) {
-      throw new GuideError('workspace_drift', 'Workspace, catalog, index, or user state changed after plan computation. Generate and approve a new preview.');
+    if (approvedPlan.preconditions.scope === 'global') {
+      if (fileDigest(statePath) !== approvedPlan.preconditions.stateDigest
+        || currentCatalog.catalogDigest !== approvedPlan.preconditions.catalogDigest
+        || currentCatalog.indexDigest !== approvedPlan.preconditions.indexDigest) {
+        throw new GuideError('global_state_drift', 'User state, catalog, or index changed after plan computation. Generate and approve a new preview.');
+      }
+      const proposed = approvedPlan.preconditions.proposedSourceBinding;
+      if (proposed) {
+        const refreshed = revalidateProposedSourceBinding(proposed, options);
+        if (stableJson(refreshed) !== stableJson(proposed)) {
+          throw new GuideError(
+            'source_binding_drift',
+            `Proposed ${proposed.repository} binding changed after preview. Generate and approve a new plan.`,
+            { proposed, observed: refreshed },
+          );
+        }
+        assertActiveSourceBinding(refreshed, loadState(statePath), currentCatalog);
+      }
+    } else {
+      const currentFingerprint = workspaceFingerprint(approvedPlan.workspace, statePath, currentCatalog);
+      if (currentFingerprint !== approvedPlan.preconditions.fingerprint) {
+        throw new GuideError('workspace_drift', 'Workspace, catalog, index, or user state changed after plan computation. Generate and approve a new preview.');
+      }
     }
+    const plan = materializeApplyTime(approvedPlan, statePath);
     for (const action of plan.actions.filter((entry) => entry.type === 'write-file' || entry.type === 'delete-file')) {
-      const currentDigest = exists(action.path) ? digest(fs.readFileSync(action.path)) : null;
+      const currentDigest = fileDigest(action.path);
       if (currentDigest !== action.beforeDigest) throw new GuideError('file_drift', `Planned file changed before apply: ${action.path}.`);
     }
     if (plan.preconditions.localSkillSource) {
       const source = plan.preconditions.localSkillSource;
-      if (source.binding.provenance === 'local-git') {
-        verifyLocalSource(source.path, { access: source.binding.access, expectedCommit: source.binding.commit });
-      } else if (source.binding.provenance?.resolver === 'inspect-dependency-source') {
-        const refreshed = resolveCachedSource({ exactRef: source.binding.commit, access: 'read-only', resolverPath: options.sourceResolver });
-        if (path.resolve(refreshed.sourcePath) !== path.resolve(source.path) || refreshed.commit !== source.binding.commit) {
-          throw new GuideError('source_binding_drift', 'Cached Monica source provenance changed after preview. Generate a new plan.', {
-            expectedPath: source.path,
-            actualPath: refreshed.sourcePath,
-            expectedCommit: source.binding.commit,
-            actualCommit: refreshed.commit,
-          });
-        }
-      }
+      const observation = verifySourceBinding(source.binding, { expectedCommit: source.binding.commit, resolverPath: options.sourceResolver, timeoutMs: externalCommandTimeout(options.timeoutMs) });
+      if (observation.dirty) throw new GuideError('source_binding_drift', 'Exact local Monica source became dirty after preview. Generate a new plan.', observation);
       const sourceCatalog = {
         skills: Object.fromEntries(Object.entries(source.skillPaths).map(([name, skillPath]) => [name, {
           path: skillPath,
@@ -1183,12 +1563,14 @@ export async function applyPlan(intent, options) {
     }
     const guard = plan.actions.find((action) => action.type === 'protect-global-skills');
     const installActions = plan.actions.filter((action) => action.type === 'install-skill');
+    const removalActions = plan.actions.filter((action) => action.type === 'remove-skill-targets');
     const verificationActions = plan.actions.filter((action) => action.type === 'verify-skills');
+    const removedTargetVerificationActions = plan.actions.filter((action) => action.type === 'verify-removed-agent-targets');
     const fileActions = plan.actions.filter((action) => action.type === 'write-file' || action.type === 'delete-file');
-    const knownActionTypes = new Set(['protect-global-skills', 'install-skill', 'verify-skills', 'write-file', 'delete-file']);
+    const knownActionTypes = new Set(['protect-global-skills', 'install-skill', 'remove-skill-targets', 'verify-skills', 'verify-removed-agent-targets', 'write-file', 'delete-file']);
     const unknownAction = plan.actions.find((action) => !knownActionTypes.has(action.type));
     if (unknownAction) throw new GuideError('unknown_action', `Unknown plan action type: ${unknownAction.type}.`);
-    if ((installActions.length || verificationActions.length) && !guard) {
+    if ((installActions.length || removalActions.length || verificationActions.length || removedTargetVerificationActions.length) && !guard) {
       throw new GuideError('global_skill_transaction_guard_missing', 'The approved plan has global skill mutations without a compensation guard. Generate a new preview.');
     }
     let transaction = null;
@@ -1202,9 +1584,12 @@ export async function applyPlan(intent, options) {
         restoreSources: guard.restoreSources,
         fileActions,
         offline: guard.offline,
+        timeoutMs: guard.timeoutMs,
         mutate: ({ runSkill, runFile }) => {
           for (const action of installActions) runSkill(action.skill, () => applyInstall(action));
+          for (const action of removalActions) runSkill(action.skill, () => applyTargetRemoval(action));
           for (const action of verificationActions) applyVerification(action);
+          for (const action of removedTargetVerificationActions) applyRemovedTargetsVerification(action);
           for (const action of fileActions) runFile(action, () => applyFileAction(action));
         },
       });
@@ -1223,7 +1608,7 @@ export async function applyPlan(intent, options) {
   });
 }
 
-export function instructionDiagnostics(workspace, catalog, projectConfig = null) {
+export function instructionDiagnostics(workspace, catalog, projectConfig = null, agentTargets = []) {
   const agentsPath = path.join(workspace, 'AGENTS.md');
   const markers = catalog.managedInstructions?.markers || { start: '<!-- monica-guide:managed:start -->', end: '<!-- monica-guide:managed:end -->' };
   const block = instructionState(exists(agentsPath) ? readText(agentsPath) : '', markers);
@@ -1263,7 +1648,7 @@ export function instructionDiagnostics(workspace, catalog, projectConfig = null)
   }
   const claudePath = path.join(workspace, 'CLAUDE.md');
   const claude = claudeImportState(exists(claudePath) ? readText(claudePath) : '');
-  const claudeRequired = Boolean(projectConfig?.agentTargets?.includes('claude-code'));
+  const claudeRequired = agentTargets.includes('claude-code');
   if (claude.status === 'duplicate') {
     issues.push({ code: 'duplicate_claude_import', severity: 'error', message: 'Root CLAUDE.md contains duplicate @AGENTS.md imports.' });
   } else if (projectConfig && claudeRequired && claude.status === 'absent') {

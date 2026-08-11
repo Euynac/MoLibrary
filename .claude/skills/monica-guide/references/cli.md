@@ -3,54 +3,51 @@
 Run the dependency-free Node.js entry point by absolute path:
 
 ```bash
-node "<skill-dir>/scripts/monica-guide.mjs" <intent> --workspace "<path>" [options]
+node "<skill-dir>/scripts/monica-guide.mjs" [intent] [options]
 ```
 
-## Intents
+No intent is equivalent to `overview`.
+
+## Read-only intents
 
 | Intent | Behavior |
 | --- | --- |
-| `status` | Show detected repository, profile, framework version, configured release, global release, source binding, and per-skill installed/target revisions and change states. |
-| `doctor` | Emit actionable checks; add `--json` for the stable machine envelope. |
-| `init` | Preview or initialize project configuration, global profile skills, managed instructions, Claude import, and required source binding. |
-| `update` | Resolve the configured channel/version, reinstall only new/changed/unhealthy Monica skills, verify the complete managed set, and atomically switch the one global release. |
-| `configure` | Change profile, channel, capabilities, agent targets, and managed instructions. |
-| `source` | Bind an exact verified source path or an exact cached `inspect-dependency-source resolve --json` result. |
-| `contribute` | Set or inspect the local `never`, `prepare`, or `ask` contribution preference and route to `$monica-contribution`. |
-| `forget` | Remove repository Guide configuration, Guide-owned instruction text, and this workspace's user preferences without uninstalling global skills. |
+| `overview` | Explain toolbox capabilities, active/bundled release, agent targets, global first-party source bindings, and suggested next actions. It never requires a workspace. |
+| `status` | Show global skill and binding state. Add `--workspace <path>` for advisory repository detection, configured expectations, and compatibility. |
+| `doctor` | Diagnose global health. Add `--workspace <path>` for repository checks; add `--json` for the stable machine envelope. |
+| `source list` | List the global Monica and Monica.Docs binding summaries. |
+| `source resolve --repository monica\|docs` | Validate and return the selected global binding. Add `--workspace <path>` to compare it with that repository’s expected framework or checkout commit. |
 
-Common options are `--workspace`, `--profile`, `--channel`, repeated `--capability`, repeated `--agent`, `--catalog`, `--index`, `--offline`, and `--json`. `source` accepts `--source-path`, `--source-ref`, and `--source-access`. Use `--switch-global` only after the user explicitly chooses to replace the one active global Monica release.
+`source resolve --json` returns canonical repository identity, stored and observed commits, exact ref, provenance, resolution kind, absolute path, path/dirty health, compatibility, and warnings. A usable dirty or mismatched lookup remains visible with warnings; exact-parity operations may reject it.
 
-`update` alone is the safe default. It reinstalls every managed skill when agent targets changed or any stored skill metadata is unknown; otherwise it reinstalls only new skills, changed digests, and skills whose installed bytes, discovery, or target-agent membership drifted. It always verifies every managed skill before writing release state. A successful verification can advance unchanged skill records without reinstalling their bytes.
+## Mutating intents
 
-`update` accepts repeatable `--skill <name>` for an explicitly targeted update. The Guide expands required Monica dependencies and reinstalls unhealthy or changed members of that closure. It blocks instead of switching the global release when another managed skill is new, unknown, has a changed target digest, is missing, is tampered, or cannot be verified for every target agent. Run a full update in that case. `--skill` is invalid for every other intent.
+| Intent | Behavior |
+| --- | --- |
+| `init` | Initialize selected project configuration, profile skill closure, managed instructions, and conditional Claude import. Requires `--workspace`, immutable release selection, profile confirmation, and at least one validated `--agent`. |
+| `update` | Resolve the configured release, reinstall only selected new/changed/unhealthy Monica skills, verify the complete managed set, and atomically switch the one global release. |
+| `configure` | Change profile, channel, capabilities, agent targets, or managed instructions for an initialized workspace. |
+| `source bind --repository monica\|docs` | Add or replace one global verified binding from `--source-path` or an exact `--source-ref` resolved through `--source-resolver`. |
+| `source unbind --repository monica\|docs` | Remove that repository’s global binding or discard unresolved migration candidates. |
+| `contribute` | Set or inspect the local `never`, `prepare`, or `ask` preference and route to `$monica-contribution`. |
+| `forget` | Remove repository Guide configuration, Guide-owned instruction text, and that workspace’s preferences. It never removes global source bindings or unrelated skills. |
 
-`init`, `configure`, and `update` also accept repeatable `--nested-instruction <relative-path>`. Each value must name an existing, diagnosed nested `AGENTS.md` or `CLAUDE.md` beneath the selected repository. Paths must stay inside the repository, may not contain symlinks, and are never inferred from discovery alone. A selected nested `CLAUDE.md` requires the `claude-code` target and an existing sibling `AGENTS.md`. All unselected nested instruction files remain byte-for-byte unchanged.
+Every mutating intent is a dry run unless both `--apply` and `--plan-digest <digest>` are present. Apply rebuilds the plan from current state, validates local preconditions under an exclusive state lock, and rejects drift. Do not hold the lock while fetching network release data.
 
-`framework-contributor` and `docs-contributor` require `--workspace` to identify the canonical Git root, not a subdirectory. The canonical `Tairitsua/Monica` or `Tairitsua/Monica.Docs` identity may be supplied by `origin` or by `upstream` when `origin` is a fork. `status` and `doctor` enforce the same identity, root, and writability contract as mutation planning. Framework checkout detection may resolve its exact version from the root `Directory.Build.props` `<Version>` when no consumer reference establishes a version.
+Common options include `--workspace`, `--profile`, `--channel`, repeated `--capability`, repeated `--agent`, `--catalog`, `--index`, `--offline`, and `--json`. Agent values are pinned `npx skills` target identifiers; verify each independently through `skills ls -g -a <target> --json`. Only `claude-code` enables the root `CLAUDE.md` import behavior.
 
-`--offline` permits only verified cache/local reads. `init`, `update`, and `configure` require both cached immutable release contracts and an exact verified local/cached Monica checkout whose managed skill manifest matches those contracts. Their generated installation and verification commands use the catalog-pinned `skills` CLI with npm's `--offline` flag and local `skills/<name>` inputs. `source` channel installation follows the same local-source rule even without `--offline`.
+`source bind` accepts either `--source-path <absolute-path> [--source-ref <exact-ref>]` or `--source-ref <exact-ref> [--source-resolver <path>]`. It never stores access, dirtiness, verification status, or compatibility observations. `source list` and `source resolve` are always read-only.
 
-Every mutating intent is a dry run unless both `--apply` and `--plan-digest <digest>` are present. The CLI recomputes the plan from current workspace and user state and rejects a stale digest. Applied file changes use an exclusive state lock and atomic same-directory replacement.
-
-Plans that install or verify global skills include a `protect-global-skills` action. Apply snapshots the catalog-selected Monica skills and every planned file before invoking the pinned `skills` CLI. It marks each skill or file before attempting that action and compensates only attempted work. The observable recovery contract verifies the canonical skill path, bytes, portable file modes, full discovered agent membership, CLI-reported provenance, and planned file bytes/modes. The pinned CLI does not expose per-agent copy-versus-symlink topology, so the Guide does not claim to restore that hidden topology.
-
-If any protected install, verification, cache, state, project, or instruction action fails, the Guide restores planned files and re-adds pre-existing skills through a supported pinned-CLI source. Successful compensation returns the original failure with `details.transaction.status` set to `compensated`. Incomplete compensation fails with `global_skill_rollback_incomplete` and retains a private recovery directory beside user state. A cleanup failure after an otherwise committed or compensated operation retains evidence without triggering a second rollback. `status` and `doctor` surface retained transactions, and another mutation fails with `global_skill_recovery_required` until the evidence is reviewed and reconciled. This is verified best-effort compensation, not an atomic guarantee against process or machine termination.
+Exit codes are `0` for success, `1` for warning-only diagnostics, `3` for domain blockers or unhealthy results, and `2` for invocation, operational, or internal failures.
 
 ## Repository state
 
-`.monica/guide.json` is shareable and contains only:
-
-- schema version;
-- confirmed profile and channel;
-- selected capabilities and agent targets;
-- expected immutable catalog release;
-- managed instruction block version.
-
-It never contains user paths, timestamps, or contribution preferences. Guide writes it with repository-readable mode `0644`.
+`.monica/guide.json` is shareable and contains only the confirmed profile/channel/capabilities, expected immutable catalog release, managed instruction version, and the minimal ownership flag for a Guide-managed Claude import. Agent targets remain user-global and are never written to repository state. The file never contains local paths, timestamps, source bindings, or contribution preferences.
 
 ## User state
 
-`state.json` uses the platform data directory (`XDG_DATA_HOME`, macOS Application Support, or `LOCALAPPDATA`) unless `MONICA_GUIDE_STATE` or `--state` explicitly overrides it. Schema v3 contains one active global release, agent targets, exact source bindings, per-workspace preferences, contribution preferences, and a separate timestamped observations collection. `managedSkills` maps every name to `{ revision, digest, lastChangedIn }`. Tagged releases use a positive catalog revision, exact digest, and immutable change-origin tag. Source installs use `null`, an exact digest, and `null`, and display as `source@<commit>`. Migrated v2 names use an all-null record and require a subsequent full verified update before they can be treated as current. Mixed or partial tuples fail closed. User state and verified release caches are written with private mode `0600`.
+Private state schema v4 contains one active global skill release, managed skill metadata, agent targets, a repository-keyed global `sourceBindings` map, workspace and contribution preferences, migration candidates, cached release contracts, and timestamped observations.
 
-`status --json` and `doctor --json` are safe for automation but can contain local paths. Keep their payloads local. Status emits each skill's installed record, target record, and `new`, `unknown`, `content-changed`, `metadata-changed`, or `unchanged` state. Doctor reports unknown metadata as an error and pending changes or repairable drift as actionable diagnostics. Both validate the managed `AGENTS.md` body and configured block version; when Claude Code is selected they also require exactly one root `CLAUDE.md` import of `@AGENTS.md`.
+Binding keys are exactly `Tairitsua/Monica` and `Tairitsua/Monica.Docs`. Persist only repository, ref, commit, provenance, resolution kind, and source path. Migrating v3 promotes identical legacy Monica bindings, retains conflicting values as explicit candidates, and blocks mutations until `source bind` chooses a replacement or `source unbind` discards them.
+
+Any Guide output that includes source bindings or local paths—including `overview`, `source list`, `source resolve`, `status`, and `doctor`—can expose private absolute paths. Keep it local and do not commit or share it by default. State locking uses a random owner token; never delete or replace a lock that the current process does not own. Diagnose stale/dead owners and require explicit recovery instead of automatic takeover.

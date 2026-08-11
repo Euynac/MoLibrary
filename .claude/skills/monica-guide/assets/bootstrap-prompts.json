@@ -1,6 +1,6 @@
 {
   "$schema": "./bootstrap-prompts.schema.json",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "repository": "Tairitsua/Monica",
   "skill": "monica-guide",
   "immutableRef": "{{MONICA_IMMUTABLE_REF}}",
@@ -12,100 +12,17 @@
     },
     "immutableSkillUrlTemplate": "https://github.com/Tairitsua/Monica/tree/{tag}/skills/{skill}"
   },
-  "hosts": {
-    "codex": {
-      "agentTargets": [
-        "codex"
-      ]
-    },
-    "claude-code": {
-      "agentTargets": [
-        "claude-code"
-      ]
-    },
-    "generic": {
-      "agentTargets": [
-        "codex",
-        "claude-code"
-      ]
-    }
-  },
-  "goals": {
-    "application": {
-      "profile": "application"
-    },
-    "extension": {
-      "profile": "extension-author"
-    }
+  "verifiedAgentTargets": ["codex", "claude-code"],
+  "fallback": {
+    "installCommand": "npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -s monica-guide",
+    "verifyCommand": "npx --yes skills@1.5.21 ls -g --json"
   },
   "locales": {
     "en-US": {
-      "hosts": {
-        "codex": {
-          "goals": {
-            "application": {
-              "prompt": "Install only the named monica-guide skill globally from the immutable source https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide with `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a codex -s monica-guide -y`. This global installation changes your user-level skill directory. Verify the installed skill with `npx --yes skills@1.5.21 ls -g -a codex --json`. Codex normally discovers skills live; restart only if monica-guide is still unavailable after verification. Then invoke $monica-guide and run the dry-run preview `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile application --agent codex --json` for this repository. Verify that releaseCatalogDigest equals `{{MONICA_CATALOG_DIGEST}}`, then show me all actions, file diffs, warnings, blockers, and the planDigest in plain language. Do not apply the plan, change downstream repository files, or perform remote mutations until I approve that unchanged preview. If Guide-managed instructions change later, start a new agent run before development work because AGENTS.md loads per run."
-            },
-            "extension": {
-              "prompt": "Install only the named monica-guide skill globally from the immutable source https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide with `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a codex -s monica-guide -y`. This global installation changes your user-level skill directory. Verify the installed skill with `npx --yes skills@1.5.21 ls -g -a codex --json`. Codex normally discovers skills live; restart only if monica-guide is still unavailable after verification. Then invoke $monica-guide and run the dry-run preview `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile extension-author --agent codex --json` for this repository. Verify that releaseCatalogDigest equals `{{MONICA_CATALOG_DIGEST}}`, then show me all actions, file diffs, warnings, blockers, and the planDigest in plain language. If exact read-only Monica source or its resolver prerequisite is unavailable, report the blocker and never substitute another ref. Do not apply the plan, change downstream repository files, or perform remote mutations until I approve that unchanged preview. If Guide-managed instructions change later, start a new agent run before development work because AGENTS.md loads per run."
-            }
-          }
-        },
-        "claude-code": {
-          "goals": {
-            "application": {
-              "prompt": "Install only the named monica-guide skill globally from the immutable source https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide with `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a claude-code -s monica-guide -y`. This global installation changes your user-level skill directory. Verify the installed skill with `npx --yes skills@1.5.21 ls -g -a claude-code --json`. Claude Code normally watches existing skill directories live; restart only if monica-guide is unavailable after verification or the top-level skills directory did not exist when this session began. Then invoke $monica-guide and run the dry-run preview `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile application --agent claude-code --json` for this repository. Verify that releaseCatalogDigest equals `{{MONICA_CATALOG_DIGEST}}`, then show me all actions, file diffs, warnings, blockers, and the planDigest in plain language. Do not apply the plan, change downstream repository files, or perform remote mutations until I approve that unchanged preview. If Guide-managed CLAUDE.md or AGENTS.md changes later, start a new session before development work because those instructions load at session start."
-            },
-            "extension": {
-              "prompt": "Install only the named monica-guide skill globally from the immutable source https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide with `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a claude-code -s monica-guide -y`. This global installation changes your user-level skill directory. Verify the installed skill with `npx --yes skills@1.5.21 ls -g -a claude-code --json`. Claude Code normally watches existing skill directories live; restart only if monica-guide is unavailable after verification or the top-level skills directory did not exist when this session began. Then invoke $monica-guide and run the dry-run preview `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile extension-author --agent claude-code --json` for this repository. Verify that releaseCatalogDigest equals `{{MONICA_CATALOG_DIGEST}}`, then show me all actions, file diffs, warnings, blockers, and the planDigest in plain language. If exact read-only Monica source or its resolver prerequisite is unavailable, report the blocker and never substitute another ref. Do not apply the plan, change downstream repository files, or perform remote mutations until I approve that unchanged preview. If Guide-managed CLAUDE.md or AGENTS.md changes later, start a new session before development work because those instructions load at session start."
-            }
-          }
-        },
-        "generic": {
-          "goals": {
-            "application": {
-              "prompt": "Install only the named monica-guide skill globally for Codex and Claude Code from the immutable source https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide with `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a codex -a claude-code -s monica-guide -y`. This global installation changes your user-level skill directory. Verify both installations with `npx --yes skills@1.5.21 ls -g -a codex --json` and `npx --yes skills@1.5.21 ls -g -a claude-code --json`. Restart a host only if it cannot discover monica-guide after verification. Then invoke $monica-guide and run the dry-run preview `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile application --agent codex --agent claude-code --json` for this repository. Verify that releaseCatalogDigest equals `{{MONICA_CATALOG_DIGEST}}`, then show me all actions, file diffs, warnings, blockers, and the planDigest in plain language. Do not apply the plan, change downstream repository files, or perform remote mutations until I approve that unchanged preview. Start a new host session after Guide-managed instruction changes."
-            },
-            "extension": {
-              "prompt": "Install only the named monica-guide skill globally for Codex and Claude Code from the immutable source https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide with `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a codex -a claude-code -s monica-guide -y`. This global installation changes your user-level skill directory. Verify both installations with `npx --yes skills@1.5.21 ls -g -a codex --json` and `npx --yes skills@1.5.21 ls -g -a claude-code --json`. Restart a host only if it cannot discover monica-guide after verification. Then invoke $monica-guide and run the dry-run preview `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile extension-author --agent codex --agent claude-code --json` for this repository. Verify that releaseCatalogDigest equals `{{MONICA_CATALOG_DIGEST}}`, then show me all actions, file diffs, warnings, blockers, and the planDigest in plain language. If exact read-only Monica source or its resolver prerequisite is unavailable, report the blocker and never substitute another ref. Do not apply the plan, change downstream repository files, or perform remote mutations until I approve that unchanged preview. Start a new host session after Guide-managed instruction changes."
-            }
-          }
-        }
-      }
+      "prompt": "Install only the monica-guide Agent Skill globally from this immutable source: https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide. Use this host's supported Agent Skills installation and discovery mechanism; if using the skills CLI, pin skills@1.5.21. This installation changes my user-level skill directory. Verify discovery and restart the host only if discovery still fails. Invoke $monica-guide, show its toolbox overview, global status, and Monica/Monica.Docs source bindings, then ask what I want to do next. After that installation, these restrictions apply until I choose an operation and approve its preview: Do not initialize a repository, choose a profile, install downstream Monica skills, bind or unbind source, make any other file changes, or perform remote mutations."
     },
     "zh-CN": {
-      "hosts": {
-        "codex": {
-          "goals": {
-            "application": {
-              "prompt": "使用 `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a codex -s monica-guide -y`，仅从不可变来源 https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide 全局安装具名 monica-guide Skill。这次全局安装会更改你的用户级 Skill 目录。使用 `npx --yes skills@1.5.21 ls -g -a codex --json` 验证实际安装。Codex 通常会实时发现 Skill；只有验证后 monica-guide 仍不可用时才重启。然后调用 $monica-guide，对此仓库运行 dry-run 预览 `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile application --agent codex --json`。确认 releaseCatalogDigest 等于 `{{MONICA_CATALOG_DIGEST}}`，再用清晰语言向我展示全部操作、文件差异、警告、阻塞项和 planDigest。在我批准这份未变化的预览前，不要应用计划，不要修改后续仓库文件，也不要执行远程变更。如果 Guide 后续修改了托管指令，请在开发前新开一次 agent run，因为 AGENTS.md 按 run 加载。"
-            },
-            "extension": {
-              "prompt": "使用 `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a codex -s monica-guide -y`，仅从不可变来源 https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide 全局安装具名 monica-guide Skill。这次全局安装会更改你的用户级 Skill 目录。使用 `npx --yes skills@1.5.21 ls -g -a codex --json` 验证实际安装。Codex 通常会实时发现 Skill；只有验证后 monica-guide 仍不可用时才重启。然后调用 $monica-guide，对此仓库运行 dry-run 预览 `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile extension-author --agent codex --json`。确认 releaseCatalogDigest 等于 `{{MONICA_CATALOG_DIGEST}}`，再用清晰语言向我展示全部操作、文件差异、警告、阻塞项和 planDigest。如果无法取得所需的精确只读 Monica 源码或源码解析器前置条件，请报告阻塞项，绝不能替换为其他 ref。在我批准这份未变化的预览前，不要应用计划，不要修改后续仓库文件，也不要执行远程变更。如果 Guide 后续修改了托管指令，请在开发前新开一次 agent run，因为 AGENTS.md 按 run 加载。"
-            }
-          }
-        },
-        "claude-code": {
-          "goals": {
-            "application": {
-              "prompt": "使用 `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a claude-code -s monica-guide -y`，仅从不可变来源 https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide 全局安装具名 monica-guide Skill。这次全局安装会更改你的用户级 Skill 目录。使用 `npx --yes skills@1.5.21 ls -g -a claude-code --json` 验证实际安装。Claude Code 通常会实时监视既有 Skill 目录；只有验证后 monica-guide 仍不可用，或本会话启动时顶层 Skill 目录不存在时才重启。然后调用 $monica-guide，对此仓库运行 dry-run 预览 `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile application --agent claude-code --json`。确认 releaseCatalogDigest 等于 `{{MONICA_CATALOG_DIGEST}}`，再用清晰语言向我展示全部操作、文件差异、警告、阻塞项和 planDigest。在我批准这份未变化的预览前，不要应用计划，不要修改后续仓库文件，也不要执行远程变更。如果 Guide 后续修改了 CLAUDE.md 或 AGENTS.md，请在开发前新开会话，因为这些指令在会话启动时加载。"
-            },
-            "extension": {
-              "prompt": "使用 `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a claude-code -s monica-guide -y`，仅从不可变来源 https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide 全局安装具名 monica-guide Skill。这次全局安装会更改你的用户级 Skill 目录。使用 `npx --yes skills@1.5.21 ls -g -a claude-code --json` 验证实际安装。Claude Code 通常会实时监视既有 Skill 目录；只有验证后 monica-guide 仍不可用，或本会话启动时顶层 Skill 目录不存在时才重启。然后调用 $monica-guide，对此仓库运行 dry-run 预览 `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile extension-author --agent claude-code --json`。确认 releaseCatalogDigest 等于 `{{MONICA_CATALOG_DIGEST}}`，再用清晰语言向我展示全部操作、文件差异、警告、阻塞项和 planDigest。如果无法取得所需的精确只读 Monica 源码或源码解析器前置条件，请报告阻塞项，绝不能替换为其他 ref。在我批准这份未变化的预览前，不要应用计划，不要修改后续仓库文件，也不要执行远程变更。如果 Guide 后续修改了 CLAUDE.md 或 AGENTS.md，请在开发前新开会话，因为这些指令在会话启动时加载。"
-            }
-          }
-        },
-        "generic": {
-          "goals": {
-            "application": {
-              "prompt": "使用 `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a codex -a claude-code -s monica-guide -y`，仅从不可变来源 https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide 为 Codex 与 Claude Code 全局安装具名 monica-guide Skill。这次全局安装会更改你的用户级 Skill 目录。分别使用 `npx --yes skills@1.5.21 ls -g -a codex --json` 和 `npx --yes skills@1.5.21 ls -g -a claude-code --json` 验证实际安装。只有宿主在验证后仍无法发现 monica-guide 时才重启。然后调用 $monica-guide，对此仓库运行 dry-run 预览 `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile application --agent codex --agent claude-code --json`。确认 releaseCatalogDigest 等于 `{{MONICA_CATALOG_DIGEST}}`，再用清晰语言向我展示全部操作、文件差异、警告、阻塞项和 planDigest。在我批准这份未变化的预览前，不要应用计划，不要修改后续仓库文件，也不要执行远程变更。Guide 托管指令变化后，请新开宿主会话。"
-            },
-            "extension": {
-              "prompt": "使用 `npx --yes skills@1.5.21 add https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide -g -a codex -a claude-code -s monica-guide -y`，仅从不可变来源 https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide 为 Codex 与 Claude Code 全局安装具名 monica-guide Skill。这次全局安装会更改你的用户级 Skill 目录。分别使用 `npx --yes skills@1.5.21 ls -g -a codex --json` 和 `npx --yes skills@1.5.21 ls -g -a claude-code --json` 验证实际安装。只有宿主在验证后仍无法发现 monica-guide 时才重启。然后调用 $monica-guide，对此仓库运行 dry-run 预览 `init --release-tag {{MONICA_IMMUTABLE_REF}} --profile extension-author --agent codex --agent claude-code --json`。确认 releaseCatalogDigest 等于 `{{MONICA_CATALOG_DIGEST}}`，再用清晰语言向我展示全部操作、文件差异、警告、阻塞项和 planDigest。如果无法取得所需的精确只读 Monica 源码或源码解析器前置条件，请报告阻塞项，绝不能替换为其他 ref。在我批准这份未变化的预览前，不要应用计划，不要修改后续仓库文件，也不要执行远程变更。Guide 托管指令变化后，请新开宿主会话。"
-            }
-          }
-        }
-      }
+      "prompt": "只从这个不可变来源全局安装 monica-guide Agent Skill：https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide。使用当前宿主支持的 Agent Skills 安装与发现方式；若使用 skills CLI，请固定 skills@1.5.21。这次安装会更改我的用户级 Skill 目录。请验证发现结果，只有发现仍失败时才重启宿主。调用 $monica-guide，介绍其工具箱、全局状态以及 Monica 和 Monica.Docs 源码绑定，再询问我下一步想做什么。完成这次安装后，在我选择操作并批准其预览之前，以下限制适用：不要初始化仓库、选择 profile、安装后续 Monica Skill、绑定或解绑源码、不要再修改其他文件或执行远程变更。"
     }
   }
 }

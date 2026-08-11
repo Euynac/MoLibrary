@@ -152,6 +152,52 @@ test('current module declarations are detected as extension characteristics', (t
   assert.equal(detection.confidence, 'ambiguous');
 });
 
+test('repository detection prioritizes decisive module files beyond the legacy file cutoff', (t) => {
+  const repository = temporaryDirectory(t);
+  for (let index = 0; index < 300; index += 1) {
+    write(path.join(repository, 'Generated', `Generated${String(index).padStart(3, '0')}.cs`), 'internal sealed class GeneratedType { }\n');
+  }
+  write(
+    path.join(repository, 'Zed', 'Modules', 'ModuleLast.cs'),
+    'public sealed class ModuleLast : MonicaModule<ModuleLastOption> { }\n',
+  );
+
+  const detection = detectRepository(repository);
+  assert.equal(detection.characteristics.extension, true);
+  assert.equal(detection.candidateProfile, 'extension-author');
+  assert.equal(detection.detectionScan.truncated, true);
+});
+
+test('repository detection reads complete project declarations beyond 64 KiB', (t) => {
+  const repository = temporaryDirectory(t);
+  write(
+    path.join(repository, 'LateReference.csproj'),
+    `<Project>${' '.repeat(70 * 1024)}<ItemGroup><PackageReference Include="Monica.Core" Version="1.2.3" /></ItemGroup></Project>\n`,
+  );
+
+  const detection = detectRepository(repository);
+  assert.equal(detection.characteristics.application, true);
+  assert.equal(detection.candidateProfile, 'application');
+  assert.equal(detection.detectionScan.truncated, false);
+});
+
+test('bounded source scanning is reported instead of guessing an application profile', (t) => {
+  const repository = temporaryDirectory(t);
+  write(
+    path.join(repository, 'Application.csproj'),
+    '<Project><ItemGroup><PackageReference Include="Monica.Core" Version="1.2.3" /></ItemGroup></Project>\n',
+  );
+  for (let index = 0; index < 251; index += 1) {
+    write(path.join(repository, 'Source', `Type${String(index).padStart(3, '0')}.cs`), 'internal sealed class Type { }\n');
+  }
+
+  const detection = detectRepository(repository);
+  assert.equal(detection.characteristics.application, true);
+  assert.equal(detection.detectionScan.truncated, true);
+  assert.equal(detection.candidateProfile, null);
+  assert.match(detection.reason, /bounded source scanning/i);
+});
+
 test('characteristic-only docs inference requires both locales and the exact frontend path', (t) => {
   const repository = temporaryDirectory(t);
   fs.mkdirSync(path.join(repository, 'docs', 'en-US'), { recursive: true });
@@ -188,24 +234,23 @@ test('instruction diagnostics validate body, block version, and Claude import', 
     profile: 'application',
     channel: 'stable',
     capabilities: [],
-    agentTargets: ['codex', 'claude-code'],
     instructionBlockVersion: catalog.managedInstructions.version,
     expectedCatalogRelease: { id: 'v1.2.3' },
   };
   const body = renderManagedInstructions(catalog, { profile: config.profile, channel: config.channel, release: config.expectedCatalogRelease, capabilities: [] });
   write(path.join(workspace, 'AGENTS.md'), upsertInstructionBlock('user\r\n\r\n', body, { markers: catalog.managedInstructions.markers }));
   write(path.join(workspace, 'CLAUDE.md'), '@AGENTS.md\r\n');
-  assert.deepEqual(instructionDiagnostics(workspace, catalog, config).issues, []);
+  assert.deepEqual(instructionDiagnostics(workspace, catalog, config, ['claude-code', 'codex']).issues, []);
 
   write(path.join(workspace, 'AGENTS.md'), upsertInstructionBlock('', 'stale', { markers: catalog.managedInstructions.markers }));
-  const stale = instructionDiagnostics(workspace, catalog, { ...config, instructionBlockVersion: 0 });
+  const stale = instructionDiagnostics(workspace, catalog, { ...config, instructionBlockVersion: 0 }, ['claude-code', 'codex']);
   assert.ok(stale.issues.some((issue) => issue.code === 'instruction_body_mismatch'));
   assert.ok(stale.issues.some((issue) => issue.code === 'instruction_block_version_mismatch'));
   write(path.join(workspace, 'CLAUDE.md'), 'no import\n');
-  assert.ok(instructionDiagnostics(workspace, catalog, config).issues.some((issue) => issue.code === 'claude_import_missing'));
+  assert.ok(instructionDiagnostics(workspace, catalog, config, ['claude-code', 'codex']).issues.some((issue) => issue.code === 'claude_import_missing'));
   write(path.join(workspace, 'CLAUDE.md'), '@AGENTS.md\n@AGENTS.md\n');
   assert.equal(claudeImportState(fs.readFileSync(path.join(workspace, 'CLAUDE.md'), 'utf8')).status, 'duplicate');
-  assert.ok(instructionDiagnostics(workspace, catalog, config).issues.some((issue) => issue.code === 'duplicate_claude_import'));
+  assert.ok(instructionDiagnostics(workspace, catalog, config, ['claude-code', 'codex']).issues.some((issue) => issue.code === 'duplicate_claude_import'));
 });
 
 test('duplicate root Claude imports are diagnosed before initialization', (t) => {

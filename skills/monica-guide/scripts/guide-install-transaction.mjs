@@ -5,23 +5,24 @@ import {
   GuideError,
   atomicWrite,
   compareOrdinalUtf8,
-  digest,
+  fileDigest,
   run,
   stableJson,
 } from './guide-shared.mjs';
-
-const AGENT_DISPLAY_NAMES = new Map([
-  ['codex', 'codex'],
-  ['claude code', 'claude-code'],
-  ['claude-code', 'claude-code'],
-]);
 
 function cliPrefix(cliSpec, offline) {
   return [...(offline ? ['--offline'] : []), '--yes', cliSpec];
 }
 
-function invoke(runner, executable, args, code) {
-  const result = runner(executable, args);
+function invoke(runner, executable, args, code, timeoutMs) {
+  const result = runner(executable, args, { timeout: timeoutMs });
+  if (result.error?.code === 'ETIMEDOUT') {
+    throw new GuideError(
+      'skills_cli_timeout',
+      `Pinned skills CLI timed out after ${timeoutMs} ms during protected global-skill mutation. Verify the local CLI/cache and retry; offline mode never fetches a substitute.`,
+      { command: executable, args, timeoutMs },
+    );
+  }
   if (result.error || result.status !== 0) {
     const detail = (result.stderr || result.stdout || result.error?.message || 'unknown error').trim();
     throw new GuideError(code, `${executable} failed: ${detail}`, {
@@ -34,7 +35,8 @@ function invoke(runner, executable, args, code) {
 }
 
 export function normalizeSkillsCliAgent(value) {
-  return AGENT_DISPLAY_NAMES.get(String(value || '').trim().toLowerCase()) || null;
+  const normalized = String(value || '').trim().toLowerCase().replace(/[ _]+/g, '-');
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized) ? normalized : null;
 }
 
 function transactionParent(statePath) {
@@ -75,26 +77,43 @@ function assertNoRetainedTransactions(statePath) {
   }
 }
 
-function readDiscovery({ runner, executable, cliSpec, offline }) {
-  const result = invoke(
-    runner,
-    executable,
-    [...cliPrefix(cliSpec, offline), 'ls', '-g', '--json'],
-    'global_skill_transaction_discovery_failed',
-  );
-  let payload;
-  try {
-    payload = JSON.parse(result.stdout);
-  } catch (error) {
-    throw new GuideError(
-      'global_skill_transaction_discovery_invalid',
-      `Pinned skills CLI returned invalid global discovery JSON: ${error.message}`,
+function readDiscovery({ runner, executable, cliSpec, offline, agents, timeoutMs }) {
+  const merged = new Map();
+  for (const agent of [...new Set(agents || [])]) {
+    const result = invoke(
+      runner,
+      executable,
+      [...cliPrefix(cliSpec, offline), 'ls', '-g', '-a', agent, '--json'],
+      'global_skill_transaction_discovery_failed',
+      timeoutMs,
     );
+    let payload;
+    try {
+      payload = JSON.parse(result.stdout);
+    } catch (error) {
+      throw new GuideError(
+        'global_skill_transaction_discovery_invalid',
+        `Pinned skills CLI returned invalid discovery JSON for ${agent}: ${error.message}`,
+      );
+    }
+    if (!Array.isArray(payload)) {
+      throw new GuideError('global_skill_transaction_discovery_invalid', `Pinned skills CLI discovery for ${agent} must be a top-level array.`);
+    }
+    for (const entry of payload) {
+      if (!entry?.name) continue;
+      const previous = merged.get(entry.name);
+      if (previous && (previous.path !== entry.path || stableJson(previous.provenance) !== stableJson(normalizeProvenance(entry, entry.name)))) {
+        throw new GuideError('global_skill_transaction_discovery_ambiguous', `Agent targets disagree about the installed ${entry.name} location or provenance.`);
+      }
+      const entryAgents = Array.isArray(entry.agents) ? entry.agents : [agent];
+      merged.set(entry.name, {
+        ...entry,
+        agents: [...new Set([...(previous?.agents || []), ...entryAgents])].sort(compareOrdinalUtf8),
+        provenance: normalizeProvenance(entry, entry.name),
+      });
+    }
   }
-  if (!Array.isArray(payload)) {
-    throw new GuideError('global_skill_transaction_discovery_invalid', 'Pinned skills CLI global discovery must be a top-level array.');
-  }
-  return payload;
+  return [...merged.values()].map(({ provenance, ...entry }) => ({ ...entry, ...provenance }));
 }
 
 function inventoryTree(root) {
@@ -114,7 +133,7 @@ function inventoryTree(root) {
         const stat = fs.statSync(absolute);
         const relative = path.relative(root, absolute).split(path.sep).join('/');
         files[relative] = {
-          digest: digest(fs.readFileSync(absolute)),
+          digest: fileDigest(absolute),
           mode: process.platform === 'win32' ? null : stat.mode & 0o777,
           size: stat.size,
         };
@@ -155,7 +174,7 @@ function plannedEntry(payload, skill, targetAgents) {
   if (!cliAgents.length) {
     throw new GuideError(
       'global_skill_membership_not_restorable',
-      `Pre-existing ${skill} has no Codex or Claude Code binding that the Guide can restore through the pinned CLI.`,
+      `Pre-existing ${skill} has no valid agent-target binding that the Guide can restore through the pinned CLI.`,
       { agents },
     );
   }
@@ -265,7 +284,7 @@ function captureLocalFiles(transactionRoot, fileActions) {
     records[absolute] = {
       existed: true,
       mode: process.platform === 'win32' ? null : stat.mode & 0o777,
-      digest: digest(fs.readFileSync(absolute)),
+      digest: fileDigest(absolute),
       snapshot,
     };
   }
@@ -366,11 +385,15 @@ function persistMetadata(context, snapshot, status, extra = {}) {
 function removeBindings(context, skill, agents, failures) {
   if (!agents.length) return;
   try {
+    const args = [...cliPrefix(context.cliSpec, context.offline), 'remove', skill, '-g'];
+    for (const agent of agents) args.push('-a', agent);
+    args.push('-y');
     invoke(
       context.runner,
       context.executable,
-      [...cliPrefix(context.cliSpec, context.offline), 'remove', skill, '-g', '-a', ...agents, '-y'],
+      args,
       'global_skill_rollback_remove_failed',
+      context.timeoutMs,
     );
   } catch (error) {
     failures.push({ phase: 'remove', skill, code: error.code || 'remove_failed', message: error.message });
@@ -398,6 +421,7 @@ function restoreSkills(context, snapshot, failures) {
         context.executable,
         [...cliPrefix(context.cliSpec, context.offline), 'add', source, '-g', '-a', ...record.cliAgents, '-s', skill, '-y'],
         'global_skill_rollback_restore_failed',
+        context.timeoutMs,
       );
     } catch (error) {
       failures.push({ phase: 'restore', skill, code: error.code || 'restore_failed', message: error.message });
@@ -485,7 +509,7 @@ function verifyRestoredFiles(snapshot) {
       drift.push({ path: filePath, kind: 'unsafe-file' });
       continue;
     }
-    const actualDigest = digest(fs.readFileSync(filePath));
+    const actualDigest = fileDigest(filePath);
     const actualMode = process.platform === 'win32' ? null : state.mode & 0o777;
     if (actualDigest !== expected.digest || actualMode !== expected.mode) {
       drift.push({ path: filePath, kind: 'file-content', expectedDigest: expected.digest, actualDigest, expectedMode: expected.mode, actualMode });
@@ -567,6 +591,7 @@ export function withGlobalSkillCompensation({
   restoreSources = {},
   fileActions = [],
   offline = false,
+  timeoutMs = 30_000,
   executable = process.env.MONICA_GUIDE_NPX || 'npx',
   runner = run,
   cleanup = tryCleanupTransaction,
@@ -581,6 +606,7 @@ export function withGlobalSkillCompensation({
     restoreSources,
     fileActions,
     offline: Boolean(offline),
+    timeoutMs,
     executable,
     runner,
     cleanup,

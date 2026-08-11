@@ -9,6 +9,7 @@ Use this skill as the entry point for work on Monica itself: infrastructure modu
 
 ## Routing
 
+- Exact Monica or Monica.Docs source location/provenance: use `$monica-guide source resolve` before guessing a checkout path, cloning, or using a moving branch. Treat the returned binding as lookup-only.
 - Module architecture, folder boundaries, Facades, Providers, public/internal placement, page decomposition: use `$monica-architecture`.
 - Module registration, `Res` and `Res<T>`, services, registration extensions, hosted services, runtime module behavior: use `$monica-development`.
 - Independent NuGet packages, publisher-first IDs, third-party module keys, compatibility branding, licensing, scaffolding, and publishing: use `$monica-third-party-module-development`.

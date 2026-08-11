@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GuideError, compareOrdinalUtf8, digest, parseSemVer, readJson, semverChannel } from './guide-shared.mjs';
+import { GuideError, compareOrdinalUtf8, digest, fileDigest, parseSemVer, readJson, semverChannel } from './guide-shared.mjs';
 
 const ASSET_ROOT = fileURLToPath(new URL('../assets/', import.meta.url));
-const SUPPORTED_CATALOG_SCHEMA_VERSION = 1;
+const SUPPORTED_CATALOG_SCHEMA_VERSION = 2;
 const SUPPORTED_RELEASE_INDEX_SCHEMA_VERSION = 2;
 const SUPPORTED_RELEASE_MANIFEST_SCHEMA_VERSION = 2;
 
@@ -20,8 +20,8 @@ export function loadCatalog({ catalogPath, indexPath } = {}) {
     index,
     catalogPath: resolvedCatalogPath,
     indexPath: resolvedIndexPath,
-    catalogDigest: digest(fs.readFileSync(resolvedCatalogPath)),
-    indexDigest: digest(fs.readFileSync(resolvedIndexPath)),
+    catalogDigest: fileDigest(resolvedCatalogPath),
+    indexDigest: fileDigest(resolvedIndexPath),
   };
 }
 
@@ -361,9 +361,17 @@ export async function loadReleaseArtifacts({
 }
 
 export function validateCatalog(catalog) {
-  if (catalog?.schemaVersion !== SUPPORTED_CATALOG_SCHEMA_VERSION) throw new GuideError('catalog_schema_mismatch', `Expected catalog schema ${SUPPORTED_CATALOG_SCHEMA_VERSION}, found ${catalog?.schemaVersion ?? 'missing'}.`);
+  if (catalog?.schemaVersion !== SUPPORTED_CATALOG_SCHEMA_VERSION) {
+    const actualSchemaVersion = catalog?.schemaVersion ?? 'missing';
+    const remediation = 'Use Monica Guide from the immutable release that produced this catalog, or explicitly upgrade/switch the workspace to a release supported by the installed Guide. Guide will not reinterpret or substitute incompatible catalog bytes.';
+    throw new GuideError(
+      'catalog_schema_mismatch',
+      `This Monica Guide supports catalog schema ${SUPPORTED_CATALOG_SCHEMA_VERSION}, but the selected immutable release uses schema ${actualSchemaVersion}. ${remediation}`,
+      { expectedSchemaVersion: SUPPORTED_CATALOG_SCHEMA_VERSION, actualSchemaVersion, remediation },
+    );
+  }
   if (catalog.$schema !== './schemas/agent-skill-catalog.schema.json') throw new GuideError('catalog_schema_reference_mismatch', 'Catalog must identify the canonical agent-skill-catalog schema.');
-  const requiredTopLevel = ['$schema', 'schemaVersion', 'catalogVersion', 'skills', 'externalSkills', 'profiles', 'profileClosurePolicy', 'sourcePolicies', 'aliases', 'managedInstructions', 'prompts', 'distribution'];
+  const requiredTopLevel = ['$schema', 'schemaVersion', 'catalogVersion', 'skills', 'externalSkills', 'profiles', 'profileClosurePolicy', 'sourceRepositories', 'sourcePolicies', 'aliases', 'managedInstructions', 'prompts', 'distribution'];
   const unexpectedTopLevel = Object.keys(catalog).filter((key) => !requiredTopLevel.includes(key));
   if (requiredTopLevel.some((key) => !Object.hasOwn(catalog, key)) || unexpectedTopLevel.length) throw new GuideError('invalid_catalog', 'Catalog top-level fields do not match the canonical schema.', { unexpectedTopLevel });
   if (!/^\d+\.\d+\.\d+$/.test(catalog.catalogVersion || '')) throw new GuideError('invalid_catalog_version', `Catalog version ${catalog.catalogVersion || 'missing'} is invalid.`);
@@ -417,8 +425,8 @@ export function validateCatalog(catalog) {
     if (external.ownership !== 'external' || external.managed !== false || typeof external.purpose !== 'string' || !external.purpose.trim()) throw new GuideError('invalid_catalog', `External skill ${name} has an invalid ownership contract.`);
     if (external.distribution !== undefined) {
       const distribution = external.distribution;
-      exactKeys(distribution, ['repository', 'ref', 'commit', 'immutableSkillUrl', 'digest', 'digestAlgorithm', 'requiredByProfiles'], [], `externalSkills.${name}.distribution`);
-      nameList(distribution.requiredByProfiles, `externalSkills.${name}.distribution.requiredByProfiles`);
+      exactKeys(distribution, ['repository', 'ref', 'commit', 'immutableSkillUrl', 'digest', 'digestAlgorithm', 'requiredFor'], [], `externalSkills.${name}.distribution`);
+      nameList(distribution.requiredFor, `externalSkills.${name}.distribution.requiredFor`);
       const expectedUrl = `https://github.com/${distribution.repository}/tree/${distribution.commit}`;
       if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(distribution.repository || '')
         || typeof distribution.ref !== 'string'
@@ -449,18 +457,48 @@ export function validateCatalog(catalog) {
     visited.add(name);
   };
   for (const name of Object.keys(catalog.skills)) visitRequired(name);
+  exactKeys(catalog.sourceRepositories, ['Tairitsua/Monica', 'Tairitsua/Monica.Docs'], [], 'sourceRepositories');
+  const expectedSourceAliases = new Map([
+    ['Tairitsua/Monica', ['monica']],
+    ['Tairitsua/Monica.Docs', ['docs']],
+  ]);
+  const sourceAliases = new Set();
+  for (const [repositoryName, repository] of Object.entries(catalog.sourceRepositories)) {
+    exactKeys(repository, ['aliases', 'resolverQuery'], [], `sourceRepositories.${repositoryName}`);
+    nameList(repository.aliases, `sourceRepositories.${repositoryName}.aliases`);
+    if (repository.resolverQuery !== repositoryName
+      || JSON.stringify(repository.aliases) !== JSON.stringify(expectedSourceAliases.get(repositoryName))) {
+      throw new GuideError('invalid_catalog', `Source repository ${repositoryName} has an unsupported identity or alias contract.`);
+    }
+    for (const alias of repository.aliases) {
+      if (sourceAliases.has(alias)) throw new GuideError('invalid_catalog', `Source repository alias ${alias} is assigned more than once.`);
+      sourceAliases.add(alias);
+    }
+  }
   for (const profileName of ['application', 'extension-author', 'framework-contributor', 'docs-contributor']) {
     const profile = catalog.profiles[profileName];
     if (!profile) throw new GuideError('invalid_catalog', `Catalog is missing required profile ${profileName}.`);
-    exactKeys(profile, ['description', 'skills', 'source', 'repositories', 'inference'], [], `profiles.${profileName}`);
+    exactKeys(profile, ['description', 'skills', 'sourceRequirements', 'repositories', 'inference'], [], `profiles.${profileName}`);
     if (typeof profile.description !== 'string' || !profile.description.trim()) throw new GuideError('invalid_catalog', `Profile ${profileName} has no description.`);
     exactKeys(profile.skills, ['required', 'recommended', 'conditional'], [], `profiles.${profileName}.skills`);
     nameList(profile.skills.required, `profiles.${profileName}.skills.required`);
     nameList(profile.skills.recommended, `profiles.${profileName}.skills.recommended`);
     conditionals(profile.skills.conditional, `profiles.${profileName}.skills.conditional`);
     assertSkillReferences([...profile.skills.required, ...profile.skills.recommended, ...profile.skills.conditional.flatMap((entry) => entry.skills)], `profiles.${profileName}`);
-    exactKeys(profile.source, ['required', 'recommended', 'access', 'repository'], [], `profiles.${profileName}.source`);
-    if (typeof profile.source.required !== 'boolean' || typeof profile.source.recommended !== 'boolean' || !['none', 'read-only', 'read-write'].includes(profile.source.access) || !['Monica', 'Monica.Docs'].includes(profile.source.repository)) throw new GuideError('invalid_catalog', `Profile ${profileName} has an invalid source policy.`);
+    if (!Array.isArray(profile.sourceRequirements)) throw new GuideError('invalid_catalog', `Profile ${profileName} sourceRequirements must be an array.`);
+    const requiredRepositories = new Set();
+    for (const [index, requirement] of profile.sourceRequirements.entries()) {
+      const label = `profiles.${profileName}.sourceRequirements[${index}]`;
+      exactKeys(requirement, ['repository', 'requirement', 'compatibility'], ['condition'], label);
+      if (!Object.hasOwn(catalog.sourceRepositories, requirement.repository)
+        || !['required', 'conditional'].includes(requirement.requirement)
+        || !['framework-version', 'workspace-commit'].includes(requirement.compatibility)
+        || (requirement.requirement === 'conditional') !== (typeof requirement.condition === 'string' && skillNamePattern.test(requirement.condition))) {
+        throw new GuideError('invalid_catalog', `${label} has an invalid source requirement.`);
+      }
+      if (requiredRepositories.has(requirement.repository)) throw new GuideError('invalid_catalog', `Profile ${profileName} repeats source repository ${requirement.repository}.`);
+      requiredRepositories.add(requirement.repository);
+    }
     if (!Array.isArray(profile.repositories)) throw new GuideError('invalid_catalog', `Profile ${profileName} repositories must be an array.`);
     for (const [index, repository] of profile.repositories.entries()) {
       exactKeys(repository, ['repository', 'access'], ['purpose'], `profiles.${profileName}.repositories[${index}]`);
@@ -470,18 +508,21 @@ export function validateCatalog(catalog) {
     for (const field of ['repositoryIdentities', 'characteristicPaths']) if (!Array.isArray(profile.inference[field]) || new Set(profile.inference[field]).size !== profile.inference[field].length) throw new GuideError('invalid_catalog', `Profile ${profileName} inference ${field} must be a unique array.`);
     if (profile.inference.characteristicPaths.some((entry) => !safeRelativePath(entry))) throw new GuideError('invalid_catalog', `Profile ${profileName} has an unsafe characteristic path.`);
   }
-  for (const [name, external] of Object.entries(catalog.externalSkills)) {
-    for (const profileName of external.distribution?.requiredByProfiles || []) {
-      if (!Object.hasOwn(catalog.profiles, profileName)) throw new GuideError('invalid_catalog_reference', `External skill ${name} distribution references missing profile ${profileName}.`);
-    }
-  }
+  const sourceResolver = catalog.externalSkills[catalog.sourcePolicies?.immutableBinding?.resolverSkill];
+  if (JSON.stringify(sourceResolver?.distribution?.requiredFor) !== '["cached-source-resolution"]') throw new GuideError('invalid_catalog_reference', 'The immutable source resolver must declare the cached-source-resolution capability.');
   exactKeys(catalog.profileClosurePolicy, ['traverseSkillDependencies', 'recommendations', 'conditional'], [], 'profileClosurePolicy');
   if (JSON.stringify(catalog.profileClosurePolicy.traverseSkillDependencies) !== '["required"]' || catalog.profileClosurePolicy.recommendations !== 'profile-explicit' || catalog.profileClosurePolicy.conditional !== 'selected-capabilities-only') throw new GuideError('invalid_catalog', 'Catalog profile closure policy is unsupported.');
-  exactKeys(catalog.sourcePolicies, ['channels', 'versionResolutionOrder', 'immutableBinding', 'failClosedOn', 'offline'], [], 'sourcePolicies');
+  exactKeys(catalog.sourcePolicies, ['bindingScope', 'bindingCardinality', 'channels', 'versionResolutionOrder', 'immutableBinding', 'failClosedOn', 'offline'], [], 'sourcePolicies');
+  if (catalog.sourcePolicies.bindingScope !== 'global-user' || catalog.sourcePolicies.bindingCardinality !== 'one-per-repository') throw new GuideError('invalid_catalog', 'Catalog source bindings must be one global user binding per first-party repository.');
   if (new Set(catalog.sourcePolicies.channels || []).size !== 3 || !['stable', 'preview', 'source'].every((channel) => catalog.sourcePolicies.channels.includes(channel))) throw new GuideError('invalid_catalog', 'Catalog source channels must be stable, preview, and source.');
   for (const field of ['versionResolutionOrder', 'failClosedOn']) if (!Array.isArray(catalog.sourcePolicies[field]) || !catalog.sourcePolicies[field].length || new Set(catalog.sourcePolicies[field]).size !== catalog.sourcePolicies[field].length) throw new GuideError('invalid_catalog', `sourcePolicies.${field} must be a nonempty unique array.`);
   exactKeys(catalog.sourcePolicies.immutableBinding, ['resolverSkill', 'command', 'storedFields'], [], 'sourcePolicies.immutableBinding');
-  if (!Object.hasOwn(catalog.externalSkills, catalog.sourcePolicies.immutableBinding.resolverSkill) || typeof catalog.sourcePolicies.immutableBinding.command !== 'string' || !catalog.sourcePolicies.immutableBinding.command.trim() || !Array.isArray(catalog.sourcePolicies.immutableBinding.storedFields)) throw new GuideError('invalid_catalog', 'Catalog immutable source binding contract is invalid.');
+  const expectedStoredFields = ['repository', 'ref', 'commit', 'provenance', 'resolutionKind', 'sourcePath'];
+  if (!Object.hasOwn(catalog.externalSkills, catalog.sourcePolicies.immutableBinding.resolverSkill)
+    || catalog.sourcePolicies.immutableBinding.command !== 'resolve <repository> --ref <immutable-ref> --json'
+    || JSON.stringify(catalog.sourcePolicies.immutableBinding.storedFields) !== JSON.stringify(expectedStoredFields)) {
+    throw new GuideError('invalid_catalog', 'Catalog immutable source binding contract is invalid.');
+  }
   if (typeof catalog.sourcePolicies.offline !== 'string' || !catalog.sourcePolicies.offline.trim()) throw new GuideError('invalid_catalog', 'Catalog offline source policy is missing.');
   for (const [alias, entry] of Object.entries(catalog.aliases)) {
     if (!skillNamePattern.test(alias)) throw new GuideError('invalid_catalog', `Invalid alias ${alias}.`);
@@ -687,7 +728,7 @@ export function resolveProfileClosure(catalog, profileName, selectedCapabilities
     conditional: [...conditional].sort(),
     external: [...external].sort(),
     selected,
-    source: profile.source || { required: false, access: 'read-only', writableRepository: null },
+    sourceRequirements: profile.sourceRequirements.map((requirement) => ({ ...requirement })),
   };
 }
 

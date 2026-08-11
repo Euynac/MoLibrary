@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { GuideError, compareOrdinalUtf8, digest, parseSemVer } from './guide-shared.mjs';
+import { GuideError, compareOrdinalUtf8, digest, fileDigest, parseSemVer } from './guide-shared.mjs';
 
 function expectedSkillFiles(manifest, skillName) {
   const prefix = `skills/${skillName}/`;
@@ -20,7 +20,7 @@ function installedFiles(root) {
       const relative = path.relative(root, absolute).split(path.sep).join('/');
       if (entry.isSymbolicLink()) throw new GuideError('installed_skill_symlink', `Installed skill contains an unexpected internal symlink: ${absolute}.`);
       if (entry.isDirectory()) visit(absolute);
-      else if (entry.isFile()) files.set(relative, digest(fs.readFileSync(absolute)));
+      else if (entry.isFile()) files.set(relative, fileDigest(absolute));
     }
   };
   visit(root);
@@ -79,7 +79,7 @@ export function buildSourceManifest(sourceRoot, catalog) {
         const absolute = path.join(directory, child.name);
         if (child.isSymbolicLink()) throw new GuideError('source_skill_symlink', `Source skill contains a symlink: ${absolute}.`);
         if (child.isDirectory()) visit(absolute);
-        else if (child.isFile()) files[path.relative(sourceRoot, absolute).split(path.sep).join('/')] = digest(fs.readFileSync(absolute));
+        else if (child.isFile()) files[path.relative(sourceRoot, absolute).split(path.sep).join('/')] = fileDigest(absolute);
       }
     };
     visit(skillRoot);

@@ -1,9 +1,86 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { GuideError, canonicalRepository, exists, gitInfo, parseSemVer, readJson, readText, walkFiles } from './guide-shared.mjs';
+import { GuideError, canonicalRepository, compareOrdinalUtf8, exists, gitInfo, parseSemVer, readJson, readText, walkFiles } from './guide-shared.mjs';
 
 const MONICA_PACKAGE = /^Monica(?:\.|$)/i;
 const BUNDLED_SKILL_DIRECTORIES = ['skills', '.agents', '.claude', '.codex'];
+const SOURCE_SCAN_FILE_LIMIT = 250;
+const SOURCE_SCAN_BYTE_LIMIT = 16 * 1024 * 1024;
+
+function portableRelative(workspace, file) {
+  return path.relative(workspace, file).split(path.sep).join('/');
+}
+
+function isProjectDetectionFile(name) {
+  return name.endsWith('.csproj')
+    || name.endsWith('.fsproj')
+    || name.endsWith('.props')
+    || name.endsWith('.targets');
+}
+
+function sourcePriority(workspace, file) {
+  const relative = portableRelative(workspace, file);
+  const name = path.basename(file);
+  if (/(?:^|\/)Modules\//i.test(relative) || /^Module.*\.cs$/i.test(name)) return 0;
+  if (/Extension|Provider|Connector/i.test(name)) return 1;
+  if (name.endsWith('.razor')) return 2;
+  return 3;
+}
+
+function readPrefix(file, byteLimit) {
+  const descriptor = fs.openSync(file, 'r');
+  try {
+    const buffer = Buffer.allocUnsafe(byteLimit);
+    const bytesRead = fs.readSync(descriptor, buffer, 0, byteLimit, 0);
+    return buffer.subarray(0, bytesRead).toString('utf8');
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+function scanSourceContent(workspace, files) {
+  const ordered = [...files].sort((left, right) => {
+    const priority = sourcePriority(workspace, left) - sourcePriority(workspace, right);
+    return priority || compareOrdinalUtf8(portableRelative(workspace, left), portableRelative(workspace, right));
+  });
+  const snippets = [];
+  let scannedBytes = 0;
+  let scannedFiles = 0;
+  let unreadableFiles = 0;
+  let partialFile = false;
+  for (const file of ordered) {
+    if (scannedFiles >= SOURCE_SCAN_FILE_LIMIT || scannedBytes >= SOURCE_SCAN_BYTE_LIMIT) break;
+    let size;
+    try {
+      size = fs.statSync(file).size;
+    } catch {
+      continue;
+    }
+    const remaining = SOURCE_SCAN_BYTE_LIMIT - scannedBytes;
+    const bytesToRead = Math.min(size, remaining);
+    try {
+      snippets.push(readPrefix(file, bytesToRead));
+    } catch {
+      unreadableFiles += 1;
+      continue;
+    }
+    scannedBytes += bytesToRead;
+    scannedFiles += 1;
+    partialFile ||= bytesToRead < size;
+  }
+  return {
+    text: snippets.join('\n'),
+    observation: {
+      sourceFiles: ordered.length,
+      scannedFiles,
+      scannedBytes,
+      unreadableFiles,
+      fileLimit: SOURCE_SCAN_FILE_LIMIT,
+      byteLimit: SOURCE_SCAN_BYTE_LIMIT,
+      truncated: partialFile || unreadableFiles > 0 || scannedFiles < ordered.length,
+    },
+  };
+}
 
 function xmlAttributes(text, tagName) {
   const matches = [];
@@ -198,7 +275,7 @@ export function detectFrameworkVersion(workspace, inventory = null, options = {}
   const projectFiles = inventory
     ? inventory.filter((file) => file.endsWith('.csproj') || file.endsWith('.fsproj'))
     : walkFiles(workspace, {
-      maxDepth: 7,
+      maxDepth: Number.POSITIVE_INFINITY,
       ignoredDirectories: BUNDLED_SKILL_DIRECTORIES,
       include: (_file, name) => name.endsWith('.csproj') || name.endsWith('.fsproj'),
     });
@@ -251,19 +328,23 @@ export function detectRepository(workspace, inventory = null) {
   };
   const relevantFiles = inventory ? inventory.filter((file) => {
     const name = path.basename(file);
-    return name.endsWith('.csproj') || name.endsWith('.cs') || name.endsWith('.razor') || name === 'Directory.Build.props';
+    return isProjectDetectionFile(name) || name.endsWith('.cs') || name.endsWith('.razor');
   }) : walkFiles(workspace, {
-    maxDepth: 6,
+    maxDepth: Number.POSITIVE_INFINITY,
     ignoredDirectories: BUNDLED_SKILL_DIRECTORIES,
-    include: (_file, name) => name.endsWith('.csproj') || name.endsWith('.cs') || name.endsWith('.razor') || name === 'Directory.Build.props',
+    include: (_file, name) => isProjectDetectionFile(name) || name.endsWith('.cs') || name.endsWith('.razor'),
   });
-  const portablePaths = relevantFiles.map((file) => path.relative(workspace, file).split(path.sep).join('/'));
-  const snippets = relevantFiles.slice(0, 250).map((file) => readText(file, '').slice(0, 65536)).join('\n');
-  characteristics.ui = relevantFiles.some((file) => file.endsWith('.razor')) || /Monica\.[\w.]*UI|MudBlazor/i.test(snippets);
-  characteristics.extension = /monica-third-party|MonicaModule\s*<|ModuleRegistration\s*</i.test(snippets)
+  const portablePaths = relevantFiles.map((file) => portableRelative(workspace, file));
+  const projectFiles = relevantFiles.filter((file) => isProjectDetectionFile(path.basename(file)));
+  const sourceFiles = relevantFiles.filter((file) => !isProjectDetectionFile(path.basename(file)));
+  const projectText = projectFiles.map((file) => readText(file, '')).join('\n');
+  const sourceScan = scanSourceContent(workspace, sourceFiles);
+  const detectionText = `${projectText}\n${sourceScan.text}`;
+  characteristics.ui = relevantFiles.some((file) => file.endsWith('.razor')) || /Monica\.[\w.]*UI|MudBlazor/i.test(detectionText);
+  characteristics.extension = /monica-third-party|MonicaModule\s*<|ModuleRegistration\s*</i.test(detectionText)
     || relevantFiles.some((file) => /Extension|Provider|Connector/i.test(path.basename(file)));
-  characteristics.application = /PackageReference[^>]+Include=["']Monica\.|ProjectReference[^>]+Monica\./i.test(snippets);
-  characteristics.projectReference = /ProjectReference[^>]+(?:Include|Update)=["'][^"']*Monica/i.test(snippets);
+  characteristics.application = /PackageReference[^>]+Include=["']Monica\.|ProjectReference[^>]+Monica\./i.test(projectText);
+  characteristics.projectReference = /ProjectReference[^>]+(?:Include|Update)=["'][^"']*Monica/i.test(projectText);
   characteristics.microservice = portablePaths.some((file) => /^src\/Services\//i.test(file)
     || /(?:^|\/)[^/]+Service\.(?:API|Domain)\.csproj$/i.test(file));
   characteristics.modularMonolith = portablePaths.some((file) => /^src\/Domains\//i.test(file)
@@ -284,15 +365,19 @@ export function detectRepository(workspace, inventory = null) {
     candidateProfile = null; confidence = 'ambiguous'; reason = 'Both application and extension characteristics were detected; select a profile explicitly.';
   } else if (characteristics.extension) {
     candidateProfile = 'extension-author'; confidence = 'characteristic'; reason = 'Monica extension/module characteristics detected.';
+  } else if (characteristics.application && sourceScan.observation.truncated) {
+    candidateProfile = null; confidence = 'ambiguous'; reason = 'Application characteristics were detected, but bounded source scanning could not rule out an extension; select a profile explicitly.';
   } else if (characteristics.application) {
     candidateProfile = 'application'; confidence = 'characteristic'; reason = 'Monica package or project references detected.';
+  } else if (sourceScan.observation.truncated) {
+    reason = 'No decisive characteristics were found before the bounded source scan was exhausted; select a profile explicitly.';
   }
   const capabilities = [
     ...(characteristics.microservice ? ['microservice'] : []),
     ...(characteristics.modularMonolith ? ['modular-monolith'] : []),
     ...(characteristics.ui ? ['ui'] : []),
   ];
-  return { git, identity, characteristics, candidateProfile, confidence, reason, capabilities };
+  return { git, identity, characteristics, candidateProfile, confidence, reason, capabilities, detectionScan: sourceScan.observation };
 }
 
 export function profileRepositoryIssues(workspace, profile, repository) {
@@ -354,13 +439,14 @@ export function nestedInstructionFiles(workspace) {
 
 export function workspaceDetection(workspace) {
   const inventory = walkFiles(workspace, {
-    maxDepth: 8,
+    maxDepth: Number.POSITIVE_INFINITY,
     ignoredDirectories: BUNDLED_SKILL_DIRECTORIES,
     include: (_file, name) => name.endsWith('.csproj')
       || name.endsWith('.fsproj')
+      || name.endsWith('.cs')
       || name.endsWith('.razor')
-      || name === 'Directory.Build.props'
-      || name === 'Directory.Packages.props'
+      || name.endsWith('.props')
+      || name.endsWith('.targets')
       || name === 'packages.lock.json'
       || name === 'AGENTS.md'
       || name === 'CLAUDE.md',

@@ -306,13 +306,11 @@ def find_required_cycles(skills: dict[str, Any]) -> list[list[str]]:
 
 def bootstrap_prompt_entries(
     bootstrap: dict[str, Any],
-) -> Iterable[tuple[str, str, str, str]]:
-    """Yield locale, host, goal, and prompt from the schema-v2 matrix."""
+) -> Iterable[tuple[str, str]]:
+    """Yield each localized universal prompt from the schema-v3 manifest."""
 
     for locale, localized in bootstrap.get("locales", {}).items():
-        for host, host_content in localized.get("hosts", {}).items():
-            for goal, goal_content in host_content.get("goals", {}).items():
-                yield locale, host, goal, goal_content.get("prompt", "")
+        yield locale, localized.get("prompt", "")
 
 
 def validate_bootstrap_prompts(
@@ -345,52 +343,34 @@ def validate_bootstrap_prompts(
         "bootstrap prompts: catalog digest token is missing",
     )
 
-    expected_hosts = {
-        "codex": ["codex"],
-        "claude-code": ["claude-code"],
-        "generic": ["codex", "claude-code"],
-    }
-    expected_goals = {
-        "application": "application",
-        "extension": "extension-author",
-    }
     validation.check(
-        {
-            host: entry.get("agentTargets")
-            for host, entry in bootstrap.get("hosts", {}).items()
-        }
-        == expected_hosts,
-        "bootstrap prompts: host-to-agent mapping is incomplete or unsupported",
-    )
-    validation.check(
-        {
-            goal: entry.get("profile")
-            for goal, entry in bootstrap.get("goals", {}).items()
-        }
-        == expected_goals,
-        "bootstrap prompts: goal-to-profile mapping is incomplete or unsupported",
+        bootstrap.get("verifiedAgentTargets") == ["codex", "claude-code"],
+        "bootstrap prompts: verified agent targets must remain informational Codex and Claude Code metadata",
     )
 
     direct_url = (
         "https://github.com/Tairitsua/Monica/tree/"
         "{{MONICA_IMMUTABLE_REF}}/skills/monica-guide"
     )
-    expected_entries = {
-        (locale, host, goal)
-        for locale in ("en-US", "zh-CN")
-        for host in expected_hosts
-        for goal in expected_goals
+    expected_fallback = {
+        "installCommand": (
+            f"npx --yes {cli_reference} add {direct_url} -g -s monica-guide"
+        ),
+        "verifyCommand": f"npx --yes {cli_reference} ls -g --json",
     }
+    validation.check(
+        bootstrap.get("fallback") == expected_fallback,
+        "bootstrap prompts: interactive fallback commands must match the catalog-pinned, agent-neutral contract",
+    )
+
     entries = list(bootstrap_prompt_entries(bootstrap))
     validation.check(
-        {(locale, host, goal) for locale, host, goal, _ in entries}
-        == expected_entries,
-        "bootstrap prompts: locale × host × goal matrix is incomplete",
+        {locale for locale, _ in entries} == {"en-US", "zh-CN"}
+        and len(entries) == 2,
+        "bootstrap prompts: exactly one universal prompt is required for each supported locale",
     )
-    for locale, host, goal, prompt in entries:
-        label = f"bootstrap {locale}/{host}/{goal}"
-        agent_targets = expected_hosts.get(host, [])
-        profile = expected_goals.get(goal)
+    for locale, prompt in entries:
+        label = f"bootstrap {locale}"
         validation.check(
             cli_reference in prompt and "skills@latest" not in prompt,
             f"{label}: must use catalog-pinned {cli_reference}",
@@ -400,74 +380,68 @@ def validate_bootstrap_prompts(
             f"{label}: must install from the direct immutable skill URL",
         )
         required_fragments = [
-            "npx --yes",
-            " add ",
-            "-g",
-            "-s monica-guide",
-            "-y",
             "$monica-guide",
-            "init --release-tag {{MONICA_IMMUTABLE_REF}}",
-            f"--profile {profile}",
-            "--json",
-            "releaseCatalogDigest",
-            "{{MONICA_CATALOG_DIGEST}}",
-            "planDigest",
-            "dry-run",
+            "Monica.Docs",
         ]
-        required_fragments.extend(f"--agent {agent}" for agent in agent_targets)
-        required_fragments.extend(f"-a {agent}" for agent in agent_targets)
         validation.check(
             all(fragment in prompt for fragment in required_fragments),
-            f"{label}: install, explicit profile, digest, or preview safety contract is incomplete",
+            f"{label}: toolbox invocation or dual-source discovery guidance is incomplete",
         )
-        expected_tokens = {
-            "{{MONICA_IMMUTABLE_REF}}",
-            "{{MONICA_CATALOG_DIGEST}}",
-        }
         validation.check(
-            set(BOOTSTRAP_TOKEN_PATTERN.findall(prompt)) == expected_tokens,
+            set(BOOTSTRAP_TOKEN_PATTERN.findall(prompt))
+            == {"{{MONICA_IMMUTABLE_REF}}"},
             f"{label}: contains an unknown or missing substitution token",
         )
         validation.check(
-            "--apply" not in prompt,
-            f"{label}: advertised bootstrap prompts must remain preview-only and never contain the apply flag",
-        )
-        validation.check(
-            "--channel" not in prompt,
-            f"{label}: immutable release selection must derive its channel from the release",
+            not any(
+                fragment in prompt
+                for fragment in (
+                    "--apply",
+                    "--agent",
+                    "--profile",
+                    "-a codex",
+                    "-a claude-code",
+                    "init --",
+                )
+            ),
+            f"{label}: universal bootstrap must not select a host, profile, or initialization path",
         )
         locale_safety = (
             (
-                "This global installation changes your user-level skill directory.",
-                "Do not apply the plan",
+                "This installation changes my user-level skill directory.",
+                "restart the host only if discovery still fails",
+                "ask what I want to do next",
+                "approve its preview",
+                "After that installation, these restrictions apply",
+                "Do not initialize a repository",
+                "bind or unbind source",
+                "make any other file changes",
                 "remote mutations",
             )
             if locale == "en-US"
             else (
-                "这次全局安装会更改你的用户级 Skill 目录。",
-                "不要应用计划",
+                "这次安装会更改我的用户级 Skill 目录。",
+                "只有发现仍失败时才重启宿主",
+                "询问我下一步想做什么",
+                "批准其预览",
+                "完成这次安装后",
+                "不要初始化仓库",
+                "绑定或解绑源码",
+                "再修改其他文件",
                 "远程变更",
             )
         )
-        restart_guidance = (
-            "restart" in prompt.lower() if locale == "en-US" else "重启" in prompt
-        )
         validation.check(
-            all(fragment in prompt for fragment in locale_safety) and restart_guidance,
-            f"{label}: localized user-directory, approval, remote-mutation, or restart guidance is missing",
+            all(fragment in prompt for fragment in locale_safety),
+            f"{label}: localized toolbox safety or discovery guidance is missing",
         )
-        if goal == "extension":
-            source_marker = "exact read-only Monica source" if locale == "en-US" else "精确只读 Monica 源码"
-            validation.check(
-                source_marker in prompt,
-                f"{label}: source-required goal must explain its exact read-only source blocker",
-            )
 
 
 def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
     skills: dict[str, Any] = catalog.get("skills", {})
     external: dict[str, Any] = catalog.get("externalSkills", {})
     aliases: dict[str, Any] = catalog.get("aliases", {})
+    source_repositories: dict[str, Any] = catalog.get("sourceRepositories", {})
     canonical_root = REPOSITORY_ROOT / "skills"
     canonical_directories = {
         child.name for child in canonical_root.iterdir() if child.is_dir()
@@ -592,6 +566,24 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
     for cycle in find_required_cycles(skills):
         validation.errors.append("required dependency cycle: " + " -> ".join(cycle))
 
+    expected_source_aliases = {
+        "Tairitsua/Monica": ["monica"],
+        "Tairitsua/Monica.Docs": ["docs"],
+    }
+    source_aliases: dict[str, str] = {}
+    for repository, source_entry in source_repositories.items():
+        validation.check(
+            source_entry.get("resolverQuery") == repository
+            and source_entry.get("aliases") == expected_source_aliases.get(repository),
+            f"source repository {repository}: canonical resolver identity or alias contract is invalid",
+        )
+        for alias in source_entry.get("aliases", []):
+            validation.check(
+                alias not in source_aliases,
+                f"source repository alias {alias!r} is assigned more than once",
+            )
+            source_aliases[alias] = repository
+
     for profile_name, profile in catalog.get("profiles", {}).items():
         profile_skills = profile.get("skills", {})
         roots = [
@@ -624,28 +616,24 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
                 selection_closure <= set(skills),
                 f"profile {profile_name} {selection_kind}: closure contains an unknown skill",
             )
-        source = profile.get("source", {})
-        if source.get("required"):
+        source_requirements = profile.get("sourceRequirements", [])
+        required_repositories: set[str] = set()
+        for source_requirement in source_requirements:
+            repository = source_requirement.get("repository")
             validation.check(
-                source.get("access") in {"read-only", "read-write"},
-                f"profile {profile_name}: required source must declare access",
+                repository in source_repositories,
+                f"profile {profile_name}: unknown source repository {repository!r}",
             )
+            validation.check(
+                repository not in required_repositories,
+                f"profile {profile_name}: duplicate source requirement for {repository!r}",
+            )
+            required_repositories.add(repository)
 
     for external_name, external_entry in external.items():
         distribution = external_entry.get("distribution")
         if not distribution:
             continue
-        required_profiles = distribution.get("requiredByProfiles", [])
-        for profile_name in required_profiles:
-            validation.check(
-                profile_name in catalog.get("profiles", {}),
-                f"external skill {external_name}: unknown required profile {profile_name!r}",
-            )
-            validation.check(
-                catalog.get("profiles", {}).get(profile_name, {}).get("source", {}).get("required")
-                is True,
-                f"external skill {external_name}: {profile_name} must require exact source",
-            )
         commit = distribution.get("commit", "")
         expected_url = (
             f"https://github.com/{distribution.get('repository', '')}/tree/{commit}"
@@ -659,6 +647,28 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
             and bool(SHA256_PATTERN.fullmatch(distribution.get("digest", ""))),
             f"external skill {external_name}: immutable distribution digest is invalid",
         )
+
+    immutable_binding = catalog.get("sourcePolicies", {}).get("immutableBinding", {})
+    source_resolver = external.get(immutable_binding.get("resolverSkill"), {})
+    validation.check(
+        source_resolver.get("distribution", {}).get("requiredFor")
+        == ["cached-source-resolution"],
+        "immutable source resolver must declare the cached-source-resolution capability",
+    )
+    validation.check(
+        immutable_binding.get("command")
+        == "resolve <repository> --ref <immutable-ref> --json"
+        and immutable_binding.get("storedFields")
+        == [
+            "repository",
+            "ref",
+            "commit",
+            "provenance",
+            "resolutionKind",
+            "sourcePath",
+        ],
+        "source policy must persist only the global lookup binding contract",
+    )
 
     for template_name, template in catalog.get("managedInstructions", {}).get("templates", {}).items():
         validation.check(template_name in catalog.get("profiles", {}), f"unknown instruction template {template_name}")

@@ -4,7 +4,7 @@ Use three separate version axes. Do not describe one as a substitute for another
 
 | Axis | Meaning | Authority |
 | --- | --- | --- |
-| Monica framework version | The NuGet or source version used by the project | Resolved project state and exact source binding |
+| Monica framework version | The NuGet or source version used by the project | Resolved project state and compatibility with the global Monica binding |
 | Monica skill release | The immutable Monica tag and catalog selected for the one global installation | `agent-skill-index.json` |
 | Per-skill revision | A human-readable change counter within the immutable release sequence | Release index `skillRevisions` and `skillLastChangedIn` metadata |
 
@@ -22,7 +22,7 @@ The Monica release workflow is the only publication path:
 4. Tag-based install and discovery smoke tests must pass before that immutable release is advertised.
 5. The published index is rolled into source history before the next release. History rewrites fail closed.
 
-The `source` channel is different: it binds an explicitly selected commit and identifies skill content by exact digest. It never follows a moving branch and does not invent release revisions.
+The `source` channel is different: it installs from the exact globally bound Monica commit and identifies skill content by exact digest. It never follows a moving branch and does not invent release revisions. The independent Monica.Docs binding is a lookup source and does not select a Monica skill release.
 
 If a selected release uses a newer index, catalog, or manifest schema than the installed Guide supports, stop with `guide_upgrade_required`. Reinstall only `monica-guide` from the exact `reinstallUrl` for that requested tag, verify host discovery, and retry the same command. Do not fall back to another release or interpret the newer contract with the old Guide.
 

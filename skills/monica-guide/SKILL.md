@@ -1,52 +1,47 @@
 ---
 name: monica-guide
-description: Bootstrap, configure, diagnose, update, and safely route Monica development environments for Codex and Claude Code. Use when initializing a Monica application, extension, framework checkout, or Monica.Docs checkout; selecting a Monica skill profile or release channel; binding exact framework source; managing Monica-owned AGENTS.md instructions; checking installation or version health; or preparing to contribute a finding upstream.
+description: Explain, bootstrap, configure, diagnose, update, and safely route the Monica toolbox for any Agent Skills-compatible host. Use when someone is new to Monica or has not chosen a repository/profile yet; when initializing or maintaining a Monica application, extension, framework checkout, or Monica.Docs checkout; when selecting Monica skills or releases; when an agent needs verified Monica or Monica.Docs source; or when preparing a safe upstream contribution.
 ---
 
 # Monica Guide
 
-Use the bundled CLI as the source of truth for environment changes. Keep ordinary implementation work in the routed Monica development skills.
+Use the bundled CLI as the source of truth for toolbox state and environment changes. Keep ordinary implementation work in the routed Monica development skills.
 
 ## Workflow
 
-1. In a new repository, preview `init` directly with the advertised immutable release, an explicit profile, and the selected host. Do not run `doctor` before first initialization unless setup is already failing:
+1. Start without assuming a repository or development path:
 
    ```bash
-   node "<skill-dir>/scripts/monica-guide.mjs" init --workspace "<repository>" \
-     --release-tag "<immutable-vSemVer-tag>" --profile application --agent codex
+   node "<skill-dir>/scripts/monica-guide.mjs" overview
    ```
 
-2. For an already configured or unhealthy repository, run the read-only diagnosis first:
+   Explain the available tools, current global skill release and agent targets, Monica and Monica.Docs bindings, and reasonable next actions. Ask what the user wants to do.
+
+2. When an agent needs first-party source, resolve the global binding before guessing a path, cloning, or opening a moving branch:
 
    ```bash
-   node "<skill-dir>/scripts/monica-guide.mjs" doctor --workspace "<repository>"
+   node "<skill-dir>/scripts/monica-guide.mjs" source resolve --repository monica --json
+   node "<skill-dir>/scripts/monica-guide.mjs" source resolve --repository docs --json
    ```
 
-3. Present the complete actions, diffs, warnings, blockers, and `planDigest`. Obtain confirmation for the detected profile and the plan.
-4. Apply only the unchanged plan:
+   Treat a returned path as a verified lookup location, never as write authorization. Report compatibility and dirty-state warnings instead of hiding the path.
 
-   ```bash
-   node "<skill-dir>/scripts/monica-guide.mjs" init --workspace "<repository>" \
-     --release-tag "<immutable-vSemVer-tag>" --profile application --agent codex \
-     --apply --plan-digest "sha256:..."
-   ```
+3. Run global `status` or `doctor` without a workspace. Add `--workspace "<path>"` only when the user wants repository-specific detection and compatibility checks.
 
-5. Run `doctor` again. Route application work to `$monica-application`, framework work to `$monica-framework`, and upstream contribution preparation to `$monica-contribution`.
+4. Run `init`, `configure`, or `update` only after the user chooses a concrete repository workflow. Require explicit profile confirmation, present the complete dry-run actions, diffs, warnings, blockers, and `planDigest`, then apply only the unchanged approved plan.
+
+5. Route application work to `$monica-application`, framework and extension work to `$monica-framework`, documentation work to `$monica-docs-authoring`, and upstream contribution preparation to `$monica-contribution`.
 
 ## Operating rules
 
-- Treat `stable`, `preview`, and explicit `source` as distinct channels. Never replace an unavailable immutable release with a branch or another version.
-- In offline mode, require verified cached release contracts plus an exact local/cached Monica source whose complete managed skill tree matches the target manifest. Install from that local tree with the pinned CLI in npm offline mode; never contact GitHub or the npm registry.
-- Install the `source` channel only from its exact bound checkout. Revalidate the source path, commit, cleanliness/provenance, and managed skill manifest at preview and apply time.
-- Require an explicit profile for the first applied initialization, even when detection is confident.
-- Keep only one active global Monica skill release per user. Require `--switch-global` before replacing it.
-- Read per-skill revisions from the immutable release contract. Treat digests as the machine contract and revisions plus `lastChangedIn` as the human-readable change history; never infer versions from `SKILL.md` frontmatter.
-- A normal `update` reinstalls only new, changed, unknown, missing, or tampered skills, then verifies every managed skill before switching the global release. Use repeatable `--skill` only for an explicitly requested targeted update; include required dependencies and block when another managed skill would change or prevent full verification.
-- Treat the previewed `protect-global-skills` action as mandatory. The Guide snapshots selected Monica skills and planned files, restores only attempted work, and verifies its observable recovery contract if any protected action fails. Stop when private recovery evidence is retained; `doctor` must be clean before another mutation.
-- Store local source paths and contribution preferences only in user state. Never put them in repository configuration.
-- Modify only the marked root `AGENTS.md` block. Refuse malformed or duplicate markers. Do not rewrite nested instruction files implicitly.
-- Create or preserve the minimal root `CLAUDE.md` import `@AGENTS.md`. Skill discovery is live when supported; AGENTS/CLAUDE instruction changes take effect in a new agent run.
-- Do not create issues, branches, commits, pushes, or pull requests. Persisted contribution preferences never replace current-session approval.
+- Keep toolbox discovery healthy without forcing initialization. Empty, mixed, uninitialized, and non-Monica directories are valid until the user selects a repository operation.
+- Treat agent target values as Agent Skills identifiers. Verify each target independently with the catalog-pinned `skills` CLI; do not restrict targets to named hosts or infer installation directories.
+- Keep `stable`, `preview`, and exact `source` distinct. Never replace an unavailable immutable release with a branch or another version.
+- Maintain one active global Monica skill release and at most one global binding for each first-party repository. Either binding may be used from any profile.
+- Store source identity, ref, commit, provenance, resolution kind, and path in private user state. Observe compatibility, dirtiness, and path health at lookup time; never persist or infer write permission.
+- Revalidate exact parity for operations that require it. A normal lookup may return a dirty or version-mismatched binding with prominent warnings.
+- Install downstream Monica skills only for a user-selected profile. Require `--switch-global` before replacing the active global release.
+- Modify only Guide-owned instruction spans. Never treat managed instructions, contribution preferences, or source bindings as permission for remote or repository mutations.
 - Source public bootstrap instructions only from [assets/bootstrap-prompts.json](assets/bootstrap-prompts.json). Never maintain host-, goal-, release-, or locale-specific executable prompt copies outside that manifest.
 
-Read [references/cli.md](references/cli.md) for command and state contracts, [references/profiles.md](references/profiles.md) for profile and source rules, [references/versioning.md](references/versioning.md) for release and per-skill update timing, and [references/safety.md](references/safety.md) for offline, discovery, privacy, and contribution constraints.
+Read [references/toolbox.md](references/toolbox.md) for intent selection, [references/cli.md](references/cli.md) for command and state contracts, [references/profiles.md](references/profiles.md) for profile source minimums, [references/versioning.md](references/versioning.md) for release timing, and [references/safety.md](references/safety.md) for discovery, offline, privacy, and contribution constraints.

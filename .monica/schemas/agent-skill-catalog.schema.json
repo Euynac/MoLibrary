@@ -12,6 +12,7 @@
     "externalSkills",
     "profiles",
     "profileClosurePolicy",
+    "sourceRepositories",
     "sourcePolicies",
     "aliases",
     "managedInstructions",
@@ -20,7 +21,7 @@
   ],
   "properties": {
     "$schema": { "type": "string", "const": "./schemas/agent-skill-catalog.schema.json" },
-    "schemaVersion": { "type": "integer", "const": 1 },
+    "schemaVersion": { "type": "integer", "const": 2 },
     "catalogVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "skills": {
       "type": "object",
@@ -49,6 +50,15 @@
         },
         "recommendations": { "type": "string", "const": "profile-explicit" },
         "conditional": { "type": "string", "const": "selected-capabilities-only" }
+      }
+    },
+    "sourceRepositories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["Tairitsua/Monica", "Tairitsua/Monica.Docs"],
+      "properties": {
+        "Tairitsua/Monica": { "$ref": "#/$defs/sourceRepository" },
+        "Tairitsua/Monica.Docs": { "$ref": "#/$defs/sourceRepository" }
       }
     },
     "sourcePolicies": { "$ref": "#/$defs/sourcePolicies" },
@@ -156,7 +166,7 @@
         "immutableSkillUrl",
         "digest",
         "digestAlgorithm",
-        "requiredByProfiles"
+        "requiredFor"
       ],
       "properties": {
         "repository": {
@@ -175,9 +185,10 @@
           "type": "string",
           "const": "sha256-file-manifest-v1"
         },
-        "requiredByProfiles": {
+        "requiredFor": {
           "type": "array",
           "items": { "$ref": "#/$defs/skillName" },
+          "minItems": 1,
           "uniqueItems": true
         }
       }
@@ -195,16 +206,49 @@
         }
       }
     },
-    "profileSource": {
+    "sourceRepository": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["required", "recommended", "access", "repository"],
+      "required": ["aliases", "resolverQuery"],
       "properties": {
-        "required": { "type": "boolean" },
-        "recommended": { "type": "boolean" },
-        "access": { "type": "string", "enum": ["none", "read-only", "read-write"] },
-        "repository": { "type": "string", "enum": ["Monica", "Monica.Docs"] }
+        "aliases": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/skillName" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "resolverQuery": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        }
       }
+    },
+    "sourceRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "requirement", "compatibility"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "enum": ["Tairitsua/Monica", "Tairitsua/Monica.Docs"]
+        },
+        "requirement": { "type": "string", "enum": ["required", "conditional"] },
+        "compatibility": {
+          "type": "string",
+          "enum": ["framework-version", "workspace-commit"]
+        },
+        "condition": { "$ref": "#/$defs/skillName" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "requirement": { "const": "conditional" } },
+            "required": ["requirement"]
+          },
+          "then": { "required": ["condition"] },
+          "else": { "not": { "required": ["condition"] } }
+        }
+      ]
     },
     "repositoryRequirement": {
       "type": "object",
@@ -219,11 +263,15 @@
     "profile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["description", "skills", "source", "repositories", "inference"],
+      "required": ["description", "skills", "sourceRequirements", "repositories", "inference"],
       "properties": {
         "description": { "type": "string", "minLength": 1 },
         "skills": { "$ref": "#/$defs/profileSkills" },
-        "source": { "$ref": "#/$defs/profileSource" },
+        "sourceRequirements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceRequirement" },
+          "uniqueItems": true
+        },
         "repositories": {
           "type": "array",
           "items": { "$ref": "#/$defs/repositoryRequirement" }
@@ -242,8 +290,18 @@
     "sourcePolicies": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["channels", "versionResolutionOrder", "immutableBinding", "failClosedOn", "offline"],
+      "required": [
+        "bindingScope",
+        "bindingCardinality",
+        "channels",
+        "versionResolutionOrder",
+        "immutableBinding",
+        "failClosedOn",
+        "offline"
+      ],
       "properties": {
+        "bindingScope": { "type": "string", "const": "global-user" },
+        "bindingCardinality": { "type": "string", "const": "one-per-repository" },
         "channels": {
           "type": "array",
           "items": { "type": "string", "enum": ["stable", "preview", "source"] },

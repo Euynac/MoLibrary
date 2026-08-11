@@ -2,17 +2,18 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { once } from 'node:events';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { buildPlan, applyPlan } from '../scripts/guide-plan.mjs';
-import { inspectEnvironment, doctor } from '../scripts/guide-doctor.mjs';
-import { loadCatalog, loadReleaseArtifacts, loadReleaseIndex, resolveProfileClosure, validateIndex } from '../scripts/guide-catalog.mjs';
+import { doctorGlobal, inspectEnvironment, inspectGlobalEnvironment, doctor, listSourceBindings, resolveSourceBinding } from '../scripts/guide-doctor.mjs';
+import { loadCatalog, loadReleaseArtifacts, loadReleaseIndex, renderManagedInstructions, resolveProfileClosure, validateIndex } from '../scripts/guide-catalog.mjs';
 import { detectFrameworkVersion } from '../scripts/guide-detect.mjs';
 import { targetSkillRecord, verifyInstalledSkill } from '../scripts/guide-installation.mjs';
-import { resolveCachedSource } from '../scripts/guide-source.mjs';
-import { GuideError, digest, emptyState, loadState, normalizePath, parseSemVer, semverChannel, stableJson, withFileLock } from '../scripts/guide-shared.mjs';
-import { renderStatus, statusEnvelope } from '../scripts/monica-guide.mjs';
+import { resolveCachedSource, verifyLocalSource } from '../scripts/guide-source.mjs';
+import { GuideError, digest, emptyState, gitStatusSnapshot, gitWorkspaceFingerprint, loadState, normalizePath, parseSemVer, semverChannel, stableJson, upsertInstructionBlock, withFileLock, workspaceKey } from '../scripts/guide-shared.mjs';
+import { globalStatusEnvelope, main, parseArguments, renderStatus, statusEnvelope } from '../scripts/monica-guide.mjs';
 
 const TEST_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_ROOT = path.dirname(TEST_ROOT);
@@ -21,6 +22,8 @@ const REPOSITORY_ROOT = path.dirname(SKILLS_ROOT);
 const CATALOG_PATH = path.join(SKILL_ROOT, 'assets', 'default-catalog.json');
 const INDEX_PATH = path.join(SKILL_ROOT, 'assets', 'default-index.json');
 const RELEASE_INDEX_PATH = path.join(REPOSITORY_ROOT, '.monica', 'agent-skill-index.json');
+const GUIDE_ENTRYPOINT = path.join(SKILL_ROOT, 'scripts', 'monica-guide.mjs');
+const GUIDE_SHARED_URL = new URL('../scripts/guide-shared.mjs', import.meta.url).href;
 const CATALOG_DIGEST = digest(fs.readFileSync(CATALOG_PATH));
 const COMMIT = 'a'.repeat(40);
 const TAG = 'v1.2.3';
@@ -257,21 +260,23 @@ function baseOptions(root, workspace) {
     index: INDEX_PATH,
     profile: 'application',
     capabilities: ['modular-monolith'],
+    agents: ['codex', 'claude-code'],
+    agentValidationRunner: () => ({ status: 0, stdout: '[]', stderr: '', error: null }),
     releaseTag: TAG,
     fetchImplementation: releaseFetch(),
   };
 }
 
-function mockNpx(root, skills, { corrupt = false, agents = ['codex', 'claude-code'] } = {}) {
+function mockNpx(root, skills, { corrupt = false, agents = ['codex', 'claude-code'], extraEntries = [] } = {}) {
   const executable = path.join(root, 'mock-npx.sh');
   const installedRoot = path.join(root, 'installed');
   fs.mkdirSync(installedRoot, { recursive: true });
-  const payload = JSON.stringify(skills.map((name, index) => {
+  const payload = JSON.stringify([...skills.map((name, index) => {
     const installed = path.join(installedRoot, name);
     fs.cpSync(path.join(SKILLS_ROOT, name), installed, { recursive: true });
     if (corrupt && index === 0) fs.appendFileSync(path.join(installed, 'SKILL.md'), '\ncorrupt\n');
     return { name, path: installed, scope: 'global', agents, source: 'Tairitsua/Monica', sourceUrl: 'https://github.com/Tairitsua/Monica.git', sourceType: 'github' };
-  }));
+  }), ...extraEntries]);
   write(executable, `#!/bin/sh\necho "$*" >> "${path.join(root, 'npx.log')}"\ncase "$*" in\n  *" ls "*) cat <<'JSON'\n${payload}\nJSON\n  ;;\nesac\n`);
   fs.chmodSync(executable, 0o755);
   return executable;
@@ -302,14 +307,13 @@ function configuredState(root, workspace, {
       digest: release.skillDigests[skill],
       lastChangedIn: release.skillLastChangedIn[skill],
     }]));
-  state.agentTargets = agents;
+  state.agentTargets = [...agents].sort();
   write(statePath, stableJson(state, 2));
   write(path.join(workspace, '.monica', 'guide.json'), stableJson({
-    schemaVersion: 1,
+    schemaVersion: 2,
     profile: 'application',
     channel: 'stable',
     capabilities: ['modular-monolith'],
-    agentTargets: agents,
     expectedCatalogRelease: { ...state.activeRelease, indexTag: releaseTag },
     instructionBlockVersion: 1,
     managedClaudeImport: false,
@@ -340,8 +344,27 @@ test('all four profiles resolve required, recommended, conditional, and external
   assert.deepEqual(docs.required, ['monica-application', 'monica-application-microservice', 'monica-application-modular-monolith', 'monica-application-project-unit-development', 'monica-architecture', 'monica-docs-authoring', 'monica-guide']);
   assert.deepEqual(docs.recommended, ['monica-application-unit-testing', 'monica-contribution']);
   assert.deepEqual(docs.conditional, []);
-  assert.equal(application.source.required, false);
-  for (const closure of [extension, framework, docs]) assert.equal(closure.source.required, true);
+  assert.deepEqual(application.sourceRequirements, []);
+  assert.deepEqual(extension.sourceRequirements, [{
+    repository: 'Tairitsua/Monica',
+    requirement: 'conditional',
+    compatibility: 'framework-version',
+    condition: 'framework-internal-work',
+  }]);
+  assert.deepEqual(framework.sourceRequirements, [{
+    repository: 'Tairitsua/Monica',
+    requirement: 'required',
+    compatibility: 'workspace-commit',
+  }]);
+  assert.deepEqual(docs.sourceRequirements, [{
+    repository: 'Tairitsua/Monica',
+    requirement: 'required',
+    compatibility: 'framework-version',
+  }, {
+    repository: 'Tairitsua/Monica.Docs',
+    requirement: 'required',
+    compatibility: 'workspace-commit',
+  }]);
 });
 
 test('init applies atomically while offline update/configure require and use an exact local skill source', async (t) => {
@@ -374,6 +397,15 @@ test('init applies atomically while offline update/configure require and use an 
   assert.ok(Object.hasOwn(state.managedSkills, 'monica-guide'));
   assert.equal(state.managedSkills['monica-guide'].revision, 1);
   assert.equal(state.managedSkills['monica-guide'].lastChangedIn, TAG);
+  const observation = Object.values(state.observations)[0];
+  assert.equal(observation.schemaVersion, 1);
+  assert.ok(!Number.isNaN(Date.parse(observation.observedAt)));
+  assert.equal(observation.observedAt === '<apply-time>', false);
+  assert.equal(Object.hasOwn(observation, 'dirty'), false);
+  assert.equal(Object.hasOwn(observation, 'sourceBindings'), false);
+  const projectConfig = JSON.parse(fs.readFileSync(path.join(workspace, '.monica', 'guide.json'), 'utf8'));
+  assert.equal(projectConfig.schemaVersion, 2);
+  assert.equal(Object.hasOwn(projectConfig, 'agentTargets'), false);
   assert.ok(state.verifiedReleaseIndexes[TAG]);
   if (process.platform !== 'win32') {
     assert.equal(fs.statSync(path.join(workspace, '.monica', 'guide.json')).mode & 0o777, 0o644);
@@ -390,23 +422,18 @@ test('init applies atomically while offline update/configure require and use an 
   const blockedUpdate = await buildPlan('update', { workspace, state: options.state, catalog: CATALOG_PATH, index: INDEX_PATH, offline: true });
   assert.ok(blockedUpdate.blockers.some((entry) => entry.code === 'offline_local_skill_source_required'));
   assert.equal(blockedUpdate.actions.some((action) => action.type === 'install-skill' || action.type === 'verify-skills'), false);
-  assert.equal(fs.existsSync(path.join(root, 'npx.log')), false);
+  assert.match(fs.readFileSync(path.join(root, 'npx.log'), 'utf8'), /ls -g -a codex --json/);
 
   const localSource = path.join(root, 'cached-monica-source');
   fs.cpSync(SKILLS_ROOT, path.join(localSource, 'skills'), { recursive: true });
   const withSource = loadState(options.state);
-  const workspaceStateKey = Object.keys(withSource.workspacePreferences)[0];
-  withSource.sourceBindings[workspaceStateKey] = {
+  withSource.sourceBindings['Tairitsua/Monica'] = {
+    repository: 'Tairitsua/Monica',
     ref: COMMIT,
     commit: COMMIT,
     provenance: { resolver: 'inspect-dependency-source', repositoryId: 'repo', artifactId: 'artifact', resolutionKind: 'exact_commit', expectedCommit: COMMIT },
-    verificationState: 'verified',
     resolutionKind: 'exact_commit',
-    access: 'read-only',
     sourcePath: localSource,
-    repository: 'Tairitsua/Monica',
-    managed: true,
-    dirty: false,
   };
   write(options.state, stableJson(withSource, 2));
   const resolver = path.join(root, 'resolver.py');
@@ -415,7 +442,7 @@ test('init applies atomically while offline update/configure require and use an 
   const update = await buildPlan('update', offlineOptions);
   assert.equal(update.blockers.length, 0);
   const offlineActions = update.actions.filter((action) => action.type === 'install-skill');
-  assert.ok(offlineActions.length > 0);
+  assert.equal(offlineActions.length, 0);
   assert.ok(offlineActions.every((action) => action.offline
     && action.args.includes('--offline')
     && action.source.startsWith(`${localSource}${path.sep}`)
@@ -423,6 +450,7 @@ test('init applies atomically while offline update/configure require and use an 
   const offlineVerification = update.actions.find((action) => action.type === 'verify-skills');
   assert.ok(offlineVerification.offline);
   assert.ok(offlineVerification.commands.every((command) => command.includes('npx --offline --yes skills@1.5.21')));
+  fs.rmSync(path.join(root, 'npx.log'), { force: true });
 
   const switchedSource = path.join(root, 'switched-cached-source');
   fs.cpSync(SKILLS_ROOT, path.join(switchedSource, 'skills'), { recursive: true });
@@ -497,6 +525,58 @@ test('default update installs only changed skills, verifies the full set, and re
   assert.equal(report.checks.find((entry) => entry.id === 'immutable-release').status, 'error');
 });
 
+test('legacy project target ownership migrates diagnostically and rewrites only on approved workspace mutation', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const configured = configuredState(root, workspace);
+  const configPath = path.join(workspace, '.monica', 'guide.json');
+  const legacy = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  legacy.schemaVersion = 1;
+  legacy.agentTargets = ['cursor'];
+  const { catalog } = loadCatalog({ catalogPath: CATALOG_PATH, indexPath: INDEX_PATH });
+  legacy.instructionBlockVersion = catalog.managedInstructions.version;
+  write(configPath, stableJson(legacy, 2));
+  const managedBody = renderManagedInstructions(catalog, {
+    profile: legacy.profile,
+    channel: legacy.channel,
+    release: legacy.expectedCatalogRelease,
+    capabilities: legacy.capabilities,
+  });
+  write(path.join(workspace, 'AGENTS.md'), upsertInstructionBlock('', managedBody, { markers: catalog.managedInstructions.markers }));
+
+  const common = {
+    workspace,
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    releaseTag: TAG,
+    fetchImplementation: releaseFetch(),
+  };
+  const previous = process.env.MONICA_GUIDE_NPX;
+  process.env.MONICA_GUIDE_NPX = mockNpx(root, configured.skills, { agents: ['codex'] });
+  t.after(() => previous === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previous);
+  const environment = await inspectEnvironment(common);
+  assert.deepEqual(environment.state.agentTargets, ['codex']);
+  assert.deepEqual(environment.projectConfigMigration.droppedAgentTargets, ['cursor']);
+  const status = statusEnvelope(environment);
+  assert.equal(status.status, 'migration-pending');
+  assert.equal(status.severity, 'warning');
+  const report = await doctor(common);
+  assert.equal(report.checks.find((entry) => entry.id === 'project-config-migration').status, 'warning');
+  assert.equal(JSON.parse(fs.readFileSync(configPath, 'utf8')).schemaVersion, 1);
+
+  const update = await buildPlan('update', common);
+  const projectAction = update.actions.find((action) => action.path === configPath);
+  const migrated = JSON.parse(projectAction.content);
+  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(Object.hasOwn(migrated, 'agentTargets'), false);
+  assert.deepEqual(update.context.desiredAgentTargets, ['codex']);
+
+  const forget = await buildPlan('forget', common);
+  assert.ok(forget.actions.some((action) => action.type === 'delete-file' && action.path === configPath));
+  assert.ok(forget.warnings.some((entry) => entry.code === 'project_config_migration_pending'));
+});
+
 test('targeted update expands required dependencies and blocks changed skills outside its closure', async (t) => {
   const root = temporaryDirectory(t);
   const changedSkill = 'monica-application-project-unit-development';
@@ -551,7 +631,7 @@ test('agent target changes and migrated unknown metadata force a full reinstall'
     digest: null,
     lastChangedIn: null,
   }]));
-  configured.state.agentTargets = ['codex', 'claude-code'];
+  configured.state.agentTargets = ['claude-code', 'codex'];
   write(configured.statePath, stableJson(configured.state, 2));
   const unknown = await buildPlan('update', options);
   assert.equal(unknown.context.fullReinstallReason, 'skill-metadata-unknown');
@@ -675,6 +755,7 @@ test('apply refuses installed skills whose discovery source is a stale release',
   const workspace = applicationWorkspace(root);
   const options = baseOptions(root, workspace);
   const plan = await buildPlan('init', options);
+  assert.equal(plan.blockers.length, 0, JSON.stringify(plan.blockers));
   const skills = plan.actions.filter((action) => action.type === 'install-skill').map((action) => action.skill);
   const previous = process.env.MONICA_GUIDE_NPX;
   process.env.MONICA_GUIDE_NPX = mockNpx(root, skills, { corrupt: true });
@@ -691,6 +772,7 @@ test('apply verifies every selected skill is discovered for every planned agent'
   const workspace = applicationWorkspace(root);
   const options = baseOptions(root, workspace);
   const plan = await buildPlan('init', options);
+  assert.equal(plan.blockers.length, 0, JSON.stringify(plan.blockers));
   const skills = plan.actions.filter((action) => action.type === 'install-skill').map((action) => action.skill);
   const previous = process.env.MONICA_GUIDE_NPX;
   process.env.MONICA_GUIDE_NPX = mockNpx(root, skills, { agents: ['Codex'] });
@@ -709,6 +791,7 @@ test('apply rejects workspace drift inside the state lock before running install
   const workspace = applicationWorkspace(root);
   const options = baseOptions(root, workspace);
   const plan = await buildPlan('init', options);
+  assert.equal(plan.blockers.length, 0, JSON.stringify(plan.blockers));
   const skills = plan.actions.filter((action) => action.type === 'install-skill').map((action) => action.skill);
   const previous = process.env.MONICA_GUIDE_NPX;
   process.env.MONICA_GUIDE_NPX = mockNpx(root, skills);
@@ -729,6 +812,7 @@ test('Git fingerprint rejects changed content even when porcelain state is uncha
   write(path.join(workspace, 'Program.cs'), 'class Program { const string Value = "first"; }\n');
   const options = baseOptions(root, workspace);
   const plan = await buildPlan('init', options);
+  assert.equal(plan.blockers.length, 0, JSON.stringify(plan.blockers));
   const porcelainBefore = execFileSync('git', ['-C', workspace, 'status', '--porcelain=v1'], { encoding: 'utf8' });
   write(path.join(workspace, 'Program.cs'), 'class Program { const string Value = "second"; }\n');
   const porcelainAfter = execFileSync('git', ['-C', workspace, 'status', '--porcelain=v1'], { encoding: 'utf8' });
@@ -743,18 +827,55 @@ test('Git fingerprint rejects changed content even when porcelain state is uncha
   assert.equal(fs.existsSync(path.join(root, 'npx.log')), false);
 });
 
-test('state locks never steal a live owner and recover only a proven-dead owner', (t) => {
+test('state locks fail closed for competing, malformed, and proven-dead owners', async (t) => {
   const root = temporaryDirectory(t);
   const lockPath = path.join(root, 'state.json.lock');
   write(lockPath, stableJson({ pid: process.pid, createdAt: '2000-01-01T00:00:00Z' }, 2));
   fs.utimesSync(lockPath, new Date(0), new Date(0));
   assert.throws(() => withFileLock(lockPath, () => null), (error) => error.code === 'state_locked');
   fs.unlinkSync(lockPath);
-  write(lockPath, stableJson({ pid: 2147483647, createdAt: '2000-01-01T00:00:00Z' }, 2));
+  write(lockPath, stableJson({ pid: 2147483647, token: 'a'.repeat(48), createdAt: '2000-01-01T00:00:00Z' }, 2));
+  assert.throws(() => withFileLock(lockPath, () => null), (error) => error.code === 'state_locked' && error.details.status === 'stale');
+  fs.unlinkSync(lockPath);
   let called = false;
   withFileLock(lockPath, () => { called = true; });
   assert.equal(called, true);
   assert.equal(fs.existsSync(lockPath), false);
+
+  const childScript = `
+    import fs from 'node:fs';
+    import { withFileLock } from ${JSON.stringify(GUIDE_SHARED_URL)};
+    withFileLock(process.argv[1], () => {
+      process.stdout.write('locked\\n');
+      fs.readFileSync(0, 'utf8');
+    });
+  `;
+  const child = spawn(process.execPath, ['--input-type=module', '--eval', childScript, lockPath], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  let childError = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk) => { childError += chunk; });
+  await new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code) => reject(new Error(`Lock-holder child exited early with ${code}: ${childError}`)));
+    child.stdout.once('data', (chunk) => String(chunk).includes('locked') ? resolve() : reject(new Error(`Unexpected child output: ${chunk}`)));
+  });
+  const childLock = fs.readFileSync(lockPath, 'utf8');
+  assert.equal(JSON.parse(childLock).pid, child.pid);
+  assert.throws(() => withFileLock(lockPath, () => null), (error) => error.code === 'state_locked' && error.details.status === 'owned');
+  assert.equal(fs.readFileSync(lockPath, 'utf8'), childLock);
+  const childExitPromise = once(child, 'exit');
+  child.stdin.end();
+  const [childExit] = await childExitPromise;
+  assert.equal(childExit, 0, childError);
+  assert.equal(fs.existsSync(lockPath), false);
+
+  withFileLock(lockPath, () => {
+    fs.unlinkSync(lockPath);
+    write(lockPath, stableJson({ pid: process.pid, token: 'b'.repeat(48), createdAt: new Date().toISOString() }, 2));
+  });
+  assert.equal(fs.existsSync(lockPath), true);
 });
 
 test('detected profile requires explicit confirmation before init', async (t) => {
@@ -781,6 +902,8 @@ test('empty repositories derive stable and preview channels from an explicit imm
       catalog: CATALOG_PATH,
       index: INDEX_PATH,
       profile: 'application',
+      agents: ['codex'],
+      agentValidationRunner: () => ({ status: 0, stdout: '[]', stderr: '', error: null }),
       releaseTag: fixture.tag,
       fetchImplementation: releaseFetch(index),
     };
@@ -808,6 +931,7 @@ test('empty repositories derive stable and preview channels from an explicit imm
     const plannedState = JSON.parse(plan.actions.find((action) => action.path === statePath).content);
     assert.equal(plannedState.activeRelease.id, fixture.tag);
     assert.equal(Object.values(plannedState.workspacePreferences)[0].channel, fixture.channel);
+    assert.equal(Object.values(plannedState.observations)[0].observedAt, '<apply-time>');
     const projectAction = plan.actions.find((action) => action.path?.endsWith('.monica/guide.json'));
     const projectConfig = JSON.parse(projectAction.content);
     assert.equal(projectConfig.channel, fixture.channel);
@@ -830,6 +954,7 @@ test('empty repositories derive stable and preview channels from an explicit imm
     for (const action of plan.actions.filter((entry) => entry.purpose?.startsWith('Cache the verified'))) {
       write(action.path, action.content);
     }
+    for (const observation of Object.values(plannedState.observations)) observation.observedAt = '2026-08-11T00:00:00.000Z';
     write(statePath, stableJson(plannedState, 2));
     const offlineEnvironment = await inspectEnvironment({ ...selectedOptions, offline: true, fetchImplementation: undefined });
     assert.equal(offlineEnvironment.releaseError, null);
@@ -878,11 +1003,10 @@ test('explicit release constraints fail consistently without falling back to ano
 
   const persistedWorkspace = emptyGitWorkspace(root, 'persisted-channel-conflict');
   write(path.join(persistedWorkspace, '.monica', 'guide.json'), stableJson({
-    schemaVersion: 1,
+    schemaVersion: 2,
     profile: 'application',
     channel: 'stable',
     capabilities: ['modular-monolith'],
-    agentTargets: [],
     expectedCatalogRelease: {
       id: TAG,
       monicaVersion: VERSION,
@@ -1041,10 +1165,12 @@ test('global release conflicts require an explicit switch and update the managed
   const switched = await buildPlan('init', { ...baseOptions(root, workspace), state: statePath, switchGlobal: true, agents: ['claude-code'] });
   assert.equal(switched.blockers.length, 0);
   assert.ok(switched.actions.some((action) => action.type === 'install-skill' && action.skill === 'monica-ui-design'));
-  assert.ok(switched.actions.some((action) => action.type === 'install-skill' && action.skill === 'monica-ui-development'));
+  assert.equal(switched.actions.some((action) => action.type === 'install-skill' && action.skill === 'monica-ui-development'), false);
   const verification = switched.actions.find((action) => action.type === 'verify-skills');
-  assert.deepEqual(verification.agents, ['claude-code', 'codex']);
-  assert.ok(switched.actions.filter((action) => action.type === 'install-skill').every((action) => action.command.includes('-a codex') && action.command.includes('-a claude-code')));
+  assert.deepEqual(verification.agents, ['claude-code']);
+  assert.ok(switched.actions.filter((action) => action.type === 'install-skill').every((action) => !action.command.includes('-a codex') && action.command.includes('-a claude-code')));
+  assert.ok(switched.actions.some((action) => action.type === 'remove-skill-targets' && action.command.includes('-a codex')));
+  assert.ok(switched.actions.some((action) => action.type === 'verify-removed-agent-targets'));
 });
 
 test('mixed versions and version ranges fail closed', (t) => {
@@ -1265,7 +1391,7 @@ test('repository traversal ignores generated and tool-cache trees', (t) => {
   assert.ok(performance.now() - started < 2000);
 });
 
-test('application source intent resolves exact cached source and never changes active release', async (t) => {
+test('global source bind resolves exact cached source and never changes active release', async (t) => {
   const root = temporaryDirectory(t);
   const workspace = applicationWorkspace(root);
   const options = baseOptions(root, workspace);
@@ -1280,29 +1406,45 @@ test('application source intent resolves exact cached source and never changes a
   fs.cpSync(SKILLS_ROOT, path.join(source, 'skills'), { recursive: true });
   const resolver = path.join(root, 'resolver.py');
   writeResolver(resolver, source);
-  const sourcePlan = await buildPlan('source', { workspace, state: options.state, catalog: CATALOG_PATH, index: INDEX_PATH, offline: true, sourceResolver: resolver });
-  assert.equal(sourcePlan.blockers.length, 0);
-  const stateAction = sourcePlan.actions.find((action) => action.path === options.state);
-  assert.ok(stateAction);
-  assert.equal(JSON.parse(stateAction.content).activeRelease.id, TAG);
-  assert.ok(Object.values(JSON.parse(stateAction.content).sourceBindings).some((binding) => binding.commit === COMMIT));
-  const elevated = await buildPlan('source', { workspace, state: options.state, catalog: CATALOG_PATH, index: INDEX_PATH, offline: true, sourceResolver: resolver, sourceAccess: 'read-write' });
-  assert.ok(elevated.blockers.some((entry) => entry.code === 'source_access_forbidden'));
-
-  await applyPlan('source', {
-    workspace,
+  const sourceOptions = {
+    sourceAction: 'bind',
+    repository: 'monica',
+    sourceRef: COMMIT,
     state: options.state,
     catalog: CATALOG_PATH,
     index: INDEX_PATH,
     offline: true,
     sourceResolver: resolver,
+  };
+  const sourcePlan = await buildPlan('source', sourceOptions);
+  assert.equal(sourcePlan.blockers.length, 0);
+  const stateAction = sourcePlan.actions.find((action) => action.path === options.state);
+  assert.ok(stateAction);
+  assert.equal(JSON.parse(stateAction.content).activeRelease.id, TAG);
+  assert.equal(JSON.parse(stateAction.content).sourceBindings['Tairitsua/Monica'].commit, COMMIT);
+
+  await applyPlan('source', {
+    ...sourceOptions,
     planDigest: sourcePlan.planDigest,
     precomputedPlan: sourcePlan,
   });
-  const wrongCommit = 'b'.repeat(40);
-  writeResolver(resolver, source, { actualCommit: wrongCommit });
+  const listed = listSourceBindings(sourceOptions);
+  assert.equal(listed.bindings['Tairitsua/Monica'].binding.sourcePath, source);
+  const resolved = resolveSourceBinding({ ...sourceOptions, workspace });
+  assert.equal(resolved.status, 'resolved');
+  const wrongSource = path.join(root, 'wrong-managed-source');
+  fs.mkdirSync(wrongSource);
+  writeResolver(resolver, wrongSource);
+  const drifted = resolveSourceBinding({ ...sourceOptions, workspace });
+  assert.equal(drifted.status, 'unhealthy');
+  assert.equal(drifted.severity, 'error');
+  assert.equal(drifted.warning.code, 'source_binding_drift');
+  writeResolver(resolver, source);
+  fs.rmSync(source, { recursive: true, force: true });
   const report = await doctor({ workspace, state: options.state, catalog: CATALOG_PATH, index: INDEX_PATH, offline: true, sourceResolver: resolver });
-  assert.ok(report.checks.some((entry) => entry.id === 'source-binding' && entry.status === 'error'));
+  assert.ok(report.checks.some((entry) => entry.id === 'source-binding:monica'
+    && entry.status === 'error'
+    && /source is unavailable/.test(entry.message)));
   const refreshed = await buildPlan('update', {
     workspace,
     state: options.state,
@@ -1313,8 +1455,36 @@ test('application source intent resolves exact cached source and never changes a
     sourceResolver: resolver,
   });
   assert.ok(refreshed.warnings.some((entry) => entry.code === 'stored_source_invalid'));
-  const refreshedState = JSON.parse(refreshed.actions.find((action) => action.path === options.state).content);
-  assert.equal(Object.keys(refreshedState.sourceBindings).length, 0);
+  assert.equal(loadState(options.state).sourceBindings['Tairitsua/Monica'].commit, COMMIT);
+});
+
+test('active source releases keep a clean manifest-compatible Monica binding', async (t) => {
+  const root = temporaryDirectory(t);
+  const source = path.join(root, 'Monica-source');
+  fs.mkdirSync(path.join(source, '.monica'), { recursive: true });
+  fs.cpSync(SKILLS_ROOT, path.join(source, 'skills'), { recursive: true });
+  fs.copyFileSync(CATALOG_PATH, path.join(source, '.monica', 'agent-skill-catalog.json'));
+  const commit = initializeGit(source);
+  const binding = verifyLocalSource(source, { exactRef: commit });
+  const statePath = path.join(root, 'state.json');
+  const state = emptyState();
+  state.activeRelease = { id: `source:${commit}`, monicaVersion: null, tag: null, commit, catalogDigest: CATALOG_DIGEST };
+  state.sourceBindings['Tairitsua/Monica'] = binding;
+  write(statePath, stableJson(state, 2));
+  const common = { state: statePath, catalog: CATALOG_PATH, index: INDEX_PATH, repository: 'monica' };
+
+  const same = await buildPlan('source', { ...common, sourceAction: 'bind', sourcePath: source, sourceRef: commit });
+  assert.equal(same.blockers.length, 0, JSON.stringify(same.blockers));
+  const unbind = await buildPlan('source', { ...common, sourceAction: 'unbind' });
+  assert.ok(unbind.blockers.some((entry) => entry.code === 'active_source_binding_required'));
+
+  write(path.join(source, 'README.md'), 'dirty\n');
+  await assert.rejects(
+    applyPlan('source', { ...common, sourceAction: 'bind', sourcePath: source, sourceRef: commit, planDigest: same.planDigest, precomputedPlan: same }),
+    (error) => error.code === 'dirty_exact_source',
+  );
+  const dirty = await buildPlan('source', { ...common, sourceAction: 'bind', sourcePath: source, sourceRef: commit });
+  assert.ok(dirty.blockers.some((entry) => entry.code === 'dirty_exact_source'));
 });
 
 test('source channel binds catalog and skill digests to an exact clean checkout', async (t) => {
@@ -1338,6 +1508,8 @@ test('source channel binds catalog and skill digests to an exact clean checkout'
     index: INDEX_PATH,
     profile: 'application',
     capabilities: ['modular-monolith'],
+    agents: ['codex'],
+    agentValidationRunner: () => ({ status: 0, stdout: '[]', stderr: '', error: null }),
     channel: 'source',
     sourceRef: commit,
     sourcePath: source,
@@ -1403,7 +1575,7 @@ test('source channel binds catalog and skill digests to an exact clean checkout'
   assert.ok(report.checks.some((entry) => entry.id.startsWith('skill-version:') && entry.message.includes(`source@${commit}`)));
 });
 
-test('framework source channel permits ordinary dirt but rejects catalog or skill drift', async (t) => {
+test('framework exact-source workflows reject ordinary dirt and catalog or skill drift', async (t) => {
   const root = temporaryDirectory(t);
   const source = path.join(root, 'Monica');
   fs.mkdirSync(path.join(source, '.monica'), { recursive: true });
@@ -1412,19 +1584,40 @@ test('framework source channel permits ordinary dirt but rejects catalog or skil
   fs.cpSync(SKILLS_ROOT, path.join(source, 'skills'), { recursive: true });
   fs.copyFileSync(CATALOG_PATH, path.join(source, '.monica', 'agent-skill-catalog.json'));
   const commit = initializeGit(source);
-  write(path.join(source, 'notes.txt'), 'ordinary framework worktree change\n');
   const options = {
     workspace: source,
     state: path.join(root, 'state.json'),
     catalog: CATALOG_PATH,
     index: INDEX_PATH,
     profile: 'framework-contributor',
+    agents: ['codex'],
+    agentValidationRunner: () => ({ status: 0, stdout: '[]', stderr: '', error: null }),
     channel: 'source',
     sourceRef: commit,
     sourcePath: source,
   };
-  const allowed = await buildPlan('init', options);
-  assert.equal(allowed.blockers.length, 0);
+  const clean = await buildPlan('init', options);
+  assert.equal(clean.blockers.length, 0);
+
+  write(path.join(source, 'notes.txt'), 'ordinary framework worktree change\n');
+  const dirty = await buildPlan('init', options);
+  assert.ok(dirty.blockers.some((entry) => entry.code === 'dirty_exact_source'));
+
+  const state = emptyState();
+  state.sourceBindings['Tairitsua/Monica'] = verifyLocalSource(source, { exactRef: commit });
+  write(options.state, stableJson(state, 2));
+  const report = await doctor({
+    workspace: source,
+    state: options.state,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    profile: 'framework-contributor',
+    channel: 'source',
+    sourceRef: commit,
+  });
+  assert.ok(report.checks.some((entry) => entry.id === 'source-binding:monica' && entry.status === 'error' && /local changes/.test(entry.message)));
+
+  fs.unlinkSync(path.join(source, 'notes.txt'));
   fs.appendFileSync(path.join(source, 'skills', 'monica-guide', 'SKILL.md'), '\ncontract drift\n');
   const blocked = await buildPlan('init', options);
   assert.ok(blocked.blockers.some((entry) => entry.code === 'dirty_source_contract'));
@@ -1448,7 +1641,7 @@ test('extension ProjectReference and docs/framework repository prerequisites are
   assert.ok(frameworkPlan.blockers.some((entry) => entry.code === 'framework_repository_required'));
 });
 
-test('source-required profiles expose the pinned external resolver prerequisite without installing it', async (t) => {
+test('conditional extension source remains an on-demand global binding', async (t) => {
   const root = temporaryDirectory(t);
   const workspace = applicationWorkspace(root);
   const isolatedHome = path.join(root, 'isolated-home');
@@ -1469,16 +1662,18 @@ test('source-required profiles expose the pinned external resolver prerequisite 
     profile: 'extension-author',
     agents: ['codex'],
   });
-  const blocker = plan.blockers.find((entry) => entry.code === 'source_resolver_prerequisite_missing');
-  assert.ok(blocker, JSON.stringify(plan.blockers));
-  assert.equal(blocker.details.prerequisite.name, 'inspect-dependency-source');
-  assert.match(blocker.details.prerequisite.commit, /^[0-9a-f]{40}$/);
-  assert.ok(blocker.details.prerequisite.immutableSkillUrl.endsWith(blocker.details.prerequisite.commit));
-  assert.match(blocker.details.prerequisite.digest, /^sha256:[0-9a-f]{64}$/);
-  assert.ok(blocker.details.prerequisite.installCommand.includes(`tree/${blocker.details.prerequisite.commit}`));
-  assert.equal(blocker.details.prerequisite.managedByGuide, false);
-  assert.equal(blocker.details.requiresSeparateApproval, true);
-  assert.equal(plan.actions.some((action) => action.type === 'install-skill'), false);
+  assert.equal(plan.blockers.some((entry) => entry.code === 'source_resolver_prerequisite_missing'), false);
+  assert.ok(plan.warnings.some((entry) => entry.code === 'source_available_on_demand'));
+  assert.equal(plan.actions.some((action) => action.skill === 'inspect-dependency-source'), false);
+
+  const exactPlan = await buildPlan('init', {
+    ...baseOptions(root, workspace),
+    profile: 'extension-author',
+    agents: ['codex'],
+    capabilities: ['framework-internal-work'],
+  });
+  assert.ok(exactPlan.blockers.some((entry) => entry.code === 'source_resolver_prerequisite_missing'));
+  assert.equal(exactPlan.warnings.some((entry) => entry.code === 'source_available_on_demand'), false);
 });
 
 test('malformed managed markers are refused and doctor emits stable JSON checks', async (t) => {
@@ -1493,12 +1688,12 @@ test('malformed managed markers are refused and doctor emits stable JSON checks'
   assert.ok(report.checks.some((entry) => entry.id === 'stale-alias:mo-development' && entry.status === 'warning'));
 });
 
-test('state v1 migration separates durable preferences and reaches schema v3', (t) => {
+test('state v1 migration separates durable preferences and reaches schema v4', (t) => {
   const root = temporaryDirectory(t);
   const statePath = path.join(root, 'state.json');
   write(statePath, stableJson({ schemaVersion: 1, activeRelease: null, agentTargets: [], sourceBindings: {}, workspaces: { abc: { profile: 'application' } }, contributionPreference: 'prepare' }, 2));
   const state = loadState(statePath);
-  assert.equal(state.schemaVersion, 3);
+  assert.equal(state.schemaVersion, 4);
   assert.equal(state.workspacePreferences.abc.profile, 'application');
   assert.equal(state.contributionPreferences.abc, 'prepare');
   assert.deepEqual(state.observations, {});
@@ -1513,7 +1708,7 @@ test('state v2 migration preserves managed names as unknown version records', (t
     managedSkills: ['monica-guide', 'monica-application'],
   }, 2));
   const state = loadState(statePath);
-  assert.equal(state.schemaVersion, 3);
+  assert.equal(state.schemaVersion, 4);
   assert.deepEqual(state.managedSkills['monica-guide'], { revision: null, digest: null, lastChangedIn: null });
   assert.deepEqual(state.managedSkills['monica-application'], { revision: null, digest: null, lastChangedIn: null });
 });
@@ -1551,6 +1746,679 @@ test('state v3 accepts only coherent tagged, source, or migrated skill metadata 
     write(statePath, stableJson(valid, 2));
     assert.throws(() => loadState(statePath), (error) => error.code === 'invalid_state' && /complete tagged/.test(error.message));
   }
+});
+
+test('state v3 promotes identical global source bindings and preserves conflicts for an explicit decision', async (t) => {
+  const root = temporaryDirectory(t);
+  const binding = (sourcePath, commit = COMMIT) => ({
+    repository: 'Tairitsua/Monica',
+    ref: commit,
+    commit,
+    sourcePath,
+    resolutionKind: 'exact_commit',
+    provenance: 'local-git',
+    access: 'read-only',
+    dirty: false,
+    managed: false,
+    verificationState: 'verified',
+  });
+  const identicalPath = path.join(root, 'same');
+  const identicalStatePath = path.join(root, 'identical.json');
+  write(identicalStatePath, stableJson({ ...emptyState(), schemaVersion: 3, sourceBindings: { one: binding(identicalPath), two: binding(identicalPath) } }, 2));
+  const identical = loadState(identicalStatePath);
+  assert.equal(identical.sourceBindings['Tairitsua/Monica'].sourcePath, identicalPath);
+  assert.deepEqual(identical.sourceBindingCandidates, {});
+
+  const conflictStatePath = path.join(root, 'conflict.json');
+  write(conflictStatePath, stableJson({
+    ...emptyState(),
+    schemaVersion: 3,
+    sourceBindings: { one: binding(path.join(root, 'one')), two: binding(path.join(root, 'two'), 'b'.repeat(40)) },
+  }, 2));
+  const conflict = loadState(conflictStatePath);
+  assert.equal(conflict.sourceBindings['Tairitsua/Monica'], undefined);
+  assert.equal(conflict.sourceBindingCandidates['Tairitsua/Monica'].length, 2);
+  const unrelated = await buildPlan('source', {
+    sourceAction: 'unbind',
+    repository: 'docs',
+    state: conflictStatePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+  });
+  assert.ok(unrelated.blockers.some((entry) => entry.code === 'source_binding_migration_required'));
+  const resolution = await buildPlan('source', {
+    sourceAction: 'unbind',
+    repository: 'monica',
+    state: conflictStatePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+  });
+  assert.equal(resolution.blockers.length, 0);
+  const resolvedState = JSON.parse(resolution.actions.find((entry) => entry.path === conflictStatePath).content);
+  assert.deepEqual(resolvedState.sourceBindingCandidates, {});
+  const malformedStatePath = path.join(root, 'malformed.json');
+  write(malformedStatePath, stableJson({ ...emptyState(), schemaVersion: 3, sourceBindings: { broken: { commit: COMMIT } } }, 2));
+  assert.throws(() => loadState(malformedStatePath), (error) => error.code === 'invalid_state');
+});
+
+test('Monica and Monica.Docs bind globally as lookup-only sources while dirty and moved observations remain transient', async (t) => {
+  const root = temporaryDirectory(t);
+  const statePath = path.join(root, 'state.json');
+  const repositories = [
+    ['monica', 'Tairitsua/Monica', path.join(root, 'Monica')],
+    ['docs', 'Tairitsua/Monica.Docs', path.join(root, 'Monica.Docs')],
+  ];
+  for (const [alias, canonical, sourcePath] of repositories) {
+    fs.mkdirSync(sourcePath);
+    write(path.join(sourcePath, 'README.md'), `${canonical}\n`);
+    initializeGit(sourcePath, `https://github.com/${canonical}.git`);
+    const options = { sourceAction: 'bind', repository: alias, sourcePath, state: statePath, catalog: CATALOG_PATH, index: INDEX_PATH };
+    const plan = await buildPlan('source', options);
+    assert.equal(plan.blockers.length, 0, JSON.stringify(plan.blockers));
+    await applyPlan('source', { ...options, planDigest: plan.planDigest, precomputedPlan: plan });
+  }
+  const listed = listSourceBindings({ state: statePath, catalog: CATALOG_PATH, index: INDEX_PATH });
+  assert.ok(listed.bindings['Tairitsua/Monica'].binding);
+  assert.ok(listed.bindings['Tairitsua/Monica.Docs'].binding);
+  write(path.join(root, 'Monica.Docs', 'notes.md'), 'dirty docs worktree\n');
+  const dirtyDocs = resolveSourceBinding({ repository: 'docs', state: statePath, catalog: CATALOG_PATH, index: INDEX_PATH });
+  assert.equal(dirtyDocs.status, 'resolved');
+  assert.equal(dirtyDocs.severity, 'warning');
+  assert.equal(dirtyDocs.observation.dirty, true);
+  assert.ok(dirtyDocs.observation.warnings.some((entry) => entry.code === 'source_checkout_dirty'));
+
+  let sourceOutput = '';
+  const originalWrite = process.stdout.write;
+  process.stdout.write = (chunk) => { sourceOutput += String(chunk); return true; };
+  try {
+    const listExitCode = await main(['source', 'list', '--state', statePath, '--catalog', CATALOG_PATH, '--index', INDEX_PATH]);
+    assert.equal(listExitCode, 1);
+    const resolveExitCode = await main(['source', 'resolve', '--repository', 'docs', '--state', statePath, '--catalog', CATALOG_PATH, '--index', INDEX_PATH]);
+    assert.equal(resolveExitCode, 1);
+  } finally {
+    process.stdout.write = originalWrite;
+  }
+  assert.match(sourceOutput, /ref:/);
+  assert.match(sourceOutput, /provenance:/);
+  assert.match(sourceOutput, /compatibility:/);
+  assert.match(sourceOutput, /source_checkout_dirty/);
+
+  write(path.join(root, 'Monica', 'next.md'), 'next commit\n');
+  execFileSync('git', ['-C', path.join(root, 'Monica'), 'add', '.']);
+  execFileSync('git', ['-C', path.join(root, 'Monica'), 'commit', '-qm', 'move source']);
+  const moved = resolveSourceBinding({ repository: 'monica', state: statePath, catalog: CATALOG_PATH, index: INDEX_PATH });
+  assert.equal(moved.status, 'unhealthy');
+  assert.equal(moved.observation.pathHealth, 'moved');
+
+  const workspace = applicationWorkspace(path.join(root, 'forget'));
+  const state = loadState(statePath);
+  state.workspacePreferences[workspaceKey(workspace)] = { workspace, profile: 'application' };
+  write(statePath, stableJson(state, 2));
+  const forget = await buildPlan('forget', { workspace, state: statePath, catalog: CATALOG_PATH, index: INDEX_PATH });
+  const forgottenState = JSON.parse(forget.actions.find((entry) => entry.path === statePath).content);
+  assert.equal(Object.keys(forgottenState.sourceBindings).length, 2);
+});
+
+test('source resolve derives a NuGet-only workspace expectation from the immutable version index', (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const indexPath = path.join(root, 'index.json');
+  write(indexPath, stableJson(releaseIndex(), 2));
+
+  const statePath = path.join(root, 'state.json');
+  const state = emptyState();
+  state.activeRelease = {
+    id: 'v9.9.9',
+    monicaVersion: '9.9.9',
+    tag: 'v9.9.9',
+    commit: 'b'.repeat(40),
+    catalogDigest: CATALOG_DIGEST,
+  };
+  write(statePath, stableJson(state, 2));
+
+  const source = path.join(root, 'cached-source');
+  fs.mkdirSync(source);
+  const resolver = path.join(root, 'resolver.py');
+  writeResolver(resolver, source);
+  const resolved = resolveSourceBinding({
+    repository: 'monica',
+    workspace,
+    state: statePath,
+    catalog: CATALOG_PATH,
+    index: indexPath,
+    sourceResolver: resolver,
+  });
+  assert.equal(resolved.status, 'offered');
+  assert.equal(resolved.expectation.basis, 'framework-version-release');
+  assert.equal(resolved.expectation.commit, COMMIT);
+  assert.equal(resolved.offeredBinding.commit, COMMIT);
+  assert.notEqual(resolved.expectation.commit, state.activeRelease.commit);
+
+  const unavailable = resolveSourceBinding({
+    repository: 'monica',
+    workspace,
+    state: statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    sourceResolver: resolver,
+  });
+  assert.equal(unavailable.status, 'blocked');
+  assert.equal(unavailable.severity, 'error');
+  assert.equal(unavailable.offeredBinding, null);
+  assert.equal(unavailable.expectation.basis, 'unresolved');
+});
+
+test('source expectations prefer current dependency evidence and canonical Monica HEAD over stale persisted releases', (t) => {
+  const root = temporaryDirectory(t);
+  const indexPath = path.join(root, 'index.json');
+  write(indexPath, stableJson(releaseIndex(), 2));
+  const statePath = path.join(root, 'state.json');
+  const state = emptyState();
+  state.activeRelease = {
+    id: 'v9.9.9',
+    monicaVersion: '9.9.9',
+    tag: 'v9.9.9',
+    commit: 'c'.repeat(40),
+    catalogDigest: CATALOG_DIGEST,
+  };
+  write(statePath, stableJson(state, 2));
+
+  const application = applicationWorkspace(path.join(root, 'stale-application'));
+  write(path.join(application, '.monica', 'guide.json'), stableJson({
+    schemaVersion: 2,
+    profile: 'application',
+    channel: 'stable',
+    capabilities: ['modular-monolith'],
+    expectedCatalogRelease: {
+      id: 'v0.9.0',
+      monicaVersion: '0.9.0',
+      tag: 'v0.9.0',
+      commit: 'b'.repeat(40),
+      catalogDigest: CATALOG_DIGEST,
+      indexTag: 'v0.9.0',
+    },
+    instructionBlockVersion: 1,
+    managedClaudeImport: false,
+  }, 2));
+  const cachedApplicationSource = path.join(root, 'cached-application-source');
+  fs.mkdirSync(cachedApplicationSource);
+  const applicationResolver = path.join(root, 'application-resolver.py');
+  writeResolver(applicationResolver, cachedApplicationSource);
+  const applicationResult = resolveSourceBinding({
+    repository: 'monica',
+    workspace: application,
+    state: statePath,
+    catalog: CATALOG_PATH,
+    index: indexPath,
+    sourceResolver: applicationResolver,
+  });
+  assert.equal(applicationResult.expectation.basis, 'framework-version-release');
+  assert.equal(applicationResult.expectation.commit, COMMIT);
+
+  const monica = path.join(root, 'Monica');
+  fs.mkdirSync(monica);
+  write(path.join(monica, 'Monica.slnx'), '<Solution />\n');
+  const head = initializeGit(monica);
+  const cachedFrameworkSource = path.join(root, 'cached-framework-source');
+  fs.mkdirSync(cachedFrameworkSource);
+  const frameworkResolver = path.join(root, 'framework-resolver.py');
+  writeResolver(frameworkResolver, cachedFrameworkSource, { actualCommit: head, expectedCommit: head, ref: head });
+  const frameworkResult = resolveSourceBinding({
+    repository: 'monica',
+    workspace: monica,
+    state: statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    sourceResolver: frameworkResolver,
+  });
+  assert.equal(frameworkResult.expectation.basis, 'monica-workspace-head');
+  assert.equal(frameworkResult.expectation.commit, head);
+  assert.equal(frameworkResult.offeredBinding.commit, head);
+});
+
+test('source lookup and the CLI distinguish operational workspace failures from domain version blockers', async (t) => {
+  const root = temporaryDirectory(t);
+  const state = path.join(root, 'state.json');
+  const common = ['--state', state, '--catalog', CATALOG_PATH, '--index', INDEX_PATH, '--json'];
+
+  const missing = path.join(root, 'missing');
+  assert.throws(
+    () => resolveSourceBinding({ repository: 'monica', workspace: missing, state, catalog: CATALOG_PATH, index: INDEX_PATH }),
+    (error) => error.code === 'workspace_unavailable',
+  );
+  const missingProcess = spawnSync(process.execPath, [GUIDE_ENTRYPOINT, 'source', 'resolve', '--repository', 'monica', '--workspace', missing, ...common], { encoding: 'utf8' });
+  assert.equal(missingProcess.status, 2, missingProcess.stderr);
+  assert.equal(JSON.parse(missingProcess.stderr).error.code, 'workspace_unavailable');
+
+  const mixed = path.join(root, 'mixed');
+  write(path.join(mixed, 'One.csproj'), '<Project><ItemGroup><PackageReference Include="Monica.Core" Version="1.0.0" /></ItemGroup></Project>');
+  write(path.join(mixed, 'Two.csproj'), '<Project><ItemGroup><PackageReference Include="Monica.Core" Version="2.0.0" /></ItemGroup></Project>');
+  const mixedLookup = resolveSourceBinding({ repository: 'monica', workspace: mixed, state, catalog: CATALOG_PATH, index: INDEX_PATH });
+  assert.equal(mixedLookup.status, 'blocked');
+  assert.equal(mixedLookup.warning.code, 'mixed_framework_versions');
+  const mixedProcess = spawnSync(process.execPath, [GUIDE_ENTRYPOINT, 'source', 'resolve', '--repository', 'monica', '--workspace', mixed, ...common], { encoding: 'utf8' });
+  assert.equal(mixedProcess.status, 3, mixedProcess.stderr);
+  assert.equal(JSON.parse(mixedProcess.stdout).warning.code, 'mixed_framework_versions');
+
+  const ranged = path.join(root, 'range');
+  write(path.join(ranged, 'Range.csproj'), '<Project><ItemGroup><PackageReference Include="Monica.Core" Version="[1.0.0,2.0.0)" /></ItemGroup></Project>');
+  const rangeLookup = resolveSourceBinding({ repository: 'monica', workspace: ranged, state, catalog: CATALOG_PATH, index: INDEX_PATH });
+  assert.equal(rangeLookup.status, 'blocked');
+  assert.equal(rangeLookup.warning.code, 'version_range_unsupported');
+  const rangeProcess = spawnSync(process.execPath, [GUIDE_ENTRYPOINT, 'source', 'resolve', '--repository', 'monica', '--workspace', ranged, ...common], { encoding: 'utf8' });
+  assert.equal(rangeProcess.status, 3, rangeProcess.stderr);
+  assert.equal(JSON.parse(rangeProcess.stdout).warning.code, 'version_range_unsupported');
+
+  const blockedOptions = {
+    sourceAction: 'bind',
+    repository: 'monica',
+    sourcePath: missing,
+    state,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+  };
+  const blockedPlan = await buildPlan('source', blockedOptions);
+  assert.ok(blockedPlan.blockers.length);
+  const applyProcess = spawnSync(process.execPath, [
+    GUIDE_ENTRYPOINT,
+    'source',
+    'bind',
+    '--repository',
+    'monica',
+    '--source-path',
+    missing,
+    '--apply',
+    '--plan-digest',
+    blockedPlan.planDigest,
+    ...common,
+  ], { encoding: 'utf8' });
+  assert.equal(applyProcess.status, 3, applyProcess.stderr);
+  assert.equal(JSON.parse(applyProcess.stderr).error.code, 'plan_blocked');
+});
+
+test('dirty Docs ProjectReferences remain warning-only lookups while workspace diagnostics retain both bindings', async (t) => {
+  const root = temporaryDirectory(t);
+  const monica = path.join(root, 'Monica');
+  fs.mkdirSync(monica);
+  write(path.join(monica, 'Directory.Build.props'), '<Project><PropertyGroup><PackageVersion>1.2.3</PackageVersion></PropertyGroup></Project>');
+  write(path.join(monica, 'Monica.Core.csproj'), '<Project />');
+  const monicaCommit = initializeGit(monica);
+  const monicaBinding = verifyLocalSource(monica, { repository: 'Tairitsua/Monica', exactRef: monicaCommit });
+
+  const docs = path.join(root, 'Monica.Docs');
+  write(path.join(docs, 'docs', 'en-US', 'index.md'), '# Docs\n');
+  write(path.join(docs, 'docs', 'zh-CN', 'index.md'), '# 文档\n');
+  write(path.join(docs, 'frontend', 'monica-docs-web', 'package.json'), '{"private":true}\n');
+  write(path.join(docs, 'Docs.csproj'), `<Project><ItemGroup><ProjectReference Include="${path.join(monica, 'Monica.Core.csproj')}" /></ItemGroup></Project>`);
+  const docsCommit = initializeGit(docs, 'https://github.com/Tairitsua/Monica.Docs.git');
+  const docsBinding = verifyLocalSource(docs, { repository: 'Tairitsua/Monica.Docs', exactRef: docsCommit });
+
+  const statePath = path.join(root, 'state.json');
+  const state = emptyState();
+  state.sourceBindings['Tairitsua/Monica'] = monicaBinding;
+  state.sourceBindings['Tairitsua/Monica.Docs'] = docsBinding;
+  write(statePath, stableJson(state, 2));
+  write(path.join(monica, 'Monica.Core.csproj'), '<Project><PropertyGroup><Dirty>true</Dirty></PropertyGroup></Project>');
+
+  const options = { workspace: docs, state: statePath, catalog: CATALOG_PATH, index: INDEX_PATH };
+  const lookup = resolveSourceBinding({ ...options, repository: 'monica' });
+  assert.equal(lookup.status, 'resolved');
+  assert.equal(lookup.severity, 'warning');
+  assert.equal(lookup.expectation.basis, 'dirty-project-reference-head');
+  assert.equal(lookup.expectation.commit, monicaCommit);
+  assert.equal(lookup.observation.pathHealth, 'available');
+  assert.ok(lookup.observation.warnings.some((entry) => entry.code === 'dirty_project_reference_source'));
+
+  const environment = await inspectEnvironment(options);
+  const status = statusEnvelope(environment);
+  assert.equal(status.severity, 'warning');
+  assert.equal(status.error, null);
+  assert.ok(status.observation.sourceBindings['Tairitsua/Monica'].binding);
+  assert.ok(status.observation.sourceBindings['Tairitsua/Monica.Docs'].binding);
+  const renderedStatus = renderStatus(status);
+  assert.match(renderedStatus, /Tairitsua\/Monica\s+/);
+  assert.match(renderedStatus, /Tairitsua\/Monica\.Docs\s+/);
+  assert.match(renderedStatus, /dirty_project_reference_source/);
+
+  const report = await doctor(options);
+  assert.equal(report.status, 'warning');
+  assert.equal(report.summary.errors, 0);
+  assert.equal(report.checks.find((entry) => entry.id === 'profile').status, 'warning');
+  assert.match(report.checks.find((entry) => entry.id === 'profile').message, /docs-contributor/);
+  assert.equal(report.checks.find((entry) => entry.id === 'source-binding:monica').status, 'warning');
+  assert.equal(report.checks.find((entry) => entry.id === 'source-binding:docs').status, 'ok');
+
+  let output = '';
+  const originalWrite = process.stdout.write;
+  process.stdout.write = (chunk) => { output += String(chunk); return true; };
+  try {
+    assert.equal(await main(['source', 'resolve', '--repository', 'monica', '--workspace', docs, '--state', statePath, '--catalog', CATALOG_PATH, '--index', INDEX_PATH]), 1);
+  } finally {
+    process.stdout.write = originalWrite;
+  }
+  assert.match(output, /resolved \(warning\)/);
+  assert.match(output, /dirty_project_reference_source/);
+});
+
+test('unsupported immutable catalog schemas fail closed with actionable Guide guidance', (t) => {
+  const root = temporaryDirectory(t);
+  const legacyCatalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+  legacyCatalog.schemaVersion = 1;
+  const legacyCatalogPath = path.join(root, 'legacy-catalog.json');
+  write(legacyCatalogPath, stableJson(legacyCatalog, 2));
+  assert.throws(
+    () => loadCatalog({ catalogPath: legacyCatalogPath, indexPath: INDEX_PATH }),
+    (error) => error.code === 'catalog_schema_mismatch'
+      && /immutable release/.test(error.message)
+      && /explicitly upgrade\/switch/.test(error.message)
+      && /will not reinterpret or substitute/.test(error.details?.remediation || ''),
+  );
+});
+
+test('read-only intents reject apply controls and global-only source commands reject workspace', () => {
+  for (const argv of [
+    ['overview', '--apply'],
+    ['status', '--plan-digest', `sha256:${'a'.repeat(64)}`],
+    ['doctor', '--apply'],
+    ['source', 'list', '--apply'],
+    ['source', 'resolve', '--repository', 'monica', '--plan-digest', `sha256:${'a'.repeat(64)}`],
+  ]) {
+    assert.throws(() => parseArguments(argv), (error) => error.code === 'readonly_apply_invalid');
+  }
+  for (const argv of [
+    ['overview', '--workspace', '/tmp'],
+    ['source', 'list', '--workspace', '/tmp'],
+    ['source', 'bind', '--repository', 'monica', '--source-path', '/tmp', '--workspace', '/tmp'],
+    ['source', 'unbind', '--repository', 'docs', '--workspace', '/tmp'],
+  ]) {
+    assert.throws(() => parseArguments(argv), (error) => error.code === 'workspace_option_invalid');
+  }
+  assert.doesNotThrow(() => parseArguments(['source', 'resolve', '--repository', 'monica', '--workspace', '/tmp']));
+  const processResult = spawnSync(process.execPath, [GUIDE_ENTRYPOINT, 'overview', '--workspace', '/tmp', '--json'], { encoding: 'utf8' });
+  assert.equal(processResult.status, 2, processResult.stderr);
+  assert.equal(JSON.parse(processResult.stderr).error.code, 'workspace_option_invalid');
+});
+
+test('local source binding is revalidated under the state lock before persistence', async (t) => {
+  const root = temporaryDirectory(t);
+  const source = path.join(root, 'Monica');
+  fs.mkdirSync(source);
+  write(path.join(source, 'README.md'), 'first\n');
+  const firstCommit = initializeGit(source);
+  const options = {
+    sourceAction: 'bind',
+    repository: 'monica',
+    sourcePath: source,
+    sourceRef: firstCommit,
+    state: path.join(root, 'state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+  };
+  const plan = await buildPlan('source', options);
+  assert.equal(plan.blockers.length, 0);
+  write(path.join(source, 'README.md'), 'second\n');
+  execFileSync('git', ['-C', source, 'add', 'README.md']);
+  execFileSync('git', ['-C', source, 'commit', '-qm', 'move checkout']);
+  await assert.rejects(
+    applyPlan('source', { ...options, planDigest: plan.planDigest, precomputedPlan: plan }),
+    (error) => error.code === 'source_binding_drift',
+  );
+  assert.equal(fs.existsSync(options.state), false);
+});
+
+test('cached source binding is revalidated through the cache-only resolver under the state lock', async (t) => {
+  const root = temporaryDirectory(t);
+  const source = path.join(root, 'cached-source');
+  const movedSource = path.join(root, 'moved-cached-source');
+  fs.mkdirSync(source);
+  fs.mkdirSync(movedSource);
+  const resolver = path.join(root, 'resolver.py');
+  writeResolver(resolver, source);
+  const options = {
+    sourceAction: 'bind',
+    repository: 'monica',
+    sourceRef: COMMIT,
+    sourceResolver: resolver,
+    state: path.join(root, 'state.json'),
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    offline: true,
+  };
+  const plan = await buildPlan('source', options);
+  assert.equal(plan.blockers.length, 0);
+  writeResolver(resolver, movedSource);
+  await assert.rejects(
+    applyPlan('source', { ...options, planDigest: plan.planDigest, precomputedPlan: plan }),
+    (error) => error.code === 'source_binding_drift',
+  );
+  assert.equal(fs.existsSync(options.state), false);
+});
+
+test('external skills CLI and source resolver timeouts are bounded operational failures', (t) => {
+  const root = temporaryDirectory(t);
+  const statePath = path.join(root, 'state.json');
+  const state = emptyState();
+  state.agentTargets = ['cursor'];
+  write(statePath, stableJson(state, 2));
+  const slowNpx = path.join(root, 'slow-npx.mjs');
+  write(slowNpx, '#!/usr/bin/env node\nsetTimeout(() => process.stdout.write("[]"), 1000);\n');
+  fs.chmodSync(slowNpx, 0o755);
+  const doctorProcess = spawnSync(process.execPath, [
+    GUIDE_ENTRYPOINT, 'doctor', '--state', statePath, '--catalog', CATALOG_PATH, '--index', INDEX_PATH,
+    '--timeout-ms', '50', '--json',
+  ], { encoding: 'utf8', env: { ...process.env, MONICA_GUIDE_NPX: slowNpx } });
+  assert.equal(doctorProcess.status, 2, doctorProcess.stderr);
+  assert.equal(JSON.parse(doctorProcess.stderr).error.code, 'skills_cli_timeout');
+
+  const slowResolver = path.join(root, 'slow-resolver.py');
+  write(slowResolver, 'import time\ntime.sleep(1)\n');
+  assert.throws(
+    () => resolveCachedSource({ exactRef: COMMIT, resolverPath: slowResolver, timeoutMs: 50 }),
+    (error) => error.code === 'source_resolver_timeout' && /offline/i.test(error.message),
+  );
+});
+
+test('resolver paths and canonical Docs workspace commits fail closed when exact evidence is absent', async (t) => {
+  const root = temporaryDirectory(t);
+  const relativeResolver = path.join(root, 'relative-resolver.py');
+  write(relativeResolver, `import json\nprint(json.dumps({"status":"ok","source_path":"relative","verification_state":"verified","resolution_kind":"exact_commit","repository":{"id":"repo","canonical_name":"Tairitsua/Monica"},"artifact":{"id":"artifact","ref":"${COMMIT}","actual_commit":"${COMMIT}","expected_commit":"${COMMIT}"}}))\n`);
+  assert.throws(
+    () => resolveCachedSource({ exactRef: COMMIT, resolverPath: relativeResolver }),
+    (error) => error.code === 'source_contract_invalid',
+  );
+
+  const docs = path.join(root, 'Monica.Docs');
+  fs.mkdirSync(docs);
+  execFileSync('git', ['init', '-q', docs]);
+  execFileSync('git', ['-C', docs, 'remote', 'add', 'origin', 'https://github.com/Tairitsua/Monica.Docs.git']);
+  const result = resolveSourceBinding({ repository: 'docs', workspace: docs, state: path.join(root, 'state.json'), catalog: CATALOG_PATH, index: INDEX_PATH });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.warning.code, 'source_commit_unresolved');
+  const plan = await buildPlan('init', {
+    ...baseOptions(root, docs),
+    state: path.join(root, 'docs-state.json'),
+    profile: 'docs-contributor',
+    capabilities: [],
+    agents: ['codex'],
+  });
+  assert.ok(plan.blockers.some((entry) => entry.code === 'source_commit_unresolved'
+    && entry.details.repository === 'Tairitsua/Monica.Docs'));
+});
+
+test('local source refs accept exact commits and tags but reject moving branches', (t) => {
+  const root = temporaryDirectory(t);
+  const source = path.join(root, 'Monica');
+  fs.mkdirSync(source);
+  write(path.join(source, 'README.md'), 'source\n');
+  const commit = initializeGit(source);
+  execFileSync('git', ['-C', source, 'tag', 'v1.2.3']);
+  assert.equal(verifyLocalSource(source, { exactRef: commit }).commit, commit);
+  assert.equal(verifyLocalSource(source, { exactRef: 'v1.2.3' }).resolutionKind, 'exact_tag');
+  const branch = execFileSync('git', ['-C', source, 'branch', '--show-current'], { encoding: 'utf8' }).trim();
+  assert.throws(() => verifyLocalSource(source, { exactRef: branch }), (error) => error.code === 'source_ref_not_immutable');
+});
+
+test('agent targets are dynamically validated and large Git diffs are fingerprinted without capture limits', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const calls = [];
+  const plan = await buildPlan('init', {
+    ...baseOptions(root, workspace),
+    agents: ['cursor'],
+    agentValidationRunner: (_command, args) => {
+      calls.push(args);
+      return { status: 0, stdout: '[]', stderr: '', error: null };
+    },
+  });
+  assert.equal(plan.blockers.some((entry) => entry.code.startsWith('agent_target_')), false);
+  assert.ok(calls.some((args) => args.join(' ').includes('ls -g -a cursor --json')));
+  const rejected = await buildPlan('init', {
+    ...baseOptions(root, workspace),
+    agents: ['future-agent'],
+    agentValidationRunner: () => ({ status: 1, stdout: '', stderr: 'unsupported', error: null }),
+  });
+  assert.ok(rejected.blockers.some((entry) => entry.code === 'agent_target_unavailable'));
+  assert.equal(rejected.actions.some((entry) => entry.type === 'install-skill'), false);
+
+  const gitWorkspace = path.join(root, 'large-diff');
+  fs.mkdirSync(gitWorkspace);
+  write(path.join(gitWorkspace, 'large.txt'), 'base\n');
+  initializeGit(gitWorkspace, 'https://github.com/example/large.git');
+  const before = gitWorkspaceFingerprint(gitWorkspace);
+  fs.writeFileSync(path.join(gitWorkspace, 'large.txt'), 'x'.repeat(9 * 1024 * 1024));
+  const after = gitWorkspaceFingerprint(gitWorkspace);
+  assert.notEqual(after, before);
+});
+
+test('Git status streams inventories beyond the process buffer and fails closed on command errors', (t) => {
+  const root = temporaryDirectory(t);
+  const largeStatus = path.join(root, 'large-status');
+  write(largeStatus, `#!/usr/bin/env node
+const chunk = ('?? ' + 'x'.repeat(120) + '\\n').repeat(1000);
+for (let index = 0; index < 80; index += 1) process.stdout.write(chunk);
+`);
+  fs.chmodSync(largeStatus, 0o755);
+  const snapshot = gitStatusSnapshot(root, { command: largeStatus, sampleLimit: 3 });
+  assert.equal(snapshot.dirty, true);
+  assert.ok(snapshot.bytes > 8 * 1024 * 1024);
+  assert.equal(snapshot.changes.length, 3);
+  assert.equal(snapshot.truncated, true);
+  assert.match(snapshot.digest, /^sha256:[0-9a-f]{64}$/);
+
+  const failedStatus = path.join(root, 'failed-status');
+  write(failedStatus, `#!/usr/bin/env node
+process.stderr.write('forced status failure');
+process.exit(7);
+`);
+  fs.chmodSync(failedStatus, 0o755);
+  assert.throws(
+    () => gitStatusSnapshot(root, { command: failedStatus }),
+    (error) => error.code === 'git_status_failed'
+      && error.details.exitCode === 7
+      && error.details.stderr === 'forced status failure',
+  );
+});
+
+test('toolbox defaults to overview and global doctor treats an unconfigured state as healthy', async (t) => {
+  const root = temporaryDirectory(t);
+  const state = path.join(root, 'state.json');
+  assert.equal(parseArguments([]).intent, 'overview');
+  const report = await doctorGlobal({ state, catalog: CATALOG_PATH, index: INDEX_PATH });
+  assert.equal(report.status, 'ok');
+  let overviewOutput = '';
+  const overviewWrite = process.stdout.write;
+  process.stdout.write = (chunk) => { overviewOutput += String(chunk); return true; };
+  try {
+    assert.equal(await main(['overview', '--state', state, '--catalog', CATALOG_PATH, '--index', INDEX_PATH]), 0);
+  } finally {
+    process.stdout.write = overviewWrite;
+  }
+  assert.match(overviewOutput, /Bundled catalog:/);
+  assert.match(overviewOutput, /Tairitsua\/Monica\s+unbound/);
+  assert.match(overviewOutput, /Tairitsua\/Monica\.Docs\s+unbound/);
+  write(`${state}.lock`, stableJson({ pid: 2147483647, token: 'c'.repeat(48), createdAt: '2000-01-01T00:00:00Z' }, 2));
+  const lockedReport = await doctorGlobal({ state, catalog: CATALOG_PATH, index: INDEX_PATH });
+  assert.equal(lockedReport.status, 'error');
+  assert.ok(lockedReport.checks.some((entry) => entry.id === 'state-lock' && entry.remediation?.includes('remove only the exact reported lock file')));
+  fs.unlinkSync(`${state}.lock`);
+  let output = '';
+  const originalWrite = process.stdout.write;
+  process.stdout.write = (chunk) => { output += String(chunk); return true; };
+  try {
+    const exitCode = await main(['source', 'bind', '--repository', 'monica', '--source-path', path.join(root, 'missing'), '--state', state, '--catalog', CATALOG_PATH, '--index', INDEX_PATH, '--json']);
+    assert.equal(exitCode, 3);
+  } finally {
+    process.stdout.write = originalWrite;
+  }
+  assert.match(output, /source_unavailable/);
+});
+
+test('global status and doctor verify missing or tampered managed skills against the active immutable release', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const configured = configuredState(root, workspace);
+  const options = {
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    fetchImplementation: releaseFetch(),
+  };
+  const previousNpx = process.env.MONICA_GUIDE_NPX;
+  t.after(() => previousNpx === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previousNpx);
+
+  process.env.MONICA_GUIDE_NPX = mockNpx(path.join(root, 'missing-install'), configured.skills.slice(1));
+  const missingDoctor = await doctorGlobal(options);
+  assert.equal(missingDoctor.status, 'error');
+  assert.ok(missingDoctor.checks.some((entry) => entry.id === 'skill-discovery:codex' && entry.status === 'error' && /exactly one/.test(entry.message)));
+  const missingStatus = await globalStatusEnvelope(inspectGlobalEnvironment(options), options);
+  assert.equal(missingStatus.status, 'error');
+  assert.equal(missingStatus.observation.installedSkillHealth.status, 'error');
+
+  process.env.MONICA_GUIDE_NPX = mockNpx(path.join(root, 'tampered-install'), configured.skills, { corrupt: true });
+  const tamperedDoctor = await doctorGlobal({ ...options, fetchImplementation: releaseFetch() });
+  assert.equal(tamperedDoctor.status, 'error');
+  assert.ok(tamperedDoctor.checks.some((entry) => entry.id === 'skill-discovery:codex' && entry.status === 'error' && /does not match/.test(entry.message)));
+  const tamperedStatus = await globalStatusEnvelope(inspectGlobalEnvironment(options), { ...options, fetchImplementation: releaseFetch() });
+  assert.equal(tamperedStatus.status, 'error');
+  assert.equal(tamperedStatus.observation.installedSkillHealth.status, 'error');
+});
+
+test('global diagnostics reject managed skill records without an active release', async (t) => {
+  const root = temporaryDirectory(t);
+  const statePath = path.join(root, 'state.json');
+  const state = emptyState();
+  state.managedSkills['monica-guide'] = { revision: null, digest: null, lastChangedIn: null };
+  write(statePath, stableJson(state, 2));
+  const options = { state: statePath, catalog: CATALOG_PATH, index: INDEX_PATH };
+  const report = await doctorGlobal(options);
+  assert.equal(report.status, 'error');
+  assert.ok(report.checks.some((entry) => entry.id === 'managed-skill-health' && entry.status === 'error' && /without an active immutable release/.test(entry.message)));
+  const status = await globalStatusEnvelope(inspectGlobalEnvironment(options), options);
+  assert.equal(status.status, 'error');
+  assert.equal(status.observation.installedSkillHealth.status, 'error');
+});
+
+test('dynamic agent discovery diagnoses stale aliases without hardcoded host directories', async (t) => {
+  const root = temporaryDirectory(t);
+  const workspace = applicationWorkspace(root);
+  const configured = configuredState(root, workspace, { agents: ['cursor'] });
+  const previousNpx = process.env.MONICA_GUIDE_NPX;
+  process.env.MONICA_GUIDE_NPX = mockNpx(path.join(root, 'cursor-install'), configured.skills, {
+    agents: ['cursor'],
+    extraEntries: [{ name: 'mo-development', path: path.join(root, 'legacy-alias'), scope: 'global', agents: ['cursor'] }],
+  });
+  t.after(() => previousNpx === undefined ? delete process.env.MONICA_GUIDE_NPX : process.env.MONICA_GUIDE_NPX = previousNpx);
+  const report = await doctorGlobal({
+    state: configured.statePath,
+    catalog: CATALOG_PATH,
+    index: INDEX_PATH,
+    fetchImplementation: releaseFetch(),
+  });
+  assert.equal(report.status, 'warning');
+  const discovery = report.checks.find((entry) => entry.id === 'skill-discovery:cursor');
+  assert.equal(discovery.status, 'warning');
+  assert.deepEqual(discovery.details.aliases.map((entry) => entry.name), ['mo-development']);
+  assert.equal(discovery.details.aliases[0].canonical, 'monica-development');
 });
 
 test('offline init fails closed without a verified release index', async (t) => {
@@ -1673,7 +2541,7 @@ test('an N-to-N+1 release schema instructs an old Guide to reinstall from the se
   );
 
   const nextCatalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
-  nextCatalog.schemaVersion = 2;
+  nextCatalog.schemaVersion = 3;
   const nextCatalogText = stableJson(nextCatalog, 2);
   const catalogRelease = structuredClone(releaseIndex().releases[TAG]);
   catalogRelease.catalogDigest = digest(Buffer.from(nextCatalogText));
@@ -1694,7 +2562,7 @@ test('an N-to-N+1 release schema instructs an old Guide to reinstall from the se
         return { ok: true, status: 200, url, text: async () => text };
       },
     }),
-    (error) => assertUpgrade(error, 'agent-skill-catalog.json', 1, 2),
+    (error) => assertUpgrade(error, 'agent-skill-catalog.json', 2, 3),
   );
 
   const manifestRelease = structuredClone(releaseIndex().releases[TAG]);
@@ -1855,11 +2723,10 @@ test('doctor remediation is executable because update adopts discovered catalog-
   state.agentTargets = ['codex'];
   write(statePath, stableJson(state, 2));
   write(path.join(workspace, '.monica', 'guide.json'), stableJson({
-    schemaVersion: 1,
+    schemaVersion: 2,
     profile: 'application',
     channel: 'stable',
     capabilities: ['modular-monolith'],
-    agentTargets: ['codex'],
     expectedCatalogRelease: { ...state.activeRelease, indexTag: TAG },
     instructionBlockVersion: 1,
     managedClaudeImport: false,
@@ -1893,40 +2760,76 @@ test('release fetches time out with actionable fail-closed diagnostics', async (
   );
 });
 
-test('bootstrap prompt contract stays bilingual, pinned, immutable, profile-explicit, and preview-first', () => {
+test('bootstrap prompt contract stays bilingual, pinned, immutable, universal, and preview-gated', () => {
   const prompts = JSON.parse(fs.readFileSync(path.join(SKILL_ROOT, 'assets', 'bootstrap-prompts.json'), 'utf8'));
-  assert.equal(prompts.schemaVersion, 2);
+  assert.equal(prompts.schemaVersion, 3);
   assert.equal(prompts.$schema, './bootstrap-prompts.schema.json');
+  assert.equal(prompts.repository, 'Tairitsua/Monica');
+  assert.equal(prompts.skill, 'monica-guide');
   assert.equal(prompts.immutableRef, '{{MONICA_IMMUTABLE_REF}}');
   assert.equal(prompts.catalogDigest, '{{MONICA_CATALOG_DIGEST}}');
   assert.equal(prompts.distribution.skillsCli.package, 'skills');
   assert.match(prompts.distribution.skillsCli.version, /^\d+\.\d+\.\d+$/);
+  assert.equal(prompts.distribution.immutableSkillUrlTemplate, 'https://github.com/Tairitsua/Monica/tree/{tag}/skills/{skill}');
+  assert.deepEqual(prompts.verifiedAgentTargets, ['codex', 'claude-code']);
+  assert.equal(Object.hasOwn(prompts, 'hosts'), false);
+  assert.equal(Object.hasOwn(prompts, 'goals'), false);
+
+  const cliReference = `${prompts.distribution.skillsCli.package}@${prompts.distribution.skillsCli.version}`;
+  const immutableUrl = 'https://github.com/Tairitsua/Monica/tree/{{MONICA_IMMUTABLE_REF}}/skills/monica-guide';
+  assert.deepEqual(prompts.fallback, {
+    installCommand: `npx --yes ${cliReference} add ${immutableUrl} -g -s monica-guide`,
+    verifyCommand: `npx --yes ${cliReference} ls -g --json`,
+  });
+  assert.deepEqual(Object.keys(prompts.locales).sort(), ['en-US', 'zh-CN']);
+
+  const localeFragments = {
+    'en-US': [
+      'Install only the monica-guide Agent Skill globally',
+      "Use this host's supported Agent Skills installation and discovery mechanism",
+      'This installation changes my user-level skill directory.',
+      'restart the host only if discovery still fails',
+      'Invoke $monica-guide',
+      'Monica/Monica.Docs source bindings',
+      'ask what I want to do next',
+      'After that installation, these restrictions apply until I choose an operation and approve its preview',
+      'Do not initialize a repository',
+      'choose a profile',
+      'install downstream Monica skills',
+      'bind or unbind source',
+      'make any other file changes',
+      'perform remote mutations',
+    ],
+    'zh-CN': [
+      '只从这个不可变来源全局安装 monica-guide Agent Skill',
+      '使用当前宿主支持的 Agent Skills 安装与发现方式',
+      '这次安装会更改我的用户级 Skill 目录。',
+      '只有发现仍失败时才重启宿主',
+      '调用 $monica-guide',
+      'Monica 和 Monica.Docs 源码绑定',
+      '询问我下一步想做什么',
+      '完成这次安装后，在我选择操作并批准其预览之前，以下限制适用',
+      '不要初始化仓库',
+      '选择 profile',
+      '安装后续 Monica Skill',
+      '绑定或解绑源码',
+      '不要再修改其他文件',
+      '执行远程变更',
+    ],
+  };
+
   for (const locale of ['en-US', 'zh-CN']) {
-    const userDirectoryDisclosure = locale === 'en-US'
-      ? 'This global installation changes your user-level skill directory.'
-      : '这次全局安装会更改你的用户级 Skill 目录。';
-    for (const host of ['codex', 'claude-code', 'generic']) {
-      const expectedAgents = prompts.hosts[host].agentTargets;
-      for (const goal of ['application', 'extension']) {
-        const prompt = prompts.locales[locale].hosts[host].goals[goal].prompt;
-        const profile = prompts.goals[goal].profile;
-        assert.match(prompt, new RegExp(`skills@${prompts.distribution.skillsCli.version.replaceAll('.', '\\.')}`));
-        assert.match(prompt, /tree\/\{\{MONICA_IMMUTABLE_REF\}\}\/skills\/monica-guide/);
-        assert.match(prompt, /--release-tag \{\{MONICA_IMMUTABLE_REF\}\}/);
-        assert.match(prompt, new RegExp(`--profile ${profile}`));
-        assert.match(prompt, /\{\{MONICA_CATALOG_DIGEST\}\}/);
-        assert.match(prompt, /releaseCatalogDigest/);
-        assert.match(prompt, /planDigest/);
-        assert.ok(prompt.includes(userDirectoryDisclosure));
-        const initCommand = prompt.match(/`(init --release-tag [^`]+)`/)?.[1];
-        assert.ok(initCommand);
-        assert.equal(initCommand.includes('--apply'), false);
-        for (const agent of expectedAgents) assert.ok(initCommand.includes(`--agent ${agent}`));
-        assert.deepEqual(
-          [...new Set(prompt.match(/\{\{[A-Z_]+\}\}/g) || [])].sort(),
-          ['{{MONICA_CATALOG_DIGEST}}', '{{MONICA_IMMUTABLE_REF}}'],
-        );
-      }
+    const prompt = prompts.locales[locale].prompt;
+    assert.ok(prompt.includes(cliReference));
+    assert.ok(prompt.includes(immutableUrl));
+    for (const fragment of localeFragments[locale]) assert.ok(prompt.includes(fragment), `${locale}: missing ${fragment}`);
+    for (const forbidden of ['skills@latest', '--apply', '--agent', '--profile', 'init --']) {
+      assert.equal(prompt.includes(forbidden), false, `${locale}: unexpected ${forbidden}`);
     }
+    assert.equal(/\b(?:codex|claude-code)\b/i.test(prompt), false);
+    assert.deepEqual(
+      [...new Set(prompt.match(/\{\{[A-Z0-9_]+\}\}/g) || [])].sort(),
+      ['{{MONICA_IMMUTABLE_REF}}'],
+    );
   }
 });

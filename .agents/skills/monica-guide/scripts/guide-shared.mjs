@@ -4,8 +4,18 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-export const STATE_SCHEMA_VERSION = 3;
-export const PROJECT_SCHEMA_VERSION = 1;
+export const STATE_SCHEMA_VERSION = 4;
+export const PROJECT_SCHEMA_VERSION = 2;
+export const DEFAULT_EXTERNAL_COMMAND_TIMEOUT_MS = 30_000;
+export const MIN_EXTERNAL_COMMAND_TIMEOUT_MS = 50;
+export const MAX_EXTERNAL_COMMAND_TIMEOUT_MS = 300_000;
+
+const WORKSPACE_KEY_DIGEST_PREFIX_LENGTH = 'sha256:'.length;
+const WORKSPACE_KEY_LENGTH = 24;
+const SOURCE_REPOSITORY_NAMES = new Map([
+  ['tairitsua/monica', 'Tairitsua/Monica'],
+  ['tairitsua/monica.docs', 'Tairitsua/Monica.Docs'],
+]);
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 
@@ -84,7 +94,17 @@ export function readJson(filePath, fallback = undefined) {
 }
 
 export function fileDigest(filePath) {
-  return exists(filePath) ? digest(fs.readFileSync(filePath)) : null;
+  if (!exists(filePath)) return null;
+  const hash = crypto.createHash('sha256');
+  const descriptor = fs.openSync(filePath, 'r');
+  const buffer = Buffer.allocUnsafe(64 * 1024);
+  try {
+    let length;
+    while ((length = fs.readSync(descriptor, buffer, 0, buffer.length, null)) > 0) hash.update(buffer.subarray(0, length));
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  return `sha256:${hash.digest('hex')}`;
 }
 
 function currentRuntimeIsWsl() {
@@ -124,7 +144,8 @@ export function stateFilePath(override = undefined) {
 }
 
 export function workspaceKey(workspace, identity = null) {
-  return digest(`${identity || 'local'}\n${path.resolve(workspace)}`).slice(7, 31);
+  return digest(`${identity || 'local'}\n${path.resolve(workspace)}`)
+    .slice(WORKSPACE_KEY_DIGEST_PREFIX_LENGTH, WORKSPACE_KEY_DIGEST_PREFIX_LENGTH + WORKSPACE_KEY_LENGTH);
 }
 
 export function emptyState() {
@@ -134,6 +155,7 @@ export function emptyState() {
     managedSkills: {},
     agentTargets: [],
     sourceBindings: {},
+    sourceBindingCandidates: {},
     workspacePreferences: {},
     contributionPreferences: {},
     verifiedReleaseIndexes: {},
@@ -195,10 +217,52 @@ export function migrateState(input) {
       }])),
     };
   }
+  if (input.schemaVersion === 3) {
+    if (!input.sourceBindings || typeof input.sourceBindings !== 'object' || Array.isArray(input.sourceBindings)) {
+      throw new GuideError('invalid_state', 'sourceBindings must be an object in user state schema 3.');
+    }
+    const promoted = {};
+    const candidates = {};
+    for (const [legacyKey, legacy] of Object.entries(input.sourceBindings ?? {})) {
+      const binding = persistedSourceBinding(legacy);
+      if (!binding) throw new GuideError('invalid_state', `Legacy sourceBindings.${legacyKey} cannot be migrated without repository, sourcePath, and exact commit.`);
+      const records = candidates[binding.repository] ?? [];
+      if (!records.some((record) => stableJson(record) === stableJson(binding))) records.push(binding);
+      candidates[binding.repository] = records;
+    }
+    for (const [repository, records] of Object.entries(candidates)) {
+      if (records.length === 1) promoted[repository] = records[0];
+    }
+    input = {
+      ...input,
+      schemaVersion: 4,
+      sourceBindings: promoted,
+      sourceBindingCandidates: Object.fromEntries(Object.entries(candidates).filter(([, records]) => records.length > 1)),
+    };
+  }
   const state = { ...emptyState(), ...input, schemaVersion: STATE_SCHEMA_VERSION };
   if (!Array.isArray(state.agentTargets)) throw new GuideError('invalid_state', 'agentTargets must be an array.');
-  for (const field of ['managedSkills', 'sourceBindings', 'workspacePreferences', 'contributionPreferences', 'verifiedReleaseIndexes', 'verifiedReleaseArtifacts', 'observations']) {
+  const normalizedAgentTargets = state.agentTargets.map((agent) => String(agent || '').trim().toLowerCase().replace(/[ _]+/g, '-'));
+  if (normalizedAgentTargets.some((agent) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(agent))) {
+    throw new GuideError('invalid_state', 'agentTargets must contain only pinned npx skills target identifiers.');
+  }
+  if (new Set(normalizedAgentTargets).size !== normalizedAgentTargets.length) {
+    throw new GuideError('invalid_state', 'agentTargets must not contain duplicates.');
+  }
+  const sortedAgentTargets = [...normalizedAgentTargets].sort(compareOrdinalUtf8);
+  if (stableJson(normalizedAgentTargets) !== stableJson(sortedAgentTargets)) {
+    throw new GuideError('invalid_state', 'agentTargets must use canonical sorted order.');
+  }
+  state.agentTargets = sortedAgentTargets;
+  for (const field of ['managedSkills', 'sourceBindings', 'sourceBindingCandidates', 'workspacePreferences', 'contributionPreferences', 'verifiedReleaseIndexes', 'verifiedReleaseArtifacts', 'observations']) {
     if (!state[field] || typeof state[field] !== 'object' || Array.isArray(state[field])) throw new GuideError('invalid_state', `${field} must be an object.`);
+  }
+  for (const [repository, binding] of Object.entries(state.sourceBindings)) validateSourceBinding(repository, binding);
+  for (const [repository, records] of Object.entries(state.sourceBindingCandidates)) {
+    if (!SOURCE_REPOSITORY_NAMES.has(repository.toLowerCase()) || !Array.isArray(records) || records.length < 2) {
+      throw new GuideError('invalid_state', `sourceBindingCandidates.${repository} must contain at least two supported source bindings.`);
+    }
+    for (const binding of records) validateSourceBinding(repository, binding);
   }
   for (const [skill, record] of Object.entries(state.managedSkills)) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill)) throw new GuideError('invalid_state', `managedSkills contains invalid skill name ${skill}.`);
@@ -220,7 +284,54 @@ export function migrateState(input) {
       );
     }
   }
+  for (const [key, observation] of Object.entries(state.observations)) {
+    if (!observation || typeof observation !== 'object' || Array.isArray(observation)) {
+      throw new GuideError('invalid_state', `observations.${key} must be an object.`);
+    }
+    if (observation.schemaVersion !== 1 || typeof observation.observedAt !== 'string'
+      || Number.isNaN(Date.parse(observation.observedAt))) {
+      throw new GuideError('invalid_state', `observations.${key} must contain schemaVersion 1 and an ISO observedAt timestamp.`);
+    }
+    for (const forbidden of ['dirty', 'sourceBindings', 'sourceVerification', 'verificationStatus']) {
+      if (Object.hasOwn(observation, forbidden)) {
+        throw new GuideError('invalid_state', `observations.${key} must not persist volatile ${forbidden} data.`);
+      }
+    }
+  }
   return state;
+}
+
+function persistedSourceBinding(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const repository = SOURCE_REPOSITORY_NAMES.get(String(input.repository || 'Tairitsua/Monica').toLowerCase());
+  if (!repository || !input.sourcePath || !input.commit) return null;
+  return {
+    repository,
+    ref: String(input.ref || input.commit),
+    commit: String(input.commit).toLowerCase(),
+    sourcePath: normalizePath(String(input.sourcePath)),
+    resolutionKind: input.resolutionKind || 'exact_commit',
+    provenance: input.provenance ?? 'local-git',
+  };
+}
+
+function validateSourceBinding(repositoryKey, input) {
+  const repository = SOURCE_REPOSITORY_NAMES.get(repositoryKey.toLowerCase());
+  if (!repository || repository !== repositoryKey) throw new GuideError('invalid_state', `Unsupported source binding repository ${repositoryKey}.`);
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new GuideError('invalid_state', `sourceBindings.${repositoryKey} must be an object.`);
+  const fields = Object.keys(input).sort();
+  const expected = ['commit', 'provenance', 'ref', 'repository', 'resolutionKind', 'sourcePath'];
+  if (fields.join(',') !== expected.sort().join(',')) {
+    throw new GuideError('invalid_state', `sourceBindings.${repositoryKey} must contain only repository, ref, commit, sourcePath, resolutionKind, and provenance.`);
+  }
+  if (input.repository !== repositoryKey) throw new GuideError('invalid_state', `sourceBindings.${repositoryKey}.repository must match its registry key.`);
+  if (typeof input.ref !== 'string' || !input.ref) throw new GuideError('invalid_state', `sourceBindings.${repositoryKey}.ref must be non-empty.`);
+  if (!/^[0-9a-f]{40}$/i.test(input.commit || '')) throw new GuideError('invalid_state', `sourceBindings.${repositoryKey}.commit must be an exact Git commit.`);
+  if (typeof input.sourcePath !== 'string' || !path.isAbsolute(input.sourcePath)) throw new GuideError('invalid_state', `sourceBindings.${repositoryKey}.sourcePath must be absolute.`);
+  if (!['exact_commit', 'exact_tag'].includes(input.resolutionKind)) throw new GuideError('invalid_state', `sourceBindings.${repositoryKey}.resolutionKind must be exact_commit or exact_tag.`);
+  if (!(typeof input.provenance === 'string' || (input.provenance && typeof input.provenance === 'object' && !Array.isArray(input.provenance)))) {
+    throw new GuideError('invalid_state', `sourceBindings.${repositoryKey}.provenance must describe local Git or resolver provenance.`);
+  }
 }
 
 export function loadState(filePath) {
@@ -230,9 +341,48 @@ export function loadState(filePath) {
 export function loadProjectConfig(workspace) {
   const filePath = path.join(workspace, '.monica', 'guide.json');
   const config = readJson(filePath, null);
-  if (config === null) return { filePath, config: null };
+  if (config === null) return { filePath, config: null, migration: null };
+  const expectedFields = [
+    'capabilities',
+    'channel',
+    'expectedCatalogRelease',
+    'instructionBlockVersion',
+    'managedClaudeImport',
+    'profile',
+    'schemaVersion',
+  ];
+  if (config.schemaVersion === 1) {
+    const legacyFields = [...expectedFields, 'agentTargets'].sort(compareOrdinalUtf8);
+    const actualFields = Object.keys(config).sort(compareOrdinalUtf8);
+    if (stableJson(actualFields) !== stableJson(legacyFields)) {
+      throw new GuideError('project_config_invalid', 'Legacy .monica/guide.json schema 1 contains unsupported fields.', { actualFields, expectedFields: legacyFields });
+    }
+    if (!Array.isArray(config.agentTargets) || config.agentTargets.some((agent) => typeof agent !== 'string'
+      || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(agent))) {
+      throw new GuideError('project_config_invalid', 'Legacy .monica/guide.json agentTargets must contain pinned npx skills target identifiers.');
+    }
+    const { agentTargets, ...shared } = config;
+    return {
+      filePath,
+      config: { ...shared, schemaVersion: PROJECT_SCHEMA_VERSION },
+      migration: {
+        fromSchemaVersion: 1,
+        toSchemaVersion: PROJECT_SCHEMA_VERSION,
+        droppedAgentTargets: [...agentTargets],
+        message: 'Legacy repository agent targets are ignored; user state is authoritative. The next approved workspace configuration mutation writes schema 2.',
+      },
+    };
+  }
   if (config.schemaVersion !== PROJECT_SCHEMA_VERSION) throw new GuideError('project_schema_mismatch', `Unsupported .monica/guide.json schema ${config.schemaVersion}.`);
-  return { filePath, config };
+  const actualFields = Object.keys(config).sort(compareOrdinalUtf8);
+  if (stableJson(actualFields) !== stableJson(expectedFields.sort(compareOrdinalUtf8))) {
+    throw new GuideError(
+      'project_config_invalid',
+      '.monica/guide.json may contain only repository-shared profile, channel, capabilities, release, instruction, and Claude-import ownership fields.',
+      { actualFields, expectedFields },
+    );
+  }
+  return { filePath, config, migration: null };
 }
 
 export function atomicWrite(filePath, content, mode = 0o600) {
@@ -261,38 +411,63 @@ export function atomicWrite(filePath, content, mode = 0o600) {
 
 export function withFileLock(lockPath, callback) {
   fs.mkdirSync(path.dirname(lockPath), { recursive: true, mode: 0o700 });
+  const token = crypto.randomBytes(24).toString('hex');
   let descriptor;
   try {
     descriptor = fs.openSync(lockPath, 'wx', 0o600);
   } catch (error) {
     if (error.code !== 'EEXIST') throw error;
-    let ownerAlive = false;
-    let ownerKnownDead = false;
-    try {
-      const owner = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-      if (Number.isInteger(owner.pid) && owner.pid > 0) {
-        try {
-          process.kill(owner.pid, 0);
-          ownerAlive = true;
-        } catch (ownerError) {
-          if (ownerError?.code === 'EPERM') ownerAlive = true;
-          else if (ownerError?.code === 'ESRCH') ownerKnownDead = true;
-        }
-      }
-    } catch { /* Malformed locks fail closed below. */ }
-    if (ownerAlive || !ownerKnownDead) throw new GuideError('state_locked', `Another Monica Guide process owns ${lockPath}.`);
-    fs.unlinkSync(lockPath);
-    descriptor = fs.openSync(lockPath, 'wx', 0o600);
+    throw new GuideError('state_locked', `Another Monica Guide process owns ${lockPath}.`, inspectFileLock(lockPath));
   }
   try {
-    fs.writeFileSync(descriptor, stableJson({ pid: process.pid, createdAt: new Date().toISOString() }, 2));
+    fs.writeFileSync(descriptor, stableJson({ pid: process.pid, token, createdAt: new Date().toISOString() }, 2));
+    fs.fsyncSync(descriptor);
     fs.closeSync(descriptor);
     descriptor = undefined;
     return callback();
   } finally {
     if (descriptor !== undefined) fs.closeSync(descriptor);
-    if (exists(lockPath)) fs.unlinkSync(lockPath);
+    try {
+      const current = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+      if (current.token === token) fs.unlinkSync(lockPath);
+    } catch {
+      // Missing, replaced, or malformed lock files are never removed by a non-owner.
+    }
   }
+}
+
+export function inspectFileLock(lockPath) {
+  if (!exists(lockPath)) return { status: 'absent', path: lockPath };
+  let owner;
+  try {
+    owner = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  } catch (error) {
+    return { status: 'malformed', path: lockPath, message: error.message };
+  }
+  if (!Number.isInteger(owner.pid) || owner.pid <= 0 || typeof owner.token !== 'string' || !/^[0-9a-f]{48}$/.test(owner.token)) {
+    return { status: 'malformed', path: lockPath, owner };
+  }
+  let alive = null;
+  try {
+    process.kill(owner.pid, 0);
+    alive = true;
+  } catch (error) {
+    if (error?.code === 'EPERM') alive = true;
+    else if (error?.code === 'ESRCH') alive = false;
+  }
+  return { status: alive === false ? 'stale' : alive === true ? 'owned' : 'unknown', path: lockPath, owner };
+}
+
+export function externalCommandTimeout(value = undefined) {
+  const selected = value ?? process.env.MONICA_GUIDE_EXTERNAL_TIMEOUT_MS ?? DEFAULT_EXTERNAL_COMMAND_TIMEOUT_MS;
+  const timeout = typeof selected === 'number' ? selected : Number(selected);
+  if (!Number.isInteger(timeout) || timeout < MIN_EXTERNAL_COMMAND_TIMEOUT_MS || timeout > MAX_EXTERNAL_COMMAND_TIMEOUT_MS) {
+    throw new GuideError(
+      'external_timeout_invalid',
+      `External command timeout must be an integer from ${MIN_EXTERNAL_COMMAND_TIMEOUT_MS} to ${MAX_EXTERNAL_COMMAND_TIMEOUT_MS} milliseconds.`,
+    );
+  }
+  return timeout;
 }
 
 export function run(command, args, options = {}) {
@@ -302,6 +477,7 @@ export function run(command, args, options = {}) {
     windowsHide: true,
     maxBuffer: options.maxBuffer ?? 8 * 1024 * 1024,
     env: options.env ?? process.env,
+    ...(options.timeout === undefined ? {} : { timeout: options.timeout, killSignal: 'SIGTERM' }),
   });
   return {
     status: result.status,
@@ -313,6 +489,13 @@ export function run(command, args, options = {}) {
 
 export function runChecked(command, args, options = {}) {
   const result = run(command, args, options);
+  if (result.error?.code === 'ETIMEDOUT') {
+    throw new GuideError(
+      options.timeoutCode || 'external_command_timeout',
+      options.timeoutMessage || `${command} timed out after ${options.timeout} ms. Verify the local tool/cache and retry; offline operation never fetches a substitute.`,
+      { command, args, timeoutMs: options.timeout },
+    );
+  }
   if (result.error || result.status !== 0) {
     const detail = (result.stderr || result.stdout || result.error?.message || 'unknown error').trim();
     throw new GuideError(options.code || 'command_failed', `${command} failed: ${detail}`, { command, args, exitCode: result.status });
@@ -341,33 +524,144 @@ export function gitInfo(workspace, { includeDirty = true } = {}) {
   ].find(([, remoteUrl]) => /^Tairitsua\/Monica(?:\.Docs)?$/i.test(canonicalRepository(remoteUrl) || ''));
   const remoteName = canonicalRemote?.[0] || (remotes.origin ? 'origin' : remotes.upstream ? 'upstream' : null);
   const remote = canonicalRemote?.[1] || (remoteName ? remotes[remoteName] : null);
-  const dirtyOutput = includeDirty ? (git(root, ['status', '--porcelain=v1', '--untracked-files=normal']) ?? '') : '';
-  return { root: path.resolve(root), commit, remote, remoteName, remotes, dirty: dirtyOutput.length > 0, dirtyDigest: digest(dirtyOutput) };
+  const status = includeDirty
+    ? gitStatusSnapshot(root)
+    : { dirty: false, digest: digest('') };
+  return { root: path.resolve(root), commit, remote, remoteName, remotes, dirty: status.dirty, dirtyDigest: status.digest };
+}
+
+export function gitStatusSnapshot(workspace, { pathspec = [], sampleLimit = 0, command = 'git' } = {}) {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'monica-guide-status-'));
+  if (process.platform !== 'win32') fs.chmodSync(temporaryRoot, 0o700);
+  try {
+    const args = ['-C', workspace, 'status', '--porcelain=v1', '--untracked-files=normal'];
+    if (pathspec.length) args.push('--', ...pathspec);
+    const result = runToFile(command, args, path.join(temporaryRoot, 'status'));
+    if (result.error || result.status !== 0) {
+      throw new GuideError('git_status_failed', `Cannot inspect Git status in ${workspace}.`, {
+        command,
+        exitCode: result.status,
+        error: result.error?.message || null,
+        stderr: filePrefix(result.stderrPath),
+      });
+    }
+    const size = fs.statSync(result.stdoutPath).size;
+    const sample = sampleLimit > 0 ? statusLineSample(result.stdoutPath, sampleLimit) : { lines: [], truncated: false };
+    return {
+      dirty: size > 0,
+      digest: fileDigest(result.stdoutPath),
+      bytes: size,
+      changes: sample.lines,
+      truncated: sample.truncated,
+    };
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 }
 
 export function gitWorkspaceFingerprint(workspace) {
   const root = git(workspace, ['rev-parse', '--show-toplevel']);
   if (!root) return null;
   const head = git(workspace, ['rev-parse', 'HEAD']) || null;
-  const staged = run('git', ['-C', workspace, 'diff', '--binary', '--cached', '--', '.']);
-  const worktree = run('git', ['-C', workspace, 'diff', '--binary', '--', '.']);
-  const untrackedResult = run('git', ['-C', workspace, 'ls-files', '--others', '--exclude-standard', '-z', '--', '.']);
-  if (staged.status !== 0 || worktree.status !== 0 || untrackedResult.status !== 0) throw new GuideError('git_fingerprint_failed', `Cannot fingerprint Git workspace ${workspace}.`);
-  const prefix = git(workspace, ['rev-parse', '--show-prefix']) || '';
-  const untracked = [];
-  for (const listed of untrackedResult.stdout.split('\0').filter(Boolean).sort()) {
-    const relativeToRoot = prefix && !listed.startsWith(prefix) ? `${prefix}${listed}` : listed;
-    const absolute = path.resolve(root, relativeToRoot);
-    const relativeToWorkspace = path.relative(path.resolve(workspace), absolute);
-    if (relativeToWorkspace.startsWith('..') || path.isAbsolute(relativeToWorkspace)) continue;
-    const stat = fs.lstatSync(absolute);
-    untracked.push({
-      path: relativeToWorkspace.split(path.sep).join('/'),
-      kind: stat.isSymbolicLink() ? 'symlink' : stat.isFile() ? 'file' : 'other',
-      digest: stat.isSymbolicLink() ? digest(fs.readlinkSync(absolute)) : stat.isFile() ? digest(fs.readFileSync(absolute)) : null,
-    });
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'monica-guide-git-'));
+  if (process.platform !== 'win32') fs.chmodSync(temporaryRoot, 0o700);
+  try {
+    const staged = runToFile('git', ['-C', workspace, 'diff', '--binary', '--cached', '--', '.'], path.join(temporaryRoot, 'staged'));
+    const worktree = runToFile('git', ['-C', workspace, 'diff', '--binary', '--', '.'], path.join(temporaryRoot, 'worktree'));
+    const untrackedResult = runToFile('git', ['-C', workspace, 'ls-files', '--others', '--exclude-standard', '-z', '--', '.'], path.join(temporaryRoot, 'untracked'));
+    if (staged.status !== 0 || worktree.status !== 0 || untrackedResult.status !== 0) throw new GuideError('git_fingerprint_failed', `Cannot fingerprint Git workspace ${workspace}.`);
+    const prefix = git(workspace, ['rev-parse', '--show-prefix']) || '';
+    const untracked = [];
+    for (const listed of nulSeparatedFileEntries(untrackedResult.stdoutPath).sort(compareOrdinalUtf8)) {
+      const relativeToRoot = prefix && !listed.startsWith(prefix) ? `${prefix}${listed}` : listed;
+      const absolute = path.resolve(root, relativeToRoot);
+      const relativeToWorkspace = path.relative(path.resolve(workspace), absolute);
+      if (relativeToWorkspace.startsWith('..') || path.isAbsolute(relativeToWorkspace)) continue;
+      const stat = fs.lstatSync(absolute);
+      untracked.push({
+        path: relativeToWorkspace.split(path.sep).join('/'),
+        kind: stat.isSymbolicLink() ? 'symlink' : stat.isFile() ? 'file' : 'other',
+        digest: stat.isSymbolicLink() ? digest(fs.readlinkSync(absolute)) : stat.isFile() ? fileDigest(absolute) : null,
+      });
+    }
+    return digest({ head, staged: fileDigest(staged.stdoutPath), worktree: fileDigest(worktree.stdoutPath), untracked });
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
   }
-  return digest({ head, staged: digest(staged.stdout), worktree: digest(worktree.stdout), untracked });
+}
+
+function runToFile(command, args, stdoutPath) {
+  const stderrPath = `${stdoutPath}.err`;
+  const stdout = fs.openSync(stdoutPath, 'wx', 0o600);
+  const stderr = fs.openSync(stderrPath, 'wx', 0o600);
+  let result;
+  try {
+    result = spawnSync(command, args, { stdio: ['ignore', stdout, stderr], windowsHide: true, env: process.env });
+  } finally {
+    fs.closeSync(stdout);
+    fs.closeSync(stderr);
+  }
+  return { status: result.status, error: result.error, stdoutPath, stderrPath };
+}
+
+function filePrefix(filePath, byteLimit = 4096) {
+  const descriptor = fs.openSync(filePath, 'r');
+  try {
+    const size = Math.min(fs.fstatSync(descriptor).size, byteLimit);
+    const buffer = Buffer.alloc(size);
+    fs.readSync(descriptor, buffer, 0, size, 0);
+    return buffer.toString('utf8').trim();
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+function statusLineSample(filePath, lineLimit) {
+  const byteLimit = 256 * 1024;
+  const descriptor = fs.openSync(filePath, 'r');
+  try {
+    const fileSize = fs.fstatSync(descriptor).size;
+    const size = Math.min(fileSize, byteLimit);
+    const buffer = Buffer.alloc(size);
+    fs.readSync(descriptor, buffer, 0, size, 0);
+    const lines = buffer.toString('utf8').split(/\r?\n/).filter(Boolean);
+    return {
+      lines: lines.slice(0, lineLimit),
+      truncated: fileSize > size || lines.length > lineLimit,
+    };
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+function nulSeparatedFileEntries(filePath) {
+  const descriptor = fs.openSync(filePath, 'r');
+  const buffer = Buffer.allocUnsafe(64 * 1024);
+  const entries = [];
+  let remainder = Buffer.alloc(0);
+  try {
+    let length;
+    while ((length = fs.readSync(descriptor, buffer, 0, buffer.length, null)) > 0) {
+      const data = Buffer.concat([remainder, buffer.subarray(0, length)]);
+      let start = 0;
+      for (let index = data.indexOf(0, start); index >= 0; index = data.indexOf(0, start)) {
+        if (index > start) entries.push(data.subarray(start, index).toString('utf8'));
+        start = index + 1;
+      }
+      remainder = data.subarray(start);
+    }
+    if (remainder.length) entries.push(remainder.toString('utf8'));
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  return entries;
+}
+
+export function formatManagedSkillVersion(record, release, { fullSource = false } = {}) {
+  if (!record || record.digest === null) return 'unknown';
+  if (record.revision !== null) return `r${record.revision}`;
+  const commit = release?.commit || String(release?.id || '').replace(/^source:/, '') || 'unknown';
+  return `source@${fullSource ? commit : commit.slice(0, 12)}`;
 }
 
 export function sanitizeRemote(remote) {

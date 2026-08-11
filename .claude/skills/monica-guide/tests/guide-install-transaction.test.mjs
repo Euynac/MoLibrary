@@ -42,10 +42,10 @@ function writeSkill(root, name, content, mode = 0o640) {
 }
 
 function agentArguments(args) {
-  const start = args.indexOf('-a');
-  if (start < 0) return [];
   const values = [];
-  for (let index = start + 1; index < args.length && !args[index].startsWith('-'); index += 1) values.push(args[index]);
+  for (let index = 0; index < args.length - 1; index += 1) {
+    if (args[index] === '-a') values.push(args[index + 1]);
+  }
   return values;
 }
 
@@ -233,7 +233,7 @@ test('restore failure and rollback discovery failure preserve the primary error 
     fs.mkdirSync(installed);
     const cli = fakeSkillsCli(installed, {
       'monica-guide': { content: 'old guide\n', agents: ['Codex', 'Claude Code'] },
-    }, mode === 'restore' ? { restoreFails: true } : { failDiscoveryAt: 2 });
+    }, mode === 'restore' ? { restoreFails: true } : { failDiscoveryAt: 3 });
     assert.throws(
       () => withGlobalSkillCompensation(transactionOptions(root, cli, ['monica-guide'], ({ runSkill }) => {
         runSkill('monica-guide', () => writeSkill(installed, 'monica-guide', 'corrupt guide\n'));
@@ -426,14 +426,14 @@ test('retained crash evidence and unsupported membership block before mutation',
   fs.rmSync(path.join(root, 'state', 'skill-install-transactions'), { recursive: true, force: true });
   const installed = path.join(root, 'installed');
   fs.mkdirSync(installed);
-  const cursorOnly = fakeSkillsCli(installed, {
-    'monica-guide': { content: 'old guide\n', agents: ['Cursor'] },
+  const invalidMembership = fakeSkillsCli(installed, {
+    'monica-guide': { content: 'old guide\n', agents: ['???'] },
   });
   assert.throws(
-    () => withGlobalSkillCompensation(transactionOptions(root, cursorOnly, ['monica-guide'], () => {})),
+    () => withGlobalSkillCompensation(transactionOptions(root, invalidMembership, ['monica-guide'], () => {})),
     (error) => error.code === 'global_skill_membership_not_restorable',
   );
-  assert.equal(cursorOnly.calls.some((args) => args.includes('add') || args.includes('remove')), false);
+  assert.equal(invalidMembership.calls.some((args) => args.includes('add') || args.includes('remove')), false);
 });
 
 test('malformed preflight blocks before mutation and successful mutation cleans its snapshot', (t) => {
