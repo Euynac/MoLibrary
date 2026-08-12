@@ -76,10 +76,6 @@ public class EfCoreJobMetadataRepository(
             {
                 // Update existing
                 JobMetadataMapper.ToEntity(definition, existingEntity);
-                if (existingEntity.IsDeleted)
-                {
-                    existingEntity.JobKey = $"[deleted-{Guid.NewGuid()}]{existingEntity.JobKey}";
-                }
 
                 logger.LogInformation(
                     "Job definition updated: {JobKey} ({JobName})",

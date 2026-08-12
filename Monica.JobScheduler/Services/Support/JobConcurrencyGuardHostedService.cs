@@ -48,21 +48,25 @@ public class JobConcurrencyGuardHostedService(
     protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
         RecordState(
-            $"Waiting for {nameof(JobRegistrationHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}'",
+            $"Waiting for {nameof(JobDefinitionControlPlaneHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}'",
             HostedServiceState.WaitingDependency,
             logLevel: LogLevel.Information);
 
-        await hostedServiceCheckpointCoordinator.WaitForCheckpointAsync<JobRegistrationHostedService>(
+        await hostedServiceCheckpointCoordinator.WaitForCheckpointAsync<JobDefinitionControlPlaneHostedService>(
             JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady,
             LeaderService.LeaderBecomeTime,
             cancellationToken);
 
         RecordState(
-            $"{nameof(JobRegistrationHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}' reached, continuing initialization",
+            $"{nameof(JobDefinitionControlPlaneHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}' reached, continuing initialization",
             HostedServiceState.Executing,
             logLevel: LogLevel.Information);
 
         await InitializeConcurrencyTrackingAsync(cancellationToken);
+
+        hostedServiceCheckpointCoordinator.SignalCheckpoint(
+            this,
+            JobSchedulerHostedServiceCheckpoints.ConcurrencyGuardReady);
     }
 
     private async Task InitializeConcurrencyTrackingAsync(CancellationToken cancellationToken)
@@ -657,29 +661,9 @@ public class JobConcurrencyGuardHostedService(
             $"Received JobDefinitionsChangedEvent: {evt.AddedJobKeys.Count} added, {evt.UpdatedJobKeys.Count} updated, {evt.DeletedJobKeys.Count} deleted",
             logLevel: LogLevel.Debug);
 
-        // 1. Add statistics for newly added jobs
-        foreach (var definition in evt.AddedDefinitions)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (!_statistics.ContainsKey(definition.JobKey))
-            {
-                _statistics[definition.JobKey] = new JobExecutionStatistic
-                {
-                    JobKey = definition.JobKey,
-                    MaxConcurrency = definition.MaxConcurrency,
-                    RunningInstances = []
-                };
-                _jobLocks[definition.JobKey] = new SemaphoreSlim(1, 1);
-
-                RecordState(
-                    $"Added concurrency tracking for new job: {definition.JobKey} (MaxConcurrency: {definition.MaxConcurrency})",
-                    logLevel: LogLevel.Debug);
-            }
-        }
-
-        // 2. Handle updated jobs (update MaxConcurrency if changed)
-        foreach (var definition in evt.UpdatedDefinitions)
+        // Treat both collections as upserts. A full-refresh retry may report a previously persisted add as an update
+        // when notification failed before the publication cursor was committed.
+        foreach (var definition in evt.AddedDefinitions.Concat(evt.UpdatedDefinitions))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -689,7 +673,20 @@ public class JobConcurrencyGuardHostedService(
                 RecordState(
                     $"Updated MaxConcurrency for job {definition.JobKey} to {definition.MaxConcurrency}",
                     logLevel: LogLevel.Debug);
+                continue;
             }
+
+            _statistics[definition.JobKey] = new JobExecutionStatistic
+            {
+                JobKey = definition.JobKey,
+                MaxConcurrency = definition.MaxConcurrency,
+                RunningInstances = []
+            };
+            _jobLocks[definition.JobKey] = new SemaphoreSlim(1, 1);
+
+            RecordState(
+                $"Added concurrency tracking for job: {definition.JobKey} (MaxConcurrency: {definition.MaxConcurrency})",
+                logLevel: LogLevel.Debug);
         }
 
         // Note: We don't remove deleted jobs immediately to allow running instances to complete gracefully

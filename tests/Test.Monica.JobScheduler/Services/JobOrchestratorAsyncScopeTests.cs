@@ -55,10 +55,7 @@ public sealed class JobOrchestratorAsyncScopeTests
             NullLogger<JobInstanceManager>.Instance);
         var definition = CreateDefinition();
         var registry = new JobRegistry(
-            Substitute.For<IJobDefinitionCacheService>(),
-            repository,
             [definition],
-            options,
             NullLogger<JobRegistry>.Instance);
         var instance = CreateInstance(definition);
         await repository.SaveInstanceAsync(instance, TestContext.Current.CancellationToken);
@@ -249,10 +246,7 @@ public sealed class JobOrchestratorAsyncScopeTests
             NullLogger<JobInstanceManager>.Instance);
         var definition = CreateDefinition(typeof(TJob));
         var registry = new JobRegistry(
-            Substitute.For<IJobDefinitionCacheService>(),
-            repository,
             [definition],
-            options,
             NullLogger<JobRegistry>.Instance);
         var instance = CreateInstance(definition);
         await repository.SaveInstanceAsync(instance, TestContext.Current.CancellationToken);

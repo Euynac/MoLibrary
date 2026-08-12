@@ -32,7 +32,6 @@ public class TriggeredJobScheduler(
     // Event subscriptions
     private IAsyncDisposable? _triggeredJobSubscription;
     private IAsyncDisposable? _cancellationSubscription;
-    private IAsyncDisposable? _manualExecutionSubscription;
 
     /// <summary>
     /// Initializes the triggered job scheduler.
@@ -53,12 +52,6 @@ public class TriggeredJobScheduler(
             OnJobCancellationRequestedAsync,
             JobEventTopicHelper.GetTopicName<JobCancellationRequestedEvent>(_options.SchedulerScopeKey));
         logger.LogDebug("Subscribed to JobCancellationRequestedEvent");
-
-        // Subscribe to manual job execution requests from Worker nodes
-        _manualExecutionSubscription = await eventBus.SubscribeAsync<ManualJobExecutionRequestEvent>(
-            OnManualJobExecutionRequestAsync,
-            JobEventTopicHelper.GetTopicName<ManualJobExecutionRequestEvent>(_options.SchedulerScopeKey));
-        logger.LogDebug("Subscribed to ManualJobExecutionRequestEvent");
 
         if (!_options.TriggeredJobDebugMode)
         {
@@ -152,59 +145,6 @@ public class TriggeredJobScheduler(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error handling JobTriggeredEvent for {JobKey}", evt.JobKey);
-        }
-    }
-
-    /// <summary>
-    /// Handles ManualJobExecutionRequestEvent from worker nodes.
-    /// Loads the pre-created job instance and dispatches it for execution on the registry node.
-    /// </summary>
-    private async Task OnManualJobExecutionRequestAsync(
-        ManualJobExecutionRequestEvent evt,
-        CancellationToken cancellationToken)
-    {
-        if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
-        {
-            logger.LogDebug("Ignored ManualJobExecutionRequestEvent for foreign scope {Scope}", evt.SchedulerScopeKey);
-            return;
-        }
-
-        try
-        {
-            var definition = await cacheService.GetDefinitionAsync(evt.JobKey, cancellationToken);
-            if (definition == null || definition.IsDisabled)
-            {
-                logger.LogWarning("Manual execution request for job {JobKey}: not found or disabled", evt.JobKey);
-                return;
-            }
-
-            var instance = await metadataRepository.GetInstanceAsync(evt.InstanceId, cancellationToken);
-            if (instance == null)
-            {
-                logger.LogWarning(
-                    "Manual execution request ignored because instance {InstanceId} was not found",
-                    evt.InstanceId);
-                return;
-            }
-
-            // Dispatch for execution
-            await jobDispatcher.PublishJobExecutionEventAsync(
-                instance,
-                definition,
-                evt.JobArgsJson,
-                cancellationToken);
-
-            logger.LogInformation(
-                "Registry processed manual execution request: {JobKey}, InstanceId: {InstanceId}",
-                evt.JobKey, instance.InstanceId);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error handling ManualJobExecutionRequestEvent for {JobKey}", evt.JobKey);
         }
     }
 
@@ -402,11 +342,6 @@ public class TriggeredJobScheduler(
         {
             await _cancellationSubscription.DisposeAsync();
         }
-        if (_manualExecutionSubscription != null)
-        {
-            await _manualExecutionSubscription.DisposeAsync();
-        }
-
         // Dispose all delayed job timers
         foreach (var schedule in _inFlightDelayedSchedules.Values)
         {

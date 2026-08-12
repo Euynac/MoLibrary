@@ -38,7 +38,7 @@ public sealed class JobSchedulerHealthCheckTests
             TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Description.Should().Contain(nameof(JobRegistrationHostedService));
+        result.Description.Should().Contain(nameof(JobDefinitionPublisherHostedService));
         result.Description.Should().NotContain(nameof(JobWorkerManagerHostedService));
     }
 
@@ -64,8 +64,7 @@ public sealed class JobSchedulerHealthCheckTests
         };
         var healthCheck = CreateHealthCheck(
             [
-                typeof(JobRegistrationHostedService),
-                typeof(JobWorkerManagerHostedService),
+                typeof(JobDefinitionControlPlaneHostedService),
                 typeof(JobConcurrencyGuardHostedService),
                 typeof(JobSchedulerHostedService)
             ],
@@ -84,7 +83,7 @@ public sealed class JobSchedulerHealthCheckTests
     public async Task CheckHealthAsync_WhenControlPlaneDoesNotRun_ShouldOnlyRequireWorkerServices()
     {
         var healthCheck = CreateHealthCheck(
-            [typeof(JobRegistrationHostedService), typeof(JobWorkerManagerHostedService)],
+            [typeof(JobDefinitionPublisherHostedService), typeof(JobWorkerManagerHostedService)],
             new ModuleJobSchedulerOption());
 
         var result = await healthCheck.CheckHealthAsync(
@@ -105,7 +104,7 @@ public sealed class JobSchedulerHealthCheckTests
         };
         var healthCheck = CreateHealthCheck(
             [
-                typeof(JobRegistrationHostedService),
+                typeof(JobDefinitionControlPlaneHostedService),
                 typeof(JobWorkerManagerHostedService),
                 typeof(JobConcurrencyGuardHostedService),
                 typeof(JobSchedulerHostedService)

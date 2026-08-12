@@ -85,19 +85,26 @@ internal sealed class JobSchedulerHealthCheck(
         ModuleJobSchedulerOption options,
         ServiceDiscoveryRole role)
     {
-        var expectedServices = new List<Type>
-        {
-            typeof(JobRegistrationHostedService),
-            typeof(JobWorkerManagerHostedService)
-        };
-
         if (role == ServiceDiscoveryRole.Worker)
         {
-            return expectedServices;
+            return
+            [
+                typeof(JobDefinitionPublisherHostedService),
+                typeof(JobWorkerManagerHostedService)
+            ];
         }
 
-        expectedServices.Add(typeof(JobConcurrencyGuardHostedService));
-        expectedServices.Add(typeof(JobSchedulerHostedService));
+        var expectedServices = new List<Type>
+        {
+            typeof(JobDefinitionControlPlaneHostedService),
+            typeof(JobConcurrencyGuardHostedService),
+            typeof(JobSchedulerHostedService)
+        };
+
+        if (role == ServiceDiscoveryRole.Standalone)
+        {
+            expectedServices.Add(typeof(JobWorkerManagerHostedService));
+        }
 
         if (options.EnableLongIntervalScheduler)
         {
