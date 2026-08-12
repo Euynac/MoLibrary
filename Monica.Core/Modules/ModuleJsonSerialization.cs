@@ -67,12 +67,12 @@ public class ModuleJsonSerializationOption : ModuleOptions<ModuleJsonSerializati
     public DateTimeWireFormat DateTimeFormat { get; set; } = DateTimeWireFormat.Iso8601WallClock;
 
     /// <summary>
-    /// Adds an ordered host contribution to the API wire JSON contract.
+    /// Adds an ordered host contribution to the canonical JSON contract.
     /// </summary>
     /// <param name="configure">The serializer-options contribution to apply after Monica's defaults.</param>
     /// <remarks>
-    /// Contributions are replayed into the canonical API contract and every supported adapter, then the canonical
-    /// snapshot becomes read-only. This contract does not configure durable state-document serialization.
+    /// Contributions are replayed into every supported adapter, including typed state-store operations, then the
+    /// canonical snapshot becomes read-only. Changing this contract can make existing persisted state incompatible.
     /// </remarks>
     public void ConfigureSerializer(Action<JsonSerializerOptions> configure)
     {

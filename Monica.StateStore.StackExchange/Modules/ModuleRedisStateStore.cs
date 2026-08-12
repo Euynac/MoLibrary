@@ -18,21 +18,17 @@ public static class ModuleRedisStateStoreBuilderExtensions
     /// </summary>
     /// <param name="module">The StateStore registration that will use Redis.</param>
     /// <param name="action">Redis state store configuration delegate</param>
-    /// <param name="documentProfileName">The declared durable-document profile selected for this store.</param>
     /// <returns>The Redis StateStore module registration for chaining.</returns>
+    /// <remarks>
+    /// Typed values use the canonical JSON contract configured for this Monica host. Changing that contract can make
+    /// existing persisted state incompatible.
+    /// </remarks>
     public static ModuleRegistration<ModuleRedisStateStore, ModuleRedisStateStoreOption> UseRedisStateStoreProvider(
         this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
-        Action<ModuleRedisStateStoreOption>? action = null,
-        string documentProfileName = ModuleStateStoreOption.DURABLE_JSON_PROFILE)
+        Action<ModuleRedisStateStoreOption>? action = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(documentProfileName);
-        module.Configure(options => EnsureDocumentProfileExists(options, documentProfileName));
         module.SetCommonDistributedStateStoreProvider<RedisStateStore>();
-        var providerModule = module.Include<ModuleRedisStateStore, ModuleRedisStateStoreOption>(options =>
-        {
-            action?.Invoke(options);
-            options.DocumentProfileName = documentProfileName;
-        });
+        var providerModule = module.Include<ModuleRedisStateStore, ModuleRedisStateStoreOption>(action);
 
         // Register global IConnectionMultiplexer for common provider
         module.ConfigureStateStoreServices(services =>
@@ -54,25 +50,20 @@ public static class ModuleRedisStateStoreBuilderExtensions
     /// <param name="module">The StateStore registration being configured.</param>
     /// <param name="serviceKey">Service key to identify this StateStore instance</param>
     /// <param name="configureOptions">Redis state store configuration delegate</param>
-    /// <param name="documentProfileName">The declared durable-document profile selected for this store.</param>
     /// <returns>The StateStore module registration for chaining.</returns>
+    /// <remarks>
+    /// The service key isolates Redis connection settings, but every keyed store uses the host's canonical JSON contract.
+    /// </remarks>
     public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddKeyedRedisStateStore(
         this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         string serviceKey,
-        Action<ModuleRedisStateStoreOption> configureOptions,
-        string documentProfileName = ModuleStateStoreOption.DURABLE_JSON_PROFILE)
+        Action<ModuleRedisStateStoreOption> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
-        ArgumentException.ThrowIfNullOrWhiteSpace(documentProfileName);
-        module.Configure(options => EnsureDocumentProfileExists(options, documentProfileName));
 
         var providerModule = module.Include<ModuleRedisStateStore, ModuleRedisStateStoreOption>()
-            .ConfigureProfile(serviceKey, options =>
-            {
-                configureOptions(options);
-                options.DocumentProfileName = documentProfileName;
-            });
+            .ConfigureProfile(serviceKey, configureOptions);
         module.ConfigureStateStoreServices(services =>
         {
             var profile = providerModule.GetProfile(serviceKey);
@@ -98,17 +89,6 @@ public static class ModuleRedisStateStoreBuilderExtensions
         module.RecordKeyedServiceKey(serviceKey);
         return module;
     }
-
-    private static void EnsureDocumentProfileExists(
-        ModuleStateStoreOption options,
-        string documentProfileName)
-    {
-        if (!options.ContainsDocumentProfile(documentProfileName))
-        {
-            throw new InvalidOperationException(
-                $"State document profile '{documentProfileName}' must be declared before a Redis store selects it.");
-        }
-    }
 }
 
 public class ModuleRedisStateStore : MonicaModule<ModuleRedisStateStoreOption>,
@@ -117,7 +97,7 @@ public class ModuleRedisStateStore : MonicaModule<ModuleRedisStateStoreOption>,
 
     public override void Describe(ModuleDescriptor module)
     {
-        // Depends on StateStore basic module
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
         module.Require<ModuleStateStore, ModuleStateStoreOption>();
     }
 
@@ -152,10 +132,6 @@ public class ModuleRedisStateStore : MonicaModule<ModuleRedisStateStoreOption>,
 /// </summary>
 public class ModuleRedisStateStoreOption : ModuleOptions<ModuleRedisStateStore>
 {
-    /// <summary>
-    /// Gets the immutable state-document profile selected for every typed operation of this logical Redis store.
-    /// </summary>
-    public string DocumentProfileName { get; internal set; } = ModuleStateStoreOption.DURABLE_JSON_PROFILE;
     /// <summary>
     /// Redis connection type (Normal, Sentinel, Cluster). Default: Normal
     /// </summary>

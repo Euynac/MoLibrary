@@ -28,6 +28,6 @@ public static class JsonSerializationServiceCollectionExtensions
         }
 
         throw new InvalidOperationException(
-            "Monica JSON wire contract is unavailable. Declare a dependency on ModuleJsonSerialization before reading it during module registration.");
+            "Monica JSON contract is unavailable. Declare a dependency on ModuleJsonSerialization before reading it during module registration.");
     }
 }

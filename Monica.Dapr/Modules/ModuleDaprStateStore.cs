@@ -17,21 +17,17 @@ public static class ModuleDaprStateStoreBuilderExtensions
     /// </summary>
     /// <param name="module">The StateStore registration that will use Dapr.</param>
     /// <param name="action">Optional Dapr state-store configuration.</param>
-    /// <param name="documentProfileName">The declared durable-document profile selected for this store.</param>
     /// <returns>The Dapr StateStore provider registration.</returns>
+    /// <remarks>
+    /// Typed values are serialized by the Dapr SDK with the canonical JSON contract configured for this Monica host.
+    /// Changing that contract can make existing persisted state incompatible.
+    /// </remarks>
     public static ModuleRegistration<ModuleDaprStateStore, ModuleDaprStateStoreOption> UseDaprStateStoreProvider(
         this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
-        Action<ModuleDaprStateStoreOption>? action = null,
-        string documentProfileName = ModuleStateStoreOption.DURABLE_JSON_PROFILE)
+        Action<ModuleDaprStateStoreOption>? action = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(documentProfileName);
-        module.Configure(options => EnsureDocumentProfileExists(options, documentProfileName));
         module.SetCommonDistributedStateStoreProvider<DaprStateStoreProvider>();
-        return module.Include<ModuleDaprStateStore, ModuleDaprStateStoreOption>(options =>
-        {
-            action?.Invoke(options);
-            options.DocumentProfileName = documentProfileName;
-        });
+        return module.Include<ModuleDaprStateStore, ModuleDaprStateStoreOption>(action);
     }
     
     /// <summary>
@@ -40,24 +36,19 @@ public static class ModuleDaprStateStoreBuilderExtensions
     /// <param name="module">The StateStore registration being configured.</param>
     /// <param name="serviceKey">The service key that identifies this state store instance.</param>
     /// <param name="configureOptions">Delegate that configures the Dapr state store.</param>
-    /// <param name="documentProfileName">The declared durable-document profile selected for this store.</param>
     /// <returns>The same StateStore module registration for chaining.</returns>
+    /// <remarks>
+    /// The service key isolates Dapr store settings, but every keyed store uses the host's canonical JSON contract.
+    /// </remarks>
     public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddKeyedDaprStateStore(
         this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         string serviceKey,
-        Action<ModuleDaprStateStoreOption> configureOptions,
-        string documentProfileName = ModuleStateStoreOption.DURABLE_JSON_PROFILE)
+        Action<ModuleDaprStateStoreOption> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
-        ArgumentException.ThrowIfNullOrWhiteSpace(documentProfileName);
-        module.Configure(options => EnsureDocumentProfileExists(options, documentProfileName));
         var providerModule = module.Include<ModuleDaprStateStore, ModuleDaprStateStoreOption>()
-            .ConfigureProfile(serviceKey, options =>
-            {
-                configureOptions(options);
-                options.DocumentProfileName = documentProfileName;
-            });
+            .ConfigureProfile(serviceKey, configureOptions);
         providerModule.ConfigureServices(context =>
         {
             var options = Options.Create(providerModule.GetProfile(serviceKey));
@@ -69,17 +60,6 @@ public static class ModuleDaprStateStoreBuilderExtensions
 
         module.RecordKeyedServiceKey(serviceKey);
         return module;
-    }
-
-    private static void EnsureDocumentProfileExists(
-        ModuleStateStoreOption options,
-        string documentProfileName)
-    {
-        if (!options.ContainsDocumentProfile(documentProfileName))
-        {
-            throw new InvalidOperationException(
-                $"State document profile '{documentProfileName}' must be declared before a Dapr store selects it.");
-        }
     }
 }
 
@@ -113,10 +93,6 @@ public class ModuleDaprStateStore : MonicaModule<ModuleDaprStateStoreOption>,
 
 public class ModuleDaprStateStoreOption : ModuleOptions<ModuleDaprStateStore>
 {
-    /// <summary>
-    /// Gets the immutable state-document profile selected for every typed operation of this logical Dapr store.
-    /// </summary>
-    public string DocumentProfileName { get; internal set; } = ModuleStateStoreOption.DURABLE_JSON_PROFILE;
     /// <summary>
     /// Name of the Dapr state store. Must match the <c>name</c> field in the Dapr state store
     /// component YAML metadata.

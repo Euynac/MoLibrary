@@ -2,6 +2,7 @@ using Dapr.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Modules;
 using Monica.Dapr.Services.Support;
 using Monica.StateStore.Abstractions;
@@ -10,14 +11,13 @@ using Monica.StateStore.Queries;
 namespace Monica.Dapr.Services;
 
 /// <summary>
-/// Dapr state store implementation
+/// Dapr state store backed by the SDK's typed APIs and the host-wide canonical JSON contract.
 /// </summary>
 internal sealed class DaprStateStoreProvider(
     DaprClient dapr,
     ILogger<DaprStateStoreProvider> logger,
     IOptions<ModuleDaprStateStoreOption> options,
-    IStateDocumentProfileProvider documentProfiles,
-    IDaprStateQueryClient stateQueryClient) : DistributedStateStoreBase(logger)
+    IJsonSerializerOptionsProvider serializerOptionsProvider) : DistributedStateStoreBase(logger)
 {
     /// <summary>
     /// Configuration options
@@ -28,9 +28,6 @@ internal sealed class DaprStateStoreProvider(
     /// State store name
     /// </summary>
     private string StateStoreName => Option.StateStoreName;
-
-    private StateDocumentProfile DocumentProfile { get; } =
-        documentProfiles.GetRequiredProfile(options.Value.DocumentProfileName);
 
     public override async Task<Dictionary<string, T?>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query, CancellationToken cancellationToken = default) where T : class
     {
@@ -44,11 +41,14 @@ internal sealed class DaprStateStoreProvider(
                 throw new InvalidOperationException("State query delegates must return the supplied query builder.");
             }
 
-            queryStr = DaprStateQueryRenderer.Render(queryBuilder.BuildDefinition(), DocumentProfile);
-            var response = await stateQueryClient.QueryAsync(StateStoreName, queryStr, cancellationToken);
-            return response.ToDictionary(
-                static item => item.Key,
-                item => item.Value is { } data ? DocumentProfile.Deserialize<T>(data) : null);
+            queryStr = DaprStateQueryRenderer.Render(
+                queryBuilder.BuildDefinition(),
+                serializerOptionsProvider.SerializerOptions);
+            var response = await dapr.QueryStateAsync<T>(
+                StateStoreName,
+                queryStr,
+                cancellationToken: cancellationToken);
+            return response.Results.ToDictionary(static item => item.Key, static item => item.Data);
         }
         catch (Exception e)
         {
@@ -63,22 +63,10 @@ internal sealed class DaprStateStoreProvider(
     {
         try
         {
-            return (await dapr.GetBulkStateAsync(StateStoreName, keys.ToList(), Option.DefaultBulkParallelism,
+            return (await dapr.GetBulkStateAsync<T>(StateStoreName, keys, Option.DefaultBulkParallelism,
                 cancellationToken: cancellationToken))
-                .Where(p => !removeEmptyValue || !string.IsNullOrEmpty(p.Value))
-                .ToDictionary(
-                    p => p.Key,
-                    item =>
-                    {
-                        try
-                        {
-                            return DocumentProfile.Deserialize<T>(item.Value);
-                        }
-                        catch (Exception e)
-                        {
-                            throw e.CreateException(Logger, "Failed to deserialize JSON value \"{0}\" to type {1}", item.Value, typeof(T).FullName);
-                        }
-                    });
+                .Where(item => !removeEmptyValue || item.Value is not null)
+                .ToDictionary(static item => item.Key, static item => (T?)item.Value);
         }
         catch (Exception e)
         {
@@ -109,8 +97,7 @@ internal sealed class DaprStateStoreProvider(
     {
         try
         {
-            var data = await dapr.GetByteStateAsync(StateStoreName, key, cancellationToken: cancellationToken);
-            return data.IsEmpty ? default : DocumentProfile.Deserialize<T>(data.Span);
+            return await dapr.GetStateAsync<T>(StateStoreName, key, cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {
@@ -136,10 +123,10 @@ internal sealed class DaprStateStoreProvider(
         try
         {
             var metadata = BuildTtlMetadata(ttl);
-            await dapr.SaveByteStateAsync(
+            await dapr.SaveStateAsync(
                 StateStoreName,
                 key,
-                DocumentProfile.SerializeToUtf8Bytes(value),
+                value,
                 metadata: metadata,
                 cancellationToken: cancellationToken);
         }
@@ -180,11 +167,10 @@ internal sealed class DaprStateStoreProvider(
     {
         try
         {
-            var (data, etag) = await dapr.GetByteStateAndETagAsync(
+            return await dapr.GetStateAndETagAsync<T>(
                 StateStoreName,
                 key,
                 cancellationToken: cancellationToken);
-            return (data.IsEmpty ? default : DocumentProfile.Deserialize<T>(data.Span), etag);
         }
         catch (Exception e)
         {
@@ -200,10 +186,10 @@ internal sealed class DaprStateStoreProvider(
             var metadata = BuildTtlMetadata(ttl);
 
             // Use Dapr's TrySaveStateAsync for optimistic locking
-            var success = await dapr.TrySaveByteStateAsync(
+            var success = await dapr.TrySaveStateAsync(
                 StateStoreName,
                 key,
-                DocumentProfile.SerializeToUtf8Bytes(value),
+                value,
                 expectedETag,
                 metadata: metadata, cancellationToken: cancellationToken);
 
@@ -231,10 +217,10 @@ internal sealed class DaprStateStoreProvider(
         try
         {
             var metadata = BuildTtlMetadata(ttl);
-            var success = await dapr.TrySaveByteStateAsync(
+            var success = await dapr.TrySaveStateAsync(
                 StateStoreName,
                 key,
-                DocumentProfile.SerializeToUtf8Bytes(value),
+                value,
                 expectedETag,
                 metadata: metadata, cancellationToken: cancellationToken);
 
@@ -271,10 +257,10 @@ internal sealed class DaprStateStoreProvider(
             var metadata = BuildTtlMetadata(ttl);
 
             // Use empty ETag for save, will fail if another process created this key
-            var success = await dapr.TrySaveByteStateAsync(
+            var success = await dapr.TrySaveStateAsync(
                 StateStoreName,
                 key,
-                DocumentProfile.SerializeToUtf8Bytes(value),
+                value,
                 "",
                 metadata: metadata, cancellationToken: cancellationToken);
 
@@ -311,18 +297,13 @@ internal sealed class DaprStateStoreProvider(
         try
         {
             var metadata = BuildTtlMetadata(ttl);
-            var serializedItems = items
-                .Select(item => (item.Key, Value: DocumentProfile.SerializeToUtf8Bytes(item.Value)))
-                .ToArray();
-
-            // Dapr's typed bulk API reserializes values through the client-global JSON options. Raw byte writes keep
-            // the selected durable document profile authoritative for bulk operations as well as single-item writes.
-            await Task.WhenAll(serializedItems.Select(item => dapr.SaveByteStateAsync(
-                StateStoreName,
+            var saveItems = items.Select(item => new SaveStateItem<T>(
                 item.Key,
                 item.Value,
-                metadata: metadata,
-                cancellationToken: cancellationToken)));
+                null!,
+                metadata: metadata)).ToArray();
+
+            await dapr.SaveBulkStateAsync(StateStoreName, saveItems, cancellationToken);
         }
         catch (Exception e)
         {

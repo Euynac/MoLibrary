@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.JsonSerialization.Extensions;
@@ -12,7 +13,6 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Abstractions;
 using Monica.Dapr.Services;
-using Monica.Dapr.Services.Support;
 using Monica.HealthCheck.Extensions;
 
 // ReSharper disable once CheckNamespace
@@ -43,14 +43,13 @@ public sealed class ModuleDaprClient : MonicaModule<ModuleDaprClientOption>, IWe
     public override void ConfigureServices(ModuleContext<ModuleDaprClientOption> context)
     {
         var services = context.Services;
+        services.RemoveAll<DaprClient>();
         services.AddDaprClient(builder => builder.UseGrpcChannelOptions(new GrpcChannelOptions()
         {
             MaxReceiveMessageSize = Option.GrpcMaxReceiveMessageSizeBytes,
             MaxSendMessageSize = Option.GrpcMaxSendMessageSizeBytes,
             MaxRetryBufferSize = Option.GrpcMaxRetryBufferSizeBytes,
         }).UseJsonSerializationOptions(services.GetMonicaJsonSerializerOptions()));
-        services.AddHttpClient();
-        services.AddSingleton<IDaprStateQueryClient, DaprStateQueryClient>();
 
         // Register health coordinator (singleton implementing both interface and IHostedService)
         services.AddSingleton<DaprSidecarHealthCoordinator>();

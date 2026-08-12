@@ -2,7 +2,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using Monica.StateStore.Abstractions;
 using Monica.StateStore.Queries;
 
 namespace Monica.Dapr.Services.Support;
@@ -11,19 +10,24 @@ internal static class DaprStateQueryRenderer
 {
     private static readonly JsonSerializerOptions PROTOCOL_JSON_OPTIONS = CreateProtocolJsonOptions();
 
-    public static string Render(StateQueryDefinition definition, StateDocumentProfile profile)
+    public static string Render(
+        StateQueryDefinition definition,
+        JsonSerializerOptions serializerOptions)
     {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(serializerOptions);
+
         var document = new Dictionary<string, object?>();
         if (definition.Filter is not null)
         {
-            document["filter"] = RenderFilter(definition.Filter, profile);
+            document["filter"] = RenderFilter(definition.Filter, serializerOptions);
         }
 
         if (definition.Sorting.Count != 0)
         {
             document["sort"] = definition.Sorting.Select(sorting => new Dictionary<string, object?>
             {
-                ["key"] = ResolvePath(sorting.Property, profile),
+                ["key"] = ResolvePath(sorting.Property, serializerOptions),
                 ["order"] = sorting.Order is Ordering.Ascending ? "ASC" : "DESC"
             }).ToArray();
         }
@@ -44,13 +48,15 @@ internal static class DaprStateQueryRenderer
             document["page"] = page;
         }
 
-        // The profile controls document paths and comparison values, not Dapr's query-envelope property names.
-        // Serializing the envelope with the profile would apply its DictionaryKeyPolicy to protocol operators
+        // The host JSON contract controls document paths and comparison values, not Dapr's query-envelope property
+        // names. Serializing the envelope with the host settings would apply its DictionaryKeyPolicy to operators
         // such as EQ and AND.
         return JsonSerializer.Serialize(document, PROTOCOL_JSON_OPTIONS);
     }
 
-    private static object RenderFilter(StateFilterNode filter, StateDocumentProfile profile)
+    private static object RenderFilter(
+        StateFilterNode filter,
+        JsonSerializerOptions serializerOptions)
     {
         return filter switch
         {
@@ -58,22 +64,38 @@ internal static class DaprStateQueryRenderer
             {
                 [GetComparisonOperator(comparison.Operator)] = new Dictionary<string, object?>
                 {
-                    [ResolvePath(comparison.Property, profile)] = SerializeComparisonValue(comparison.Value, profile)
+                    [ResolvePath(comparison.Property, serializerOptions)] =
+                        SerializeComparisonValue(comparison.Operator, comparison.Value, serializerOptions)
                 }
             },
             StateGroupFilterNode group => new Dictionary<string, object?>
             {
-                [GetGroupOperator(group.Operator)] = group.Children.Select(child => RenderFilter(child, profile)).ToArray()
+                [GetGroupOperator(group.Operator)] = group.Children
+                    .Select(child => RenderFilter(child, serializerOptions))
+                    .ToArray()
             },
             _ => throw new InvalidOperationException($"Unsupported state filter node '{filter.GetType().Name}'.")
         };
     }
 
-    private static JsonElement SerializeComparisonValue(object? value, StateDocumentProfile profile)
+    private static object SerializeComparisonValue(
+        StateComparisonOperator comparisonOperator,
+        object? value,
+        JsonSerializerOptions serializerOptions)
     {
+        if (comparisonOperator is StateComparisonOperator.In && value is string[] values)
+        {
+            // Dapr requires IN values to remain a protocol array. Serializing the array through a host contract that
+            // preserves references would wrap it in $id/$values metadata, so apply host converters to each scalar and
+            // let the neutral protocol serializer own the container.
+            return values
+                .Select(item => JsonSerializer.SerializeToElement(item, serializerOptions))
+                .ToArray();
+        }
+
         return value is null
-            ? JsonSerializer.SerializeToElement<object?>(null, profile.SerializerOptions)
-            : JsonSerializer.SerializeToElement(value, value.GetType(), profile.SerializerOptions);
+            ? JsonSerializer.SerializeToElement<object?>(null, serializerOptions)
+            : JsonSerializer.SerializeToElement(value, value.GetType(), serializerOptions);
     }
 
     private static string GetComparisonOperator(StateComparisonOperator comparisonOperator)
@@ -100,7 +122,9 @@ internal static class DaprStateQueryRenderer
         };
     }
 
-    private static string ResolvePath(LambdaExpression expression, StateDocumentProfile profile)
+    private static string ResolvePath(
+        LambdaExpression expression,
+        JsonSerializerOptions serializerOptions)
     {
         var members = new Stack<PropertyInfo>();
         Expression? current = expression.Body;
@@ -121,11 +145,11 @@ internal static class DaprStateQueryRenderer
         var currentType = expression.Parameters[0].Type;
         while (members.TryPop(out var property))
         {
-            var typeInfo = profile.SerializerOptions.GetTypeInfo(currentType);
+            var typeInfo = serializerOptions.GetTypeInfo(currentType);
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
             {
                 throw new InvalidOperationException(
-                    $"State profile '{profile.ContractIdentity}' does not expose '{currentType.FullName}' as an object document.");
+                    $"The host JSON contract does not expose '{currentType.FullName}' as an object document.");
             }
 
             var jsonProperty = typeInfo.Properties.FirstOrDefault(candidate => candidate.Get is not null
@@ -134,8 +158,7 @@ internal static class DaprStateQueryRenderer
             if (jsonProperty is null)
             {
                 throw new InvalidOperationException(
-                    $"Property '{currentType.FullName}.{property.Name}' is ignored or unavailable in state profile " +
-                    $"'{profile.ContractIdentity}'.");
+                    $"Property '{currentType.FullName}.{property.Name}' is ignored or unavailable in the host JSON contract.");
             }
 
             names.Add(jsonProperty.Name);

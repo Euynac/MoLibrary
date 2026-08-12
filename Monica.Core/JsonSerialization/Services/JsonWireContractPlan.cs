@@ -7,7 +7,7 @@ using Monica.Modules;
 namespace Monica.Core.JsonSerialization.Services;
 
 /// <summary>
-/// Compiles one host's ordered API wire-JSON contributions into immutable serializer snapshots.
+/// Compiles one host's ordered JSON contributions into an immutable serializer contract shared by supported adapters.
 /// </summary>
 public sealed class JsonWireContractPlan
 {
@@ -22,7 +22,7 @@ public sealed class JsonWireContractPlan
     }
 
     /// <summary>
-    /// Adds a module-owned API wire-JSON contribution before the contract is compiled.
+    /// Adds a module-owned JSON contribution before the contract is compiled.
     /// </summary>
     /// <param name="configure">The ordered serializer-options contribution.</param>
     public void Configure(Action<JsonSerializerOptions> configure)
@@ -33,7 +33,7 @@ public sealed class JsonWireContractPlan
     }
 
     /// <summary>
-    /// Adds result-envelope field aliases to this host's API wire contract.
+    /// Adds result-envelope field aliases to this host's JSON contract.
     /// </summary>
     /// <param name="fieldNames">The finalized field-name configuration.</param>
     public void ConfigureResultEnvelope(ResultEnvelopeFieldNames fieldNames)
@@ -43,7 +43,7 @@ public sealed class JsonWireContractPlan
     }
 
     /// <summary>
-    /// Gets the immutable canonical serializer options shared by non-adapter API consumers.
+    /// Gets the immutable canonical serializer options shared by host services and non-adapter consumers.
     /// </summary>
     public JsonSerializerOptions GetCanonicalOptions()
     {
@@ -51,7 +51,7 @@ public sealed class JsonWireContractPlan
     }
 
     /// <summary>
-    /// Replaces an adapter-owned mutable options object with a complete authoritative snapshot of this wire contract.
+    /// Replaces an adapter-owned mutable options object with a complete authoritative snapshot of this JSON contract.
     /// </summary>
     /// <param name="target">The adapter-owned serializer-options object.</param>
     public void ApplyTo(JsonSerializerOptions target)
@@ -59,7 +59,7 @@ public sealed class JsonWireContractPlan
         ArgumentNullException.ThrowIfNull(target);
         if (target.IsReadOnly)
         {
-            throw new InvalidOperationException("Cannot apply the Monica JSON wire contract to read-only adapter options.");
+            throw new InvalidOperationException("Cannot apply the Monica JSON contract to read-only adapter options.");
         }
 
         target.CopyFrom(GetCanonicalOptions());
@@ -84,7 +84,7 @@ public sealed class JsonWireContractPlan
         if (_canonicalOptions is not null)
         {
             throw new InvalidOperationException(
-                "The Monica JSON wire contract has already been compiled and cannot accept late contributions.");
+                "The Monica JSON contract has already been compiled and cannot accept late contributions.");
         }
     }
 }

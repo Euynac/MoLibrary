@@ -1,8 +1,11 @@
+using System.Text.Json;
+using Dapr.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Monica.Core;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
 using Xunit;
@@ -23,12 +26,37 @@ public sealed class ModuleDaprClientCompositionTests
 
         using var host = builder.Build();
         var application = host.Services.GetRequiredService<MonicaApplication>();
+        var daprClient = host.Services.GetRequiredService<DaprClient>();
+        var jsonOptions = host.Services.GetRequiredService<IJsonSerializerOptionsProvider>();
 
         Assert.Contains(
             application.Modules.RuntimeSnapshots,
             snapshot => snapshot.ModuleType == typeof(ModuleDaprClient)
                         && snapshot.IsWebModule
                         && !snapshot.RequiresWebHost);
+        Assert.Same(jsonOptions.SerializerOptions, daprClient.JsonSerializerOptions);
+    }
+
+    [Fact]
+    public void Build_WhenDaprClientWasRegisteredEarlier_ShouldReplaceItWithTheHostContract()
+    {
+        using var existingClient = new DaprClientBuilder()
+            .UseJsonSerializationOptions(new JsonSerializerOptions(JsonSerializerDefaults.General))
+            .Build();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddSingleton(existingClient);
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddDaprClient();
+        });
+
+        using var host = builder.Build();
+        var daprClient = host.Services.GetRequiredService<DaprClient>();
+        var jsonOptions = host.Services.GetRequiredService<IJsonSerializerOptionsProvider>();
+
+        Assert.NotSame(existingClient, daprClient);
+        Assert.Same(jsonOptions.SerializerOptions, daprClient.JsonSerializerOptions);
     }
 
     [Theory]

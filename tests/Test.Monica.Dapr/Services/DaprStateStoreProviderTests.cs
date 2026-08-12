@@ -1,11 +1,12 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Dapr.Client;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Monica.Core.JsonSerialization.Models;
+using Monica.Core.JsonSerialization.Services;
 using Monica.Dapr.Services;
-using Monica.Dapr.Services.Support;
 using Monica.Modules;
-using Monica.StateStore.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -13,19 +14,107 @@ namespace Test.Monica.Dapr.Services;
 
 public sealed class DaprStateStoreProviderTests
 {
-    private static readonly StateDocumentProfile TestDocumentProfile = StateDocumentProfile.CreateJson(
-        ModuleStateStoreOption.DURABLE_JSON_PROFILE,
-        "test");
+    [Fact]
+    public async Task SaveStateAsync_ShouldUseTypedSdkOperationAndPreserveTtlMetadata()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        var provider = CreateProvider(dapr);
+        var value = new TestState("saved");
+
+        await provider.SaveStateAsync(
+            "state-key",
+            value,
+            TestContext.Current.CancellationToken,
+            TimeSpan.FromSeconds(30));
+
+        await dapr.Received(1).SaveStateAsync(
+            "test-state-store",
+            "state-key",
+            value,
+            null!,
+            Arg.Is<IReadOnlyDictionary<string, string>>(metadata => metadata["ttlInSeconds"] == "30"),
+            TestContext.Current.CancellationToken);
+        await dapr.DidNotReceiveWithAnyArgs().SaveByteStateAsync(
+            default!,
+            default!,
+            default,
+            default!,
+            default!,
+            TestContext.Current.CancellationToken);
+    }
 
     [Fact]
-    public async Task TrySaveStateWithETagWithoutReadBackAsync_WhenSaveSucceeds_ShouldNotReadStateAgain()
+    public async Task GetBulkStateAsync_ShouldUseTypedSdkOperationAndHonorEmptyFiltering()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        dapr.GetBulkStateAsync<TestState>(
+                "test-state-store",
+                Arg.Any<IReadOnlyList<string>>(),
+                3,
+                null!,
+                Arg.Any<CancellationToken>())
+            .Returns([
+                new BulkStateItem<TestState>("found", new TestState("value"), "etag-1"),
+                new BulkStateItem<TestState>("missing", null!, "etag-2")
+            ]);
+        var provider = CreateProvider(dapr, defaultBulkParallelism: 3);
+
+        var results = await provider.GetBulkStateAsync<TestState>(
+            ["found", "missing"],
+            removeEmptyValue: true,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(new TestState("value"), results["found"]);
+        Assert.DoesNotContain("missing", results);
+        await dapr.Received(1).GetBulkStateAsync<TestState>(
+            "test-state-store",
+            Arg.Is<IReadOnlyList<string>>(keys => keys.SequenceEqual(new[] { "found", "missing" })),
+            3,
+            null!,
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task GetStateAsync_ShouldUseTypedSdkOperation()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        dapr.GetStateAsync<TestState>(
+                "test-state-store",
+                "state-key",
+                null!,
+                null!,
+                Arg.Any<CancellationToken>())
+            .Returns(new TestState("loaded"));
+        var provider = CreateProvider(dapr);
+
+        var result = await provider.GetStateAsync<TestState>(
+            "state-key",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new TestState("loaded"), result);
+        await dapr.Received(1).GetStateAsync<TestState>(
+            "test-state-store",
+            "state-key",
+            null!,
+            null!,
+            TestContext.Current.CancellationToken);
+        await dapr.DidNotReceiveWithAnyArgs().GetByteStateAsync(
+            default!,
+            default!,
+            default!,
+            default!,
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task TrySaveStateWithETagWithoutReadBackAsync_WhenSaveSucceeds_ShouldUseTypedSdkOperationWithoutReadBack()
     {
         var dapr = Substitute.For<DaprClient>();
         var value = new TestState("updated");
-        dapr.TrySaveByteStateAsync(
+        dapr.TrySaveStateAsync(
                 "test-state-store",
                 "flight-key",
-                Arg.Is<ReadOnlyMemory<byte>>(bytes => MatchesSerializedState(bytes, value)),
+                value,
                 "etag-1",
                 null!,
                 Arg.Any<IReadOnlyDictionary<string, string>>(),
@@ -40,21 +129,20 @@ public sealed class DaprStateStoreProviderTests
             TestContext.Current.CancellationToken);
 
         Assert.True(success);
-        await dapr.Received(1).TrySaveByteStateAsync(
+        await dapr.Received(1).TrySaveStateAsync(
             "test-state-store",
             "flight-key",
-            Arg.Is<ReadOnlyMemory<byte>>(bytes => MatchesSerializedState(bytes, value)),
+            value,
             "etag-1",
             null!,
-            Arg.Any<IReadOnlyDictionary<string, string>>(),
+            null!,
             TestContext.Current.CancellationToken);
-        await dapr.DidNotReceiveWithAnyArgs()
-            .GetStateAndETagAsync<TestState>(
-                default!,
-                default!,
-                default!,
-                default!,
-                TestContext.Current.CancellationToken);
+        await dapr.DidNotReceiveWithAnyArgs().GetStateAndETagAsync<TestState>(
+            default!,
+            default!,
+            default!,
+            default!,
+            TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -62,13 +150,13 @@ public sealed class DaprStateStoreProviderTests
     {
         var dapr = Substitute.For<DaprClient>();
         var value = new TestState("updated");
-        dapr.TrySaveByteStateAsync(
+        dapr.TrySaveStateAsync(
                 "test-state-store",
                 "flight-key",
-                Arg.Any<ReadOnlyMemory<byte>>(),
+                value,
                 "stale-etag",
                 null!,
-                Arg.Any<IReadOnlyDictionary<string, string>>(),
+                null!,
                 Arg.Any<CancellationToken>())
             .Returns(false);
         var provider = CreateProvider(dapr);
@@ -80,145 +168,181 @@ public sealed class DaprStateStoreProviderTests
             TestContext.Current.CancellationToken);
 
         Assert.False(success);
-        await dapr.DidNotReceiveWithAnyArgs()
-            .GetStateAndETagAsync<TestState>(
-                default!,
-                default!,
-                default!,
-                default!,
-                TestContext.Current.CancellationToken);
+        await dapr.DidNotReceiveWithAnyArgs().GetStateAndETagAsync<TestState>(
+            default!,
+            default!,
+            default!,
+            default!,
+            TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public async Task SaveBulkStateAsync_ShouldUseProfileSerializedByteWrites()
+    public async Task TrySaveStateWithETagAsync_WhenSaveSucceeds_ShouldReadTheNewETagWithoutDeserializingState()
     {
-        var profile = StateDocumentProfile.CreateJson(
-            ModuleStateStoreOption.DURABLE_JSON_PROFILE,
-            "bulk-test",
-            options =>
-            {
-                options.PropertyNamingPolicy = null;
-                options.WriteIndented = true;
-            });
         var dapr = Substitute.For<DaprClient>();
+        var value = new TestState("updated");
+        dapr.TrySaveStateAsync(
+                "test-state-store",
+                "flight-key",
+                value,
+                "etag-1",
+                null!,
+                null!,
+                Arg.Any<CancellationToken>())
+            .Returns(true);
+        dapr.GetByteStateAndETagAsync(
+                "test-state-store",
+                "flight-key",
+                null!,
+                null!,
+                Arg.Any<CancellationToken>())
+            .Returns((ReadOnlyMemory<byte>.Empty, "etag-2"));
+        var provider = CreateProvider(dapr);
+
+        var result = await provider.TrySaveStateWithETagAsync(
+            "flight-key",
+            value,
+            "etag-1",
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal("etag-2", result.NewETag);
+        await dapr.Received(1).GetByteStateAndETagAsync(
+            "test-state-store",
+            "flight-key",
+            null!,
+            null!,
+            TestContext.Current.CancellationToken);
+        await dapr.DidNotReceiveWithAnyArgs().GetStateAndETagAsync<TestState>(
+            default!,
+            default!,
+            default!,
+            default!,
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task TrySaveStateIfNotExistsAsync_WhenKeyExists_ShouldInspectOnlyTheETag()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        dapr.GetByteStateAndETagAsync(
+                "test-state-store",
+                "existing-key",
+                null!,
+                null!,
+                Arg.Any<CancellationToken>())
+            .Returns((new ReadOnlyMemory<byte>([0xFF]), "etag-existing"));
+        var provider = CreateProvider(dapr);
+
+        var success = await provider.TrySaveStateIfNotExistsAsync(
+            "existing-key",
+            new TestState("ignored"),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(success);
+        await dapr.DidNotReceiveWithAnyArgs().GetStateAndETagAsync<TestState>(
+            default!,
+            default!,
+            default!,
+            default!,
+            TestContext.Current.CancellationToken);
+        await dapr.DidNotReceiveWithAnyArgs().TrySaveStateAsync(
+            default!,
+            default!,
+            default(TestState)!,
+            default!,
+            default!,
+            default!,
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task SaveBulkStateAsync_ShouldUseTypedSdkBulkOperationAndPreserveTtlMetadata()
+    {
+        var dapr = Substitute.For<DaprClient>();
+        var provider = CreateProvider(dapr);
         var first = new TestState("first");
         var second = new TestState("second");
-        var provider = CreateProvider(dapr, profile);
 
         await provider.SaveBulkStateAsync(
             [("first-key", first), ("second-key", second)],
             TestContext.Current.CancellationToken,
             TimeSpan.FromSeconds(45));
 
-        await dapr.Received(1).SaveByteStateAsync(
+        await dapr.Received(1).SaveBulkStateAsync(
             "test-state-store",
-            "first-key",
-            Arg.Is<ReadOnlyMemory<byte>>(bytes => MatchesSerializedState(profile, bytes, first)),
-            null!,
-            Arg.Is<IReadOnlyDictionary<string, string>>(metadata => metadata["ttlInSeconds"] == "45"),
+            Arg.Is<IReadOnlyList<SaveStateItem<TestState>>>(items =>
+                items.Count == 2
+                && items[0].Key == "first-key"
+                && items[0].Value == first
+                && items[0].ETag == null
+                && items[0].Metadata!["ttlInSeconds"] == "45"
+                && items[1].Key == "second-key"
+                && items[1].Value == second
+                && items[1].ETag == null
+                && items[1].Metadata!["ttlInSeconds"] == "45"),
             TestContext.Current.CancellationToken);
-        await dapr.Received(1).SaveByteStateAsync(
-            "test-state-store",
-            "second-key",
-            Arg.Is<ReadOnlyMemory<byte>>(bytes => MatchesSerializedState(profile, bytes, second)),
-            null!,
-            Arg.Is<IReadOnlyDictionary<string, string>>(metadata => metadata["ttlInSeconds"] == "45"),
-            TestContext.Current.CancellationToken);
-        await dapr.DidNotReceiveWithAnyArgs().SaveBulkStateAsync<JsonElement>(
+        await dapr.DidNotReceiveWithAnyArgs().SaveByteStateAsync(
+            default!,
+            default!,
+            default,
             default!,
             default!,
             TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public async Task QueryStateAsync_ShouldDeserializeRawQueryDocumentsWithTheSelectedProfile()
+    public async Task QueryStateAsync_ShouldRenderWithCanonicalOptionsAndUseTypedSdkOperation()
     {
         var dapr = Substitute.For<DaprClient>();
-        var queryClient = new TestStateQueryClient(
-            new Dictionary<string, string?>
-            {
-                ["found"] = "{\"value\":\"from-profile\"}",
-                ["missing"] = null
-            });
-        var provider = CreateProvider(dapr, stateQueryClient: queryClient);
+        string? renderedQuery = null;
+        dapr.QueryStateAsync<TestState>(
+                "test-state-store",
+                Arg.Do<string>(query => renderedQuery = query),
+                null!,
+                Arg.Any<CancellationToken>())
+            .Returns(new StateQueryResponse<TestState>(
+                [new StateQueryItem<TestState>("found", new TestState("matched"), "etag", string.Empty)],
+                string.Empty,
+                new Dictionary<string, string>()));
+        var provider = CreateProvider(dapr);
 
         var results = await provider.QueryStateAsync<TestState>(
             builder => builder.Where(filter => filter.Eq(state => state.Value, "match")).Build(),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(new TestState("from-profile"), results["found"]);
-        Assert.Null(results["missing"]);
-        Assert.Equal("test-state-store", queryClient.StateStoreName);
-        Assert.NotNull(queryClient.JsonQuery);
-        Assert.Contains("\"EQ\"", queryClient.JsonQuery, StringComparison.Ordinal);
-        await dapr.DidNotReceiveWithAnyArgs().QueryStateAsync<JsonElement>(
-            default!,
-            default!,
-            default!,
+        Assert.Equal(new TestState("matched"), results["found"]);
+        var query = Assert.IsType<string>(renderedQuery);
+        Assert.Contains("\"EQ\":{\"value\":\"match\"}", query, StringComparison.Ordinal);
+        await dapr.Received(1).QueryStateAsync<TestState>(
+            "test-state-store",
+            query,
+            null!,
             TestContext.Current.CancellationToken);
     }
 
     private static DaprStateStoreProvider CreateProvider(
         DaprClient dapr,
-        StateDocumentProfile? documentProfile = null,
-        IDaprStateQueryClient? stateQueryClient = null)
+        int? defaultBulkParallelism = null)
     {
+        var serializerOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+        };
+        serializerOptions.MakeReadOnly();
+
         return new DaprStateStoreProvider(
             dapr,
             NullLogger<DaprStateStoreProvider>.Instance,
             Options.Create(new ModuleDaprStateStoreOption
             {
-                StateStoreName = "test-state-store"
+                StateStoreName = "test-state-store",
+                DefaultBulkParallelism = defaultBulkParallelism
             }),
-            new TestDocumentProfileProvider(documentProfile ?? TestDocumentProfile),
-            stateQueryClient ?? new TestStateQueryClient(new Dictionary<string, string?>()));
+            new JsonSerializerOptionsProvider(serializerOptions, DateTimeWireFormat.Iso8601WallClock));
     }
 
-    private sealed record TestState(string Value);
-
-    private static bool MatchesSerializedState(ReadOnlyMemory<byte> bytes, TestState expected)
-    {
-        return TestDocumentProfile.Deserialize<TestState>(bytes.Span) == expected;
-    }
-
-    private static bool MatchesSerializedState(
-        StateDocumentProfile profile,
-        ReadOnlyMemory<byte> bytes,
-        TestState expected)
-    {
-        return bytes.Span.SequenceEqual(profile.SerializeToUtf8Bytes(expected));
-    }
-
-    private sealed class TestDocumentProfileProvider(StateDocumentProfile profile) : IStateDocumentProfileProvider
-    {
-        public IReadOnlyDictionary<string, StateDocumentProfile> Profiles =>
-            new Dictionary<string, StateDocumentProfile>
-            {
-                [profile.Name] = profile
-            };
-
-        public StateDocumentProfile GetRequiredProfile(string name)
-        {
-            Assert.Equal(profile.Name, name);
-            return profile;
-        }
-    }
-
-    private sealed class TestStateQueryClient(IReadOnlyDictionary<string, string?> results)
-        : IDaprStateQueryClient
-    {
-        public string? StateStoreName { get; private set; }
-
-        public string? JsonQuery { get; private set; }
-
-        public Task<IReadOnlyDictionary<string, string?>> QueryAsync(
-            string stateStoreName,
-            string jsonQuery,
-            CancellationToken cancellationToken)
-        {
-            StateStoreName = stateStoreName;
-            JsonQuery = jsonQuery;
-            return Task.FromResult(results);
-        }
-    }
+    public sealed record TestState(string Value);
 }

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Monica.Dapr.Services.Support;
-using Monica.StateStore.Abstractions;
 using Monica.StateStore.Queries;
 using Xunit;
 
@@ -10,9 +10,8 @@ namespace Test.Monica.Dapr.Services;
 public sealed class DaprStateQueryRendererTests
 {
     [Fact]
-    public void Render_ShouldUseProfileMetadataAndOmitUnselectedPagingFields()
+    public void Render_ShouldUseCanonicalJsonMetadataAndOmitUnselectedPagingFields()
     {
-        var profile = StateDocumentProfile.CreateJson("query-contract", "3");
         var builder = new QueryBuilder<QueryDocument>();
         var query = builder
             .WithPaging("next-page")
@@ -26,7 +25,7 @@ public sealed class DaprStateQueryRendererTests
 
         Assert.Same(builder, query);
         using var document = JsonDocument.Parse(
-            DaprStateQueryRenderer.Render(builder.BuildDefinition(), profile));
+            DaprStateQueryRenderer.Render(builder.BuildDefinition(), CreateSerializerOptions()));
         var root = document.RootElement;
 
         Assert.Equal(
@@ -44,18 +43,53 @@ public sealed class DaprStateQueryRendererTests
     }
 
     [Fact]
-    public void Render_WhenSelectedPropertyIsIgnored_ShouldRejectTheProfileMismatch()
+    public void Render_WhenSelectedPropertyIsIgnored_ShouldRejectTheCanonicalContractMismatch()
     {
-        var profile = StateDocumentProfile.CreateJson("query-contract", "3");
         var builder = new QueryBuilder<QueryDocument>();
         builder.Where(filter => filter.Eq(document => document.Ignored, "secret")).Build();
 
-        Action render = () => DaprStateQueryRenderer.Render(builder.BuildDefinition(), profile);
+        Action render = () => DaprStateQueryRenderer.Render(
+            builder.BuildDefinition(),
+            CreateSerializerOptions());
 
         var exception = Assert.Throws<InvalidOperationException>(render);
         Assert.Contains("Ignored", exception.Message, StringComparison.Ordinal);
         Assert.Contains("ignored or unavailable", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("query-contract@3", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("host JSON contract", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_WhenReferencePreservationIsEnabled_ShouldKeepInValuesAsAProtocolArray()
+    {
+        var builder = new QueryBuilder<QueryDocument>();
+        builder.Where(filter => filter.In(
+            document => document.Owner.DisplayName,
+            "Monica",
+            "Codex")).Build();
+
+        using var document = JsonDocument.Parse(DaprStateQueryRenderer.Render(
+            builder.BuildDefinition(),
+            CreateSerializerOptions(preserveReferences: true)));
+        var values = document.RootElement.GetProperty("filter").GetProperty("IN")
+            .GetProperty("owner.display_name");
+
+        Assert.Equal(JsonValueKind.Array, values.ValueKind);
+        Assert.Equal(
+            ["Monica", "Codex"],
+            values.EnumerateArray().Select(static item => item.GetString()!).ToArray());
+    }
+
+    private static JsonSerializerOptions CreateSerializerOptions(bool preserveReferences = false)
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+            ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+        };
+        options.MakeReadOnly();
+        return options;
     }
 
     private sealed class QueryDocument
