@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.JsonSerialization.Annotations;
+using Monica.Core.JsonSerialization.Models;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
@@ -38,7 +39,7 @@ public class ModuleJsonSerialization : MonicaModule<ModuleJsonSerializationOptio
         Option.ExtendAction?.Invoke(jsonSerializerOptions);
 
         jsonSerializerOptions.TypeInfoResolver = jsonSerializerOptions.GetConfiguredTypeInfoResolver();
-        var provider = new JsonSerializerOptionsProvider(jsonSerializerOptions);
+        var provider = new JsonSerializerOptionsProvider(jsonSerializerOptions, Option.DateTimeFormat);
 
         services.AddHttpContextAccessor();
 
@@ -59,6 +60,19 @@ public class ModuleJsonSerialization : MonicaModule<ModuleJsonSerializationOptio
 
 public class ModuleJsonSerializationOption : ModuleOptions<ModuleJsonSerialization>
 {
+    /// <summary>
+    /// Gets or sets the wire representation used for timezone-free <see cref="DateTime" /> values in JSON bodies,
+    /// generated RPC queries, and route parameters.
+    /// </summary>
+    /// <remarks>
+    /// The default is <see cref="DateTimeWireFormat.Iso8601WallClock" />. Configure the same value for every host
+    /// participating in one RPC contract. This option does not change <see cref="DateTimeOffset" /> serialization.
+    /// </remarks>
+    public DateTimeWireFormat DateTimeFormat { get; set; } = DateTimeWireFormat.Iso8601WallClock;
+
+    /// <summary>
+    /// Gets or sets an action that applies additional host-specific JSON serializer configuration after Monica's defaults.
+    /// </summary>
     public Action<JsonSerializerOptions>? ExtendAction { get; set; }
 
     /// <summary>

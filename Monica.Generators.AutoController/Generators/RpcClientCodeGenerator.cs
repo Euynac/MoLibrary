@@ -218,7 +218,7 @@ internal static class RpcClientCodeGenerator
             .Append(endpoint.RequestTypeName).AppendLine(" request,");
         builder.AppendLine("        global::System.Threading.CancellationToken cancellationToken = default)");
         builder.AppendLine("    {");
-        builder.Append("        var requestUri = global::Monica.WebApi.RpcClient.Extensions.HttpApiRequestExtensions.BuildApiRequestUri(request, \"")
+        builder.Append("        var requestUri = CreateRequestUri(request, \"")
             .Append(EscapeString(endpoint.CompleteRoute)).Append("\", includeQueryString: ")
             .Append(includeQueryString).AppendLine(");");
         builder.Append("        using var httpRequest = new global::System.Net.Http.HttpRequestMessage(")

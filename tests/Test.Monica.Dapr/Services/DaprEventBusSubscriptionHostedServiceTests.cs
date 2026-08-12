@@ -13,6 +13,7 @@ using Monica.Core.Execution;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
 using Monica.Core.JsonSerialization.Abstractions;
+using Monica.Core.JsonSerialization.Models;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.ObservableInstance.Services;
@@ -472,7 +473,9 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
                 DefaultHeartbeatInterval = TimeSpan.Zero
             }),
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            new JsonSerializerOptionsProvider(new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+            new JsonSerializerOptionsProvider(
+                new JsonSerializerOptions(JsonSerializerDefaults.Web),
+                DateTimeWireFormat.Iso8601WallClock),
             NullLogger<DaprTopicSubscription>.Instance,
             logger);
         var subscription = await registry.SubscribeAsync(new EventSubscriptionDescriptor
@@ -520,7 +523,9 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             Options.Create(new ModuleDaprEventBusOption()),
             Options.Create(new ModuleHostedServiceOption { DefaultHeartbeatInterval = TimeSpan.Zero }),
             dependencyProvider.GetRequiredService<IServiceScopeFactory>(),
-            new JsonSerializerOptionsProvider(new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+            new JsonSerializerOptionsProvider(
+                new JsonSerializerOptions(JsonSerializerDefaults.Web),
+                DateTimeWireFormat.Iso8601WallClock),
             NullLogger<DaprTopicSubscription>.Instance,
             NullLogger<DaprEventBusSubscriptionHostedService>.Instance,
             serviceKey);

@@ -9,8 +9,8 @@ internal static class JsonOptionsBuilder
 {
     public static void ApplyJsonSerializationDefaults(this JsonSerializerOptions options, ModuleJsonSerializationOption extraOption)
     {
-        options.Converters.Add(new NullableDateTimeJsonConverter());
-        options.Converters.Add(new DateTimeJsonConverter());
+        options.Converters.Add(new NullableDateTimeJsonConverter(extraOption.DateTimeFormat));
+        options.Converters.Add(new DateTimeJsonConverter(extraOption.DateTimeFormat));
         options.Converters.Add(new NullableGuidJsonConverter());
         options.Converters.Add(new LongToStringJsonConverter());
 

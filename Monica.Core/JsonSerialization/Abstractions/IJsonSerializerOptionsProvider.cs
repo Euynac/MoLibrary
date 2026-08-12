@@ -1,10 +1,16 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Monica.Core.JsonSerialization.Models;
 
 namespace Monica.Core.JsonSerialization.Abstractions;
 
 public interface IJsonSerializerOptionsProvider
 {
+    /// <summary>
+    /// Gets the host-owned wire representation for timezone-free <see cref="DateTime" /> values.
+    /// </summary>
+    DateTimeWireFormat DateTimeFormat { get; }
+
     /// <summary>
     /// Gets the shared JSON serializer options used by the application.
     /// </summary>

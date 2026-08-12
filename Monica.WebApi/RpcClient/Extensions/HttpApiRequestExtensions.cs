@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Routing.Patterns;
-using Monica.Core.JsonSerialization.Services;
+using Monica.Core.JsonSerialization.Models;
 using Monica.Tool.Extensions;
 
 namespace Monica.WebApi.RpcClient.Extensions;
@@ -32,6 +32,7 @@ public static class HttpApiRequestExtensions
     /// <param name="includeQueryString">
     /// Whether properties that are not bound to route placeholders should be appended to the query string.
     /// </param>
+    /// <param name="dateTimeFormat">The host-owned wire representation for <see cref="DateTime" /> values.</param>
     /// <returns>The escaped relative request URI.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="request"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">
@@ -40,9 +41,11 @@ public static class HttpApiRequestExtensions
     public static string BuildApiRequestUri<TRequest>(
         this TRequest request,
         string routeTemplate,
-        bool includeQueryString)
+        bool includeQueryString,
+        DateTimeWireFormat dateTimeFormat)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(dateTimeFormat);
 
         if (!includeQueryString && !RoutePlaceholderPattern.IsMatch(routeTemplate))
         {
@@ -75,7 +78,7 @@ public static class HttpApiRequestExtensions
                 var value = property.GetValue(request) ?? parameter.Default;
                 if (value is not null)
                 {
-                    return Uri.EscapeDataString(FormatValue(value));
+                    return Uri.EscapeDataString(FormatValue(value, dateTimeFormat));
                 }
 
                 if (parameter.IsOptional)
@@ -118,14 +121,14 @@ public static class HttpApiRequestExtensions
                 {
                     if (item is not null)
                     {
-                        builder.Add(queryName, FormatValue(item));
+                        builder.Add(queryName, FormatValue(item, dateTimeFormat));
                     }
                 }
 
                 continue;
             }
 
-            builder.Add(queryName, FormatValue(value));
+            builder.Add(queryName, FormatValue(value, dateTimeFormat));
         }
 
         return route + builder;
@@ -156,13 +159,11 @@ public static class HttpApiRequestExtensions
         return properties;
     }
 
-    private static string FormatValue(object value)
+    private static string FormatValue(object value, DateTimeWireFormat dateTimeFormat)
     {
         return value switch
         {
-            DateTime dateTime => dateTime.ToString(
-                JsonSerializerOptionsProvider.OutputDateTimeFormat,
-                CultureInfo.InvariantCulture),
+            DateTime dateTime => dateTimeFormat.Format(dateTime),
             DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
             IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
             _ => value.ToString() ?? string.Empty

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.JsonSerialization.Services;
 
 namespace Monica.Experimental.Features;
 
@@ -21,7 +20,7 @@ public class AutoUtcDateTimeModelBinder : IModelBinder
         await _dateTimeModelBinder.BindModelAsync(bindingContext);
         if (bindingContext.Result is {IsModelSet: true, Model: DateTime dateTime})
         {
-            bindingContext.Result = ModelBindingResult.Success(JsonSerializerOptionsProvider.NormalizeInTime(dateTime));
+            bindingContext.Result = ModelBindingResult.Success(dateTime);
         }
     }
 }

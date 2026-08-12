@@ -7,6 +7,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Monica.Core.JsonSerialization.Models;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
@@ -33,7 +34,9 @@ public class ResultEnvelopeProviderTests
         };
 
         var reader = new ResultEnvelopeProvider(
-            new JsonSerializerOptionsProvider(new JsonSerializerOptions()),
+            new JsonSerializerOptionsProvider(
+                new JsonSerializerOptions(),
+                DateTimeWireFormat.Iso8601WallClock),
             Options.Create(new ModuleResultEnvelopeOption()),
             NullLogger<ResultEnvelopeProvider>.Instance);
         var result = await reader.ReadRemoteResponse<Res<string>>(
@@ -52,7 +55,9 @@ public class ResultEnvelopeProviderTests
             Content = new StringContent("not-json", Encoding.UTF8, "application/json")
         };
         var reader = new ResultEnvelopeProvider(
-            new JsonSerializerOptionsProvider(new JsonSerializerOptions()),
+            new JsonSerializerOptionsProvider(
+                new JsonSerializerOptions(),
+                DateTimeWireFormat.Iso8601WallClock),
             Options.Create(new ModuleResultEnvelopeOption()),
             NullLogger<ResultEnvelopeProvider>.Instance);
 
@@ -73,7 +78,9 @@ public class ResultEnvelopeProviderTests
             Content = new StringContent("{}", Encoding.UTF8, "application/json")
         };
         var reader = new ResultEnvelopeProvider(
-            new JsonSerializerOptionsProvider(new JsonSerializerOptions()),
+            new JsonSerializerOptionsProvider(
+                new JsonSerializerOptions(),
+                DateTimeWireFormat.Iso8601WallClock),
             Options.Create(new ModuleResultEnvelopeOption()),
             NullLogger<ResultEnvelopeProvider>.Instance);
         using var cancellation = new CancellationTokenSource();
