@@ -3,9 +3,9 @@ using System.Net;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 using MudBlazor;
+using Monica.Core.Localization.Models;
 using Monica.Core.Results;
 using Monica.Markdown.Facades;
 using Monica.Markdown.Localization;
@@ -29,7 +29,7 @@ internal sealed class MarkdownViewerPageStateFactory(
     ISnackbar snackbar,
     IJSRuntime jsRuntime,
     IStringLocalizer<MarkdownResource> localizer,
-    IOptions<ModuleLocalizationOption> localizationOptions)
+    LocalizationProfile localizationProfile)
 {
     /// <summary>
     /// Creates and attaches a state instance to its owning component.
@@ -43,7 +43,7 @@ internal sealed class MarkdownViewerPageStateFactory(
             snackbar,
             jsRuntime,
             localizer,
-            localizationOptions);
+            localizationProfile);
 
         state.Attach(renderRequestedAsync);
         return state;
@@ -60,7 +60,7 @@ internal sealed class MarkdownViewerPageState(
     ISnackbar snackbar,
     IJSRuntime jsRuntime,
     IStringLocalizer<MarkdownResource> localizer,
-    IOptions<ModuleLocalizationOption> localizationOptions)
+    LocalizationProfile localizationProfile)
     : IAsyncDisposable
 {
     private readonly CancellationTokenSource _lifetimeCancellation = new();
@@ -70,7 +70,7 @@ internal sealed class MarkdownViewerPageState(
     private readonly List<Task> _locationOperations = [];
     private readonly TaskCompletionSource _disposedCompletion =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private readonly ModuleLocalizationOption _localizationOption = localizationOptions.Value;
+    private readonly LocalizationProfile _localizationProfile = localizationProfile;
     private readonly DialogOptions _groupSwitcherDialogOptions = new()
     {
         MaxWidth = MaxWidth.Medium,
@@ -874,40 +874,15 @@ internal sealed class MarkdownViewerPageState(
             requestedCulture,
             SelectedCulture,
             CultureInfo.CurrentUICulture.Name,
-            _localizationOption.DefaultCulture);
+            _localizationProfile.DefaultCulture);
     }
 
     private string? ResolveGlobalCulturePreference(string? requestedCulture)
     {
-        var supportedCultures = _localizationOption.SupportedCultures
-            .Where(static culture => !string.IsNullOrWhiteSpace(culture))
-            .Select(static culture => culture.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        if (supportedCultures.Length == 0)
-        {
-            return null;
-        }
-
-        return TryResolveSupportedCulture(supportedCultures, requestedCulture)
-               ?? TryResolveSupportedCulture(supportedCultures, SelectedCulture)
-               ?? TryResolveSupportedCulture(supportedCultures, CultureInfo.CurrentUICulture.Name)
-               ?? TryResolveSupportedCulture(supportedCultures, _localizationOption.DefaultCulture)
-               ?? supportedCultures[0];
-    }
-
-    private static string? TryResolveSupportedCulture(
-        IReadOnlyList<string> supportedCultures,
-        string? candidate)
-    {
-        if (string.IsNullOrWhiteSpace(candidate))
-        {
-            return null;
-        }
-
-        return supportedCultures.FirstOrDefault(supportedCulture =>
-            string.Equals(supportedCulture, candidate, StringComparison.OrdinalIgnoreCase));
+        return _localizationProfile.ResolveCulture(
+            requestedCulture,
+            SelectedCulture,
+            CultureInfo.CurrentUICulture.Name);
     }
 
     private void SetMissingTranslation(string documentRelativePath, string targetCulture)

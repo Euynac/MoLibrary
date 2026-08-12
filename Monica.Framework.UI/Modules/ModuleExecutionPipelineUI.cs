@@ -26,18 +26,7 @@ public static class ModuleExecutionPipelineUIBuilderExtensions
         public ModuleRegistration<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption> AddExecutionPipelineUI(
             Action<ModuleExecutionPipelineUIOption>? configure = null)
         {
-            var registration = builder.AddModule<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption>(configure);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<ExecutionPipelineResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIExecutionPipelinePage, ExecutionPipelineResource>(
-                    UIExecutionPipelinePage.PAGE_URL,
-                    "Pages:ExecutionPipeline:Title",
-                    Icons.Material.Filled.Schema,
-                    BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
-                    navOrder: 20));
-            return registration;
+            return builder.AddModule<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption>(configure);
         }
     }
 }
@@ -51,6 +40,17 @@ public sealed class ModuleExecutionPipelineUI : MonicaModule<ModuleExecutionPipe
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<ExecutionPipelineResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIExecutionPipelinePage, ExecutionPipelineResource>(
+                    UIExecutionPipelinePage.PAGE_URL,
+                    "Pages:ExecutionPipeline:Title",
+                    Icons.Material.Filled.Schema,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 20)));
     }
 
     /// <inheritdoc />

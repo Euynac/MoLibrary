@@ -31,7 +31,7 @@ The strict result must have zero JSON integrity errors, missing keys, invalid na
 - Inject `ILocalizationCatalog` only for scenarios that genuinely need generic resource lookup. At application-composition boundaries such as endpoint metadata configuration, resolve the localizer or catalog from the current host's service provider so localization state never crosses host boundaries.
 - For page content, use the module-local resource marker and JSON files.
 - Every localized page must use `RegisterLocalizedPage<TPage, TResource>(...)`. The page-title key lives in the owning module's `TResource`; no implicit or central page resource exists.
-- The owning module's registration extension must call `registration.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<TResource>()` for every navigation resource.
+- The owning module must contribute every navigation resource through `module.Require<ModuleLocalization, ModuleLocalizationOption>(option => option.AddResource<TResource>())` in `Describe`, so direct and transitive inclusion behave identically.
 - Treat category identity and category text as separate contracts. Use `BuiltInNavigationCategoryIds` for the small shell-owned taxonomy, or call `RegisterLocalizedCategory<TResource>(stableId, displayNameKey, order)` once for a module-owned category and pass the returned ID to its pages.
 - Never group by translated category labels. Stable category IDs are case-insensitive, publisher-qualified for independent packages, and category order is explicit rather than culture-dependent.
 - `RegisterLocalizedComponent` and `UIRegistryResource` are obsolete architecture and must not appear in new or migrated code.

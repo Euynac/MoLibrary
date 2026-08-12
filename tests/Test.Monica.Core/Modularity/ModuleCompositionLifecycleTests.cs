@@ -393,6 +393,7 @@ public sealed class ModuleCompositionLifecycleTests
             nameof(ModulePhase.None),
             nameof(ModulePhase.Describe),
             nameof(ModulePhase.FinalizeOptions),
+            nameof(ModulePhase.DeclareContracts),
             nameof(ModulePhase.ConfigureBuilder),
             nameof(ModulePhase.ConfigureServices),
             nameof(ModulePhase.DeclareTypeDiscovery),

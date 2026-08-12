@@ -21,18 +21,7 @@ public static class ModuleExecutionTimingUIBuilderExtensions
         public ModuleRegistration<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption> AddExecutionTimingUI(
             Action<ModuleExecutionTimingUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<ExecutionTimingResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIExecutionTimingPage, ExecutionTimingResource>(
-                    UIExecutionTimingPage.PAGE_URL,
-                    "Pages:ExecutionTiming:Title",
-                    Icons.Material.Filled.Timer,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 30));
-            return registration;
+            return builder.AddModule<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption>(action);
         }
     }
 }
@@ -46,6 +35,17 @@ public class ModuleExecutionTimingUI : MonicaModule<ModuleExecutionTimingUIOptio
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleExecutionTiming, ModuleExecutionTimingOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<ExecutionTimingResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIExecutionTimingPage, ExecutionTimingResource>(
+                    UIExecutionTimingPage.PAGE_URL,
+                    "Pages:ExecutionTiming:Title",
+                    Icons.Material.Filled.Timer,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 30)));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleExecutionTimingUIOption> context)

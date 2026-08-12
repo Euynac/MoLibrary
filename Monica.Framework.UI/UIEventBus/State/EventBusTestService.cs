@@ -78,7 +78,7 @@ public sealed class EventBusTestService(
             var sample = CreateSampleValue(subscription.EventType, [], depth: 0);
             var json = JsonSerializer.Serialize(
                 sample,
-                jsonSerializerOptionsProvider.SerializerOptions.Clone(o => o.WriteIndented = true));
+                jsonSerializerOptionsProvider.SerializerOptions.Copy(o => o.WriteIndented = true));
 
             return Res.Ok<string>(json ?? "{}");
         }
@@ -195,7 +195,7 @@ public sealed class EventBusTestService(
                 subscription.EventType,
                 subscription.TopicName,
                 GetMessageLimit(),
-                jsonSerializerOptionsProvider.SerializerOptions.Clone(o => o.WriteIndented = true));
+                jsonSerializerOptionsProvider.SerializerOptions.Copy(o => o.WriteIndented = true));
 
             var descriptor = new EventSubscriptionDescriptor
             {

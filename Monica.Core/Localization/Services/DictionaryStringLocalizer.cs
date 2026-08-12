@@ -1,14 +1,14 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Localization.Models.Internal;
+using Monica.Core.Localization.Models;
 
 namespace Monica.Core.Localization.Services;
 
 internal sealed class DictionaryStringLocalizer(
     string resourceName,
     Dictionary<string, Dictionary<string, string>> resources,
-    LocalizationRuntimeOptions options,
+    LocalizationProfile profile,
     ILogger<DictionaryStringLocalizer> logger) : IStringLocalizer
 {
     public LocalizedString this[string name]
@@ -73,9 +73,9 @@ internal sealed class DictionaryStringLocalizer(
         }
 
         // 3. Default culture
-        if (options.DefaultCulture != culture.Name)
+        if (profile.DefaultCulture != culture.Name)
         {
-            culturesToTry.Add(options.DefaultCulture);
+            culturesToTry.Add(profile.DefaultCulture);
         }
 
         foreach (var cultureToTry in culturesToTry)
@@ -90,4 +90,3 @@ internal sealed class DictionaryStringLocalizer(
         return null;
     }
 }
-

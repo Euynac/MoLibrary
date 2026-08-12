@@ -1,10 +1,12 @@
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
+using Monica.JobScheduler.Services.Support;
 using Monica.Modules;
 using Xunit;
 
@@ -27,8 +29,11 @@ public class ModuleJobSchedulerCompositionTests
             monica.AddJobScheduler();
         });
 
-        act.Should().Throw<ModuleRegistrationException>()
-            .WithMessage("*metadata-store*provider*scope*");
+        var exception = act.Should().Throw<ModuleRegistrationException>().Which;
+        exception.Message.Should().Contain("metadata-store");
+        exception.Message.Should().Contain("provider");
+        exception.Message.Should().Contain("scope");
+        exception.Message.Should().Contain("service-discovery-state-store");
     }
 
     [Fact]
@@ -42,6 +47,9 @@ public class ModuleJobSchedulerCompositionTests
                 options.ExcludeDefault();
                 options.Add(typeof(ModuleJobScheduler).Assembly, typeof(ModuleServiceDiscovery).Assembly);
             });
+            monica.AddServiceDiscovery()
+                .AsStandalone()
+                .UseMemoryStorage();
             monica.AddJobScheduler(options => options.ProjectName = "Test.Project")
                 .UseSchedulerScope("job-tests")
                 .UseInMemoryProvider()
@@ -58,6 +66,34 @@ public class ModuleJobSchedulerCompositionTests
         application.Modules.IsRegistered(typeof(ModuleHostedService)).Should().BeTrue();
         application.Modules.IsRegistered(typeof(ModuleHealthCheck)).Should().BeTrue();
         options.SchedulerScopeKey.Should().Be("job-tests");
-        options.RunControlPlane.Should().BeTrue();
+        host.Services.GetRequiredService<IOptions<ModuleServiceDiscoveryOption>>().Value.Role
+            .Should().Be(ServiceDiscoveryRole.Standalone);
+    }
+
+    [Theory]
+    [InlineData(ServiceDiscoveryRole.Worker, false)]
+    [InlineData(ServiceDiscoveryRole.Registry, true)]
+    [InlineData(ServiceDiscoveryRole.Standalone, true)]
+    public async Task AddJobScheduler_ShouldDeriveControlPlaneFromServiceDiscoveryRole(
+        ServiceDiscoveryRole role,
+        bool expectControlPlane)
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddServiceDiscovery(options => options.Role = role)
+                .UseMemoryStorage();
+            monica.AddJobScheduler()
+                .UseSchedulerScope("role-tests")
+                .UseInMemoryProvider()
+                .UseInMemoryMetadataRepository();
+        });
+
+        await using var host = builder.Build();
+        host.Services.GetServices<IHostedService>().OfType<JobSchedulerHostedService>().Any()
+            .Should().Be(expectControlPlane);
+        host.Services.GetRequiredService<IOptions<ModuleServiceDiscoveryOption>>().Value.Role
+            .Should().Be(role);
     }
 }

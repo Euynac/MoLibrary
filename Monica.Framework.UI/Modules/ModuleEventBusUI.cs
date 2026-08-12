@@ -29,19 +29,7 @@ public static class ModuleEventBusUIBuilderExtensions
         public ModuleRegistration<ModuleEventBusUI, ModuleEventBusUIOption> AddEventBusUI(
             Action<ModuleEventBusUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleEventBusUI, ModuleEventBusUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<EventBusResource>()
-                .AddResource<ModuleSystemResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIEventBusMonitorPage, EventBusResource>(
-                    UIEventBusMonitorPage.PAGE_URL,
-                    "Pages:EventBusMonitor:Title",
-                    Icons.Material.Filled.Hub,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 40));
-            return registration;
+            return builder.AddModule<ModuleEventBusUI, ModuleEventBusUIOption>(action);
         }
     }
 }
@@ -54,8 +42,23 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleEventBus, ModuleEventBusOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.RequireDependencyFeature<ModuleEventBus, ModuleEventBusOption>(
+            ModuleEventBus.DISTRIBUTED_PROVIDER_FEATURE);
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(static option =>
+        {
+            option.AddResource<EventBusResource>();
+            option.AddResource<ModuleSystemResource>();
+        });
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIEventBusMonitorPage, EventBusResource>(
+                    UIEventBusMonitorPage.PAGE_URL,
+                    "Pages:EventBusMonitor:Title",
+                    Icons.Material.Filled.Hub,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 40)));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleEventBusUIOption> context)

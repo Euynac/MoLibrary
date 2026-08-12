@@ -3,47 +3,29 @@
 //  -------------------------------------------------------------
 
 using System.Linq.Expressions;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Monica.StateStore.Queries;
 
 public sealed class QueryBuilder<T> : IInitialQueryBuilder<T>, IContinuableQueryBuilder<T>, ISortByQuery<T>, IFinishedQueryBuilder<T>
 {
-    private readonly List<Sorting> _sortQueries = new();
-    private readonly JsonSerializerOptions _serializerOptions = new()
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    private Paging _pagingQuery = new();
-    private IFinishedFilterQuery? _filterQuery = null;
+    private readonly List<Sorting> _sortQueries = [];
+    private Paging? _pagingQuery;
+    private IFinishedFilterQuery? _filterQuery;
 
     /// <summary>
-    /// Constructor enabling the use of the built-in JSON serializer options.
+    /// Configures optional paging for the query.
     /// </summary>
-    public QueryBuilder()
-    {
-
-    }
-
-    /// <summary>
-    /// Constructor allowing the JSON serializer options to be overridden.
-    /// </summary>
-    /// <param name="serializerOptions"></param>
-    public QueryBuilder(JsonSerializerOptions serializerOptions)
-    {
-        _serializerOptions = serializerOptions;
-    }
-    
     public IPagingQuery<T> WithPaging(uint? limit = null, string? continuationToken = null)
     {
-        if (limit != null)
-            _pagingQuery = _pagingQuery with {Limit = (int) limit};
+        if (limit is not null)
+        {
+            _pagingQuery = (_pagingQuery ?? new Paging()) with { Limit = (int)limit };
+        }
 
-        if (continuationToken != null)
-            _pagingQuery = _pagingQuery with {Token = continuationToken};
+        if (continuationToken is not null)
+        {
+            _pagingQuery = (_pagingQuery ?? new Paging()) with { Token = continuationToken };
+        }
 
         return this;
     }
@@ -62,7 +44,7 @@ public sealed class QueryBuilder<T> : IInitialQueryBuilder<T>, IContinuableQuery
 
     public IPagingQuery<T> WithPaging(uint limit, string continuationToken)
     {
-        _pagingQuery = new Paging(Limit: (int) limit, Token: continuationToken);
+        _pagingQuery = new Paging(Limit: (int)limit, Token: continuationToken);
         return this;
     }
     
@@ -74,8 +56,7 @@ public sealed class QueryBuilder<T> : IInitialQueryBuilder<T>, IContinuableQuery
 
     public ISortByQuery<T> Sort(Expression<Func<T, string>> propertyName, Ordering? direction = null)
     {
-        var jsonPropertyName = JsonNameHelpers<T>.GetJsonPropertyName(propertyName);
-        _sortQueries.Add(new Sorting(jsonPropertyName, direction ?? Ordering.Ascending));
+        _sortQueries.Add(new Sorting(propertyName, direction ?? Ordering.Ascending));
         return this;
     }
     
@@ -84,79 +65,97 @@ public sealed class QueryBuilder<T> : IInitialQueryBuilder<T>, IContinuableQuery
         return this;
     }
 
-    public override string ToString()
+    /// <summary>
+    /// Gets the provider-neutral typed query definition for protocol rendering.
+    /// </summary>
+    public StateQueryDefinition BuildDefinition()
     {
-        var query = new Query<T>(
-            Filter: _filterQuery == null ? null : JsonDocument.Parse(JsonSerializer.Serialize(_filterQuery?.GetFilter())),
-            Sorting: _sortQueries.Any() ? _sortQueries : null,
-            Paging: _pagingQuery != new Paging() ? _pagingQuery : null
-        );
-
-        return JsonSerializer.Serialize(query, _serializerOptions);
+        return new StateQueryDefinition(
+            _filterQuery?.GetFilterNode(),
+            _sortQueries.Count == 0 ? [] : [.. _sortQueries],
+            _pagingQuery);
     }
 }
 
 public class FilterQuery<T> : IFinishedFilterQuery
 {
-    private readonly Dictionary<string, object> _filters = new();
+    private readonly List<StateFilterNode> _filters = [];
 
     public IFinishedFilterQuery Eq(Expression<Func<T, string>> propertySelector, string value)
     {
-        _filters.Add("EQ", new Dictionary<string, string> { { JsonNameHelpers<T>.GetJsonPropertyName(propertySelector), value } });
+        _filters.Add(new StateComparisonFilterNode(StateComparisonOperator.Equal, propertySelector, value));
         return this;
     }
 
     public IFinishedFilterQuery In(Expression<Func<T, string>> propertySelector, params string[] values)
     {
-        _filters.Add("IN", new Dictionary<string, string[]> { { JsonNameHelpers<T>.GetJsonPropertyName(propertySelector), values } });
+        _filters.Add(new StateComparisonFilterNode(StateComparisonOperator.In, propertySelector, values));
         return this;
     }
 
     public IFinishedFilterQuery GT(Expression<Func<T, string>> propertySelector, string value)
     {
-        _filters.Add("GT", new Dictionary<string, string> { { JsonNameHelpers<T>.GetJsonPropertyName(propertySelector), value } });
+        _filters.Add(new StateComparisonFilterNode(StateComparisonOperator.GreaterThan, propertySelector, value));
         return this;
     }
 
     public IFinishedFilterQuery GTE(Expression<Func<T, string>> propertySelector, string value)
     {
-        _filters.Add("GTE", new Dictionary<string, string> { { JsonNameHelpers<T>.GetJsonPropertyName(propertySelector), value } });
+        _filters.Add(new StateComparisonFilterNode(StateComparisonOperator.GreaterThanOrEqual, propertySelector, value));
         return this;
     }
 
     public IFinishedFilterQuery GTE(Expression<Func<T, DateTime>> propertySelector, DateTime value)
     {
-        _filters.Add("GTE", new Dictionary<string, DateTime> { { JsonNameHelpers<T>.GetJsonPropertyName(propertySelector), value } });
+        _filters.Add(new StateComparisonFilterNode(StateComparisonOperator.GreaterThanOrEqual, propertySelector, value));
         return this;
     }
 
 
     public IFinishedFilterQuery LT(Expression<Func<T, string>> propertySelector, string value)
     {
-        _filters.Add("LT", new Dictionary<string, string> { { JsonNameHelpers<T>.GetJsonPropertyName(propertySelector), value } });
+        _filters.Add(new StateComparisonFilterNode(StateComparisonOperator.LessThan, propertySelector, value));
         return this;
     }
 
     public IFinishedFilterQuery LTE(Expression<Func<T, string>> propertySelector, string value)
     {
-        _filters.Add("LTE", new Dictionary<string, string> { { JsonNameHelpers<T>.GetJsonPropertyName(propertySelector), value } });
+        _filters.Add(new StateComparisonFilterNode(StateComparisonOperator.LessThanOrEqual, propertySelector, value));
         return this;
     }
 
     public FilterQuery<T> And(params IFinishedFilterQuery[] queries)
     {
-        _filters.Add("AND", queries.Select(x => x.GetFilter()));
+        AddGroup(StateGroupOperator.And, queries);
         return this;
     }
 
     public FilterQuery<T> Or(params IFinishedFilterQuery[] queries)
     {
-        _filters.Add("OR", queries.Select(x => x.GetFilter()));
+        AddGroup(StateGroupOperator.Or, queries);
         return this;
     }
 
-    public object GetFilter()
+    private void AddGroup(StateGroupOperator groupOperator, IFinishedFilterQuery[] queries)
     {
-        return _filters;
+        ArgumentNullException.ThrowIfNull(queries);
+        if (queries.Length == 0)
+        {
+            throw new ArgumentException("A state filter group must contain at least one predicate.", nameof(queries));
+        }
+
+        _filters.Add(new StateGroupFilterNode(
+            groupOperator,
+            queries.Select(static query => query.GetFilterNode()).ToArray()));
+    }
+
+    StateFilterNode IFinishedFilterQuery.GetFilterNode()
+    {
+        return _filters.Count switch
+        {
+            0 => throw new InvalidOperationException("A state filter must contain at least one predicate."),
+            1 => _filters[0],
+            _ => new StateGroupFilterNode(StateGroupOperator.And, [.. _filters])
+        };
     }
 }

@@ -2,6 +2,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.JsonSerialization.Models;
 using Monica.Core.Modularity.Extensions;
@@ -47,5 +48,56 @@ public sealed class ModuleJsonSerializationTests
 
         provider.DateTimeFormat.Should().BeSameAs(DateTimeWireFormat.SpaceSeparatedWallClock);
         json.Should().Be("\"2026-07-28 14:30:00.1234567\"");
+    }
+
+    [Fact]
+    public void ConfigureSerializer_ShouldCompileEquivalentReadOnlyCanonicalAndAspNetSnapshots()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddJsonSerialization(options => options.ConfigureSerializer(serializerOptions =>
+            {
+                serializerOptions.WriteIndented = true;
+                serializerOptions.AllowOutOfOrderMetadataProperties = true;
+            }));
+        });
+
+        using var host = builder.Build();
+        var canonical = host.Services.GetRequiredService<IJsonSerializerOptionsProvider>().SerializerOptions;
+        var http = host.Services.GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>()
+            .Value.SerializerOptions;
+        var mvc = host.Services.GetRequiredService<IOptions<Microsoft.AspNetCore.Mvc.JsonOptions>>()
+            .Value.JsonSerializerOptions;
+
+        foreach (var options in new[] { canonical, http, mvc })
+        {
+            options.IsReadOnly.Should().BeTrue();
+            options.WriteIndented.Should().BeTrue();
+            options.AllowOutOfOrderMetadataProperties.Should().BeTrue();
+            options.Converters.Select(static converter => converter.GetType())
+                .Should().Equal(canonical.Converters.Select(static converter => converter.GetType()));
+        }
+    }
+
+    [Fact]
+    public void ConfigureSerializer_AfterComposition_ShouldRejectLateMutation()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddJsonSerialization();
+        });
+
+        using var host = builder.Build();
+        var options = host.Services.GetRequiredService<ModuleJsonSerializationOption>();
+
+        Action mutate = () => options.ConfigureSerializer(static serializerOptions =>
+            serializerOptions.WriteIndented = true);
+
+        mutate.Should().Throw<InvalidOperationException>()
+            .WithMessage("*already been compiled*late contributions*");
     }
 }

@@ -72,8 +72,8 @@ public class JobSchedulerFacade(
 
             var serviceDiscoveryOption = serviceDiscoveryOptions.Value;
 
-            // On worker nodes, delegate to the registry via the event bus.
-            if (!serviceDiscoveryOption.IsRegistryServer && !serviceDiscoveryOption.IsStandaloneMode)
+            // Worker hosts delegate control-plane work to the registry via the event bus.
+            if (serviceDiscoveryOption.Role == ServiceDiscoveryRole.Worker)
             {
                 return await CreateJobInstanceViaRegistryAsync(definition, jobArgs, cancellationToken);
             }

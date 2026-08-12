@@ -103,14 +103,13 @@ Rules:
 - Keep page code thin and move state/orchestration to `UI{Name}/State` or `Support`.
 - Use isolated `.razor.css`, MudBlazor primitives, and Monica/MudBlazor theme tokens.
 
-Configure localization and shell contributions from the UI module's host-bound registration, using the concrete Monica registrations and their rich extensions:
+Configure localization and shell contributions intrinsically from the UI module's `Describe` method:
 
 ```csharp
-var registration = builder.AddModule<ModuleAuditUI, ModuleAuditUIOption>(configure);
-registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-    .AddResource<AuditResource>();
-registration.Require<ModuleShellUI, ModuleShellUIOption>()
-    .RegisterUIComponents(registry =>
+module.Require<ModuleLocalization, ModuleLocalizationOption>(
+    static option => option.AddResource<AuditResource>());
+module.Require<ModuleShellUI, ModuleShellUIOption>(
+    static option => option.ConfigureNavigation(registry =>
 {
     var category = registry.RegisterLocalizedCategory<AuditResource>(
         "Acme.Monica.Toolkit.Audit",
@@ -123,8 +122,7 @@ registration.Require<ModuleShellUI, ModuleShellUIOption>()
         categoryId: category,
         addToNav: true,
         navOrder: 80);
-});
-return registration;
+}));
 ```
 
 Use deterministic explicit values. The scaffold assigns category order `450 + UI module index`, after the shell's Configuration category, and page navigation order `80 + UI module index`. Keep category identity stable when labels, cultures, or page titles change.

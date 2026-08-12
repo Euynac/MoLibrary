@@ -24,18 +24,7 @@ public static class ModuleRuntimeMetricsUIBuilderExtensions
         public ModuleRegistration<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption> AddRuntimeMetricsUI(
             Action<ModuleRuntimeMetricsUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<RuntimeMetricsResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
-                    UIRuntimeMetricsPage.PAGE_URL,
-                    "Pages:RuntimeMetrics:Title",
-                    Icons.Material.Filled.Speed,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 10));
-            return registration;
+            return builder.AddModule<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption>(action);
         }
     }
 }
@@ -49,6 +38,17 @@ public class ModuleRuntimeMetricsUI : MonicaModule<ModuleRuntimeMetricsUIOption>
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<RuntimeMetricsResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
+                    UIRuntimeMetricsPage.PAGE_URL,
+                    "Pages:RuntimeMetrics:Title",
+                    Icons.Material.Filled.Speed,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 10)));
     }
 
     /// <inheritdoc />

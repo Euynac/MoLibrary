@@ -1,11 +1,10 @@
 @using System.Globalization
-@using Microsoft.Extensions.Options
 @using Microsoft.Extensions.Localization
-@using Monica.Modules
+@using Monica.Core.Localization.Models
 @using Monica.UI.Localization
 @using Monica.UI.Shell.Support
 @inject NavigationManager NavigationManager
-@inject IOptions<ModuleLocalizationOption> LocalizationOptions
+@inject LocalizationProfile LocalizationProfile
 @inject IJSRuntime JSRuntime
 @inject IBrowserStorage BrowserStorage
 @inject IStringLocalizer<SharedResource> L
@@ -19,12 +18,13 @@
          ListClass="mo-appbar-menu-list"
          Class="action-button"
          title="@L["Layout:LanguageTooltip"]">
-    @foreach (var culture in LocalizationOptions.Value.SupportedCultures)
+    @foreach (var culture in LocalizationProfile.SupportedCultures)
     {
-        var displayName = LocalizationOptions.Value.CultureDisplayNames.TryGetValue(culture, out var name)
-            ? name
-            : new CultureInfo(culture).NativeName;
-        var isCurrentCulture = CultureInfo.CurrentUICulture.Name == culture;
+        var displayName = LocalizationProfile.GetDisplayName(culture);
+        var isCurrentCulture = string.Equals(
+            CultureInfo.CurrentUICulture.Name,
+            culture,
+            StringComparison.OrdinalIgnoreCase);
 
         <MudMenuItem OnClick="@(() => ChangeCultureAsync(culture))"
                      Class="@(isCurrentCulture ? "active" : null)"
@@ -48,27 +48,20 @@
 
             // Load culture preference from localStorage
             var storedCulture = await BrowserStorage.GetAsync<string?>(StorageKey, null);
+            var culture = LocalizationProfile.ResolveCulture(storedCulture);
 
-            if (storedCulture != null && LocalizationOptions.Value.SupportedCultures.Contains(storedCulture))
+            if (!string.Equals(storedCulture, culture, StringComparison.Ordinal))
             {
-                // Ensure cookie is in sync with localStorage
-                var cookieCulture = await _cultureHelperModule.InvokeAsync<string?>(
-                    "getCultureFromCookie", LocalizationOptions.Value.CookieName);
-
-                if (cookieCulture != storedCulture)
-                {
-                    // Sync cookie with localStorage
-                    await _cultureHelperModule.InvokeVoidAsync(
-                        "setCultureCookie", storedCulture, LocalizationOptions.Value.CookieName);
-                }
+                await BrowserStorage.SetAsync(StorageKey, culture);
             }
-            else if (storedCulture == null)
+
+            // Keep the server-side request-culture cookie aligned with the canonical browser preference.
+            var cookieCulture = await _cultureHelperModule.InvokeAsync<string?>(
+                "getCultureFromCookie", LocalizationProfile.CookieName);
+            if (!string.Equals(cookieCulture, culture, StringComparison.Ordinal))
             {
-                // First visit - save default culture to localStorage
-                var defaultCulture = LocalizationOptions.Value.DefaultCulture;
-                await BrowserStorage.SetAsync(StorageKey, defaultCulture);
                 await _cultureHelperModule.InvokeVoidAsync(
-                    "setCultureCookie", defaultCulture, LocalizationOptions.Value.CookieName);
+                    "setCultureCookie", culture, LocalizationProfile.CookieName);
             }
         }
     }
@@ -85,7 +78,7 @@
 
         // 2. Set cookie for server-side middleware
         await _cultureHelperModule.InvokeVoidAsync(
-            "setCultureCookie", culture, LocalizationOptions.Value.CookieName);
+            "setCultureCookie", culture, LocalizationProfile.CookieName);
 
         // 3. Reload page to apply culture change
         NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);

@@ -53,13 +53,13 @@ public sealed class JobOrchestratorAsyncScopeTests
             clientInfo,
             options,
             NullLogger<JobInstanceManager>.Instance);
+        var definition = CreateDefinition();
         var registry = new JobRegistry(
             Substitute.For<IJobDefinitionCacheService>(),
             repository,
+            [definition],
             options,
             NullLogger<JobRegistry>.Instance);
-        var definition = CreateDefinition();
-        await registry.RegisterJob(definition, "test");
         var instance = CreateInstance(definition);
         await repository.SaveInstanceAsync(instance, TestContext.Current.CancellationToken);
         var cancellationManager = Substitute.For<IJobCancellationTokenManager>();
@@ -247,13 +247,13 @@ public sealed class JobOrchestratorAsyncScopeTests
             clientInfo,
             options,
             NullLogger<JobInstanceManager>.Instance);
+        var definition = CreateDefinition(typeof(TJob));
         var registry = new JobRegistry(
             Substitute.For<IJobDefinitionCacheService>(),
             repository,
+            [definition],
             options,
             NullLogger<JobRegistry>.Instance);
-        var definition = CreateDefinition(typeof(TJob));
-        await registry.RegisterJob(definition, "test");
         var instance = CreateInstance(definition);
         await repository.SaveInstanceAsync(instance, TestContext.Current.CancellationToken);
         var orchestrator = new JobOrchestrator(

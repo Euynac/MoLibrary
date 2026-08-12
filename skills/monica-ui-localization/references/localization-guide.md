@@ -18,11 +18,11 @@ Each `*.UI` project has its own localization infrastructure:
 
 ### Resource Registration and Loading
 
-Reusable Monica modules register their resource marker explicitly from the owning module's registration extension:
+Reusable Monica modules register their resource marker intrinsically from the owning module's `Describe` method:
 
 ```csharp
-registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-    .AddResource<StateStoreResource>();
+module.Require<ModuleLocalization, ModuleLocalizationOption>(
+    static option => option.AddResource<StateStoreResource>());
 ```
 
 Host/business resource types may also be discovered through the host's configured business-type scan. Independent packages must not rely on an assembly-name prefix or on the host scanning their assembly.
@@ -135,27 +135,28 @@ Inject the localizer in your components:
 
 #### Step 6: Register localized navigation explicitly
 
-Every localized page declares its owning resource type. Shared shell categories use stable built-in IDs:
+Every localized page declares its owning resource type from the UI module's `Describe` method. Shared shell categories use stable built-in IDs:
 
 ```csharp
-registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-    .AddResource<StateStoreResource>();
+module.Require<ModuleLocalization, ModuleLocalizationOption>(
+    static option => option.AddResource<StateStoreResource>());
 
-registration.Require<ModuleShellUI, ModuleShellUIOption>()
-    .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIStateStorePage, StateStoreResource>(
-        UIStateStorePage.PAGE_URL,
-        "Navigation:Title",
-        Icons.Material.Filled.Storage,
-        BuiltInNavigationCategoryIds.Debug,
-        addToNav: true,
-        navOrder: 20));
+module.Require<ModuleShellUI, ModuleShellUIOption>(
+    static option => option.ConfigureNavigation(registry =>
+        registry.RegisterLocalizedPage<UIStateStorePage, StateStoreResource>(
+            UIStateStorePage.PAGE_URL,
+            "Navigation:Title",
+            Icons.Material.Filled.Storage,
+            BuiltInNavigationCategoryIds.Debug,
+            addToNav: true,
+            navOrder: 20)));
 ```
 
 A package-owned category registers its stable identity and localized label once, then passes the returned ID to pages:
 
 ```csharp
-registration.Require<ModuleShellUI, ModuleShellUIOption>()
-    .RegisterUIComponents(registry =>
+module.Require<ModuleShellUI, ModuleShellUIOption>(
+    static option => option.ConfigureNavigation(registry =>
     {
         var categoryId = registry.RegisterLocalizedCategory<ExampleResource>(
             "Contoso.Monica.Example",
@@ -169,7 +170,7 @@ registration.Require<ModuleShellUI, ModuleShellUIOption>()
             categoryId,
             addToNav: true,
             navOrder: 10);
-    });
+    }));
 ```
 
 The category ID is never translated and is compared case-insensitively. Category order is explicit. The registry freezes on its first read, so all contributions must occur during application startup.

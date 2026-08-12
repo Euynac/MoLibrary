@@ -16,10 +16,9 @@ using Monica.ServiceDiscovery.Services.Support;
 namespace Monica.JobScheduler.Services.Support;
 
 /// <summary>
-/// Background service that registers discovered job definitions to the JobRegistry during application startup.
-/// Extends CoordinatedLeaderService for consistent initialization with service registration coordination and leader-only execution.
-/// Publishes JobDefinitionsChangedEvent after reconciliation to notify subscribers of changes.
-/// Supports dynamic leader status changes - re-registers job definitions when leader status is re-gained.
+/// Leader-only control-plane service that reconciles discovered job definitions with persistent metadata and publishes
+/// definition-change events. Local CLR-type registration is owned by <see cref="JobRegistry"/> on every host and does
+/// not depend on leadership.
 /// </summary>
 public class JobRegistrationHostedService(
     JobRegistry jobRegistry,
@@ -76,13 +75,6 @@ public class JobRegistrationHostedService(
             {
                 RecordState($"[Deleted] Job: {deletedKey} - No longer exists in code", logLevel: LogLevel.Warning);
             }
-        }
-
-        // Register all current job definitions
-        foreach (var definition in jobDefinitions)
-        {
-            var status = result.AddedJobKeys.Contains(definition.JobKey) ? "Added" : "Already Registered";
-            await jobRegistry.RegisterJob(definition, status);
         }
 
         hostedServiceCheckpointCoordinator.SignalCheckpoint(

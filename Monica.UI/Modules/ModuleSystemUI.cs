@@ -23,22 +23,7 @@ public static class ModuleSystemUIBuilderExtensions
         public ModuleRegistration<ModuleSystemUI, ModuleSystemUIOption> AddModuleSystemUI(
             Action<ModuleSystemUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleSystemUI, ModuleSystemUIOption>(action);
-            registration.Require<ModuleSystem, ModuleSystemOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<ModuleSystemResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<
-                    ModuleSystemPage,
-                    ModuleSystemResource>(
-                    ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
-                    "Navigation:Title",
-                    Icons.Material.Filled.AccountTree,
-                    BuiltInNavigationCategoryIds.Module,
-                    addToNav: true,
-                    navOrder: 10,
-                    accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>)));
-            return registration;
+            return builder.AddModule<ModuleSystemUI, ModuleSystemUIOption>(action);
         }
     }
 }
@@ -52,8 +37,19 @@ public class ModuleSystemUI : MonicaModule<ModuleSystemUIOption>, IUIModule
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleSystem, ModuleSystemOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<ModuleSystemResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry => registry.RegisterLocalizedPage<
+                ModuleSystemPage,
+                ModuleSystemResource>(
+                ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
+                "Navigation:Title",
+                Icons.Material.Filled.AccountTree,
+                BuiltInNavigationCategoryIds.Module,
+                addToNav: true,
+                navOrder: 10,
+                accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSystemUIOption>))));
     }
 
     /// <inheritdoc />

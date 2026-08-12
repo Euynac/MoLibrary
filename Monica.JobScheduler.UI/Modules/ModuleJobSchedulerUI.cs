@@ -6,6 +6,7 @@ using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.Pages;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 using Monica.UI.Shell.Models;
+using Monica.UI.Shell.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -21,52 +22,10 @@ public static class ModuleJobSchedulerUIBuilderExtensions
         public ModuleRegistration<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption> AddJobSchedulerUI(
             Action<ModuleJobSchedulerUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption>(action);
-            registration.Require<ModuleStackTraceUI, ModuleStackTraceUIOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<JobSchedulerResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry =>
-                {
-                    registry.RegisterLocalizedPage<DashboardPage, JobSchedulerResource>(
-                        DashboardPage.PAGE_URL,
-                        "Pages:JobSchedulerDashboard:Title",
-                        Icons.Material.Filled.Dashboard,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 99);
-                    registry.RegisterLocalizedPage<MonitorPage, JobSchedulerResource>(
-                        MonitorPage.PAGE_URL,
-                        "Pages:JobSchedulerMonitor:Title",
-                        Icons.Material.Filled.Monitor,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 100);
-                    registry.RegisterLocalizedPage<JobDefinitionsPage, JobSchedulerResource>(
-                        JobDefinitionsPage.PAGE_URL,
-                        "Pages:JobDefinitions:Title",
-                        Icons.Material.Filled.WorkOutline,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 101);
-                    registry.RegisterLocalizedPage<JobInstancesPage, JobSchedulerResource>(
-                        JobInstancesPage.PAGE_URL,
-                        "Pages:JobInstances:Title",
-                        Icons.Material.Filled.PlaylistPlay,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 102);
-                    registry.RegisterLocalizedPage<StatisticsPage, JobSchedulerResource>(
-                        StatisticsPage.PAGE_URL,
-                        "Pages:JobStatistics:Title",
-                        Icons.Material.Filled.Analytics,
-                        BuiltInNavigationCategoryIds.TaskScheduling,
-                        addToNav: true,
-                        navOrder: 103);
-                });
-            return registration;
+            return builder.AddModule<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption>(action);
         }
     }
+
 }
 
 /// <summary>
@@ -79,7 +38,50 @@ public class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOption>, IU
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleJobScheduler, ModuleJobSchedulerOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleStackTraceUI, ModuleStackTraceUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<JobSchedulerResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(
+            static option => option.ConfigureNavigation(RegisterNavigation));
+    }
+
+    private static void RegisterNavigation(INavigationRegistryBuilder registry)
+    {
+        registry.RegisterLocalizedPage<DashboardPage, JobSchedulerResource>(
+            DashboardPage.PAGE_URL,
+            "Pages:JobSchedulerDashboard:Title",
+            Icons.Material.Filled.Dashboard,
+            BuiltInNavigationCategoryIds.TaskScheduling,
+            addToNav: true,
+            navOrder: 99);
+        registry.RegisterLocalizedPage<MonitorPage, JobSchedulerResource>(
+            MonitorPage.PAGE_URL,
+            "Pages:JobSchedulerMonitor:Title",
+            Icons.Material.Filled.Monitor,
+            BuiltInNavigationCategoryIds.TaskScheduling,
+            addToNav: true,
+            navOrder: 100);
+        registry.RegisterLocalizedPage<JobDefinitionsPage, JobSchedulerResource>(
+            JobDefinitionsPage.PAGE_URL,
+            "Pages:JobDefinitions:Title",
+            Icons.Material.Filled.WorkOutline,
+            BuiltInNavigationCategoryIds.TaskScheduling,
+            addToNav: true,
+            navOrder: 101);
+        registry.RegisterLocalizedPage<JobInstancesPage, JobSchedulerResource>(
+            JobInstancesPage.PAGE_URL,
+            "Pages:JobInstances:Title",
+            Icons.Material.Filled.PlaylistPlay,
+            BuiltInNavigationCategoryIds.TaskScheduling,
+            addToNav: true,
+            navOrder: 102);
+        registry.RegisterLocalizedPage<StatisticsPage, JobSchedulerResource>(
+            StatisticsPage.PAGE_URL,
+            "Pages:JobStatistics:Title",
+            Icons.Material.Filled.Analytics,
+            BuiltInNavigationCategoryIds.TaskScheduling,
+            addToNav: true,
+            navOrder: 103);
     }
 
     public override void ConfigureServices(ModuleContext<ModuleJobSchedulerUIOption> context)

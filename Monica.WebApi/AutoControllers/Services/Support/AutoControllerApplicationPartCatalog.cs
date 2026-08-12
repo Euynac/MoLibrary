@@ -9,9 +9,9 @@ internal sealed class AutoControllerApplicationPartCatalog
 {
     private readonly HashSet<Type> _applicationPartTypes = [];
 
-    public void Add(Type type)
+    public bool Add(Type type)
     {
-        _applicationPartTypes.Add(type);
+        return _applicationPartTypes.Add(type);
     }
 
     public IReadOnlyCollection<Type> GetApplicationPartTypes()

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Diagnostics.Facades;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Services.Support;
 using Monica.Modules;
@@ -87,7 +88,7 @@ public sealed class MonicaStartupTimingTests
             snapshot.IsFinal.Should().BeTrue();
             snapshot.Should().NotBeSameAs(beforeReady);
             snapshot.Revision.Should().BeGreaterThan(beforeReady.Revision);
-            snapshot.SchemaVersion.Should().Be(3);
+            snapshot.SchemaVersion.Should().Be(ModuleDiagnosticsSnapshot.CURRENT_SCHEMA_VERSION);
             snapshot.Summary.ApplicationStartupDurationMs.Should().Be(ready.DurationMs);
             diagnostics.CreateExport().Data!.Summary.ApplicationStartupDurationMs.Should().Be(ready.DurationMs);
 

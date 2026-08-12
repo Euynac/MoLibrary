@@ -15,8 +15,17 @@ public class ModuleK8SUI : MonicaModule<ModuleK8SUIOption>, IUIModule
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleK8S, ModuleK8SOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<K8SResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIK8SPage, K8SResource>(
+                    UIK8SPage.PAGE_URL,
+                    "Pages:K8S:Title",
+                    Icons.Material.Filled.Dns,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 35)));
     }
 }
 
@@ -26,17 +35,7 @@ public static class ModuleK8SUIBuilderExtensions
     {
         public ModuleRegistration<ModuleK8SUI, ModuleK8SUIOption> AddK8SUI(Action<ModuleK8SUIOption>? action = null)
         {
-            var module = builder.AddModule<ModuleK8SUI, ModuleK8SUIOption>(action);
-            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<K8SResource>();
-            module.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIK8SPage, K8SResource>(
-                    UIK8SPage.PAGE_URL,
-                    "Pages:K8S:Title",
-                    Icons.Material.Filled.Dns,
-                    BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
-                    navOrder: 35));
-            return module;
+            return builder.AddModule<ModuleK8SUI, ModuleK8SUIOption>(action);
         }
     }
 }

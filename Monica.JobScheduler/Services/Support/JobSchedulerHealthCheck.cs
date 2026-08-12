@@ -11,7 +11,8 @@ namespace Monica.JobScheduler.Services.Support;
 /// </summary>
 internal sealed class JobSchedulerHealthCheck(
     IMoHostedServiceRegistry serviceRegistry,
-    IOptions<ModuleJobSchedulerOption> options) : IHealthCheck
+    IOptions<ModuleJobSchedulerOption> options,
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -19,7 +20,7 @@ internal sealed class JobSchedulerHealthCheck(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var expectedServices = GetExpectedServiceTypes(options.Value)
+        var expectedServices = GetExpectedServiceTypes(options.Value, serviceDiscoveryOptions.Value.Role)
             .Select(serviceType => new ExpectedService(
                 serviceType,
                 serviceRegistry.GetServices(serviceType)))
@@ -80,7 +81,9 @@ internal sealed class JobSchedulerHealthCheck(
             $"All JobScheduler services healthy: {healthyNames}"));
     }
 
-    private static IReadOnlyList<Type> GetExpectedServiceTypes(ModuleJobSchedulerOption options)
+    private static IReadOnlyList<Type> GetExpectedServiceTypes(
+        ModuleJobSchedulerOption options,
+        ServiceDiscoveryRole role)
     {
         var expectedServices = new List<Type>
         {
@@ -88,7 +91,7 @@ internal sealed class JobSchedulerHealthCheck(
             typeof(JobWorkerManagerHostedService)
         };
 
-        if (!options.RunControlPlane)
+        if (role == ServiceDiscoveryRole.Worker)
         {
             return expectedServices;
         }

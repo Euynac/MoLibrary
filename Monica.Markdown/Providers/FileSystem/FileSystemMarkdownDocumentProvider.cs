@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+using Monica.Core.Localization.Models;
 using Monica.Markdown.Abstractions;
 using Monica.Markdown.Models;
 using Monica.Modules;
@@ -11,7 +11,7 @@ namespace Monica.Markdown.Providers.FileSystem;
 /// </summary>
 public class FileSystemMarkdownDocumentProvider(
     IMarkdownDocumentTitleResolver titleProvider,
-    IOptions<ModuleLocalizationOption> localizationOptions) : IMarkdownDocumentProvider
+    LocalizationProfile localizationProfile) : IMarkdownDocumentProvider
 {
     public Task<MarkdownDocumentGroup> ScanGroupAsync(
         MarkdownDocumentGroupRegistration registration,
@@ -21,7 +21,7 @@ public class FileSystemMarkdownDocumentProvider(
             registration,
             options,
             titleProvider,
-            localizationOptions.Value);
+            localizationProfile);
     }
 
     public async Task<string> GetDocumentContentAsync(string documentPath)

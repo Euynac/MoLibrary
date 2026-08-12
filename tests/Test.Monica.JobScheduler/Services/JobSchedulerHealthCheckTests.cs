@@ -51,7 +51,6 @@ public sealed class JobSchedulerHealthCheckTests
     {
         var options = new ModuleJobSchedulerOption
         {
-            RunControlPlane = true,
             EnableLongIntervalScheduler = enabledService == EnabledControlPlaneService.LongIntervalScheduler,
             EnableZombieDetection = enabledService == EnabledControlPlaneService.ZombieDetector,
             EnableHistoryCleanup = enabledService == EnabledControlPlaneService.HistoryCleanup
@@ -70,7 +69,8 @@ public sealed class JobSchedulerHealthCheckTests
                 typeof(JobConcurrencyGuardHostedService),
                 typeof(JobSchedulerHostedService)
             ],
-            options);
+            options,
+            ServiceDiscoveryRole.Registry);
 
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(),
@@ -99,7 +99,6 @@ public sealed class JobSchedulerHealthCheckTests
     {
         var options = new ModuleJobSchedulerOption
         {
-            RunControlPlane = true,
             EnableLongIntervalScheduler = false,
             EnableZombieDetection = false,
             EnableHistoryCleanup = false
@@ -111,7 +110,8 @@ public sealed class JobSchedulerHealthCheckTests
                 typeof(JobConcurrencyGuardHostedService),
                 typeof(JobSchedulerHostedService)
             ],
-            options);
+            options,
+            ServiceDiscoveryRole.Standalone);
 
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(),
@@ -122,7 +122,8 @@ public sealed class JobSchedulerHealthCheckTests
 
     private static JobSchedulerHealthCheck CreateHealthCheck(
         IReadOnlyCollection<Type> registeredServiceTypes,
-        ModuleJobSchedulerOption options)
+        ModuleJobSchedulerOption options,
+        ServiceDiscoveryRole role = ServiceDiscoveryRole.Worker)
     {
         var servicesByType = registeredServiceTypes.ToDictionary(
             static serviceType => serviceType,
@@ -134,7 +135,10 @@ public sealed class JobSchedulerHealthCheckTests
                 call.Arg<Type>(),
                 Array.Empty<HostedServiceRuntimeInfo>()));
 
-        return new JobSchedulerHealthCheck(registry, Options.Create(options));
+        return new JobSchedulerHealthCheck(
+            registry,
+            Options.Create(options),
+            Options.Create(new ModuleServiceDiscoveryOption { Role = role }));
     }
 
     private static HostedServiceRuntimeInfo CreateRuntimeInfo(Type serviceType)

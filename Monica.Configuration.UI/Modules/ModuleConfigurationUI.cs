@@ -7,6 +7,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.UI.Shell.Models;
+using Monica.UI.Shell.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -27,52 +28,10 @@ public static class ModuleConfigurationUIBuilderExtensions
         public ModuleRegistration<ModuleConfigurationUI, ModuleConfigurationUIOption> AddConfigurationUI(
             Action<ModuleConfigurationUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleConfigurationUI, ModuleConfigurationUIOption>(action);
-            registration.Require<ModuleDiffHighlight, ModuleDiffHighlightOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<ConfigurationUIResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry =>
-                {
-                    registry.RegisterLocalizedPage<ConfigurationStatePage, ConfigurationUIResource>(
-                        ConfigurationUiRoutes.STATE_ROUTE,
-                        "Pages:ConfigurationState:Title",
-                        Icons.Material.Filled.Tune,
-                        BuiltInNavigationCategoryIds.Configuration,
-                        addToNav: true,
-                        navOrder: 10);
-                    registry.RegisterLocalizedPage<ConfigurationHistoryPage, ConfigurationUIResource>(
-                        ConfigurationUiRoutes.HISTORY_ROUTE,
-                        "Pages:ConfigurationHistory:Title",
-                        Icons.Material.Filled.History,
-                        BuiltInNavigationCategoryIds.Configuration,
-                        addToNav: true,
-                        navOrder: 20);
-                    registry.RegisterLocalizedPage<ConfigurationVersionsPage, ConfigurationUIResource>(
-                        ConfigurationUiRoutes.VERSIONS_ROUTE,
-                        "Pages:ConfigurationVersions:Title",
-                        Icons.Material.Filled.SettingsBackupRestore,
-                        BuiltInNavigationCategoryIds.Configuration,
-                        addToNav: true,
-                        navOrder: 25);
-                    registry.RegisterLocalizedPage<ConfigurationDebugPage, ConfigurationUIResource>(
-                        ConfigurationUiRoutes.DEBUG_ROUTE,
-                        "Pages:ConfigurationDebug:Title",
-                        Icons.Material.Filled.BugReport,
-                        BuiltInNavigationCategoryIds.Configuration,
-                        addToNav: true,
-                        navOrder: 30);
-                    registry.RegisterLocalizedPage<ConfigurationStoragePage, ConfigurationUIResource>(
-                        ConfigurationUiRoutes.STORAGE_ROUTE,
-                        "Pages:ConfigurationStorage:Title",
-                        Icons.Material.Filled.Storage,
-                        BuiltInNavigationCategoryIds.Configuration,
-                        addToNav: true,
-                        navOrder: 40);
-                });
-            return registration;
+            return builder.AddModule<ModuleConfigurationUI, ModuleConfigurationUIOption>(action);
         }
     }
+
 }
 
 /// <summary>
@@ -84,6 +43,50 @@ public sealed class ModuleConfigurationUI : MonicaModule<ModuleConfigurationUIOp
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleConfiguration, ModuleConfigurationOption>();
+        module.Require<ModuleDiffHighlight, ModuleDiffHighlightOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<ConfigurationUIResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(
+            static option => option.ConfigureNavigation(RegisterNavigation));
+    }
+
+    private static void RegisterNavigation(INavigationRegistryBuilder registry)
+    {
+        registry.RegisterLocalizedPage<ConfigurationStatePage, ConfigurationUIResource>(
+            ConfigurationUiRoutes.STATE_ROUTE,
+            "Pages:ConfigurationState:Title",
+            Icons.Material.Filled.Tune,
+            BuiltInNavigationCategoryIds.Configuration,
+            addToNav: true,
+            navOrder: 10);
+        registry.RegisterLocalizedPage<ConfigurationHistoryPage, ConfigurationUIResource>(
+            ConfigurationUiRoutes.HISTORY_ROUTE,
+            "Pages:ConfigurationHistory:Title",
+            Icons.Material.Filled.History,
+            BuiltInNavigationCategoryIds.Configuration,
+            addToNav: true,
+            navOrder: 20);
+        registry.RegisterLocalizedPage<ConfigurationVersionsPage, ConfigurationUIResource>(
+            ConfigurationUiRoutes.VERSIONS_ROUTE,
+            "Pages:ConfigurationVersions:Title",
+            Icons.Material.Filled.SettingsBackupRestore,
+            BuiltInNavigationCategoryIds.Configuration,
+            addToNav: true,
+            navOrder: 25);
+        registry.RegisterLocalizedPage<ConfigurationDebugPage, ConfigurationUIResource>(
+            ConfigurationUiRoutes.DEBUG_ROUTE,
+            "Pages:ConfigurationDebug:Title",
+            Icons.Material.Filled.BugReport,
+            BuiltInNavigationCategoryIds.Configuration,
+            addToNav: true,
+            navOrder: 30);
+        registry.RegisterLocalizedPage<ConfigurationStoragePage, ConfigurationUIResource>(
+            ConfigurationUiRoutes.STORAGE_ROUTE,
+            "Pages:ConfigurationStorage:Title",
+            Icons.Material.Filled.Storage,
+            BuiltInNavigationCategoryIds.Configuration,
+            addToNav: true,
+            navOrder: 40);
     }
 
     /// <inheritdoc />

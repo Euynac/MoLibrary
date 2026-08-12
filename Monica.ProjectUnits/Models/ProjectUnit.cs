@@ -53,9 +53,25 @@ public abstract class ProjectUnit
     public string Title { get; set; }
 
     /// <summary>
-    /// Gets or sets the project-unit description.
+    /// Gets the effective project-unit description using metadata, configuration annotation, then XML documentation
+    /// precedence.
     /// </summary>
-    public string? Description { get; set; }
+    public string? Description => MetadataDescription ?? ConfigurationDescription ?? XmlDocumentationDescription;
+
+    /// <summary>
+    /// Gets the description declared by explicit project-unit metadata.
+    /// </summary>
+    public string? MetadataDescription { get; private set; }
+
+    /// <summary>
+    /// Gets the description declared by a configuration annotation when this unit represents configuration.
+    /// </summary>
+    public string? ConfigurationDescription { get; private set; }
+
+    /// <summary>
+    /// Gets the description loaded from XML documentation.
+    /// </summary>
+    public string? XmlDocumentationDescription { get; private set; }
 
     /// <summary>
     /// Gets the valid, normalized title declared by <see cref="ProjectUnitMetadataAttribute"/>.
@@ -158,7 +174,7 @@ public abstract class ProjectUnit
             }
 
             Owner = Normalize(metadata.Owner);
-            Description = Normalize(metadata.Description) ?? Description;
+            MetadataDescription = Normalize(metadata.Description);
             Tags = NormalizeTags(metadata.Tags ?? []);
         }
 
@@ -206,6 +222,26 @@ public abstract class ProjectUnit
     protected void InitializeMethods<TBaseType>()
     {
         Methods = Catalog.Documentation.GetPublicMethods(Type, typeof(TBaseType));
+    }
+
+    /// <summary>
+    /// Preserves the description declared by the Monica configuration annotation.
+    /// </summary>
+    internal void SetConfigurationDescription(string? description)
+    {
+        ConfigurationDescription = Normalize(description);
+    }
+
+    /// <summary>
+    /// Applies optional XML documentation after structural discovery is complete.
+    /// </summary>
+    internal void ApplyDocumentation(ProjectUnitDocumentationResolver documentation)
+    {
+        XmlDocumentationDescription = Normalize(documentation.ExtractTypeDescription(Type));
+        foreach (var method in Methods)
+        {
+            method.Description = Normalize(documentation.ExtractMethodDescription(method.MethodInfo));
+        }
     }
 
     /// <summary>
@@ -290,8 +326,6 @@ public abstract class ProjectUnit
 
     private void InitializeClassInfo()
     {
-        Description = Catalog.Documentation.ExtractTypeDescription(Type);
-
         var mainConstructor = Shape.Constructors
             .OrderByDescending(constructor => constructor.GetParameters().Length)
             .FirstOrDefault();

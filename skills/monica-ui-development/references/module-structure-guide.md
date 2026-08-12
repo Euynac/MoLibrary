@@ -153,6 +153,17 @@ public class Module{Name}UI : MonicaModule<Module{Name}UIOption>, IUIModule
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<Module{Name}, Module{Name}Option>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<{Name}Resource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(
+            static option => option.ConfigureNavigation(registry =>
+                registry.RegisterLocalizedPage<UI{Name}Page, {Name}Resource>(
+                    UI{Name}Page.{NAME}_URL,
+                    "Pages:{Name}:Title",
+                    Icons.Material.Filled.Settings,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 100)));
     }
 
     public override void ConfigureServices(ModuleContext<Module{Name}UIOption> context)
@@ -167,19 +178,7 @@ public static class Module{Name}UIBuilderExtensions
     {
         public ModuleRegistration<Module{Name}UI, Module{Name}UIOption> Add{Name}UI()
         {
-            var registration = builder.AddModule<Module{Name}UI, Module{Name}UIOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<{Name}Resource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry =>
-                    registry.RegisterLocalizedPage<UI{Name}Page, {Name}Resource>(
-                        UI{Name}Page.{NAME}_URL,
-                        "Pages:{Name}:Title",
-                        Icons.Material.Filled.Settings,
-                        BuiltInNavigationCategoryIds.Infrastructure,
-                        addToNav: true,
-                        navOrder: 100));
-            return registration;
+            return builder.AddModule<Module{Name}UI, Module{Name}UIOption>();
         }
     }
 }

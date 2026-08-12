@@ -17,23 +17,29 @@
 每个 UI 模块必须显式声明页面标题所属的资源类型，并使用稳定的分类 ID。分类文本只用于显示，不能作为分组标识。
 
 ```csharp
+public sealed class ModuleSignalRUI : MonicaModule<ModuleSignalRUIOption>, IUIModule
+{
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<SignalRResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(
+            static option => option.ConfigureNavigation(registry =>
+                registry.RegisterLocalizedPage<UISignalRDebugPage, SignalRResource>(
+                    UISignalRDebugPage.PAGE_URL,
+                    "Pages:SignalRDebug:Title",
+                    Icons.Material.Filled.Settings,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 20)));
+    }
+}
+
 public static ModuleRegistration<ModuleSignalRUI, ModuleSignalRUIOption> AddSignalRUI(
     this IMonicaBuilder builder,
     Action<ModuleSignalRUIOption>? action = null)
 {
-    var module = builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption>(action);
-    module.Require<ModuleLocalization, ModuleLocalizationOption>()
-        .AddResource<SignalRResource>();
-
-    module.Require<ModuleShellUI, ModuleShellUIOption>()
-        .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UISignalRDebugPage, SignalRResource>(
-            UISignalRDebugPage.PAGE_URL,
-            "Pages:SignalRDebug:Title",
-            Icons.Material.Filled.Settings,
-            BuiltInNavigationCategoryIds.Debug,
-            addToNav: true,
-            navOrder: 20));
-    return module;
+    return builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption>(action);
 }
 ```
 

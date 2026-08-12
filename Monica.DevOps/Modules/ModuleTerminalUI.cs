@@ -24,17 +24,7 @@ public static class ModuleTerminalUIBuilderExtensions
         /// <returns>The host-bound terminal UI module registration.</returns>
         public ModuleRegistration<ModuleTerminalUI, ModuleTerminalUIOption> AddTerminalUI(Action<ModuleTerminalUIOption>? action = null)
         {
-            var module = builder.AddModule<ModuleTerminalUI, ModuleTerminalUIOption>(action);
-            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<TerminalResource>();
-            module.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UITerminalPage, TerminalResource>(
-                    UITerminalPage.PAGE_URL,
-                    "Pages:Terminal:Title",
-                    Icons.Material.Filled.Terminal,
-                    BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
-                    navOrder: 58));
-            return module;
+            return builder.AddModule<ModuleTerminalUI, ModuleTerminalUIOption>(action);
         }
     }
 }
@@ -48,8 +38,17 @@ public sealed class ModuleTerminalUI : MonicaModule<ModuleTerminalUIOption>, IUI
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleTerminal, ModuleTerminalOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<TerminalResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UITerminalPage, TerminalResource>(
+                    UITerminalPage.PAGE_URL,
+                    "Pages:Terminal:Title",
+                    Icons.Material.Filled.Terminal,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 58)));
     }
 }
 

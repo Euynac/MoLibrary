@@ -33,6 +33,7 @@ public class ModuleMarkdown : MonicaModule<ModuleMarkdownOption>
     /// <inheritdoc />
     public override void Describe(ModuleDescriptor module)
     {
+        module.Require<ModuleLocalization, ModuleLocalizationOption>();
     }
 
     /// <inheritdoc />
@@ -122,7 +123,6 @@ public static class ModuleMarkdownRegistrationExtensions
     /// </summary>
     public static ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> EnableMultilingualDocuments(this ModuleRegistration<ModuleMarkdown, ModuleMarkdownOption> module)
     {
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
         module.Configure(options =>
         {
             options.EnableMultilingualDocuments = true;

@@ -47,6 +47,8 @@ public abstract class MonicaModule : IModule
 
     internal abstract void ValidateFinalOptions(object options, string? profileName);
 
+    internal abstract void DeclareModuleContracts(ModuleRegistrationState registration);
+
     internal abstract void AttachLifecycle(ModuleRegistrationState registration);
 
     internal abstract ITypeDiscoveryPlan DeclareTypeDiscoveryPlan();
@@ -172,6 +174,18 @@ public abstract class MonicaModule<TOptions> : MonicaModule
     }
 
     /// <summary>
+    /// Declares service contracts selected by this module's finalized options.
+    /// </summary>
+    /// <param name="contracts">The read-only finalized contract declaration surface.</param>
+    /// <remarks>
+    /// Use this callback for option-dependent unkeyed or keyed service requirements. Monica validates the declared
+    /// identities after all service contributions complete. Do not resolve services or perform runtime work here.
+    /// </remarks>
+    public virtual void DeclareContracts(ModuleContractDescriptor<TOptions> contracts)
+    {
+    }
+
+    /// <summary>
     /// Configures the host builder for this module.
     /// </summary>
     public virtual void ConfigureBuilder(ModuleBuilderContext<TOptions> context)
@@ -235,6 +249,11 @@ public abstract class MonicaModule<TOptions> : MonicaModule
     internal sealed override void ValidateFinalOptions(object options, string? profileName)
     {
         ValidateOptions((TOptions)options, profileName);
+    }
+
+    internal sealed override void DeclareModuleContracts(ModuleRegistrationState registration)
+    {
+        DeclareContracts(new ModuleContractDescriptor<TOptions>(registration));
     }
 
     internal sealed override void AttachLifecycle(ModuleRegistrationState registration)

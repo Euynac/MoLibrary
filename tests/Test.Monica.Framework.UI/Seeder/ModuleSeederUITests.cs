@@ -75,10 +75,15 @@ public sealed class ModuleSeederUITests
         secondScope.ServiceProvider.GetRequiredService<SeederPageSessionFactory>().Should().BeSameAs(firstFactory);
     }
 
-    [Fact]
-    public async Task AddSeederUI_ShouldPublishProtectedMonitorNavigationAtConfiguredOrder()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DirectAndTransitiveComposition_ShouldPublishTheSameProtectedMonitorNavigation(
+        bool useConvenienceEntry)
     {
-        await using var app = Compose(configurePipeline: true);
+        await using var app = Compose(
+            configurePipeline: true,
+            useConvenienceEntry: useConvenienceEntry);
         var catalog = app.Services.GetRequiredService<IPageCatalog>();
         var route = UISeederPage.PAGE_URL.Trim('/');
         var page = catalog.GetRegisteredPages().Single(definition => definition.Route == route);
@@ -93,7 +98,9 @@ public sealed class ModuleSeederUITests
         navigation.Order.Should().Be(15);
     }
 
-    private static WebApplication Compose(bool configurePipeline = false)
+    private static WebApplication Compose(
+        bool configurePipeline = false,
+        bool useConvenienceEntry = true)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -109,7 +116,14 @@ public sealed class ModuleSeederUITests
                     typeof(ModuleSeeder).Assembly,
                     typeof(ModuleShellUI).Assembly);
             });
-            monica.AddSeederUI();
+            if (useConvenienceEntry)
+            {
+                monica.AddSeederUI();
+            }
+            else
+            {
+                monica.AddModule<SeederUIConsumerModule, SeederUIConsumerModuleOption>();
+            }
         });
 
         var app = builder.Build();
@@ -132,3 +146,13 @@ public sealed class ModuleSeederUITests
             .ToHashSet();
     }
 }
+
+public sealed class SeederUIConsumerModule : MonicaModule<SeederUIConsumerModuleOption>
+{
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleSeederUI, ModuleSeederUIOption>();
+    }
+}
+
+public sealed class SeederUIConsumerModuleOption : ModuleOptions<SeederUIConsumerModule>;

@@ -23,19 +23,7 @@ public static class ModuleStateStoreUIBuilderExtensions
         public ModuleRegistration<ModuleStateStoreUI, ModuleStateStoreUIOption> AddStateStoreUI(
             Action<ModuleStateStoreUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleStateStoreUI, ModuleStateStoreUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<StateStoreResource>()
-                .AddResource<ModuleSystemResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIStateStoreDashboardPage, StateStoreResource>(
-                    UIStateStoreDashboardPage.PAGE_URL,
-                    "Pages:StateStoreManage:Title",
-                    Icons.Material.Filled.Storage,
-                    BuiltInNavigationCategoryIds.Debug,
-                    addToNav: true,
-                    navOrder: 20));
-            return registration;
+            return builder.AddModule<ModuleStateStoreUI, ModuleStateStoreUIOption>(action);
         }
     }
 }
@@ -49,8 +37,20 @@ public class ModuleStateStoreUI : MonicaModule<ModuleStateStoreUIOption>, IUIMod
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleStateStore, ModuleStateStoreOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(static option =>
+        {
+            option.AddResource<StateStoreResource>();
+            option.AddResource<ModuleSystemResource>();
+        });
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIStateStoreDashboardPage, StateStoreResource>(
+                    UIStateStoreDashboardPage.PAGE_URL,
+                    "Pages:StateStoreManage:Title",
+                    Icons.Material.Filled.Storage,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 20)));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleStateStoreUIOption> context)

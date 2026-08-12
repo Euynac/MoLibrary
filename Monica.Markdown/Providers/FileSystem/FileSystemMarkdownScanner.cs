@@ -1,4 +1,4 @@
-using System.Globalization;
+using Monica.Core.Localization.Models;
 using Monica.Markdown.Abstractions;
 using Monica.Markdown.Models;
 using Monica.Modules;
@@ -19,7 +19,7 @@ public static class FileSystemMarkdownScanner
         MarkdownDocumentGroupRegistration registration,
         ModuleMarkdownOption option,
         IMarkdownDocumentTitleResolver titleProvider,
-        ModuleLocalizationOption localizationOption)
+        LocalizationProfile localizationProfile)
     {
         var basePath = Path.GetFullPath(registration.BasePath);
 
@@ -47,7 +47,7 @@ public static class FileSystemMarkdownScanner
         var multilingualContext = CreateMultilingualContext(
             basePath,
             option,
-            localizationOption);
+            localizationProfile);
         var documents = new List<MarkdownDocument>();
         var rootFolderMetadata = new Dictionary<string, MarkdownFolderMetadata>(
             StringComparer.OrdinalIgnoreCase);
@@ -254,20 +254,16 @@ public static class FileSystemMarkdownScanner
     private static MultilingualScanContext CreateMultilingualContext(
         string basePath,
         ModuleMarkdownOption option,
-        ModuleLocalizationOption localizationOption)
+        LocalizationProfile localizationProfile)
     {
         if (!option.EnableMultilingualDocuments)
         {
             return MultilingualScanContext.Disabled;
         }
 
-        var supportedCultures = localizationOption.SupportedCultures
-            .Where(static culture => !string.IsNullOrWhiteSpace(culture))
-            .Select(static culture => culture.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var supportedCultures = localizationProfile.SupportedCultures;
 
-        if (supportedCultures.Length == 0)
+        if (supportedCultures.Count == 0)
         {
             return MultilingualScanContext.Disabled;
         }
@@ -286,14 +282,14 @@ public static class FileSystemMarkdownScanner
             return new MultilingualScanContext(
                 supportedCultures,
                 supportedCultureSet,
-                localizationOption.CultureDisplayNames,
+                localizationProfile.CultureDisplayNames,
                 HasLanguageRoots: false);
         }
 
         return new MultilingualScanContext(
             supportedCultures,
             supportedCultureSet,
-            localizationOption.CultureDisplayNames,
+            localizationProfile.CultureDisplayNames,
             HasLanguageRoots: true);
     }
 
@@ -345,31 +341,11 @@ public static class FileSystemMarkdownScanner
 
             languages.Add(new MarkdownDocumentLanguage(
                 culture,
-                ResolveCultureDisplayName(culture, context.CultureDisplayNames),
+                context.CultureDisplayNames[culture],
                 documentCount));
         }
 
         return languages;
-    }
-
-    private static string ResolveCultureDisplayName(
-        string culture,
-        IReadOnlyDictionary<string, string> cultureDisplayNames)
-    {
-        if (cultureDisplayNames.TryGetValue(culture, out var displayName)
-            && !string.IsNullOrWhiteSpace(displayName))
-        {
-            return displayName;
-        }
-
-        try
-        {
-            return new CultureInfo(culture).NativeName;
-        }
-        catch (CultureNotFoundException)
-        {
-            return culture;
-        }
     }
 
     private static bool ShouldScanFile(

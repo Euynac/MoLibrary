@@ -285,6 +285,24 @@ public sealed class ModuleRegistry(MonicaApplication application)
         GetRegistration(moduleType).RequireFeature(featureName);
     }
 
+    internal void DescribeRequireDependencyFeature<TModule, TOptions>(
+        Type ownerModuleType,
+        string featureName)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        EnsureActiveDescriptor(ownerModuleType);
+        if (!_hardDependencies.TryGetValue(ownerModuleType, out var dependencies)
+            || !dependencies.Contains(typeof(TModule)))
+        {
+            throw new InvalidOperationException(
+                $"{ownerModuleType.Name} cannot require feature '{featureName}' from {typeof(TModule).Name} " +
+                $"without first declaring Require<{typeof(TModule).Name}, {typeof(TOptions).Name}>().");
+        }
+
+        GetRegistration(typeof(TModule)).RequireFeature(featureName);
+    }
+
     internal void Disable(Type moduleType, string reason)
     {
         EnsureCompositionIsOpen();
@@ -435,6 +453,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
             ValidateFeatures();
             ValidateWebModuleCompatibility(builder);
             var registrations = MaterializeModules();
+            DeclareModuleContracts(registrations);
             typeDiscovery = CompileTypeDiscovery(registrations);
             _hasMutatedHost = true;
             RegisterCoreServices(services);
@@ -458,6 +477,7 @@ public sealed class ModuleRegistry(MonicaApplication application)
             ExecutePostConfigureServices(builder, services, snapshots);
             _startupWork.CloseSubmissions();
             ReachStartupWorkBarrier(ModuleStartupWorkBarrier.BeforeServiceRegistrationCompletion);
+            ValidateServiceRequirements(services, registrations);
 
             lock (_diagnosticsGate)
             {
@@ -641,6 +661,66 @@ public sealed class ModuleRegistry(MonicaApplication application)
         {
             application.Profiling.StopPhase(nameof(ModulePhase.FinalizeOptions));
         }
+    }
+
+    private void DeclareModuleContracts(IReadOnlyList<ModuleRegistrationState> registrations)
+    {
+        application.Profiling.StartPhase(nameof(ModulePhase.DeclareContracts));
+        try
+        {
+            foreach (var registration in registrations)
+            {
+                registration.StartModulePhase(ModulePhase.DeclareContracts);
+                try
+                {
+                    registration.ModuleSingleton.DeclareModuleContracts(registration);
+                }
+                finally
+                {
+                    registration.EndModulePhase(ModulePhase.DeclareContracts);
+                }
+            }
+        }
+        finally
+        {
+            application.Profiling.StopPhase(nameof(ModulePhase.DeclareContracts));
+        }
+    }
+
+    private static void ValidateServiceRequirements(
+        IServiceCollection services,
+        IReadOnlyList<ModuleRegistrationState> registrations)
+    {
+        var missing = registrations
+            .SelectMany(registration => registration.ServiceRequirements.Select(requirement => new
+            {
+                Consumer = registration.ModuleType,
+                Requirement = requirement
+            }))
+            .Where(item => !services.Any(descriptor =>
+                descriptor.ServiceType == item.Requirement.ServiceType
+                && descriptor.IsKeyedService == item.Requirement.IsKeyed
+                && (!item.Requirement.IsKeyed
+                    || Equals(descriptor.ServiceKey, item.Requirement.ServiceKey))))
+            .ToArray();
+        if (missing.Length == 0)
+        {
+            return;
+        }
+
+        var lines = new List<string>
+        {
+            "Module service-contract validation failed after service registration:"
+        };
+        foreach (var item in missing)
+        {
+            var identity = item.Requirement.IsKeyed
+                ? $"keyed {item.Requirement.ServiceType.Name} with key '{item.Requirement.ServiceKey}'"
+                : $"unkeyed {item.Requirement.ServiceType.Name}";
+            lines.Add($"- {item.Consumer.Name} requires {identity}, but no matching registration exists.");
+        }
+
+        throw new ModuleRegistrationException(string.Join(Environment.NewLine, lines));
     }
 
     private void RegisterCoreServices(IServiceCollection services)

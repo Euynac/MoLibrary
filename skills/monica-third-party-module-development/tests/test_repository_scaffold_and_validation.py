@@ -279,13 +279,16 @@ class RepositorySkillTests(unittest.TestCase):
             ui_text = ui_module.read_text(encoding="utf-8")
             self.assertIn("MonicaModule<ModuleOcrUIOption>, IUIModule", ui_text)
             self.assertIn(
-                "registration.Require<global::Monica.Modules.ModuleLocalization,",
+                "module.Require<global::Monica.Modules.ModuleLocalization,",
                 ui_text,
             )
             self.assertIn(
-                "registration.Require<global::Monica.Modules.ModuleShellUI,",
+                "module.Require<global::Monica.Modules.ModuleShellUI,",
                 ui_text,
             )
+            self.assertIn("option.AddResource<OcrResource>()", ui_text)
+            self.assertIn("option.ConfigureNavigation(registry =>", ui_text)
+            self.assertNotIn("registration.Require", ui_text)
             self.assertIn('"/ai-ocr"', ui_text)
             self.assertIn('target "paddleocr-cpu-amd64"', bake)
             self.assertIn('target "paddleocr-nvidia-cu129-amd64"', bake)
@@ -786,7 +789,7 @@ class RepositorySkillTests(unittest.TestCase):
 
         module_text = """
 // RegisterLocalizedComponent<LegacyPage, LegacyResource>("/ignored", "Ignored");
-shellRegistration.RegisterUIComponents(registry =>
+shellOption.ConfigureNavigation(registry =>
 {
     var category = registry.RegisterLocalizedCategory<AuditResource>(
         categoryId: "Acme.Monica.Toolkit.Audit",

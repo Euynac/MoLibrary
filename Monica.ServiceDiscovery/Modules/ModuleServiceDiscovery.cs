@@ -27,16 +27,54 @@ public class ModuleServiceDiscovery : MonicaModule<ModuleServiceDiscoveryOption>
 {
     internal const string STATE_STORE_FEATURE = "service-discovery-state-store";
 
+    /// <inheritdoc />
+    public override void ValidateOptions(ModuleServiceDiscoveryOption options, string? profileName)
+    {
+        if (!Enum.IsDefined(options.Role))
+        {
+            throw new InvalidOperationException(
+                $"Unsupported {nameof(ServiceDiscoveryRole)} value '{options.Role}'.");
+        }
+
+        if (options.StorageMode is not { } storageMode)
+        {
+            throw new InvalidOperationException(
+                $"Service discovery storage is not configured. Call {nameof(ModuleServiceDiscoveryBuilderExtensions.UseMemoryStorage)}, " +
+                $"{nameof(ModuleServiceDiscoveryBuilderExtensions.UseDistributedStorage)}, or " +
+                $"{nameof(ModuleServiceDiscoveryBuilderExtensions.UseExternalKeyedStorage)} when composing the module.");
+        }
+
+        if (!Enum.IsDefined(storageMode))
+        {
+            throw new InvalidOperationException(
+                $"Unsupported {nameof(ServiceDiscoveryStorageMode)} value '{storageMode}'.");
+        }
+
+        if (storageMode == ServiceDiscoveryStorageMode.ExternalKeyed)
+        {
+            if (string.IsNullOrWhiteSpace(options.ExternalStateStoreServiceKey))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(ModuleServiceDiscoveryOption.ExternalStateStoreServiceKey)} is required when " +
+                    $"{nameof(ModuleServiceDiscoveryOption.StorageMode)} is {nameof(ServiceDiscoveryStorageMode.ExternalKeyed)}.");
+            }
+
+            return;
+        }
+
+        if (options.ExternalStateStoreServiceKey is not null)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(ModuleServiceDiscoveryOption.ExternalStateStoreServiceKey)} can only be configured for " +
+                $"{nameof(ServiceDiscoveryStorageMode.ExternalKeyed)} storage.");
+        }
+    }
+
     public override void Describe(ModuleDescriptor module)
     {
         module.RequireFeature(STATE_STORE_FEATURE);
-        module.Require<ModuleLocalization, ModuleLocalizationOption>(localization =>
-        {
-            if (!localization.ResourceMarkerTypes.Contains(typeof(ServiceDiscoveryResource)))
-            {
-                localization.ResourceMarkerTypes.Add(typeof(ServiceDiscoveryResource));
-            }
-        });
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static localization => localization.AddResource<ServiceDiscoveryResource>());
         module.Require<ModuleHostedService, ModuleHostedServiceOption>();
         module.Require<ModuleResilience, ModuleResilienceOption>(resilience =>
             resilience.PipelineConfigurations[ResiliencePipelineNames.ServiceDiscovery] = builder =>
@@ -47,25 +85,53 @@ public class ModuleServiceDiscovery : MonicaModule<ModuleServiceDiscoveryOption>
                     BackoffType = DelayBackoffType.Exponential,
                     UseJitter = true
                 }));
-        module.Require<ModuleStateStore, ModuleStateStoreOption>();
+    }
+
+    /// <inheritdoc />
+    public override void DeclareContracts(ModuleContractDescriptor<ModuleServiceDiscoveryOption> contracts)
+    {
+        switch (contracts.Options.StorageMode)
+        {
+            case ServiceDiscoveryStorageMode.Memory:
+                contracts.RequireService<IMemoryStateStore>();
+                break;
+            case ServiceDiscoveryStorageMode.Distributed:
+                contracts.RequireService<IDistributedStateStore>();
+                break;
+            case ServiceDiscoveryStorageMode.ExternalKeyed:
+                contracts.RequireKeyedService<IStateStore>(
+                    contracts.Options.ExternalStateStoreServiceKey
+                    ?? throw new InvalidOperationException("External state-store key validation did not run."));
+                break;
+            default:
+                throw new InvalidOperationException("Service discovery storage validation did not run.");
+        }
     }
 
     public override void ConfigureServices(ModuleContext<ModuleServiceDiscoveryOption> context)
     {
         var services = context.Services;
-        // If a custom keyed state store is used, proxy it to the ServiceDiscovery service key.
-        if (Option.UseCustomKeyedStateStore && !string.IsNullOrEmpty(Option.CustomStateStoreServiceKey))
+        switch (Option.StorageMode)
         {
-            if (Option.CustomStateStoreServiceKey != nameof(ModuleServiceDiscovery))
-            {
+            case ServiceDiscoveryStorageMode.Memory:
                 services.AddKeyedSingleton<IStateStore>(nameof(ModuleServiceDiscovery), (provider, _) =>
-                    provider.GetRequiredKeyedService<IStateStore>(Option.CustomStateStoreServiceKey));
-            }
-        }
-        else
-        {
-            services.AddKeyedSingleton<IStateStore>(nameof(ModuleServiceDiscovery), (provider, _) =>
-                provider.GetRequiredService<IStateStore>());
+                    provider.GetRequiredService<IMemoryStateStore>());
+                break;
+            case ServiceDiscoveryStorageMode.Distributed:
+                services.AddKeyedSingleton<IStateStore>(nameof(ModuleServiceDiscovery), (provider, _) =>
+                    provider.GetRequiredService<IDistributedStateStore>());
+                break;
+            case ServiceDiscoveryStorageMode.ExternalKeyed:
+                var externalKey = Option.ExternalStateStoreServiceKey
+                    ?? throw new InvalidOperationException("External state-store key validation did not run.");
+                if (!string.Equals(externalKey, nameof(ModuleServiceDiscovery), StringComparison.Ordinal))
+                {
+                    services.AddKeyedSingleton<IStateStore>(nameof(ModuleServiceDiscovery), (provider, _) =>
+                        provider.GetRequiredKeyedService<IStateStore>(externalKey));
+                }
+                break;
+            default:
+                throw new InvalidOperationException("Service discovery storage validation did not run.");
         }
 
         if (Option.IncludeListeningAddresses)
@@ -158,39 +224,62 @@ public static class ModuleServiceDiscoveryBuilderExtensions
     extension(ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> registration)
     {
         /// <summary>
-        /// Uses the process-local state store and makes this instance the registry server.
+        /// Configures this host as a worker. Workers participate in service registration but do not own
+        /// application control-plane responsibilities. This is the default role.
         /// </summary>
-        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseInMemoryStateStore()
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> AsWorker()
         {
+            return registration.Configure(options => options.Role = ServiceDiscoveryRole.Worker);
+        }
+
+        /// <summary>
+        /// Configures this host as a registry instance that owns application control-plane responsibilities.
+        /// </summary>
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> AsRegistry()
+        {
+            return registration.Configure(options => options.Role = ServiceDiscoveryRole.Registry);
+        }
+
+        /// <summary>
+        /// Configures this host as a self-contained registry and worker for single-host deployments.
+        /// Storage remains an independent choice and must be selected separately.
+        /// </summary>
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> AsStandalone()
+        {
+            return registration.Configure(options => options.Role = ServiceDiscoveryRole.Standalone);
+        }
+
+        /// <summary>
+        /// Uses the process-local state store owned by <see cref="ModuleStateStore"/>.
+        /// Select this only when service-discovery state does not need to cross process boundaries.
+        /// </summary>
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseMemoryStorage()
+        {
+            registration.Require<ModuleStateStore, ModuleStateStoreOption>();
             return registration
                 .Configure(options =>
                 {
-                    options.IsStandaloneMode = true;
-                    options.IsRegistryServer = true;
-                    options.CustomStateStoreServiceKey = null;
+                    options.StorageMode = ServiceDiscoveryStorageMode.Memory;
+                    options.ExternalStateStoreServiceKey = null;
                 })
                 .SatisfyFeature(ModuleServiceDiscovery.STATE_STORE_FEATURE);
         }
 
         /// <summary>
-        /// Uses the StateStore module's configured distributed provider.
+        /// Uses the distributed provider selected on <see cref="ModuleStateStore"/> and binds it directly to
+        /// service discovery without consulting the host's default <see cref="IStateStore"/> registration.
         /// </summary>
-        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseDistributedStateStore()
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseDistributedStorage()
         {
             registration.Require<ModuleStateStore, ModuleStateStoreOption>()
                 .RequireFeature(ModuleStateStore.DISTRIBUTED_PROVIDER_FEATURE);
             return registration
                 .Configure(options =>
                 {
-                    options.IsStandaloneMode = false;
-                    options.CustomStateStoreServiceKey = null;
+                    options.StorageMode = ServiceDiscoveryStorageMode.Distributed;
+                    options.ExternalStateStoreServiceKey = null;
                 })
                 .SatisfyFeature(ModuleServiceDiscovery.STATE_STORE_FEATURE);
-        }
-
-        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> SetAsRegistryServer()
-        {
-            return registration.Configure(options => options.IsRegistryServer = true);
         }
 
         public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> ConfigureRegistryCatalog<TProvider>()
@@ -217,17 +306,18 @@ public static class ModuleServiceDiscoveryBuilderExtensions
         }
 
         /// <summary>
-        /// Uses a keyed state store that the host has registered explicitly.
+        /// Uses a keyed state store that the host has registered explicitly. The supplied key is the sole external
+        /// provider contract; no unkeyed state-store fallback is consulted.
         /// </summary>
-        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseCustomKeyedStateStore(
-            string serviceKey = nameof(ModuleServiceDiscovery))
+        public ModuleRegistration<ModuleServiceDiscovery, ModuleServiceDiscoveryOption> UseExternalKeyedStorage(
+            string serviceKey)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(serviceKey);
             return registration
                 .Configure(options =>
                 {
-                    options.IsStandaloneMode = false;
-                    options.CustomStateStoreServiceKey = serviceKey;
+                    options.StorageMode = ServiceDiscoveryStorageMode.ExternalKeyed;
+                    options.ExternalStateStoreServiceKey = serviceKey;
                 })
                 .SatisfyFeature(ModuleServiceDiscovery.STATE_STORE_FEATURE);
         }
@@ -237,15 +327,16 @@ public static class ModuleServiceDiscoveryBuilderExtensions
 public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServiceDiscovery>
 {
     /// <summary>
-    /// Indicates whether the current microservice acts as the registry server.
+    /// Gets the responsibility assigned to this host. The default is <see cref="ServiceDiscoveryRole.Worker"/>.
+    /// Use the role registration methods when the host owns registry or standalone control-plane work.
     /// </summary>
-    public bool IsRegistryServer { get; internal set; }
+    public ServiceDiscoveryRole Role { get; set; } = ServiceDiscoveryRole.Worker;
 
     /// <summary>
-    /// Indicates whether standalone in-memory mode is enabled.
-    /// Suitable for single-instance deployments or development environments and does not support cross-service configuration calls.
+    /// Gets the state-store binding selected for service discovery. There is no implicit default: composition must
+    /// select memory, distributed, or an external keyed provider through the registration API.
     /// </summary>
-    public bool IsStandaloneMode { get; internal set; }
+    public ServiceDiscoveryStorageMode? StorageMode { get; internal set; }
    
     /// <summary>
     /// Environment variable keys to read as metadata.
@@ -317,8 +408,6 @@ public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServic
     /// </summary>
     public List<string>? DependentSubDomains { get; set; }
 
-    // === New Architecture Configuration ===
-
     /// <summary>
     /// Leader election configuration.
     /// </summary>
@@ -330,16 +419,11 @@ public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServic
     public EIsolationHandlingMode IsolationHandlingMode { get; set; } = EIsolationHandlingMode.ContinueRunning;
 
     /// <summary>
-    /// Indicates whether a custom keyed StateStore provider is used.
-    /// When true, the host supplies an explicitly keyed StateStore instead of using the module default.
+    /// Gets the host-owned keyed service used when <see cref="StorageMode"/> is
+    /// <see cref="ServiceDiscoveryStorageMode.ExternalKeyed"/>. Configure it through
+    /// <see cref="ModuleServiceDiscoveryBuilderExtensions.UseExternalKeyedStorage"/>.
     /// </summary>
-    public bool UseCustomKeyedStateStore => CustomStateStoreServiceKey != null;
-
-    /// <summary>
-    /// Service key of the custom StateStore.
-    /// Used to resolve the keyed StateStore instance from the DI container.
-    /// </summary>
-    public string? CustomStateStoreServiceKey { get; internal set; }
+    public string? ExternalStateStoreServiceKey { get; internal set; }
 
     #region CoordinatedLeaderService Configuration 
     /// <summary>
@@ -354,6 +438,48 @@ public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServic
     /// </summary>
     public TimeSpan RegistrationWaitTimeout { get; set; } = TimeSpan.FromMinutes(5);
     #endregion
+}
+
+/// <summary>
+/// Defines the application responsibility owned by a service-discovery host.
+/// </summary>
+public enum ServiceDiscoveryRole
+{
+    /// <summary>
+    /// Participates in service registration and workload execution without owning application control-plane work.
+    /// </summary>
+    Worker,
+
+    /// <summary>
+    /// Owns application control-plane work while participating in distributed service discovery.
+    /// </summary>
+    Registry,
+
+    /// <summary>
+    /// Combines registry and worker responsibilities in a self-contained host.
+    /// </summary>
+    Standalone
+}
+
+/// <summary>
+/// Defines how service-discovery state is bound to a concrete store.
+/// </summary>
+public enum ServiceDiscoveryStorageMode
+{
+    /// <summary>
+    /// Uses the process-local <see cref="IMemoryStateStore"/>.
+    /// </summary>
+    Memory,
+
+    /// <summary>
+    /// Uses the <see cref="IDistributedStateStore"/> selected on the StateStore module.
+    /// </summary>
+    Distributed,
+
+    /// <summary>
+    /// Uses a host-owned keyed <see cref="IStateStore"/> registration.
+    /// </summary>
+    ExternalKeyed
 }
 
 /// <summary>

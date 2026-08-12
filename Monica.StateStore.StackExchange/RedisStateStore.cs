@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
@@ -25,6 +24,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
     private readonly ModuleRedisStateStoreOption _option;
     private readonly IDatabase _database;
     private readonly IRedisConnectionFactory _connectionFactory;
+    private readonly StateDocumentProfile _documentProfile;
 
     // Cached loaded scripts for performance
     private LoadedLuaScript? _getWithETagScript;
@@ -38,12 +38,14 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
     public RedisStateStore(
         IConnectionMultiplexer connection,
         IOptions<ModuleRedisStateStoreOption> options,
+        IStateDocumentProfileProvider documentProfiles,
         IRedisConnectionFactory connectionFactory,
         ILogger<RedisStateStore> logger) : base(logger)
     {
         _connection = connection;
         _option = options.Value;
         _connectionFactory = connectionFactory;
+        _documentProfile = documentProfiles.GetRequiredProfile(_option.DocumentProfileName);
         _database = _connection.GetDatabase(_option.DatabaseIndex);
     }
 
@@ -209,7 +211,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
 
                 if (value.HasValue)
                 {
-                    result[keys[i]] = JsonSerializer.Deserialize<T>(value.ToString());
+                    result[keys[i]] = _documentProfile.Deserialize<T>(value.ToString());
                 }
             }
 
@@ -236,7 +238,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
             if (!data.HasValue)
                 return default;
 
-            return JsonSerializer.Deserialize<T>(data.ToString());
+            return _documentProfile.Deserialize<T>(data.ToString());
         }
         catch (OperationCanceledException)
         {
@@ -314,7 +316,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
         {
             EnsureScriptsLoaded();
 
-            var json = JsonSerializer.Serialize(value);
+            var json = _documentProfile.Serialize(value);
             var expiry = BuildTtl(ttl);
             var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
 
@@ -397,7 +399,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
             if (dataJson == null || etag == "0")
                 return (default, string.Empty);
 
-            var deserialized = JsonSerializer.Deserialize<T>(dataJson);
+            var deserialized = _documentProfile.Deserialize<T>(dataJson);
             return (deserialized, etag);
         }
         catch (OperationCanceledException)
@@ -424,7 +426,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
         {
             EnsureScriptsLoaded();
 
-            var json = JsonSerializer.Serialize(value);
+            var json = _documentProfile.Serialize(value);
             var expiry = BuildTtl(ttl);
             var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
 
@@ -471,7 +473,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
         {
             EnsureScriptsLoaded();
 
-            var dataJson = JsonSerializer.Serialize(value);
+            var dataJson = _documentProfile.Serialize(value);
             var expiry = BuildTtl(ttl);
             var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
 
@@ -549,7 +551,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var redisKey = GetRedisKey(key);
-                var json = JsonSerializer.Serialize(value);
+                var json = _documentProfile.Serialize(value);
 
                 var task = batch.ScriptEvaluateAsync(
                     _saveStateScript!,
