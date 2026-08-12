@@ -10,7 +10,17 @@
               Justify="Justify.SpaceBetween"
               AlignItems="AlignItems.Center"
               Class="project-units-tab-section__header">
-        <MudText Typo="Typo.h6">@L["ProjectUnitMonitor:Header:Title"]</MudText>
+        <div class="project-units-tab-section__identity">
+            <div class="project-units-tab-section__icon">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+            </div>
+            <div class="project-units-tab-section__copy">
+                <MudText Typo="Typo.h6">@L["ProjectUnitMonitor:Header:Title"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="project-units-tab-section__description">
+                    @L["ProjectUnitMonitor:Header:Description"]
+                </MudText>
+            </div>
+        </div>
         <div class="project-units-tab-section__actions">
             <MudButton Variant="Variant.Filled"
                       Color="Color.Primary"

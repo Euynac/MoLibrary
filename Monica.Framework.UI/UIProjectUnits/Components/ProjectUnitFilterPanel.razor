@@ -2,9 +2,9 @@
 @using Monica.ProjectUnits.Models
 @inject IStringLocalizer<ProjectUnitsResource> L
 
-<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="4">
+<MudPaper Class="project-units-control-panel project-unit-filter-panel" Elevation="0" Outlined="true">
+    <div class="project-unit-filter-panel__main">
+        <div class="project-unit-filter-panel__search">
             <MudTextField @bind-Value="FilterText"
                           Label="@L["ProjectUnitFilterPanel:Fields:SearchLabel"]"
                           HelperText="@L["ProjectUnitFilterPanel:Fields:SearchHelper"]"
@@ -14,54 +14,66 @@
                           Immediate="true"
                           DebounceInterval="300"
                           OnDebounceIntervalElapsed="OnFilterTextChanged" />
-        </MudItem>
-        <MudItem xs="12" md="8">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["ProjectUnitFilterPanel:Sections:TypeFilter"]</MudText>
-            <div class="d-flex flex-wrap gap-1 mb-2">
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Text"
-                           Color="Color.Primary"
-                           OnClick="SelectAllTypes">
-                    @L["Shared:Actions:SelectAll"]
-                </MudButton>
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Text"
-                           Color="Color.Secondary"
-                           OnClick="ClearAllTypes">
-                    @L["Shared:Actions:Clear"]
-                </MudButton>
+        </div>
+        <section class="project-unit-filter-panel__types">
+            <div class="project-unit-filter-panel__types-heading">
+                <MudText Typo="Typo.subtitle2">@L["ProjectUnitFilterPanel:Sections:TypeFilter"]</MudText>
+                <div class="project-unit-filter-panel__type-actions">
+                    <MudButton Size="Size.Small"
+                               Variant="Variant.Text"
+                               Color="Color.Primary"
+                               OnClick="SelectAllTypes">
+                        @L["Shared:Actions:SelectAll"]
+                    </MudButton>
+                    <MudButton Size="Size.Small"
+                               Variant="Variant.Text"
+                               Color="Color.Secondary"
+                               OnClick="ClearAllTypes">
+                        @L["Shared:Actions:Clear"]
+                    </MudButton>
+                </div>
             </div>
-            <MudChipSet T="EProjectUnitType"
-                        SelectionMode="SelectionMode.MultiSelection"
-                        SelectedValues="SelectedUnitTypes"
-                        SelectedValuesChanged="OnSelectedUnitTypesChanged">
-                @foreach (var option in _unitTypeOptions)
-                {
-                    var isSelected = SelectedUnitTypes.Contains(option.UnitType);
-                    <MudChip T="EProjectUnitType"
-                             Value="@option.UnitType"
-                             Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(option.UnitType)"
-                             Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(option.UnitType)"
-                             Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
-                             Size="Size.Small">
-                        @L["ProjectUnitFilterPanel:Formats:TypeCount", L.GetProjectUnitTypeText(option.UnitType), option.Count]
-                    </MudChip>
-                }
-            </MudChipSet>
-        </MudItem>
-        <MudItem xs="12" sm="6">
+            <div class="project-unit-filter-panel__chips">
+                <MudChipSet T="EProjectUnitType"
+                            SelectionMode="SelectionMode.MultiSelection"
+                            SelectedValues="SelectedUnitTypes"
+                            SelectedValuesChanged="OnSelectedUnitTypesChanged">
+                    @foreach (var option in _unitTypeOptions)
+                    {
+                        var isSelected = SelectedUnitTypes.Contains(option.UnitType);
+                        <MudChip T="EProjectUnitType"
+                                 Value="@option.UnitType"
+                                 Icon="@ProjectUnitVisualizationConfig.GetUnitTypeIcon(option.UnitType)"
+                                 Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(option.UnitType)"
+                                 Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
+                                 Size="Size.Small">
+                            @L["ProjectUnitFilterPanel:Formats:TypeCount", L.GetProjectUnitTypeText(option.UnitType), option.Count]
+                        </MudChip>
+                    }
+                </MudChipSet>
+            </div>
+        </section>
+    </div>
+    <div class="project-unit-filter-panel__toggles">
+        <div class="project-unit-filter-panel__toggle" data-tone="info">
+            <div class="project-unit-filter-panel__toggle-icon">
+                <MudIcon Icon="@Icons.Material.Filled.Route" Size="Size.Small" />
+            </div>
             <MudSwitch T="bool" Value="ShowOnlyWithDependencies"
                        ValueChanged="OnShowOnlyWithDependenciesChanged"
                        Label="@L["ProjectUnitFilterPanel:Switches:OnlyDependencies"]"
                        Color="Color.Primary" />
-        </MudItem>
-        <MudItem xs="12" sm="6">
+        </div>
+        <div class="project-unit-filter-panel__toggle" data-tone="warning">
+            <div class="project-unit-filter-panel__toggle-icon">
+                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Size="Size.Small" />
+            </div>
             <MudSwitch T="bool" Value="ShowOnlyWithAlerts"
                        ValueChanged="OnShowOnlyWithAlertsChanged"
                        Label="@L["ProjectUnitFilterPanel:Switches:OnlyAlerts"]"
                        Color="Color.Warning" />
-        </MudItem>
-    </MudGrid>
+        </div>
+    </div>
 </MudPaper>
 
 @code {

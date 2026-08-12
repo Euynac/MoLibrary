@@ -1,0 +1,96 @@
+.project-unit-filter-panel__main {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(18rem, 0.8fr) minmax(24rem, 1.2fr);
+    padding: 1rem;
+}
+
+.project-unit-filter-panel__search,
+.project-unit-filter-panel__types {
+    min-width: 0;
+}
+
+.project-unit-filter-panel__types {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.project-unit-filter-panel__types-heading,
+.project-unit-filter-panel__type-actions,
+.project-unit-filter-panel__toggle {
+    align-items: center;
+    display: flex;
+}
+
+.project-unit-filter-panel__types-heading {
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.project-unit-filter-panel__type-actions {
+    flex: 0 0 auto;
+    gap: 0.125rem;
+}
+
+.project-unit-filter-panel__chips {
+    min-height: 2rem;
+}
+
+.project-unit-filter-panel__toggles {
+    background: var(--mud-palette-divider);
+    border-top: 1px solid var(--mud-palette-divider);
+    display: grid;
+    gap: 1px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-unit-filter-panel__toggle {
+    background: var(--mud-palette-surface);
+    gap: 0.625rem;
+    min-width: 0;
+    padding: 0.625rem 1rem;
+}
+
+.project-unit-filter-panel__toggle-icon {
+    align-items: center;
+    background: color-mix(in srgb, var(--mud-palette-info) 11%, var(--mud-palette-surface));
+    border-radius: 5px;
+    color: var(--mud-palette-info);
+    display: flex;
+    flex: 0 0 2rem;
+    height: 2rem;
+    justify-content: center;
+}
+
+.project-unit-filter-panel__toggle[data-tone="warning"] .project-unit-filter-panel__toggle-icon {
+    background: color-mix(in srgb, var(--mud-palette-warning) 12%, var(--mud-palette-surface));
+    color: var(--mud-palette-warning);
+}
+
+.project-unit-filter-panel__toggle ::deep .mud-switch {
+    min-width: 0;
+}
+
+@media (max-width: 959.98px) {
+    .project-unit-filter-panel__main {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 599.98px) {
+    .project-unit-filter-panel__main {
+        gap: 1rem;
+        padding: 0.875rem;
+    }
+
+    .project-unit-filter-panel__types-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .project-unit-filter-panel__toggles {
+        grid-template-columns: 1fr;
+    }
+}

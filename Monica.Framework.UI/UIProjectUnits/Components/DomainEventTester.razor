@@ -15,7 +15,17 @@
               Justify="Justify.SpaceBetween"
               AlignItems="AlignItems.Center"
               Class="project-units-tab-section__header">
-        <MudText Typo="Typo.h6">@L["DomainEventTester:Header:Title"]</MudText>
+        <div class="project-units-tab-section__identity">
+            <div class="project-units-tab-section__icon">
+                <MudIcon Icon="@Icons.Material.Filled.Event" />
+            </div>
+            <div class="project-units-tab-section__copy">
+                <MudText Typo="Typo.h6">@L["DomainEventTester:Header:Title"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="project-units-tab-section__description">
+                    @L["DomainEventTester:Header:Description"]
+                </MudText>
+            </div>
+        </div>
         <div class="project-units-tab-section__actions">
             <MudButton Variant="Variant.Filled"
                       Color="Color.Primary"
@@ -29,7 +39,7 @@
     <div class="project-units-tab-section__body">
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                <MudPaper Class="pa-4 project-units-tool-card" Elevation="0" Outlined="true">
                     <MudText Typo="Typo.h6" Class="mb-3">@L["DomainEventTester:Sections:EventList"]</MudText>
                     @if (_loading)
                     {
@@ -60,7 +70,7 @@
             </MudItem>
 
             <MudItem xs="12" md="6">
-                <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                <MudPaper Class="pa-4 project-units-tool-card" Elevation="0" Outlined="true">
                     <MudText Typo="Typo.h6" Class="mb-3">@L["DomainEventTester:Sections:EventTester"]</MudText>
                     @if (_selectedEvent != null)
                     {

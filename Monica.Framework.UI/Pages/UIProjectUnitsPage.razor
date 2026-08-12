@@ -8,16 +8,30 @@
 <div class="project-units-page">
     <MudContainer MaxWidth="MaxWidth.False" Class="project-units-page__outer-container">
         <div class="project-units-page__container">
-            <div class="project-units-page__header">
-                <MudText Typo="Typo.h4">@L["Page:Header:Title"]</MudText>
-            </div>
+            <header class="project-units-page__header">
+                <div class="project-units-page__eyebrow">
+                    <span class="project-units-page__eyebrow-line" aria-hidden="true"></span>
+                    <span>@L["Page:Header:Eyebrow"]</span>
+                </div>
+                <div class="project-units-page__heading-row">
+                    <div>
+                        <MudText Typo="Typo.h3" HtmlTag="h1" Class="project-units-page__title">@L["Page:Header:Title"]</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="project-units-page__description">
+                            @L["Page:Header:Description"]
+                        </MudText>
+                    </div>
+                    <div class="project-units-page__header-mark" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+                    </div>
+                </div>
+            </header>
 
             <div class="project-units-page__content">
-                <MudTabs Elevation="1"
-                         Rounded="true"
-                         ApplyEffectsToContainer="true">
+                <MudTabs Elevation="0"
+                         Rounded="false"
+                         Class="project-units-page__workspace">
                     <MudTabPanel Text="@L["Page:Tabs:StatusOverview"]"
-                                 Icon="@Icons.Material.Filled.Dashboard"
+                                 Icon="@Icons.Material.Filled.SpaceDashboard"
                                  PanelClass="project-units-tab-panel">
                         <ProjectUnitDashboard />
                     </MudTabPanel>
@@ -47,7 +61,7 @@
                     </MudTabPanel>
 
                     <MudTabPanel Text="@L["Page:Tabs:EnumInfo"]"
-                                 Icon="@Icons.Material.Filled.List"
+                                 Icon="@Icons.Material.Filled.DataObject"
                                  PanelClass="project-units-tab-panel">
                         <EnumInfoViewer />
                     </MudTabPanel>

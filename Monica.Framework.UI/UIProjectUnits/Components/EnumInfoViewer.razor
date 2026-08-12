@@ -16,7 +16,17 @@
                   Justify="Justify.SpaceBetween"
                   AlignItems="AlignItems.Center"
                   Class="project-units-tab-section__header">
-            <MudText Typo="Typo.h6">@L["EnumInfoViewer:Header:Title"]</MudText>
+            <div class="project-units-tab-section__identity">
+                <div class="project-units-tab-section__icon">
+                    <MudIcon Icon="@Icons.Material.Filled.DataObject" />
+                </div>
+                <div class="project-units-tab-section__copy">
+                    <MudText Typo="Typo.h6">@L["EnumInfoViewer:Header:Title"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="project-units-tab-section__description">
+                        @L["EnumInfoViewer:Header:Description"]
+                    </MudText>
+                </div>
+            </div>
             <div class="project-units-tab-section__actions">
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
@@ -81,7 +91,7 @@
 
             <MudGrid Class="enum-info-viewer__grid">
                 <MudItem xs="12" md="4">
-                    <MudPaper Class="enum-info-viewer__panel" Elevation="1">
+                    <MudPaper Class="enum-info-viewer__panel project-units-tool-card" Elevation="0" Outlined="true">
                         <div class="enum-info-viewer__panel-header">
                             <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Assemblies"]</div>
                             <div class="enum-info-viewer__panel-subtitle">@GetAssemblyPanelSummary()</div>
@@ -131,7 +141,7 @@
                 </MudItem>
 
                 <MudItem xs="12" md="4">
-                    <MudPaper Class="enum-info-viewer__panel" Elevation="1">
+                    <MudPaper Class="enum-info-viewer__panel project-units-tool-card" Elevation="0" Outlined="true">
                         <div class="enum-info-viewer__panel-header">
                             <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Enums"]</div>
                             <div class="enum-info-viewer__panel-subtitle">@GetEnumPanelSummary()</div>
@@ -173,7 +183,7 @@
                 </MudItem>
 
                 <MudItem xs="12" md="4">
-                    <MudPaper Class="enum-info-viewer__panel" Elevation="1">
+                    <MudPaper Class="enum-info-viewer__panel project-units-tool-card" Elevation="0" Outlined="true">
                         <div class="enum-info-viewer__panel-header">
                             <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Values"]</div>
                             <div class="enum-info-viewer__panel-subtitle">@GetValuePanelSummary()</div>

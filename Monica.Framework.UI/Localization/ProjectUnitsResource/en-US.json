@@ -7,7 +7,9 @@
   "Page": {
     "PageTitle": "Project Units",
     "Header": {
-      "Title": "Project Units"
+      "Title": "Project Units",
+      "Eyebrow": "Monica / Architecture Registry",
+      "Description": "Explore the host's discovered capabilities, architecture relationships, context completeness, and operational test tools."
     },
     "Tabs": {
       "StatusOverview": "Status Overview",
@@ -133,7 +135,8 @@
   },
   "DomainEventTester": {
     "Header": {
-      "Title": "Domain Event Tester"
+      "Title": "Domain Event Tester",
+      "Description": "Select a discovered domain event, inspect its contract, and publish a controlled test payload."
     },
     "Actions": {
       "Refresh": "Refresh event list",
@@ -162,7 +165,8 @@
   },
   "EnumInfoViewer": {
     "Header": {
-      "Title": "Enum Information Viewer"
+      "Title": "Enum Information Viewer",
+      "Description": "Navigate the host's assembly, enum, and value catalog without losing technical context."
     },
     "Search": {
       "Placeholder": "Search assemblies, enums, and values",
@@ -219,7 +223,8 @@
   },
   "ProjectUnitMonitor": {
     "Header": {
-      "Title": "Project Unit Monitor"
+      "Title": "Project Unit Monitor",
+      "Description": "Search the live catalog and inspect each unit's type, identity, and architecture relationships."
     },
     "Columns": {
       "Name": "Unit name",
@@ -277,6 +282,7 @@
       "Retry": "Retry"
     },
     "Service": {
+      "Eyebrow": "Active service catalog",
       "ProjectName": "Project: {0}",
       "AppId": "Application ID: {0}",
       "Domain": "Domain: {0}"
@@ -326,7 +332,8 @@
   },
   "ProjectUnitVisualization": {
     "Header": {
-      "Title": "Project Architecture Visualization"
+      "Title": "Project Architecture Visualization",
+      "Description": "Explore unit topology interactively, then refine the graph by type, relationship, or alert state."
     },
     "Actions": {
       "RefreshTooltip": "Refresh data",
@@ -379,7 +386,8 @@
   },
   "RequestFilterManager": {
     "Header": {
-      "Title": "Request Filter Manager"
+      "Title": "Request Filter Manager",
+      "Description": "Control request-path availability and review the host's currently disabled routes."
     },
     "Actions": {
       "RefreshState": "Refresh state",

@@ -1,36 +1,37 @@
 .visualization-shell {
     display: flex;
-    width: 100%;
     height: clamp(26rem, 65vh, 48rem);
     min-height: 26rem;
+    width: 100%;
 }
 
 .visualization-shell ::deep .visualization-container {
-    position: relative;
+    background: var(--mud-palette-surface);
+    border-radius: 8px;
     display: flex;
-    width: 100%;
     height: 100%;
     overflow: hidden;
-    background: var(--mud-palette-background);
+    position: relative;
+    width: 100%;
 }
 
 .visualization-shell ::deep #project-unit-graph {
     background: var(--mud-palette-surface);
+    border-radius: 7px;
     display: block;
-    border-radius: 4px;
     flex: 1;
     height: 100%;
     width: 100%;
 }
 
 .visualization-shell ::deep .node {
-    transition: opacity 0.3s ease;
+    transition: opacity 180ms ease;
 }
 
 /* Remove hover opacity, controlled by JavaScript */
 
 .visualization-shell ::deep .link {
-    transition: stroke-opacity 0.3s ease;
+    transition: stroke-opacity 180ms ease;
 }
 
 .visualization-shell ::deep .links {
@@ -38,8 +39,8 @@
 }
 
 .filter-panel {
-    border-radius: 4px;
-    margin-bottom: 16px;
+    border-radius: 8px;
+    margin-bottom: 1rem;
 }
 
 .legend-chip {
@@ -55,5 +56,12 @@
     .visualization-shell ::deep .visualization-container {
         height: 26rem;
         min-height: 26rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .visualization-shell ::deep .node,
+    .visualization-shell ::deep .link {
+        transition: none;
     }
 }

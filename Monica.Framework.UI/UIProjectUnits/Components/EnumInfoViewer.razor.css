@@ -1,9 +1,13 @@
 .enum-info-viewer__toolbar {
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
     margin-bottom: 16px;
+    padding: 12px;
 }
 
 .enum-info-viewer__search-input {
@@ -30,10 +34,12 @@
 }
 
 .enum-info-viewer__panel-header {
+    background: var(--mud-palette-background-gray);
+    border-bottom: 1px solid var(--mud-palette-divider);
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 16px 16px 0;
+    padding: 14px 16px;
 }
 
 .enum-info-viewer__panel-title {
@@ -61,7 +67,7 @@
 .enum-info-viewer__item {
     background: var(--mud-palette-surface);
     border: 1px solid transparent;
-    border-radius: 14px;
+    border-radius: 6px;
 }
 
 .enum-info-viewer__selected-enum {

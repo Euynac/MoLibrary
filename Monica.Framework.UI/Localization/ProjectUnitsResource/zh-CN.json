@@ -7,7 +7,9 @@
   "Page": {
     "PageTitle": "项目单元",
     "Header": {
-      "Title": "项目单元"
+      "Title": "项目单元",
+      "Eyebrow": "Monica / 架构目录",
+      "Description": "集中查看当前宿主发现的能力、架构关系、上下文完整度与运行测试工具。"
     },
     "Tabs": {
       "StatusOverview": "状态概览",
@@ -133,7 +135,8 @@
   },
   "DomainEventTester": {
     "Header": {
-      "Title": "领域事件测试"
+      "Title": "领域事件测试",
+      "Description": "选择已发现的领域事件，检查契约，并发布受控的测试负载。"
     },
     "Actions": {
       "Refresh": "刷新事件列表",
@@ -162,7 +165,8 @@
   },
   "EnumInfoViewer": {
     "Header": {
-      "Title": "枚举信息查看器"
+      "Title": "枚举信息查看器",
+      "Description": "在保留技术上下文的同时，浏览宿主中的程序集、枚举与枚举值目录。"
     },
     "Search": {
       "Placeholder": "搜索程序集、枚举和值",
@@ -219,7 +223,8 @@
   },
   "ProjectUnitMonitor": {
     "Header": {
-      "Title": "项目单元监控"
+      "Title": "项目单元监控",
+      "Description": "检索实时目录，并检查每个单元的类型、标识与架构关系。"
     },
     "Columns": {
       "Name": "单元名称",
@@ -277,6 +282,7 @@
       "Retry": "重试"
     },
     "Service": {
+      "Eyebrow": "当前服务目录",
       "ProjectName": "项目：{0}",
       "AppId": "应用标识：{0}",
       "Domain": "领域：{0}"
@@ -326,7 +332,8 @@
   },
   "ProjectUnitVisualization": {
     "Header": {
-      "Title": "项目架构可视化"
+      "Title": "项目架构可视化",
+      "Description": "交互式探索单元拓扑，并按类型、关系或告警状态收敛视图。"
     },
     "Actions": {
       "RefreshTooltip": "刷新数据",
@@ -379,7 +386,8 @@
   },
   "RequestFilterManager": {
     "Header": {
-      "Title": "请求过滤管理"
+      "Title": "请求过滤管理",
+      "Description": "控制请求路径的可用状态，并检查宿主当前已停用的路由。"
     },
     "Actions": {
       "RefreshState": "刷新状态",
