@@ -164,75 +164,82 @@
                         <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
                     }
 
-                    <div class="executions-page__table-scroll">
-                        <MudTable T="JobExecutionInstance"
-                                  Items="@PageState.Executions"
-                                  Dense="true"
-                                  Hover="true"
-                                  Breakpoint="Breakpoint.None"
-                                  Elevation="0"
-                                  Class="executions-page__table">
-                            <HeaderContent>
-                                <MudTh>@L["Executions:Columns:Instance"]</MudTh>
-                                <MudTh>@L["Executions:Columns:Job"]</MudTh>
-                                <MudTh>@L["Executions:Columns:State"]</MudTh>
-                                <MudTh>@L["Executions:Columns:Created"]</MudTh>
-                                <MudTh>@L["Executions:Columns:Available"]</MudTh>
-                                <MudTh>@L["Executions:Columns:Started"]</MudTh>
-                                <MudTh>@L["Executions:Columns:Completed"]</MudTh>
-                                <MudTh>@L["Executions:Columns:Duration"]</MudTh>
-                                <MudTh>@L["Executions:Columns:Attempts"]</MudTh>
-                                <MudTh>@L["Executions:Columns:Worker"]</MudTh>
-                                <MudTh Class="executions-page__actions">@L["Executions:Columns:Actions"]</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="@L["Executions:Columns:Instance"]">
-                                    <code class="executions-page__identity" title="@context.InstanceId">@context.InstanceId</code>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Job"]">
-                                    <div class="executions-page__job" title="@context.Template.Revision.JobKey">
-                                        <strong>@context.Template.Revision.JobKey</strong>
-                                        <span>@context.Template.Revision.OwnerKey</span>
-                                    </div>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:State"]">
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                             Color="@JobSchedulerUiPresentation.GetStateColor(context.State)">
-                                        @L[$"ExecutionStates:{context.State}"]
-                                    </MudChip>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Created"]" Class="executions-page__time">@ExecutionUiPresentation.FormatDateTime(context.CreatedAtUtc)</MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Available"]" Class="executions-page__time">@ExecutionUiPresentation.FormatDateTime(context.AvailableAtUtc)</MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Started"]" Class="executions-page__time">@ExecutionUiPresentation.FormatDateTime(context.StartedAtUtc)</MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Completed"]" Class="executions-page__time">@ExecutionUiPresentation.FormatDateTime(context.CompletedAtUtc)</MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Duration"]" Class="executions-page__mono">@ExecutionUiPresentation.FormatDuration(ExecutionUiPresentation.GetDuration(context, PageState.ObservedAtUtc ?? DateTimeOffset.UtcNow))</MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Attempts"]" Class="executions-page__mono">@context.ExecutionAttempt / @context.RetryAttempt</MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Worker"]">
-                                    <code class="executions-page__identity" title="@context.RunningWorkerInstanceId">@(context.RunningWorkerInstanceId ?? "—")</code>
-                                </MudTd>
-                                <MudTd DataLabel="@L["Executions:Columns:Actions"]" Class="executions-page__actions">
-                                    <MudTooltip Text="@L["Executions:Actions:Details"]">
-                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
-                                                       OnClick="@(() => OpenDetailsAsync(context.InstanceId))"
-                                                       aria-label="@L["Executions:Actions:Details"]" />
-                                    </MudTooltip>
-                                    @if (!context.IsTerminal)
+                    @if (PageState.Executions.Count == 0 && !PageState.IsLoading)
+                    {
+                        <div class="executions-page__empty">
+                            <MudIcon Icon="@Icons.Material.Filled.EventBusy" Color="Color.Secondary" Size="Size.Large" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Executions:Empty"]</MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="execution-activity" role="list" aria-label="@L["Executions:Title"]">
+                            @foreach (var execution in PageState.Executions)
+                            {
+                                <article class="execution-activity__item" role="listitem" data-state="@execution.State.ToString().ToLowerInvariant()">
+                                    <button type="button"
+                                            class="execution-activity__open"
+                                            aria-label="@L["Executions:Actions:Details"]"
+                                            @onclick="@(() => OpenDetailsAsync(execution.InstanceId))">
+                                        <span class="execution-activity__state-icon" aria-hidden="true">
+                                            <MudIcon Icon="@GetStateIcon(execution.State)" Size="Size.Medium"
+                                                     Color="@JobSchedulerUiPresentation.GetStateColor(execution.State)" />
+                                        </span>
+
+                                        <span class="execution-activity__identity">
+                                            <span class="execution-activity__title-row">
+                                                <strong title="@execution.Template.Revision.JobKey">@execution.Template.Revision.JobKey</strong>
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                         Color="@JobSchedulerUiPresentation.GetStateColor(execution.State)">
+                                                    @L[$"ExecutionStates:{execution.State}"]
+                                                </MudChip>
+                                            </span>
+                                            <span class="execution-activity__owner">@execution.Template.Revision.OwnerKey</span>
+                                            <code title="@execution.InstanceId">@execution.InstanceId</code>
+                                        </span>
+
+                                        <span class="execution-activity__facts">
+                                            <span>
+                                                <small>@L["Executions:Columns:Created"]</small>
+                                                <strong>@ExecutionUiPresentation.FormatDateTime(execution.CreatedAtUtc)</strong>
+                                            </span>
+                                            <span>
+                                                <small>@L["Executions:Columns:Duration"]</small>
+                                                <strong>@ExecutionUiPresentation.FormatDuration(ExecutionUiPresentation.GetDuration(execution, PageState.ObservedAtUtc ?? DateTimeOffset.UtcNow))</strong>
+                                            </span>
+                                            <span>
+                                                <small>@L["Executions:Columns:Attempts"]</small>
+                                                <strong>@execution.ExecutionAttempt / @execution.RetryAttempt</strong>
+                                            </span>
+                                            <span>
+                                                <small>@L["Executions:Columns:Worker"]</small>
+                                                <code title="@execution.RunningWorkerInstanceId">@(execution.RunningWorkerInstanceId ?? "—")</code>
+                                            </span>
+                                        </span>
+
+                                        <span class="execution-activity__chronology" aria-hidden="true">
+                                            <span class="execution-activity__chronology-node"></span>
+                                            <span class="execution-activity__chronology-line"></span>
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                                        </span>
+                                    </button>
+
+                                    @if (!execution.IsTerminal)
                                     {
-                                        <MudTooltip Text="@L["Executions:Actions:Cancel"]">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Cancel"
-                                                           Color="Color.Warning"
-                                                           Disabled="@PageState.IsMutating"
-                                                           OnClick="@(() => CancelAsync(context))"
-                                                           aria-label="@L["Executions:Actions:Cancel"]" />
-                                        </MudTooltip>
+                                        <div class="execution-activity__actions">
+                                            <MudTooltip Text="@L["Executions:Actions:Cancel"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.StopCircle"
+                                                               Color="Color.Warning"
+                                                               Disabled="@PageState.IsMutating"
+                                                               OnClick="@(() => CancelAsync(execution))"
+                                                               aria-label="@L["Executions:Actions:Cancel"]" />
+                                            </MudTooltip>
+                                        </div>
                                     }
-                                </MudTd>
-                            </RowTemplate>
-                            <NoRecordsContent>
-                                <MudText Class="pa-6" Color="Color.Secondary">@L["Executions:Empty"]</MudText>
-                            </NoRecordsContent>
-                        </MudTable>
-                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
 
                     @if (PageState.PageCount > 1)
                     {

@@ -18,7 +18,8 @@ internal static class JobSchedulerUiPresentation
         JobExecutionState.Running => Color.Primary,
         JobExecutionState.Succeeded => Color.Success,
         JobExecutionState.Failed => Color.Error,
-        JobExecutionState.Cancelled => Color.Warning,
+        JobExecutionState.Cancelled => Color.Secondary,
+        JobExecutionState.Skipped => Color.Warning,
         _ => Color.Default
     };
 
@@ -45,6 +46,55 @@ internal static class JobSchedulerUiPresentation
     }
 
     internal static string GetJobKeyLabel(string jobKey) => jobKey.Split('.').LastOrDefault() ?? jobKey;
+
+    internal static string DescribeCron(
+        string? expression,
+        IStringLocalizer<JobSchedulerResource> localizer)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            return localizer["Catalog:Cron:Unavailable"];
+        }
+
+        var fields = expression.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var offset = fields.Length == 6 ? 1 : 0;
+        if (fields.Length is not (5 or 6))
+        {
+            return localizer["Catalog:Cron:Custom"];
+        }
+
+        var minute = fields[offset];
+        var hour = fields[offset + 1];
+        var day = fields[offset + 2];
+        var month = fields[offset + 3];
+        var weekday = fields[offset + 4];
+        if (day != "*" || month != "*" || weekday != "*")
+        {
+            return localizer["Catalog:Cron:Custom"];
+        }
+
+        if (hour == "*" && minute.StartsWith("*/", StringComparison.Ordinal)
+                        && int.TryParse(minute.AsSpan(2), out var minuteInterval)
+                        && minuteInterval > 0)
+        {
+            return localizer["Catalog:Cron:EveryMinutes", minuteInterval];
+        }
+
+        if (hour == "*" && minute == "0")
+        {
+            return localizer["Catalog:Cron:EveryHour"];
+        }
+
+        if (int.TryParse(hour, out var dailyHour)
+            && int.TryParse(minute, out var dailyMinute)
+            && dailyHour is >= 0 and <= 23
+            && dailyMinute is >= 0 and <= 59)
+        {
+            return localizer["Catalog:Cron:EveryDayAt", $"{dailyHour:00}:{dailyMinute:00}"];
+        }
+
+        return localizer["Catalog:Cron:Custom"];
+    }
 
     internal static string FormatExecutionDuration(
         JobExecutionInstance execution,

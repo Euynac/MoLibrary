@@ -91,8 +91,9 @@ public sealed record JobExecutionTemplate
     public string? JobArgsKey { get; init; }
 
     /// <summary>
-    /// Gets the maximum number of concurrently leased executions for the scope-wide logical job, including leases
-    /// retained by superseded owners or revisions during cooperative cutover cancellation.
+    /// Gets the scope-wide logical job capacity. Claims use it as the maximum concurrent lease count; recurring
+    /// materialization uses it as the maximum queued-and-running occurrence count before recording a tick as skipped.
+    /// Both checks include superseded owners and revisions.
     /// </summary>
     public int MaxConcurrency { get; init; } = 1;
 

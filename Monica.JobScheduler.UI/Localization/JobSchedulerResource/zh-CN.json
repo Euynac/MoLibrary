@@ -3,7 +3,8 @@
     "Overview": { "Title": "调度总览" },
     "Catalog": { "Title": "作业目录" },
     "JobDetail": { "Title": "作业详情" },
-    "Executions": { "Title": "执行账本" }
+    "Executions": { "Title": "执行账本" },
+    "Statistics": { "Title": "调度统计分析" }
   },
   "Workspace": {
     "Eyebrow": "MONICA / 持久化调度",
@@ -13,16 +14,17 @@
     "Navigation": {
       "Overview": "总览",
       "Catalog": "目录",
-      "Executions": "执行"
+      "Executions": "执行",
+      "Statistics": "统计分析"
     },
     "Pages": {
       "Overview": {
-        "Title": "部署控制室",
-        "Description": "在同一运行视图中跟踪发布意图、定义发布、精确工作节点版本与持久化队列状态。"
+        "Title": "调度运行总览",
+        "Description": "优先掌握工作负载、执行结果、最近活动与关注信号，再深入查看部署证据。"
       },
       "Catalog": {
-        "Title": "不可变作业目录",
-        "Description": "检查代码声明与精确执行版本。运维人员只能修改独立的启停与保留策略。"
+        "Title": "作业目录",
+        "Description": "分别浏览周期作业与触发作业，掌握调度状态，并进入完整的作业运行档案。"
       },
       "JobDetail": {
         "Title": "作业运行档案",
@@ -31,6 +33,10 @@
       "Executions": {
         "Title": "持久化执行账本",
         "Description": "检索排队与已完成工作、检查带栅栏的租约历史，并在不依赖消息投递的情况下请求取消。"
+      },
+      "Statistics": {
+        "Title": "调度统计分析",
+        "Description": "在有界 UTC 时间范围内度量可靠率、调度达成率、吞吐量、耗时分位数与工作负载集中度。"
       }
     }
   },
@@ -58,7 +64,8 @@
     "Running": "执行中",
     "Succeeded": "成功",
     "Failed": "失败",
-    "Cancelled": "已取消"
+    "Cancelled": "已取消",
+    "Skipped": "已跳过"
   },
   "JobTypes": {
     "Recurring": "周期作业",
@@ -82,7 +89,44 @@
       "ReadinessDescription": "期望发布与精确工作节点版本全部收敛后，该发布才能成为活动执行契约。",
       "EpochAriaLabel": "目录纪元推进状态"
     },
-    "Queue": { "AriaLabel": "持久化执行状态统计" },
+    "Workload": {
+      "AriaLabel": "调度工作负载摘要",
+      "TotalJobs": "作业总数",
+      "AcrossOwners": "来自 {0} 个项目",
+      "RecurringJobs": "周期作业",
+      "RecurringDescription": "由调度计划驱动",
+      "TriggeredJobs": "触发作业",
+      "TriggeredDescription": "由运维或 API 准入",
+      "SuccessRate": "成功率",
+      "CompletedSample": "基于 {0} 次成功或失败执行"
+    },
+    "Queue": {
+      "Title": "执行状态",
+      "Description": "当前持久化执行账本的生命周期分布。",
+      "Total": "执行",
+      "AriaLabel": "持久化执行状态统计"
+    },
+    "Attention": {
+      "Title": "需要关注",
+      "Description": "可能需要运维人员处理的信号。",
+      "ClearTitle": "暂无需立即干预",
+      "ClearDescription": "没有失败或跳过的执行，所有来源项目均已收敛。",
+      "Failed": "失败执行",
+      "FailedDescription": "检查错误与重试证据。",
+      "Skipped": "跳过的执行时点",
+      "SkippedDescription": "检查重叠执行与调度容量。",
+      "Owners": "未收敛的来源项目",
+      "OwnersDescription": "缺少声明发布或兼容工作节点。"
+    },
+    "Analytics": {
+      "Title": "统计分析",
+      "Description": "在有界时间范围内分析吞吐量、执行结果趋势、耗时分位数与慢作业。",
+      "Action": "打开统计分析"
+    },
+    "Deployment": {
+      "Title": "部署证据",
+      "Description": "发布纪元与工作节点收敛信息下移保留，用于深入的运行诊断。"
+    },
     "Owners": {
       "Title": "所有者收敛",
       "Description": "仅当每个预期定义快照和匹配的工作节点版本都存在时，发布才具备运行条件。",
@@ -109,16 +153,18 @@
   },
   "Catalog": {
     "PageTitle": "任务调度 · 作业目录",
-    "Title": "活动声明",
+    "Title": "作业定义",
     "Count": "共 {0} 个定义",
     "Enabled": "已启用",
     "Disabled": "已禁用",
     "OnDemand": "按需触发",
     "Empty": "没有符合当前筛选条件的活动定义。",
     "Filters": {
+      "AriaLabel": "作业目录搜索与筛选",
       "Search": "定义",
       "SearchPlaceholder": "作业名称或键",
-      "Owner": "所有者",
+      "Owner": "来源项目",
+      "AnyOwner": "全部来源项目",
       "Type": "作业类型",
       "AnyType": "全部类型",
       "State": "生效状态",
@@ -139,6 +185,8 @@
       "Actions": "操作"
     },
     "Actions": {
+      "OpenJob": "打开 {0} 的详情",
+      "Run": "立即执行作业",
       "Trigger": "通过活动目录执行",
       "Policy": "编辑运维策略",
       "Details": "打开作业详情",
@@ -158,10 +206,23 @@
       "Suspended": "已暂停",
       "Exhausted": "调度已结束"
     },
+    "Cron": {
+      "Unavailable": "没有周期调度",
+      "Custom": "自定义周期调度",
+      "EveryMinutes": "每 {0} 分钟",
+      "EveryHour": "每小时",
+      "EveryDayAt": "每天 {0}",
+      "Tooltip": "{0} · 时区 {1} · 下次 {2}"
+    },
+    "Triggered": {
+      "Ready": "可由运维人员触发",
+      "NoArguments": "无需参数契约"
+    },
     "History": { "NeverRun": "从未执行" },
     "Activity": { "QueuedRunning": "排队 {0} · 执行中 {1}" },
     "Selection": {
       "SelectAll": "选择本页全部周期作业",
+      "SelectPage": "选择本页",
       "Select": "选择",
       "SelectJob": "选择 {0}",
       "ToolbarLabel": "所选周期作业操作",
@@ -172,7 +233,9 @@
     "Messages": {
       "Paused": "周期实例物化已暂停。",
       "Resumed": "周期实例物化将从下一个未来时点继续。",
-      "UpdateFailed": "策略更新失败。"
+      "UpdateFailed": "策略更新失败。",
+      "RunFailed": "作业无法入队。",
+      "Queued": "执行 {0} 已入队。"
     },
     "Batch": {
       "Empty": "请至少选择一个周期作业。",
@@ -259,6 +322,17 @@
       "Title": "最近执行",
       "Description": "该逻辑作业跨目录版本的最新持久化执行证据。",
       "Empty": "该作业尚未生成持久化执行。"
+    },
+    "Health": {
+      "Eyebrow": "最近 30 天执行证据",
+      "Title": "作业健康指标",
+      "Description": "分别度量执行可靠率、调度达成率、终态分布与执行耗时。",
+      "Window": "最近 30 天",
+      "ReliabilityHelp": "基于 {0} 次成功或失败执行",
+      "FulfillmentHelp": "基于 {0} 个已完成调度结果",
+      "OutcomeAriaLabel": "所选时间范围内创建的作业执行结果",
+      "CohortNote": "结果卡片统计时间窗内创建的执行；可靠率与耗时统计时间窗内完成的执行。",
+      "LoadFailed": "无法刷新作业健康分析：{0}"
     }
   },
   "RecurringScheduleStatuses": {
@@ -324,6 +398,63 @@
       "Required": "请选择完整的 UTC 日期和时间。",
       "Future": "延迟可用时间必须晚于当前时间。"
     }
+  },
+  "Analytics": {
+    "PageTitle": "任务调度 · 统计分析",
+    "RefreshFailed": "最近一次分析刷新失败：{0}",
+    "ObservedAt": "分析观测时间：{0}",
+    "Range": {
+      "Title": "分析时间范围",
+      "Description": "完成指标采用固定 UTC 区间，并由数据库执行有界聚合。",
+      "TodayUtc": "今天（UTC）",
+      "Last24Hours": "最近 24 小时",
+      "Last7Days": "最近 7 天",
+      "Last30Days": "最近 30 天"
+    },
+    "Metrics": {
+      "AriaLabel": "调度统计摘要",
+      "Reliability": "执行可靠率",
+      "Throughput": "执行吞吐量",
+      "ScheduleFulfillment": "调度达成率",
+      "DecidedRuns": "基于 {0} 次成功或失败执行",
+      "PerHour": "每小时终态执行数",
+      "ScheduledDispositions": "基于 {0} 个已完成调度结果",
+      "DurationSample": "基于 {0} 次有耗时记录的终态执行"
+    },
+    "Trend": {
+      "Eyebrow": "完成脉搏",
+      "Title": "执行结果趋势",
+      "Description": "按固定 UTC 区间展示成功、失败与跳过的完成数量。",
+      "LegendAriaLabel": "结果趋势图例",
+      "ChartAriaLabel": "调度完成结果趋势图",
+      "BucketTooltip": "{0}：成功 {1}，失败 {2}，跳过 {3}，取消 {4}"
+    },
+    "Duration": {
+      "Title": "终态执行耗时",
+      "Description": "从最近一次执行开始到终态完成；未占用工作节点的跳过记录不进入分布。",
+      "Minimum": "最短",
+      "Average": "平均",
+      "P50": "P50",
+      "P90": "P90",
+      "P95": "P95",
+      "P99": "P99",
+      "Maximum": "最长"
+    },
+    "Rankings": {
+      "Title": "工作负载集中度",
+      "Description": "对照终态吞吐量，定位产生失败或调度跳过的作业。",
+      "Volume": "终态吞吐",
+      "Failures": "失败关注",
+      "Skips": "调度跳过",
+      "Empty": "该时间范围内没有完成的作业活动。",
+      "OutcomeSummary": "共 {0} · 失败 {1} · 跳过 {2}"
+    },
+    "Slowest": {
+      "Title": "最慢执行",
+      "Description": "耗时最长的终态执行，可直接打开其持久化证据。",
+      "Empty": "该时间范围内没有可度量耗时的终态执行。"
+    },
+    "CohortNote": "状态总数统计时间窗内创建的执行；结果、吞吐量、趋势、排名与耗时统计时间窗内完成的执行。"
   },
   "Executions": {
     "PageTitle": "任务调度 · 执行账本",

@@ -25,6 +25,15 @@ public interface IJobExecutionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Durably queues an immediate operator execution of an active recurring job without advancing or otherwise
+    /// changing its recurring schedule cursor. Schedule suspension does not reject this explicit operator action.
+    /// Repeating an identical command is idempotent.
+    /// </summary>
+    Task<JobExecutionInstance> RunRecurringNowAsync(
+        JobRecurringRunNowCommand command,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets one execution by scope and identifier, including its complete retained audit history.
     /// </summary>
     Task<JobExecutionInstance?> GetExecutionAsync(

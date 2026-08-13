@@ -31,11 +31,48 @@ public sealed partial class InMemoryJobSchedulerStore
             var executionKey = new ExecutionKey(request.SchedulerScopeKey, request.InstanceId);
             if (_executionInstances.TryGetValue(executionKey, out var existing))
             {
-                return Task.FromResult(ResolveIdempotentEnqueueUnsafe(request, existing));
+                return Task.FromResult(ResolveIdempotentEnqueueUnsafe(
+                    request,
+                    existing,
+                    JobExecutionOrigin.Triggered));
             }
 
             var template = ResolveActiveExecutionTemplateUnsafe(request);
-            return Task.FromResult(EnqueueCapturedUnsafe(request, template, UtcNow));
+            return Task.FromResult(EnqueueCapturedUnsafe(
+                request,
+                template,
+                UtcNow,
+                JobExecutionOrigin.Triggered));
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<JobExecutionInstance> RunRecurringNowAsync(
+        JobRecurringRunNowCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        command.Validate();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var request = JobExecutionAdmission.CreateRecurringRunNowRequest(command);
+        lock (_gate)
+        {
+            var executionKey = new ExecutionKey(command.SchedulerScopeKey, command.InstanceId);
+            if (_executionInstances.TryGetValue(executionKey, out var existing))
+            {
+                return Task.FromResult(ResolveIdempotentEnqueueUnsafe(
+                    request,
+                    existing,
+                    JobExecutionOrigin.RecurringRunNow));
+            }
+
+            var template = ResolveActiveRecurringExecutionTemplateUnsafe(command);
+            return Task.FromResult(EnqueueCapturedUnsafe(
+                request,
+                template,
+                UtcNow,
+                JobExecutionOrigin.RecurringRunNow));
         }
     }
 
@@ -1003,17 +1040,29 @@ public sealed partial class InMemoryJobSchedulerStore
                 });
             }
 
+            var request = new JobEnqueueRequest
+            {
+                InstanceId = materialization.InstanceId,
+                SchedulerScopeKey = cursor.Template.Revision.SchedulerScopeKey,
+                JobKey = cursor.Template.Revision.JobKey,
+                AvailableAtUtc = expectedOccurrence,
+                EnqueueReason = $"Recurring occurrence {expectedOccurrence:O} materialized"
+            };
+            var outstandingCount = CountOutstandingExecutionsUnsafe(cursor.Template.Revision);
+            JobExecutionSkipReason? skipReason = outstandingCount >= cursor.Template.MaxConcurrency
+                ? JobExecutionSkipReason.RecurringCapacityUnavailable
+                : null;
             var execution = EnqueueCapturedUnsafe(
-                new JobEnqueueRequest
-                {
-                    InstanceId = materialization.InstanceId,
-                    SchedulerScopeKey = cursor.Template.Revision.SchedulerScopeKey,
-                    JobKey = cursor.Template.Revision.JobKey,
-                    AvailableAtUtc = expectedOccurrence,
-                    EnqueueReason = $"Recurring occurrence {expectedOccurrence:O} materialized"
-                },
+                request,
                 cursor.Template,
-                now);
+                now,
+                JobExecutionOrigin.RecurringSchedule,
+                expectedOccurrence,
+                skipReason,
+                skipReason is null
+                    ? request.EnqueueReason
+                    : $"Recurring occurrence {expectedOccurrence:O} skipped because {outstandingCount} outstanding "
+                      + $"execution(s) reached the configured capacity of {cursor.Template.MaxConcurrency}");
             cursor.NextOccurrenceUtc = materialization.NextOccurrenceUtc is { } next ? NormalizeUtc(next) : null;
             cursor.Version++;
             cursor.UpdatedAtUtc = now;
@@ -1031,40 +1080,14 @@ public sealed partial class InMemoryJobSchedulerStore
 
     private JobExecutionTemplate ResolveActiveExecutionTemplateUnsafe(JobEnqueueRequest request)
     {
-        if (!_catalogScopes.TryGetValue(request.SchedulerScopeKey, out var scope)
-            || scope.ActiveReleaseId is null)
-        {
-            throw new JobCatalogNotFoundException(
-                $"Scheduler scope '{request.SchedulerScopeKey}' has no active catalog.");
-        }
-
-        if (scope.ActiveIntentEpoch != scope.DesiredIntentEpoch)
-        {
-            throw new JobCatalogTransitionException(request.SchedulerScopeKey);
-        }
-
-        var definition = ProjectActiveDefinitions(request.SchedulerScopeKey, scope)
-            .SingleOrDefault(candidate => string.Equals(
-                candidate.Declaration.JobKey,
-                request.JobKey,
-                StringComparison.Ordinal))
-            ?? throw new JobCatalogNotFoundException(
-                $"Active job '{request.JobKey}' was not found in scope '{request.SchedulerScopeKey}'.");
+        var definition = ResolveActiveDefinitionUnsafe(
+            request.SchedulerScopeKey,
+            request.JobKey,
+            request.ExpectedOwnerId,
+            request.ExpectedJobRevisionId);
         if (definition.IsDisabled)
         {
             throw new InvalidOperationException($"Active job '{request.JobKey}' is disabled.");
-        }
-
-        var ownerMismatch = request.ExpectedOwnerId is not null
-                            && !string.Equals(request.ExpectedOwnerId, definition.OwnerId, StringComparison.Ordinal);
-        var revisionMismatch = request.ExpectedJobRevisionId is not null
-                               && !string.Equals(
-                                   request.ExpectedJobRevisionId,
-                                   definition.JobRevisionId,
-                                   StringComparison.Ordinal);
-        if (ownerMismatch || revisionMismatch)
-        {
-            throw new JobRevisionMismatchException(request.JobKey);
         }
 
         var template = definition.CreateExecutionTemplate();
@@ -1082,9 +1105,64 @@ public sealed partial class InMemoryJobSchedulerStore
         return template;
     }
 
+    private JobExecutionTemplate ResolveActiveRecurringExecutionTemplateUnsafe(JobRecurringRunNowCommand command)
+    {
+        var definition = ResolveActiveDefinitionUnsafe(
+            command.SchedulerScopeKey,
+            command.JobKey,
+            command.ExpectedOwnerId,
+            command.ExpectedJobRevisionId);
+        var template = definition.CreateExecutionTemplate();
+        if (template.JobType != JobType.Recurring)
+        {
+            throw new InvalidOperationException(
+                $"Active job '{command.JobKey}' is triggered and cannot be admitted through the recurring run-now API.");
+        }
+
+        return template;
+    }
+
+    private ActiveJobDefinition ResolveActiveDefinitionUnsafe(
+        string schedulerScopeKey,
+        string jobKey,
+        string? expectedOwnerId,
+        string? expectedJobRevisionId)
+    {
+        if (!_catalogScopes.TryGetValue(schedulerScopeKey, out var scope)
+            || scope.ActiveReleaseId is null)
+        {
+            throw new JobCatalogNotFoundException(
+                $"Scheduler scope '{schedulerScopeKey}' has no active catalog.");
+        }
+
+        if (scope.ActiveIntentEpoch != scope.DesiredIntentEpoch)
+        {
+            throw new JobCatalogTransitionException(schedulerScopeKey);
+        }
+
+        var definition = ProjectActiveDefinitions(schedulerScopeKey, scope)
+            .SingleOrDefault(candidate => string.Equals(
+                candidate.Declaration.JobKey,
+                jobKey,
+                StringComparison.Ordinal))
+            ?? throw new JobCatalogNotFoundException(
+                $"Active job '{jobKey}' was not found in scope '{schedulerScopeKey}'.");
+        var ownerMismatch = expectedOwnerId is not null
+                            && !string.Equals(expectedOwnerId, definition.OwnerId, StringComparison.Ordinal);
+        var revisionMismatch = expectedJobRevisionId is not null
+                               && !string.Equals(expectedJobRevisionId, definition.JobRevisionId, StringComparison.Ordinal);
+        if (ownerMismatch || revisionMismatch)
+        {
+            throw new JobRevisionMismatchException(jobKey);
+        }
+
+        return definition;
+    }
+
     private static JobExecutionInstance ResolveIdempotentEnqueueUnsafe(
         JobEnqueueRequest request,
-        StoredExecution existing)
+        StoredExecution existing,
+        JobExecutionOrigin expectedOrigin)
     {
         var revision = existing.Template.Revision;
         var jobMatches = string.Equals(request.JobKey, revision.JobKey, StringComparison.Ordinal);
@@ -1098,7 +1176,12 @@ public sealed partial class InMemoryJobSchedulerStore
         var payloadMatches = string.Equals(existing.JobArgs, request.JobArgs, StringComparison.Ordinal);
         var availabilityMatches = request.AvailableAtUtc is not { } requestedAvailability
                                   || existing.AvailableAtUtc == NormalizeUtc(requestedAvailability);
-        if (!jobMatches || !ownerMatches || !revisionMatches || !payloadMatches || !availabilityMatches)
+        if (!jobMatches
+            || !ownerMatches
+            || !revisionMatches
+            || !payloadMatches
+            || !availabilityMatches
+            || existing.Origin != expectedOrigin)
         {
             throw new InvalidOperationException(
                 $"Execution identifier '{request.InstanceId}' was reused for a different enqueue request.");
@@ -1110,16 +1193,27 @@ public sealed partial class InMemoryJobSchedulerStore
     private JobExecutionInstance EnqueueCapturedUnsafe(
         JobEnqueueRequest request,
         JobExecutionTemplate template,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        JobExecutionOrigin origin,
+        DateTimeOffset? recurringOccurrenceUtc = null,
+        JobExecutionSkipReason? skipReason = null,
+        string? historyMessage = null)
     {
+        JobExecutionAdmission.Validate(template, origin, recurringOccurrenceUtc, skipReason);
         var normalizedAvailableAt = request.AvailableAtUtc is { } requestedAvailability
             ? NormalizeUtc(requestedAvailability)
             : now;
+        DateTimeOffset? normalizedOccurrence = recurringOccurrenceUtc is { } occurrence
+            ? NormalizeUtc(occurrence)
+            : null;
         var key = new ExecutionKey(template.Revision.SchedulerScopeKey, request.InstanceId);
         if (_executionInstances.TryGetValue(key, out var existing))
         {
             if (existing.Template != template
                 || !string.Equals(existing.JobArgs, request.JobArgs, StringComparison.Ordinal)
+                || existing.Origin != origin
+                || existing.RecurringOccurrenceUtc != normalizedOccurrence
+                || existing.SkipReason != skipReason
                 || (request.AvailableAtUtc is not null
                     && existing.AvailableAtUtc != normalizedAvailableAt))
             {
@@ -1135,20 +1229,34 @@ public sealed partial class InMemoryJobSchedulerStore
             InstanceId = request.InstanceId,
             Template = template,
             JobArgs = request.JobArgs,
+            Origin = origin,
+            RecurringOccurrenceUtc = normalizedOccurrence,
+            SkipReason = skipReason,
             AvailableAtUtc = normalizedAvailableAt,
-            State = JobExecutionState.Queued,
-            CreatedAtUtc = now
+            State = skipReason is null ? JobExecutionState.Queued : JobExecutionState.Skipped,
+            CreatedAtUtc = now,
+            CompletedAtUtc = skipReason is null ? null : now
         };
         AddHistory(execution, new JobExecutionHistoryEntry
         {
             TimestampUtc = now,
             Kind = JobExecutionHistoryKind.StateTransition,
-            NewState = JobExecutionState.Queued,
-            Message = request.EnqueueReason
+            NewState = execution.State,
+            LogLevel = skipReason is null ? LogLevel.Information : LogLevel.Warning,
+            Message = historyMessage ?? request.EnqueueReason
         });
         _executionInstances.Add(key, execution);
         return ToSummary(execution);
     }
+
+    private int CountOutstandingExecutionsUnsafe(JobRevisionIdentity revision) =>
+        _executionInstances.Values.Count(execution =>
+            string.Equals(
+                execution.Template.Revision.SchedulerScopeKey,
+                revision.SchedulerScopeKey,
+                StringComparison.Ordinal)
+            && string.Equals(execution.Template.Revision.JobKey, revision.JobKey, StringComparison.Ordinal)
+            && execution.State is JobExecutionState.Queued or JobExecutionState.Running);
 
     private JobAttemptCompletionResult CompleteAttemptUnsafe(
         JobAttemptCompletion completion,
@@ -1475,6 +1583,9 @@ public sealed partial class InMemoryJobSchedulerStore
             InstanceId = execution.InstanceId,
             Template = execution.Template,
             JobArgs = execution.JobArgs,
+            Origin = execution.Origin,
+            RecurringOccurrenceUtc = execution.RecurringOccurrenceUtc,
+            SkipReason = execution.SkipReason,
             AvailableAtUtc = execution.AvailableAtUtc,
             State = execution.State,
             CreatedAtUtc = execution.CreatedAtUtc,
@@ -1535,7 +1646,10 @@ public sealed partial class InMemoryJobSchedulerStore
 
     private static bool IsTerminal(JobExecutionState state)
     {
-        return state is JobExecutionState.Succeeded or JobExecutionState.Failed or JobExecutionState.Cancelled;
+        return state is JobExecutionState.Succeeded
+            or JobExecutionState.Failed
+            or JobExecutionState.Cancelled
+            or JobExecutionState.Skipped;
     }
 
     private static string NewToken() => Guid.NewGuid().ToString("N");
@@ -1569,6 +1683,9 @@ public sealed partial class InMemoryJobSchedulerStore
         public required string InstanceId { get; init; }
         public required JobExecutionTemplate Template { get; init; }
         public string? JobArgs { get; init; }
+        public JobExecutionOrigin Origin { get; init; }
+        public DateTimeOffset? RecurringOccurrenceUtc { get; init; }
+        public JobExecutionSkipReason? SkipReason { get; init; }
         public DateTimeOffset AvailableAtUtc { get; set; }
         public JobExecutionState State { get; set; }
         public DateTimeOffset CreatedAtUtc { get; init; }

@@ -3,10 +3,10 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject TimeProvider TimeProvider
 
-<section class="recent-panel">
+<section class="recent-panel" aria-labelledby="recent-panel-title">
     <header class="recent-panel__heading">
         <div>
-            <MudText Typo="Typo.h6" HtmlTag="h2">@L["Overview:Recent:Title"]</MudText>
+            <MudText id="recent-panel-title" Typo="Typo.h6" HtmlTag="h2">@L["Overview:Recent:Title"]</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Recent:Description"]</MudText>
         </div>
         <MudTooltip Text="@L["Common:Refresh"]">
@@ -18,53 +18,46 @@
         </MudTooltip>
     </header>
 
-    <div class="recent-panel__table-scroll">
-        <MudTable T="JobExecutionInstance"
-                  Items="@Executions"
-                  Dense="true"
-                  Hover="true"
-                  Breakpoint="Breakpoint.None"
-                  Elevation="0">
-            <HeaderContent>
-                <MudTh>@L["Overview:Recent:Job"]</MudTh>
-                <MudTh>@L["Overview:Recent:State"]</MudTh>
-                <MudTh>@L["Overview:Recent:Created"]</MudTh>
-                <MudTh>@L["Overview:Recent:Duration"]</MudTh>
-                <MudTh Class="recent-panel__action-cell">@L["Catalog:Columns:Actions"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["Overview:Recent:Job"]">
-                    <MudTooltip Text="@context.Template.Revision.JobKey">
-                        <span class="recent-panel__job">@context.Template.Revision.JobKey</span>
-                    </MudTooltip>
-                </MudTd>
-                <MudTd DataLabel="@L["Overview:Recent:State"]">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                             Color="@JobSchedulerUiPresentation.GetStateColor(context.State)">
-                        @L[$"ExecutionStates:{context.State}"]
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="@L["Overview:Recent:Created"]">
-                    <span class="recent-panel__time">@context.CreatedAtUtc.ToLocalTime().ToString("g")</span>
-                </MudTd>
-                <MudTd DataLabel="@L["Overview:Recent:Duration"]">
-                    @JobSchedulerUiPresentation.FormatExecutionDuration(context, TimeProvider.GetUtcNow(), L)
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:Actions"]" Class="recent-panel__action-cell">
-                    <MudTooltip Text="@L["Executions:Actions:Details"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
-                                       Href="@GetExecutionHref(context.InstanceId)"
-                                       Color="Color.Primary"
-                                       Size="Size.Small"
-                                       aria-label="@L["Executions:Actions:Details"]" />
-                    </MudTooltip>
-                </MudTd>
-            </RowTemplate>
-            <NoRecordsContent>
-                <MudText Class="pa-4" Color="Color.Secondary">@L["Overview:Recent:Empty"]</MudText>
-            </NoRecordsContent>
-        </MudTable>
-    </div>
+    @if (Executions.Count == 0)
+    {
+        <div class="recent-panel__empty">
+            <MudIcon Icon="@Icons.Material.Outlined.Inbox" Size="Size.Large" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Recent:Empty"]</MudText>
+        </div>
+    }
+    else
+    {
+        <ol class="recent-panel__timeline">
+            @foreach (var execution in Executions)
+            {
+                <li class="recent-panel__event" data-state="@execution.State.ToString().ToLowerInvariant()">
+                    <a class="recent-panel__event-link" href="@GetExecutionHref(execution.InstanceId)">
+                        <span class="recent-panel__marker" aria-hidden="true">
+                            <MudIcon Icon="@GetStateIcon(execution.State)" Size="Size.Small" />
+                        </span>
+                        <span class="recent-panel__event-copy">
+                            <span class="recent-panel__event-heading">
+                                <strong title="@execution.Template.Revision.JobKey">
+                                    @JobSchedulerUiPresentation.GetJobKeyLabel(execution.Template.Revision.JobKey)
+                                </strong>
+                                <span class="recent-panel__state">@L[$"ExecutionStates:{execution.State}"]</span>
+                            </span>
+                            <code title="@execution.InstanceId">@JobSchedulerUiPresentation.ShortIdentity(execution.InstanceId, 18)</code>
+                        </span>
+                        <span class="recent-panel__event-time">
+                            <time datetime="@execution.CreatedAtUtc.ToString("O")">
+                                @execution.CreatedAtUtc.ToLocalTime().ToString("g")
+                            </time>
+                            <small>@JobSchedulerUiPresentation.FormatExecutionDuration(execution, TimeProvider.GetUtcNow(), L)</small>
+                        </span>
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
+                                 Size="Size.Small"
+                                 Class="recent-panel__chevron" />
+                    </a>
+                </li>
+            }
+        </ol>
+    }
 </section>
 
 @code {
@@ -88,4 +81,15 @@
 
     private static string GetExecutionHref(string instanceId) =>
         $"/job-scheduler/executions?instanceId={Uri.EscapeDataString(instanceId)}";
+
+    private static string GetStateIcon(JobExecutionState state) => state switch
+    {
+        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
+        JobExecutionState.Running => Icons.Material.Filled.PlayArrow,
+        JobExecutionState.Succeeded => Icons.Material.Filled.Check,
+        JobExecutionState.Failed => Icons.Material.Filled.PriorityHigh,
+        JobExecutionState.Cancelled => Icons.Material.Filled.Close,
+        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
+        _ => Icons.Material.Filled.Circle
+    };
 }

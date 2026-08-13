@@ -61,6 +61,44 @@ public sealed class JobSchedulerFacadeTests
     }
 
     [Fact]
+    public async Task RunRecurringNowAsync_ShouldAdmitDedicatedRecurringExecution()
+    {
+        var fixture = await CreateFixtureAsync(JobType.Recurring);
+        _ = (await fixture.Facade.UpdatePolicyAsync(
+            fixture.Definition.OwnerId,
+            fixture.Definition.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                DisabledOverride = true,
+                MaxRetainedHistoryRecords = fixture.Definition.Policy.MaxRetainedHistoryRecords,
+                MaxRetentionDays = fixture.Definition.Policy.MaxRetentionDays,
+                ExpectedConcurrencyStamp = fixture.Definition.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken)).ShouldSucceed();
+        var request = new JobRecurringRunNowRequest
+        {
+            InstanceId = "operator-recurring-idempotency-key",
+            JobKey = fixture.Definition.Declaration.JobKey,
+            ExpectedOwnerId = fixture.Definition.OwnerId,
+            ExpectedJobRevisionId = fixture.Definition.JobRevisionId
+        };
+
+        var first = (await fixture.Facade.RunRecurringNowAsync(
+            request,
+            TestContext.Current.CancellationToken)).ShouldSucceed()!;
+        fixture.TimeProvider.Advance(TimeSpan.FromMinutes(5));
+        var repeated = (await fixture.Facade.RunRecurringNowAsync(
+            request,
+            TestContext.Current.CancellationToken)).ShouldSucceed()!;
+
+        first.State.Should().Be(JobExecutionState.Queued);
+        first.Origin.Should().Be(JobExecutionOrigin.RecurringRunNow);
+        first.RecurringOccurrenceUtc.Should().BeNull();
+        first.AvailableAtUtc.Should().Be(NOW);
+        repeated.Should().BeEquivalentTo(first);
+    }
+
+    [Fact]
     public async Task GetOverviewAsync_ShouldCombinePublicationCapabilityAndQueueSignals()
     {
         var fixture = await CreateFixtureAsync();
@@ -179,7 +217,7 @@ public sealed class JobSchedulerFacadeTests
         batch.Items[1].Error.Should().NotBeNullOrWhiteSpace();
     }
 
-    private static async Task<Fixture> CreateFixtureAsync()
+    private static async Task<Fixture> CreateFixtureAsync(JobType jobType = JobType.Triggered)
     {
         const string scope = "facade-tests";
         var timeProvider = new ManualTimeProvider(NOW);
@@ -198,10 +236,12 @@ public sealed class JobSchedulerFacadeTests
             [new JobDeclaration
             {
                 JobKey = "Jobs.GenerateReport",
-                JobArgsKey = "Jobs.GenerateReportArgs",
+                JobArgsKey = jobType == JobType.Triggered ? "Jobs.GenerateReportArgs" : null,
                 JobName = "Generate report",
-                JobType = JobType.Triggered,
-                MaxConcurrency = 2
+                JobType = jobType,
+                MaxConcurrency = 2,
+                CronExpression = jobType == JobType.Recurring ? "0 * * * * *" : null,
+                TimeZoneId = jobType == JobType.Recurring ? TimeZoneInfo.Utc.Id : null
             }]));
         await store.TryActivateReleaseAsync(scope, "release-a");
         var definition = (await store.GetActiveCatalogAsync(scope))!.Definitions.Single();

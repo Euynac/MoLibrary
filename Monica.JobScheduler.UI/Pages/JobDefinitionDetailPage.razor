@@ -67,7 +67,20 @@
                                                    OnInspectSchedule="OpenScheduleInspectorAsync"
                                                    OnEditPolicy="OpenPolicyAsync"
                                                    OnToggleDisabled="ToggleDisabledAsync"
+                                                   OnRunNow="RunRecurringNowAsync"
                                                    OnTrigger="OpenTriggerAsync" />
+
+                        @if (state.AnalyticsError is not null)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                @L["JobDetail:Health:LoadFailed", state.AnalyticsError]
+                            </MudAlert>
+                        }
+
+                        @if (state.Analytics is { } analytics)
+                        {
+                            <JobHealthPanel Snapshot="@analytics" />
+                        }
 
                         <div class="job-detail-page__evidence-grid">
                             <JobDefinitionSchedulePanel Summary="@summary"

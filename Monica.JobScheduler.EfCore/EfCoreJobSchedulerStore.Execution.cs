@@ -31,7 +31,7 @@ public sealed partial class EfCoreJobSchedulerStore
                 token);
             if (existing is not null)
             {
-                return ResolveIdempotentEnqueue(request, existing);
+                return ResolveIdempotentEnqueue(request, existing, JobExecutionOrigin.Triggered);
             }
 
             var template = await ResolveActiveExecutionTemplateAsync(dbContext, request, token);
@@ -40,13 +40,48 @@ public sealed partial class EfCoreJobSchedulerStore
                 request,
                 template,
                 await GetUtcNowAsync(dbContext, token),
+                token,
+                JobExecutionOrigin.Triggered);
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<JobExecutionInstance> RunRecurringNowAsync(
+        JobRecurringRunNowCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        command.Validate();
+        var request = JobExecutionAdmission.CreateRecurringRunNowRequest(command);
+        return WriteAsync(async (dbContext, token) =>
+        {
+            var existing = await LoadExecutionAsync(
+                dbContext,
+                command.SchedulerScopeKey,
+                command.InstanceId,
+                true,
+                false,
                 token);
+            if (existing is not null)
+            {
+                return ResolveIdempotentEnqueue(request, existing, JobExecutionOrigin.RecurringRunNow);
+            }
+
+            var template = await ResolveActiveRecurringExecutionTemplateAsync(dbContext, command, token);
+            return await EnqueueCapturedExecutionAsync(
+                dbContext,
+                request,
+                template,
+                await GetUtcNowAsync(dbContext, token),
+                token,
+                JobExecutionOrigin.RecurringRunNow);
         }, cancellationToken);
     }
 
     private static JobExecutionInstance ResolveIdempotentEnqueue(
         JobEnqueueRequest request,
-        JobExecutionEntity existing)
+        JobExecutionEntity existing,
+        JobExecutionOrigin expectedOrigin)
     {
         var revision = Deserialize<JobExecutionTemplate>(existing.TemplateJson).Revision;
         var expectedTemplateMatches = string.Equals(request.JobKey, revision.JobKey, StringComparison.Ordinal)
@@ -61,6 +96,7 @@ public sealed partial class EfCoreJobSchedulerStore
                                               revision.JobRevisionId,
                                               StringComparison.Ordinal));
         if (!expectedTemplateMatches
+            || existing.Origin != expectedOrigin
             || !string.Equals(existing.JobArgs, request.JobArgs, StringComparison.Ordinal)
             || (request.AvailableAtUtc is { } requestedAvailability
                 && existing.AvailableAtUtcTicks != ToTicks(requestedAvailability)))
@@ -309,7 +345,8 @@ public sealed partial class EfCoreJobSchedulerStore
             .Where(item => item.SchedulerScopeKey == schedulerScopeKey
                            && (item.State == JobExecutionState.Succeeded
                                || item.State == JobExecutionState.Failed
-                               || item.State == JobExecutionState.Cancelled));
+                               || item.State == JobExecutionState.Cancelled
+                               || item.State == JobExecutionState.Skipped));
 
     private static IQueryable<ExecutionCleanupCandidate> OldestCleanupCandidates(
         IQueryable<JobExecutionEntity> terminal) =>
@@ -364,7 +401,8 @@ public sealed partial class EfCoreJobSchedulerStore
                                && ids.Contains(item.InstanceId)
                                && (item.State == JobExecutionState.Succeeded
                                    || item.State == JobExecutionState.Failed
-                                   || item.State == JobExecutionState.Cancelled))
+                                   || item.State == JobExecutionState.Cancelled
+                                   || item.State == JobExecutionState.Skipped))
                 .ToListAsync(token);
             dbContext.Executions.RemoveRange(executions);
             return executions.Count;
@@ -837,9 +875,17 @@ public sealed partial class EfCoreJobSchedulerStore
         JobEnqueueRequest request,
         JobExecutionTemplate template,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        JobExecutionOrigin origin,
+        DateTimeOffset? recurringOccurrenceUtc = null,
+        JobExecutionSkipReason? skipReason = null,
+        string? historyMessage = null)
     {
+        JobExecutionAdmission.Validate(template, origin, recurringOccurrenceUtc, skipReason);
         var availableAtUtc = request.AvailableAtUtc ?? now;
+        long? recurringOccurrenceTicks = recurringOccurrenceUtc is { } occurrence
+            ? ToTicks(occurrence)
+            : null;
         var scope = template.Revision.SchedulerScopeKey;
         var existing = await LoadExecutionAsync(
             dbContext,
@@ -852,6 +898,9 @@ public sealed partial class EfCoreJobSchedulerStore
         {
             if (Deserialize<JobExecutionTemplate>(existing.TemplateJson) != template
                 || !string.Equals(existing.JobArgs, request.JobArgs, StringComparison.Ordinal)
+                || existing.Origin != origin
+                || existing.RecurringOccurrenceUtcTicks != recurringOccurrenceTicks
+                || existing.SkipReason != skipReason
                 || (request.AvailableAtUtc is not null
                     && existing.AvailableAtUtcTicks != ToTicks(availableAtUtc)))
             {
@@ -875,13 +924,22 @@ public sealed partial class EfCoreJobSchedulerStore
             JobRevisionId = revision.JobRevisionId,
             JobKey = revision.JobKey,
             JobArgs = request.JobArgs,
+            Origin = origin,
+            RecurringOccurrenceUtcTicks = recurringOccurrenceTicks,
+            SkipReason = skipReason,
             AvailableAtUtcTicks = ToTicks(availableAtUtc),
-            State = JobExecutionState.Queued,
+            State = skipReason is null ? JobExecutionState.Queued : JobExecutionState.Skipped,
             CreatedAtUtcTicks = ToTicks(now),
+            CompletedAtUtcTicks = skipReason is null ? null : ToTicks(now),
             ConcurrencyToken = NewVersion()
         };
-        AddHistory(entity, now, JobExecutionHistoryKind.StateTransition, request.EnqueueReason,
-            newState: JobExecutionState.Queued);
+        AddHistory(
+            entity,
+            now,
+            JobExecutionHistoryKind.StateTransition,
+            historyMessage ?? request.EnqueueReason,
+            newState: entity.State,
+            logLevel: skipReason is null ? LogLevel.Information : LogLevel.Warning);
         dbContext.Executions.Add(entity);
         return ToExecution(entity);
     }
@@ -891,69 +949,16 @@ public sealed partial class EfCoreJobSchedulerStore
         JobEnqueueRequest request,
         CancellationToken cancellationToken)
     {
-        var scope = await dbContext.CatalogScopes.SingleOrDefaultAsync(
-            item => item.SchedulerScopeKey == request.SchedulerScopeKey,
-            cancellationToken);
-        if (scope?.ActiveReleaseId is null)
-        {
-            throw new JobCatalogNotFoundException(
-                $"Scheduler scope '{request.SchedulerScopeKey}' has no active catalog.");
-        }
-        if (scope.ActiveIntentEpoch != scope.DesiredIntentEpoch)
-        {
-            throw new JobCatalogTransitionException(request.SchedulerScopeKey);
-        }
-
-        var release = await GetReleaseAsync(
+        var definition = await ResolveActiveDefinitionAsync(
             dbContext,
             request.SchedulerScopeKey,
-            scope.ActiveReleaseId,
+            request.JobKey,
+            request.ExpectedOwnerId,
+            request.ExpectedJobRevisionId,
             cancellationToken);
-        var payload = Deserialize<CatalogReleasePayload>(release.PayloadJson);
-        JobOwnerCatalogSnapshot? owner = null;
-        JobDeclaration? declaration = null;
-        foreach (var snapshot in payload.OwnerSnapshots.Values.OfType<JobOwnerCatalogSnapshot>())
-        {
-            var candidate = snapshot.Declarations.SingleOrDefault(item =>
-                string.Equals(item.JobKey, request.JobKey, StringComparison.Ordinal));
-            if (candidate is not null)
-            {
-                owner = snapshot;
-                declaration = candidate;
-                break;
-            }
-        }
-        if (owner is null || declaration is null)
-        {
-            throw new JobCatalogNotFoundException(
-                $"Active job '{request.JobKey}' was not found in scope '{request.SchedulerScopeKey}'.");
-        }
-
-        var policy = await dbContext.JobPolicies.SingleAsync(item =>
-            item.SchedulerScopeKey == request.SchedulerScopeKey
-            && item.JobKey == request.JobKey,
-            cancellationToken);
-        if (policy.DisabledOverride ?? declaration.IsDisabledByDefault)
+        if (definition.IsDisabled)
         {
             throw new InvalidOperationException($"Active job '{request.JobKey}' is disabled.");
-        }
-
-        var definition = new ActiveJobDefinition
-        {
-            SchedulerScopeKey = request.SchedulerScopeKey,
-            ReleaseId = release.ReleaseId,
-            ActivationEpoch = scope.ActivationEpoch,
-            OwnerId = owner.OwnerId,
-            WorkerRevisionId = owner.WorkerRevisionId,
-            Declaration = declaration,
-            Policy = ToPolicy(policy)
-        };
-        if ((request.ExpectedOwnerId is not null
-             && !string.Equals(request.ExpectedOwnerId, definition.OwnerId, StringComparison.Ordinal))
-            || (request.ExpectedJobRevisionId is not null
-                && !string.Equals(request.ExpectedJobRevisionId, definition.JobRevisionId, StringComparison.Ordinal)))
-        {
-            throw new JobRevisionMismatchException(request.JobKey);
         }
 
         var template = definition.CreateExecutionTemplate();
@@ -969,6 +974,100 @@ public sealed partial class EfCoreJobSchedulerStore
         }
 
         return template;
+    }
+
+    private async Task<JobExecutionTemplate> ResolveActiveRecurringExecutionTemplateAsync(
+        JobSchedulerDbContext dbContext,
+        JobRecurringRunNowCommand command,
+        CancellationToken cancellationToken)
+    {
+        var definition = await ResolveActiveDefinitionAsync(
+            dbContext,
+            command.SchedulerScopeKey,
+            command.JobKey,
+            command.ExpectedOwnerId,
+            command.ExpectedJobRevisionId,
+            cancellationToken);
+        var template = definition.CreateExecutionTemplate();
+        if (template.JobType != JobType.Recurring)
+        {
+            throw new InvalidOperationException(
+                $"Active job '{command.JobKey}' is triggered and cannot be admitted through the recurring run-now API.");
+        }
+
+        return template;
+    }
+
+    private async Task<ActiveJobDefinition> ResolveActiveDefinitionAsync(
+        JobSchedulerDbContext dbContext,
+        string schedulerScopeKey,
+        string jobKey,
+        string? expectedOwnerId,
+        string? expectedJobRevisionId,
+        CancellationToken cancellationToken)
+    {
+        var scope = await dbContext.CatalogScopes.SingleOrDefaultAsync(
+            item => item.SchedulerScopeKey == schedulerScopeKey,
+            cancellationToken);
+        if (scope?.ActiveReleaseId is null)
+        {
+            throw new JobCatalogNotFoundException(
+                $"Scheduler scope '{schedulerScopeKey}' has no active catalog.");
+        }
+        if (scope.ActiveIntentEpoch != scope.DesiredIntentEpoch)
+        {
+            throw new JobCatalogTransitionException(schedulerScopeKey);
+        }
+
+        var release = await GetReleaseAsync(
+            dbContext,
+            schedulerScopeKey,
+            scope.ActiveReleaseId,
+            cancellationToken);
+        var payload = Deserialize<CatalogReleasePayload>(release.PayloadJson);
+        JobOwnerCatalogSnapshot? owner = null;
+        JobDeclaration? declaration = null;
+        foreach (var snapshot in payload.OwnerSnapshots.Values.OfType<JobOwnerCatalogSnapshot>())
+        {
+            var candidate = snapshot.Declarations.SingleOrDefault(item =>
+                string.Equals(item.JobKey, jobKey, StringComparison.Ordinal));
+            if (candidate is not null)
+            {
+                owner = snapshot;
+                declaration = candidate;
+                break;
+            }
+        }
+        if (owner is null || declaration is null)
+        {
+            throw new JobCatalogNotFoundException(
+                $"Active job '{jobKey}' was not found in scope '{schedulerScopeKey}'.");
+        }
+
+        var policy = await dbContext.JobPolicies.SingleAsync(item =>
+            item.SchedulerScopeKey == schedulerScopeKey
+            && item.JobKey == jobKey,
+            cancellationToken);
+
+        var definition = new ActiveJobDefinition
+        {
+            SchedulerScopeKey = schedulerScopeKey,
+            ReleaseId = release.ReleaseId,
+            ActivationEpoch = scope.ActivationEpoch,
+            OwnerId = owner.OwnerId,
+            WorkerRevisionId = owner.WorkerRevisionId,
+            Declaration = declaration,
+            Policy = ToPolicy(policy)
+        };
+        if ((expectedOwnerId is not null
+             && !string.Equals(expectedOwnerId, definition.OwnerId, StringComparison.Ordinal))
+            || (expectedJobRevisionId is not null
+                && !string.Equals(expectedJobRevisionId, definition.JobRevisionId, StringComparison.Ordinal)))
+        {
+            throw new JobRevisionMismatchException(jobKey);
+        }
+
+        return definition;
     }
 
     private async Task<JobAttemptCompletionResult> CompleteAttemptAsync(
@@ -1160,6 +1259,9 @@ public sealed partial class EfCoreJobSchedulerStore
         InstanceId = entity.InstanceId,
         Template = Deserialize<JobExecutionTemplate>(entity.TemplateJson),
         JobArgs = entity.JobArgs,
+        Origin = entity.Origin,
+        RecurringOccurrenceUtc = FromTicks(entity.RecurringOccurrenceUtcTicks),
+        SkipReason = entity.SkipReason,
         AvailableAtUtc = FromTicks(entity.AvailableAtUtcTicks),
         State = entity.State,
         CreatedAtUtc = FromTicks(entity.CreatedAtUtcTicks),
@@ -1214,7 +1316,10 @@ public sealed partial class EfCoreJobSchedulerStore
     }
 
     private static bool IsTerminal(JobExecutionState state) =>
-        state is JobExecutionState.Succeeded or JobExecutionState.Failed or JobExecutionState.Cancelled;
+        state is JobExecutionState.Succeeded
+            or JobExecutionState.Failed
+            or JobExecutionState.Cancelled
+            or JobExecutionState.Skipped;
 
     private static void ValidatePositiveDuration(TimeSpan duration, string parameterName)
     {

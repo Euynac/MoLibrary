@@ -1,0 +1,172 @@
+.job-health {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+    padding: 18px;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.job-health:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
+    box-shadow: var(--mud-elevation-2);
+}
+
+.job-health__heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.job-health__heading > div {
+    min-width: 0;
+}
+
+.job-health__score-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.job-health__score {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-background-gray);
+}
+
+.job-health__score > span,
+.job-health__score small {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+}
+
+.job-health__score strong {
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-display);
+    font-size: clamp(1.55rem, 3vw, 2.15rem);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.job-health__outcomes {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-lines-default);
+}
+
+.job-health__outcomes > div {
+    --outcome-tone: var(--mud-palette-text-secondary);
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 12px 13px;
+    background-color: var(--mud-palette-surface);
+}
+
+.job-health__outcomes > div[data-state="succeeded"] {
+    --outcome-tone: var(--mud-palette-success);
+}
+
+.job-health__outcomes > div[data-state="failed"] {
+    --outcome-tone: var(--mud-palette-error);
+}
+
+.job-health__outcomes > div[data-state="skipped"] {
+    --outcome-tone: var(--mud-palette-warning);
+}
+
+.job-health__outcomes > div[data-state="cancelled"] {
+    --outcome-tone: var(--mud-palette-text-secondary);
+}
+
+.job-health__outcomes span {
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.68rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-health__outcomes strong {
+    color: var(--outcome-tone);
+    font-family: var(--mo-font-family-display);
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.job-health__duration {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.job-health__duration > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 7px;
+    background-color: var(--mud-palette-background-gray);
+}
+
+.job-health__duration dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
+.job-health__duration dd {
+    margin: 0;
+    overflow: hidden;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-health__note {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.7rem;
+}
+
+@media (max-width: 600px) {
+    .job-health__heading {
+        display: grid;
+    }
+
+    .job-health__score-grid,
+    .job-health__outcomes,
+    .job-health__duration {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 390px) {
+    .job-health__score-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .job-health {
+        transition-duration: 0.01ms;
+    }
+}

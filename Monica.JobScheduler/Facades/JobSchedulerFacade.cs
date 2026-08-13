@@ -4,6 +4,7 @@ using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
+using Monica.JobScheduler.Models.Analytics;
 using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
@@ -208,6 +209,31 @@ public sealed class JobSchedulerFacade(
     }
 
     /// <summary>
+    /// Queues one immediate execution of an active recurring job without changing its recurring schedule cursor.
+    /// A paused schedule remains eligible for this explicit operator action.
+    /// </summary>
+    public Task<Res<JobExecutionInstance>> RunRecurringNowAsync(
+        JobRecurringRunNowRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var command = new JobRecurringRunNowCommand
+        {
+            SchedulerScopeKey = _schedulerScopeKey,
+            InstanceId = string.IsNullOrWhiteSpace(request.InstanceId)
+                ? Guid.NewGuid().ToString("N")
+                : request.InstanceId,
+            JobKey = request.JobKey,
+            ExpectedOwnerId = request.ExpectedOwnerId,
+            ExpectedJobRevisionId = request.ExpectedJobRevisionId
+        };
+        return ExecuteAsync(
+            () => store.RunRecurringNowAsync(command, cancellationToken),
+            "run a recurring job immediately",
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Queries durable executions through a bounded page. The configured scheduler scope always overrides caller data.
     /// </summary>
     public Task<Res<QueryResult<JobExecutionInstance>>> QueryExecutionsAsync(
@@ -224,6 +250,23 @@ public sealed class JobSchedulerFacade(
         return ExecuteAsync(
             () => store.QueryExecutionsAsync(bounded, cancellationToken),
             "query job executions",
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets bounded execution analytics for the configured scheduler scope.
+    /// </summary>
+    /// <param name="query">The required time range, interval, optional job key, and ranking bounds.</param>
+    /// <param name="cancellationToken">Cancels analytics loading.</param>
+    /// <returns>A result containing cohort, outcome, duration, trend, ranking, and slow-attempt analytics.</returns>
+    public Task<Res<JobExecutionAnalyticsSnapshot>> GetExecutionAnalyticsAsync(
+        JobExecutionAnalyticsQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        return ExecuteAsync(
+            () => store.GetExecutionAnalyticsAsync(_schedulerScopeKey, query, cancellationToken),
+            "load job execution analytics",
             cancellationToken);
     }
 

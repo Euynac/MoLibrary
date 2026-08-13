@@ -3,6 +3,7 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Results;
 using Monica.JobScheduler.Models;
+using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Components;
@@ -41,6 +42,9 @@ public sealed class SchedulerOperationalPagesTests
             cut.Markup.Should().Contain("release-1");
             cut.Markup.Should().Contain(JobSchedulerUiTestContext.OWNER);
             cut.Markup.Should().Contain("Overview:Release:Converged");
+            cut.Markup.Should().Contain("Overview:Workload:TotalJobs");
+            cut.Markup.Should().Contain("Overview:Attention:Title");
+            cut.Markup.Should().Contain("execution-flow__chart");
         });
     }
 
@@ -56,8 +60,46 @@ public sealed class SchedulerOperationalPagesTests
             cut.Markup.Should().Contain("0 */5 * * * *");
             cut.Markup.Should().Contain("UTC");
             cut.FindAll("button").Should().HaveCountGreaterThanOrEqualTo(5);
+            cut.Markup.Should().Contain("catalog-item");
+            cut.Markup.Should().Contain("Catalog:Cron:EveryMinutes");
+            cut.Markup.Should().Contain("Catalog:Selection:SelectPage");
         });
         cut.Markup.Should().NotContain("CronEditor");
+    }
+
+    [Fact]
+    public async Task Catalog_ShouldSeparateRecurringAndTriggeredViews()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+
+        var cut = context.Render<JobCatalogPage>();
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Recurring cleanup"));
+        cut.Markup.Should().NotContain("Generate report");
+
+        cut.FindAll("button")
+            .Single(button => button.TextContent.Contains("JobTypes:Triggered", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Generate report"));
+        cut.Markup.Should().NotContain("Recurring cleanup");
+    }
+
+    [Fact]
+    public async Task CatalogOwnerFacets_DuringRollingRelease_ShouldDescribeTheActiveCatalog()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await context.Store.StageReleaseAsync(new JobCatalogReleaseStage(
+            new JobCatalogReleaseManifest(
+                JobSchedulerUiTestContext.SCOPE,
+                "release-2",
+                [new JobCatalogOwnerManifest(JobSchedulerUiTestContext.OWNER, "sha256:worker-b")]),
+            2), Xunit.TestContext.Current.CancellationToken);
+        await using var state = context.Services.GetRequiredService<JobCatalogPageStateFactory>().Create(20);
+
+        await state.InitializeAsync();
+
+        state.OwnerFacets.Should().ContainSingle()
+            .Which.Should().Be(KeyValuePair.Create(JobSchedulerUiTestContext.OWNER, 2));
     }
 
     [Fact]
@@ -83,6 +125,65 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
+    public async Task CatalogState_ShouldAllowRunNowWhileRecurringMaterializationIsPaused()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await using var state = context.Services.GetRequiredService<JobCatalogPageStateFactory>().Create(20);
+        await state.InitializeAsync();
+        var recurring = state.Summaries.Single();
+        (await state.SetDisabledAsync(recurring, true)).Status.Should().Be(ResStatus.Ok);
+        recurring = state.Summaries.Single();
+
+        var result = await state.RunRecurringNowAsync(recurring);
+
+        result.Status.Should().Be(ResStatus.Ok);
+        result.Data.Should().NotBeNull();
+        result.Data!.Origin.Should().Be(JobExecutionOrigin.RecurringRunNow);
+        result.Data.State.Should().Be(JobExecutionState.Queued);
+    }
+
+    [Fact]
+    public async Task OverviewRecentActivity_ShouldRenderClickableTimelineInsteadOfTableActions()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        var execution = await context.Store.EnqueueAsync(new JobEnqueueRequest
+        {
+            SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
+            InstanceId = "overview-activity-0001",
+            JobKey = context.TriggeredDefinition.Declaration.JobKey,
+            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
+            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            JobArgs = "{}"
+        }, Xunit.TestContext.Current.CancellationToken);
+
+        var cut = context.Render<SchedulerOverviewPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var activity = cut.Find(".recent-panel__event-link");
+            activity.GetAttribute("href").Should().Contain(execution.InstanceId);
+            cut.FindAll(".recent-panel table").Should().BeEmpty();
+        });
+    }
+
+    [Fact]
+    public async Task Statistics_ShouldRenderBoundedReliabilityTrendDurationAndRankings()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+
+        var cut = context.Render<SchedulerStatisticsPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Markup.Should().Contain("Analytics:Metrics:Reliability");
+            cut.Markup.Should().Contain("Analytics:Trend:Title");
+            cut.Markup.Should().Contain("Analytics:Duration:Title");
+            cut.Markup.Should().Contain("Analytics:Rankings:Title");
+            cut.Markup.Should().Contain("analytics-dashboard__bars");
+        });
+    }
+
+    [Fact]
     public async Task JobDetail_ShouldRenderSchedulePolicyRevisionAndLatestExecutionEvidence()
     {
         await using var context = new JobSchedulerUiTestContext();
@@ -97,6 +198,7 @@ public sealed class SchedulerOperationalPagesTests
             cut.Markup.Should().Contain("JobDetail:Contract:PolicyTitle");
             cut.Markup.Should().Contain("JobDetail:Contract:JobRevision");
             cut.Markup.Should().Contain("RecurringScheduleStatuses:Scheduled");
+            cut.Markup.Should().Contain("JobDetail:Health:Title");
         });
     }
 
@@ -206,10 +308,10 @@ public sealed class SchedulerOperationalPagesTests
             cut.Markup.Should().Contain("Executions:Filters:TimeRange");
             cut.Markup.Should().Contain("Executions:Filters:SortBy");
             cut.Markup.Should().Contain("Executions:Filters:PageSize");
-            cut.Markup.Should().Contain("Executions:Columns:Started");
-            cut.Markup.Should().Contain("Executions:Columns:Completed");
             cut.Markup.Should().Contain("Executions:Columns:Duration");
+            cut.Markup.Should().Contain("execution-activity__item");
         });
+        cut.Markup.Should().NotContain("executions-page__table");
     }
 
     [Fact]
@@ -279,8 +381,7 @@ public sealed class SchedulerOperationalPagesTests
             provider.Markup.Should().Contain("ExecutionDetail:PolicySnapshot");
             provider.Markup.Should().Contain("ExecutionDetail:Timing");
             provider.Markup.Should().Contain("ExecutionDetail:LeaseLosses");
-            provider.Markup.Should().Contain("ExecutionDetail:HistoryLogLevel");
-            provider.Markup.Should().Contain("ExecutionDetail:HistoryWorker");
+            provider.Markup.Should().Contain("execution-history__timeline");
             provider.Markup.Should().Contain("ExecutionDetail:Actions:CopyDiagnostics");
             provider.Markup.Should().Contain("ExecutionDetail:Actions:ViewCatalog");
         });

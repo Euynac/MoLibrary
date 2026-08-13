@@ -83,6 +83,17 @@ public partial class JobExecutionsPage : IAsyncDisposable
 
     private string FormatSortField(JobExecutionSortField sortField) => L[$"Executions:SortFields:{sortField}"];
 
+    private static string GetStateIcon(JobExecutionState state) => state switch
+    {
+        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
+        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
+        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
+        JobExecutionState.Failed => Icons.Material.Filled.Error,
+        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
+        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
+        _ => Icons.Material.Filled.Circle
+    };
+
     private async Task OpenDetailsAsync(string instanceId)
     {
         var parameters = new DialogParameters<ExecutionDetailDialog>

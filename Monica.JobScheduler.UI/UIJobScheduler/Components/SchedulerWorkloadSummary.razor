@@ -1,0 +1,68 @@
+@using System.Globalization
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+@{
+    var definitions = Overview.ActiveCatalog?.Definitions ?? [];
+    var recurringCount = definitions.Count(static definition => definition.Declaration.JobType == JobType.Recurring);
+    var triggeredCount = definitions.Count(static definition => definition.Declaration.JobType == JobType.Triggered);
+    var succeededCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Succeeded);
+    var failedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Failed);
+    var completedCount = succeededCount + failedCount;
+}
+
+<section class="workload-summary" aria-label="@L["Overview:Workload:AriaLabel"]">
+    <article class="workload-summary__metric" data-tone="primary">
+        <span class="workload-summary__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Workspaces" Size="Size.Small" />
+        </span>
+        <div>
+            <span>@L["Overview:Workload:TotalJobs"]</span>
+            <strong>@definitions.Count</strong>
+            <small>@L["Overview:Workload:AcrossOwners", Overview.Owners.Count]</small>
+        </div>
+    </article>
+    <article class="workload-summary__metric" data-tone="info">
+        <span class="workload-summary__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Update" Size="Size.Small" />
+        </span>
+        <div>
+            <span>@L["Overview:Workload:RecurringJobs"]</span>
+            <strong>@recurringCount</strong>
+            <small>@L["Overview:Workload:RecurringDescription"]</small>
+        </div>
+    </article>
+    <article class="workload-summary__metric" data-tone="warning">
+        <span class="workload-summary__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+        </span>
+        <div>
+            <span>@L["Overview:Workload:TriggeredJobs"]</span>
+            <strong>@triggeredCount</strong>
+            <small>@L["Overview:Workload:TriggeredDescription"]</small>
+        </div>
+    </article>
+    <article class="workload-summary__metric" data-tone="success">
+        <span class="workload-summary__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" />
+        </span>
+        <div>
+            <span>@L["Overview:Workload:SuccessRate"]</span>
+            <strong>@FormatSuccessRate(succeededCount, completedCount)</strong>
+            <small>@L["Overview:Workload:CompletedSample", completedCount]</small>
+        </div>
+    </article>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the current bounded scheduler workload snapshot.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobSchedulerOverview Overview { get; set; } = null!;
+
+    private static string FormatSuccessRate(int succeededCount, int completedCount) => completedCount == 0
+        ? "—"
+        : (succeededCount / (double)completedCount).ToString("P0", CultureInfo.CurrentCulture);
+}

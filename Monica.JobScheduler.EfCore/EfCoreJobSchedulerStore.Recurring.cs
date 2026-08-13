@@ -228,14 +228,35 @@ public sealed partial class EfCoreJobSchedulerStore
                 };
             }
 
-            var execution = await EnqueueCapturedExecutionAsync(dbContext, new JobEnqueueRequest
+            var request = new JobEnqueueRequest
             {
                 InstanceId = materialization.InstanceId,
                 SchedulerScopeKey = template.Revision.SchedulerScopeKey,
                 JobKey = template.Revision.JobKey,
                 AvailableAtUtc = FromTicks(expectedTicks),
                 EnqueueReason = $"Recurring occurrence {FromTicks(expectedTicks):O} materialized"
-            }, template, now, token);
+            };
+            var outstandingCount = await dbContext.Executions.CountAsync(
+                item => item.SchedulerScopeKey == template.Revision.SchedulerScopeKey
+                        && item.JobKey == template.Revision.JobKey
+                        && (item.State == JobExecutionState.Queued || item.State == JobExecutionState.Running),
+                token);
+            JobExecutionSkipReason? skipReason = outstandingCount >= template.MaxConcurrency
+                ? JobExecutionSkipReason.RecurringCapacityUnavailable
+                : null;
+            var execution = await EnqueueCapturedExecutionAsync(
+                dbContext,
+                request,
+                template,
+                now,
+                token,
+                JobExecutionOrigin.RecurringSchedule,
+                FromTicks(expectedTicks),
+                skipReason,
+                skipReason is null
+                    ? request.EnqueueReason
+                    : $"Recurring occurrence {FromTicks(expectedTicks):O} skipped because {outstandingCount} outstanding "
+                      + $"execution(s) reached the configured capacity of {template.MaxConcurrency}");
             cursor.NextOccurrenceUtcTicks = ToTicks(materialization.NextOccurrenceUtc);
             cursor.CursorVersion++;
             cursor.UpdatedAtUtcTicks = ToTicks(now);

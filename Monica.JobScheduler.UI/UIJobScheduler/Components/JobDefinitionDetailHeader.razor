@@ -53,6 +53,13 @@
             }
             @if (Definition.Declaration.JobType == JobType.Recurring)
             {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           Disabled="@IsMutating"
+                           OnClick="OnRunNow">
+                    @L["Catalog:Actions:Run"]
+                </MudButton>
                 <MudButton Variant="Variant.Outlined"
                            Color="@(Definition.IsDisabled ? Color.Success : Color.Warning)"
                            StartIcon="@(Definition.IsDisabled ? Icons.Material.Filled.PlayCircle : Icons.Material.Filled.PauseCircle)"
@@ -147,6 +154,12 @@
     /// </summary>
     [Parameter]
     public EventCallback OnToggleDisabled { get; set; }
+
+    /// <summary>
+    /// Gets the callback that admits an immediate operator occurrence without advancing the recurring cursor.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRunNow { get; set; }
 
     /// <summary>
     /// Gets the callback that opens triggered execution admission.

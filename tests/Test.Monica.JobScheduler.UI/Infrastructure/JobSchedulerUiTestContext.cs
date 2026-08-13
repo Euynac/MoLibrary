@@ -63,6 +63,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         Services.AddScoped<JobCatalogPageStateFactory>();
         Services.AddScoped<JobDefinitionDetailPageStateFactory>();
         Services.AddScoped<JobExecutionsStateFactory>();
+        Services.AddScoped<SchedulerStatisticsPageStateFactory>();
         _ = Render<MudPopoverProvider>();
         DialogProvider = Render<MudDialogProvider>();
     }

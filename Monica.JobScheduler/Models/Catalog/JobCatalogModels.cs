@@ -44,7 +44,8 @@ public sealed record JobDeclaration
     public string? Description { get; init; }
     public JobType JobType { get; init; }
     /// <summary>
-    /// Gets the maximum number of active leases for this logical job across all owners and revisions in the scope.
+    /// Gets the scope-wide logical job capacity across owners and revisions. It limits active leases and determines
+    /// when overlapping recurring occurrences are recorded as skipped instead of queued.
     /// </summary>
     public int MaxConcurrency { get; init; } = 1;
     public int RetryCount { get; init; }

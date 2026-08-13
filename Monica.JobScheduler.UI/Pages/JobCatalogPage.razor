@@ -23,10 +23,12 @@
                                   SearchTextChanged="@(value => _state.SearchText = value)"
                                   OwnerId="@_state.OwnerId"
                                   OwnerIdChanged="@(value => _state.OwnerId = value)"
+                                  OwnerFacets="@_state.OwnerFacets"
                                   SelectedJobType="@_state.SelectedJobType"
-                                  SelectedJobTypeChanged="@(value => _state.SelectedJobType = value)"
+                                  JobTypeCounts="@_state.JobTypeCounts"
+                                  JobTypeSelected="@_state.SelectJobTypeAsync"
                                   SelectedDisabledState="@_state.SelectedDisabledState"
-                                  SelectedDisabledStateChanged="@(value => _state.SelectedDisabledState = value)"
+                                  DisabledStateSelected="@_state.SelectDisabledStateAsync"
                                   IsLoading="@_state.IsLoading"
                                   SearchRequested="@_state.SearchAsync"
                                   ResetRequested="@_state.ResetAsync" />
@@ -87,9 +89,7 @@
                                             AllRecurringSelectionChanged="SetAllRecurringSelection"
                                             SelectionToggled="ToggleSelection"
                                             DisabledStateToggled="ToggleDisabledAsync"
-                                            ScheduleRequested="OpenScheduleAsync"
-                                            TriggerRequested="OpenTriggerAsync"
-                                            PolicyRequested="OpenPolicyAsync" />
+                                            RunRequested="RunJobAsync" />
             </div>
         </SchedulerAccessBoundary>
     }
@@ -196,29 +196,39 @@
         }
     }
 
-    private async Task OpenPolicyAsync(JobOperationalSummary summary)
+    private async Task RunJobAsync(JobOperationalSummary summary)
     {
         var state = _state;
-        if (state is null || !await CanMutateAsync(state))
+        if (state is null || _disposed)
         {
             return;
         }
 
-        var parameters = new DialogParameters<JobPolicyDialog>
+        if (summary.Definition.Declaration.JobType == JobType.Triggered)
         {
-            { dialog => dialog.Definition, summary.Definition }
-        };
-        var dialog = await DialogService.ShowAsync<JobPolicyDialog>(L["Policy:Title"], parameters, DialogOptions);
-        var result = await dialog.Result;
-        if (_disposed || _state != state)
-        {
+            await OpenTriggerAsync(summary);
             return;
         }
 
-        if (result is { Canceled: false, Data: JobPolicy policy })
+        try
         {
-            state.ApplyPolicy(summary.Definition.Declaration.JobKey, policy);
-            Snackbar.Add(L["Policy:Saved"], Severity.Success);
+            var result = await state.RunRecurringNowAsync(summary);
+            if (_disposed || _state != state)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error, out var execution))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:RunFailed"], Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(L["Catalog:Messages:Queued", execution.InstanceId], Severity.Success);
+            await state.RefreshAsync();
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
         }
     }
 
@@ -246,24 +256,6 @@
             Snackbar.Add(L["Trigger:Queued", execution.InstanceId], Severity.Success);
             await state.RefreshAsync();
         }
-    }
-
-    private async Task OpenScheduleAsync(JobOperationalSummary summary)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<CronScheduleInspectorDialog>
-        {
-            { dialog => dialog.Definition, summary.Definition },
-            { dialog => dialog.OperationalSummary, summary }
-        };
-        await DialogService.ShowAsync<CronScheduleInspectorDialog>(
-            L["CronInspector:Title"],
-            parameters,
-            WideDialogOptions);
     }
 
     private async Task<bool> CanMutateAsync(JobCatalogPageState state)
@@ -307,6 +299,4 @@
         FullWidth = true,
         MaxWidth = MaxWidth.Small
     };
-
-    private static DialogOptions WideDialogOptions { get; } = DialogOptions with { MaxWidth = MaxWidth.Medium };
 }

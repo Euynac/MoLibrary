@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace Monica.JobScheduler.Models.Execution;
 
 /// <summary>
-/// Represents the durable lifecycle state of a queued job execution.
+/// Represents the durable lifecycle state of a job execution or recorded recurring occurrence.
 /// </summary>
 public enum JobExecutionState
 {
@@ -30,7 +30,44 @@ public enum JobExecutionState
     /// <summary>
     /// The execution was cancelled before or during execution.
     /// </summary>
-    Cancelled
+    Cancelled,
+
+    /// <summary>
+    /// A recurring occurrence was durably recorded but intentionally did not enter the execution queue.
+    /// </summary>
+    Skipped
+}
+
+/// <summary>
+/// Identifies how an execution entered the durable ledger.
+/// </summary>
+public enum JobExecutionOrigin
+{
+    /// <summary>
+    /// Application code or an operator admitted a triggered job through the trigger API.
+    /// </summary>
+    Triggered,
+
+    /// <summary>
+    /// The recurring control plane materialized a scheduled occurrence.
+    /// </summary>
+    RecurringSchedule,
+
+    /// <summary>
+    /// An operator requested an immediate execution of a recurring job without changing its schedule cursor.
+    /// </summary>
+    RecurringRunNow
+}
+
+/// <summary>
+/// Explains why an execution ledger entry was skipped before an attempt began.
+/// </summary>
+public enum JobExecutionSkipReason
+{
+    /// <summary>
+    /// The recurring occurrence overlapped the logical job's configured outstanding-execution capacity.
+    /// </summary>
+    RecurringCapacityUnavailable
 }
 
 /// <summary>
@@ -106,7 +143,7 @@ public sealed record JobExecutionInstance
     public required string InstanceId { get; init; }
 
     /// <summary>
-    /// Gets the immutable declaration snapshot captured when the execution was enqueued.
+    /// Gets the immutable declaration snapshot captured when the execution or skipped occurrence was recorded.
     /// </summary>
     public required JobExecutionTemplate Template { get; init; }
 
@@ -116,7 +153,24 @@ public sealed record JobExecutionInstance
     public string? JobArgs { get; init; }
 
     /// <summary>
-    /// Gets the earliest UTC time at which a worker may claim the execution.
+    /// Gets how this execution entered the durable ledger.
+    /// </summary>
+    public JobExecutionOrigin Origin { get; init; }
+
+    /// <summary>
+    /// Gets the scheduled recurring occurrence represented by this execution, when it originated from the schedule.
+    /// Operator run-now executions do not have a scheduled occurrence.
+    /// </summary>
+    public DateTimeOffset? RecurringOccurrenceUtc { get; init; }
+
+    /// <summary>
+    /// Gets why this execution was skipped before entering the queue, or <see langword="null"/> otherwise.
+    /// </summary>
+    public JobExecutionSkipReason? SkipReason { get; init; }
+
+    /// <summary>
+    /// Gets the earliest UTC time at which a worker may claim a queued execution. For a skipped schedule occurrence,
+    /// this retains the occurrence time even though the entry is never claimable.
     /// </summary>
     public DateTimeOffset AvailableAtUtc { get; init; }
 
@@ -126,7 +180,7 @@ public sealed record JobExecutionInstance
     public JobExecutionState State { get; init; }
 
     /// <summary>
-    /// Gets when the execution was enqueued in UTC.
+    /// Gets when the execution or skipped occurrence was durably recorded in UTC.
     /// </summary>
     public DateTimeOffset CreatedAtUtc { get; init; }
 
@@ -179,5 +233,8 @@ public sealed record JobExecutionInstance
     /// <summary>
     /// Gets whether this execution has reached a terminal state.
     /// </summary>
-    public bool IsTerminal => State is JobExecutionState.Succeeded or JobExecutionState.Failed or JobExecutionState.Cancelled;
+    public bool IsTerminal => State is JobExecutionState.Succeeded
+        or JobExecutionState.Failed
+        or JobExecutionState.Cancelled
+        or JobExecutionState.Skipped;
 }

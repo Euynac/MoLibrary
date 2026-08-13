@@ -92,6 +92,8 @@ public sealed class JobSchedulerDbContext(
             entity.Property(item => item.JobRevisionId).HasMaxLength(JobSchedulerIdentity.HASH_LENGTH);
             entity.Property(item => item.JobKey).HasMaxLength(JobSchedulerIdentity.JOB_KEY_MAX_LENGTH);
             entity.Property(item => item.JobArgs).HasColumnType("text");
+            entity.Property(item => item.Origin).HasConversion<string>().HasMaxLength(30);
+            entity.Property(item => item.SkipReason).HasConversion<string>().HasMaxLength(40);
             entity.Property(item => item.State).HasConversion<string>().HasMaxLength(20);
             entity.Property(item => item.RunningWorkerInstanceId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
             entity.Property(item => item.ExecutionLeaseToken).HasMaxLength(32);
@@ -105,6 +107,7 @@ public sealed class JobSchedulerDbContext(
                 item.OwnerKey
             });
             entity.HasIndex(item => new { item.SchedulerScopeKey, item.State, item.ActivationEpoch });
+            entity.HasIndex(item => new { item.SchedulerScopeKey, item.JobKey, item.State });
             entity.HasIndex(item => new { item.SchedulerScopeKey, item.JobKey, item.CreatedAtUtcTicks });
             entity.HasMany(item => item.History)
                 .WithOne(item => item.Execution)

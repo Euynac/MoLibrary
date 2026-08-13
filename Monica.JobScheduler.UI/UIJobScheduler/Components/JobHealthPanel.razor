@@ -1,0 +1,105 @@
+@using System.Globalization
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<section class="job-health" aria-labelledby="job-health-heading">
+    <header class="job-health__heading">
+        <div>
+            <MudText Typo="Typo.overline" Color="Color.Primary">@L["JobDetail:Health:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="job-health-heading">@L["JobDetail:Health:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["JobDetail:Health:Description"]</MudText>
+        </div>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+            @L["JobDetail:Health:Window"]
+        </MudChip>
+    </header>
+
+    <div class="job-health__score-grid">
+        <article class="job-health__score" data-tone="success">
+            <span>@L["Analytics:Metrics:Reliability"]</span>
+            <strong>@FormatRatio(Snapshot.Reliability, HasReliabilitySample)</strong>
+            <MudProgressLinear Value="@(Snapshot.Reliability * 100D)"
+                               Color="Color.Success"
+                               Rounded="true"
+                               Size="Size.Small" />
+            <small>@L["JobDetail:Health:ReliabilityHelp", DecidedExecutionCount]</small>
+        </article>
+        <article class="job-health__score" data-tone="info">
+            <span>@L["Analytics:Metrics:ScheduleFulfillment"]</span>
+            <strong>@FormatRatio(ScheduleFulfillment, HasScheduleSample)</strong>
+            <MudProgressLinear Value="@(ScheduleFulfillment * 100D)"
+                               Color="Color.Info"
+                               Rounded="true"
+                               Size="Size.Small" />
+            <small>@L["JobDetail:Health:FulfillmentHelp", ScheduleDispositionCount]</small>
+        </article>
+    </div>
+
+    <div class="job-health__outcomes" aria-label="@L["JobDetail:Health:OutcomeAriaLabel"]">
+        @foreach (var state in OutcomeStates)
+        {
+            <div data-state="@state.ToString().ToLowerInvariant()">
+                <span>@L[$"ExecutionStates:{state}"]</span>
+                <strong>@Snapshot.StateTotals.GetValueOrDefault(state).ToString("N0", CultureInfo.CurrentCulture)</strong>
+            </div>
+        }
+    </div>
+
+    <dl class="job-health__duration">
+        <div>
+            <dt>@L["Analytics:Duration:P50"]</dt>
+            <dd>@FormatDuration(Snapshot.Duration.P50)</dd>
+        </div>
+        <div>
+            <dt>@L["Analytics:Duration:P95"]</dt>
+            <dd>@FormatDuration(Snapshot.Duration.P95)</dd>
+        </div>
+        <div>
+            <dt>@L["Analytics:Duration:P99"]</dt>
+            <dd>@FormatDuration(Snapshot.Duration.P99)</dd>
+        </div>
+        <div>
+            <dt>@L["Analytics:Duration:Maximum"]</dt>
+            <dd>@FormatDuration(Snapshot.Duration.Maximum)</dd>
+        </div>
+    </dl>
+
+    <footer class="job-health__note">
+        <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+        <span>@L["JobDetail:Health:CohortNote"]</span>
+    </footer>
+</section>
+
+@code {
+    private static readonly JobExecutionState[] OutcomeStates =
+    [
+        JobExecutionState.Succeeded,
+        JobExecutionState.Failed,
+        JobExecutionState.Skipped,
+        JobExecutionState.Cancelled
+    ];
+
+    /// <summary>
+    /// Gets the bounded per-job analytics snapshot rendered by this panel.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobExecutionAnalyticsSnapshot Snapshot { get; set; } = null!;
+
+    private long SucceededCount => Snapshot.Trend.Sum(static bucket => bucket.SucceededCount);
+    private long FailedCount => Snapshot.Trend.Sum(static bucket => bucket.FailedCount);
+    private long SkippedCount => Snapshot.Trend.Sum(static bucket => bucket.SkippedCount);
+    private long DecidedExecutionCount => SucceededCount + FailedCount;
+    private long ScheduleDispositionCount => DecidedExecutionCount + SkippedCount;
+    private bool HasReliabilitySample => DecidedExecutionCount > 0;
+    private bool HasScheduleSample => ScheduleDispositionCount > 0;
+    private double ScheduleFulfillment => HasScheduleSample ? 1D - Snapshot.SkipRate : 0D;
+
+    private static string FormatRatio(double value, bool hasSample) => hasSample
+        ? value.ToString("P1", CultureInfo.CurrentCulture)
+        : "—";
+
+    private string FormatDuration(TimeSpan? duration) => duration is { } value
+        ? JobSchedulerUiPresentation.FormatDuration(value)
+        : L["Common:NotAvailable"];
+}

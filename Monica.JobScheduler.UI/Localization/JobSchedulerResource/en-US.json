@@ -3,7 +3,8 @@
     "Overview": { "Title": "Scheduler overview" },
     "Catalog": { "Title": "Job catalog" },
     "JobDetail": { "Title": "Job details" },
-    "Executions": { "Title": "Execution ledger" }
+    "Executions": { "Title": "Execution ledger" },
+    "Statistics": { "Title": "Scheduler analytics" }
   },
   "Workspace": {
     "Eyebrow": "MONICA / DURABLE SCHEDULING",
@@ -13,16 +14,17 @@
     "Navigation": {
       "Overview": "Overview",
       "Catalog": "Catalog",
-      "Executions": "Executions"
+      "Executions": "Executions",
+      "Statistics": "Analytics"
     },
     "Pages": {
       "Overview": {
-        "Title": "Deployment control room",
-        "Description": "Track release intent, declaration publication, executable worker revisions, and durable queue state from one operational view."
+        "Title": "Scheduler operations",
+        "Description": "Follow workload volume, execution outcomes, recent activity, and attention signals before drilling into deployment evidence."
       },
       "Catalog": {
-        "Title": "Immutable job catalog",
-        "Description": "Inspect code-owned declarations and exact executable revisions. Operators can change only independent disable and retention policy."
+        "Title": "Job catalog",
+        "Description": "Browse recurring and triggered work separately, read schedule health, and open a job's complete operational dossier."
       },
       "JobDetail": {
         "Title": "Job operational dossier",
@@ -31,6 +33,10 @@
       "Executions": {
         "Title": "Durable execution ledger",
         "Description": "Search queued and completed work, inspect fenced lease history, and request cancellation without relying on broker delivery."
+      },
+      "Statistics": {
+        "Title": "Scheduler analytics",
+        "Description": "Measure reliability, schedule fulfillment, throughput, duration percentiles, and workload concentration over bounded UTC windows."
       }
     }
   },
@@ -58,7 +64,8 @@
     "Running": "Running",
     "Succeeded": "Succeeded",
     "Failed": "Failed",
-    "Cancelled": "Cancelled"
+    "Cancelled": "Cancelled",
+    "Skipped": "Skipped"
   },
   "JobTypes": {
     "Recurring": "Recurring",
@@ -82,7 +89,44 @@
       "ReadinessDescription": "Desired publication and exact worker revisions must converge before the release can become the active execution contract.",
       "EpochAriaLabel": "Catalog epoch progression"
     },
-    "Queue": { "AriaLabel": "Durable execution state counts" },
+    "Workload": {
+      "AriaLabel": "Scheduler workload summary",
+      "TotalJobs": "Total jobs",
+      "AcrossOwners": "Across {0} source project(s)",
+      "RecurringJobs": "Recurring jobs",
+      "RecurringDescription": "Schedule-driven workload",
+      "TriggeredJobs": "Triggered jobs",
+      "TriggeredDescription": "Operator or API admission",
+      "SuccessRate": "Success rate",
+      "CompletedSample": "Across {0} successful or failed run(s)"
+    },
+    "Queue": {
+      "Title": "Execution state",
+      "Description": "Current durable ledger distribution by lifecycle state.",
+      "Total": "Executions",
+      "AriaLabel": "Durable execution state counts"
+    },
+    "Attention": {
+      "Title": "Needs attention",
+      "Description": "Signals that may require an operator decision.",
+      "ClearTitle": "No immediate intervention",
+      "ClearDescription": "No failed or skipped executions and every source project is converged.",
+      "Failed": "Failed executions",
+      "FailedDescription": "Inspect errors and retry evidence.",
+      "Skipped": "Skipped occurrences",
+      "SkippedDescription": "Review overlap and schedule capacity.",
+      "Owners": "Unconverged source projects",
+      "OwnersDescription": "Publication or compatible workers are missing."
+    },
+    "Analytics": {
+      "Title": "Performance analytics",
+      "Description": "Explore throughput, outcome trends, duration percentiles, and the slowest jobs over a bounded time window.",
+      "Action": "Open analytics"
+    },
+    "Deployment": {
+      "Title": "Deployment evidence",
+      "Description": "Release epochs and worker convergence remain available below the workload pulse for deep operational diagnosis."
+    },
     "Owners": {
       "Title": "Owner convergence",
       "Description": "A release is operational only when each expected declaration snapshot and matching worker revision are present.",
@@ -109,16 +153,18 @@
   },
   "Catalog": {
     "PageTitle": "Job Scheduler · Catalog",
-    "Title": "Active declarations",
+    "Title": "Job definitions",
     "Count": "{0} definitions",
     "Enabled": "Enabled",
     "Disabled": "Disabled",
     "OnDemand": "On demand",
     "Empty": "No active definitions match the current filters.",
     "Filters": {
+      "AriaLabel": "Catalog search and filters",
       "Search": "Definition",
       "SearchPlaceholder": "Job name or key",
-      "Owner": "Owner",
+      "Owner": "Source project",
+      "AnyOwner": "All source projects",
       "Type": "Job type",
       "AnyType": "Any type",
       "State": "Effective state",
@@ -139,6 +185,8 @@
       "Actions": "Actions"
     },
     "Actions": {
+      "OpenJob": "Open details for {0}",
+      "Run": "Run job now",
       "Trigger": "Run through active catalog",
       "Policy": "Edit operator policy",
       "Details": "Open job details",
@@ -158,10 +206,23 @@
       "Suspended": "Suspended",
       "Exhausted": "Schedule exhausted"
     },
+    "Cron": {
+      "Unavailable": "No recurring schedule",
+      "Custom": "Custom recurring schedule",
+      "EveryMinutes": "Every {0} minutes",
+      "EveryHour": "Every hour",
+      "EveryDayAt": "Every day at {0}",
+      "Tooltip": "{0} · Timezone {1} · Next {2}"
+    },
+    "Triggered": {
+      "Ready": "Ready for operator admission",
+      "NoArguments": "No argument contract"
+    },
     "History": { "NeverRun": "Never run" },
     "Activity": { "QueuedRunning": "{0} queued · {1} running" },
     "Selection": {
       "SelectAll": "Select all recurring jobs on this page",
+      "SelectPage": "Select page",
       "Select": "Select",
       "SelectJob": "Select {0}",
       "ToolbarLabel": "Selected recurring job operations",
@@ -172,7 +233,9 @@
     "Messages": {
       "Paused": "Recurring materialization is paused.",
       "Resumed": "Recurring materialization will resume from the next future occurrence.",
-      "UpdateFailed": "The policy update failed."
+      "UpdateFailed": "The policy update failed.",
+      "RunFailed": "The job could not be queued.",
+      "Queued": "Execution {0} was queued."
     },
     "Batch": {
       "Empty": "Select at least one recurring job.",
@@ -259,6 +322,17 @@
       "Title": "Latest execution",
       "Description": "Newest durable execution evidence for this logical job across catalog revisions.",
       "Empty": "This job has not produced any durable execution yet."
+    },
+    "Health": {
+      "Eyebrow": "30-DAY EXECUTION EVIDENCE",
+      "Title": "Job health",
+      "Description": "Reliability, schedule delivery, terminal outcomes, and attempt duration are measured independently.",
+      "Window": "Last 30 days",
+      "ReliabilityHelp": "{0} successful or failed run(s)",
+      "FulfillmentHelp": "{0} completed schedule disposition(s)",
+      "OutcomeAriaLabel": "Job execution outcomes created in the selected window",
+      "CohortNote": "Outcome tiles describe executions created in the window; reliability and duration use executions completed in the window.",
+      "LoadFailed": "Job health analytics could not be refreshed: {0}"
     }
   },
   "RecurringScheduleStatuses": {
@@ -324,6 +398,63 @@
       "Required": "Choose both a UTC date and time.",
       "Future": "Delayed availability must be in the future."
     }
+  },
+  "Analytics": {
+    "PageTitle": "Job Scheduler · Analytics",
+    "RefreshFailed": "The latest analytics refresh failed: {0}",
+    "ObservedAt": "Analytics observed {0}",
+    "Range": {
+      "Title": "Analysis window",
+      "Description": "Completion metrics use fixed UTC intervals and bounded database aggregation.",
+      "TodayUtc": "Today (UTC)",
+      "Last24Hours": "Last 24 hours",
+      "Last7Days": "Last 7 days",
+      "Last30Days": "Last 30 days"
+    },
+    "Metrics": {
+      "AriaLabel": "Scheduler analytics summary",
+      "Reliability": "Reliability",
+      "Throughput": "Executed throughput",
+      "ScheduleFulfillment": "Schedule fulfillment",
+      "DecidedRuns": "{0} successful or failed run(s)",
+      "PerHour": "Terminal attempts per hour",
+      "ScheduledDispositions": "{0} completed schedule disposition(s)",
+      "DurationSample": "{0} measured terminal attempt(s)"
+    },
+    "Trend": {
+      "Eyebrow": "COMPLETION PULSE",
+      "Title": "Outcome trend",
+      "Description": "Successful, failed, and skipped completions by fixed UTC bucket.",
+      "LegendAriaLabel": "Outcome chart legend",
+      "ChartAriaLabel": "Scheduler completion outcome trend",
+      "BucketTooltip": "{0}: {1} succeeded, {2} failed, {3} skipped, {4} cancelled"
+    },
+    "Duration": {
+      "Title": "Terminal-attempt duration",
+      "Description": "Measured from the latest attempt start to terminal completion; skips never enter this distribution.",
+      "Minimum": "Minimum",
+      "Average": "Average",
+      "P50": "P50",
+      "P90": "P90",
+      "P95": "P95",
+      "P99": "P99",
+      "Maximum": "Maximum"
+    },
+    "Rankings": {
+      "Title": "Workload concentration",
+      "Description": "Compare terminal volume with the jobs producing failures or skipped schedules.",
+      "Volume": "Terminal volume",
+      "Failures": "Failure attention",
+      "Skips": "Schedule skips",
+      "Empty": "No terminal job activity completed in this window.",
+      "OutcomeSummary": "{0} total · {1} failed · {2} skipped"
+    },
+    "Slowest": {
+      "Title": "Slowest executions",
+      "Description": "Longest measured terminal attempts, linked back to their durable evidence.",
+      "Empty": "No measured terminal attempts completed in this window."
+    },
+    "CohortNote": "State totals describe executions created in the window. Outcomes, throughput, trends, rankings, and durations describe executions completed in the window."
   },
   "Executions": {
     "PageTitle": "Job Scheduler · Executions",

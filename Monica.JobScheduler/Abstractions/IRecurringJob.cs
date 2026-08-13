@@ -35,7 +35,8 @@ public interface IRecurringJob : IJobDefinition
     /// </para>
     /// <para>
     /// <b>Concurrency:</b> Multiple instances of this logical job may execute concurrently based on the
-    /// MaxConcurrency setting. The scope-wide JobKey gate includes superseded owners and revisions that are still
+    /// MaxConcurrency setting. When queued and running work already reaches the limit, a scheduled occurrence is
+    /// recorded as skipped. The scope-wide JobKey boundary includes superseded owners and revisions that are still
     /// stopping after catalog cutover. Ensure your implementation is thread-safe or set MaxConcurrency to 1.
     /// </para>
     /// </remarks>

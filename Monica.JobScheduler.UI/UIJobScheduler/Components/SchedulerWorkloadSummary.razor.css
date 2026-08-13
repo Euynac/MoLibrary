@@ -1,0 +1,99 @@
+.workload-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
+}
+
+.workload-summary__metric {
+    --metric-tone: var(--mud-palette-primary);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    padding: 14px 15px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-inline-start: 3px solid var(--metric-tone);
+    border-radius: 10px;
+    background-color: var(--mud-palette-surface);
+    box-shadow: var(--mud-elevation-1);
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.workload-summary__metric[data-tone="info"] {
+    --metric-tone: var(--mud-palette-info);
+}
+
+.workload-summary__metric[data-tone="warning"] {
+    --metric-tone: var(--mud-palette-warning);
+}
+
+.workload-summary__metric[data-tone="success"] {
+    --metric-tone: var(--mud-palette-success);
+}
+
+.workload-summary__metric:hover {
+    border-color: var(--mud-palette-lines-inputs);
+    box-shadow: var(--mud-elevation-2);
+    transform: translateY(-1px);
+}
+
+.workload-summary__icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 9px;
+    color: var(--metric-tone);
+    background-color: color-mix(in srgb, var(--metric-tone) 12%, transparent);
+}
+
+.workload-summary__metric > div {
+    display: grid;
+    min-width: 0;
+}
+
+.workload-summary__metric span:not(.workload-summary__icon),
+.workload-summary__metric small {
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workload-summary__metric strong {
+    overflow: hidden;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-display);
+    font-size: 1.42rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workload-summary__metric small {
+    color: var(--metric-tone);
+    font-size: 0.66rem;
+    font-weight: 650;
+}
+
+@media (max-width: 929px) {
+    .workload-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 390px) {
+    .workload-summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .workload-summary__metric {
+        transition-duration: 0.01ms;
+    }
+}

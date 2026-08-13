@@ -330,3 +330,29 @@ public sealed record JobTriggerRequest
     /// </summary>
     public string? ExpectedJobRevisionId { get; init; }
 }
+
+/// <summary>
+/// Describes an operator-initiated immediate execution of an active recurring job.
+/// </summary>
+public sealed record JobRecurringRunNowRequest
+{
+    /// <summary>
+    /// Gets the active logical recurring job key.
+    /// </summary>
+    public required string JobKey { get; init; }
+
+    /// <summary>
+    /// Gets an optional idempotency identifier. A generated identifier is used when omitted.
+    /// </summary>
+    public string? InstanceId { get; init; }
+
+    /// <summary>
+    /// Gets an optional expected owner used to fence a caller compiled against an older catalog.
+    /// </summary>
+    public string? ExpectedOwnerId { get; init; }
+
+    /// <summary>
+    /// Gets an optional expected job revision used to fence a caller compiled against an older catalog.
+    /// </summary>
+    public string? ExpectedJobRevisionId { get; init; }
+}

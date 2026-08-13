@@ -5,7 +5,6 @@
     min-width: 0;
     padding: clamp(16px, 2vw, 24px);
     border: 1px solid var(--mud-palette-lines-default);
-    border-inline-start: 4px solid var(--release-tone);
     border-radius: 12px;
     background-color: var(--mud-palette-surface);
     box-shadow: var(--mud-elevation-1);

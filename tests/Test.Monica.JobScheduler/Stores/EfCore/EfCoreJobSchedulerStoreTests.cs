@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.DependencyInjection.Abstractions;
 using Monica.JobScheduler.Abstractions;
@@ -833,6 +834,121 @@ public sealed class EfCoreJobSchedulerStoreTests
         synchronized.Cursor!.NextOccurrenceUtc.Should().Be(occurrence);
         materialized.Status.Should().Be(RecurringMaterializationStatus.Materialized);
         materialized.Execution!.AvailableAtUtc.Should().Be(occurrence);
+    }
+
+    [Fact]
+    public async Task MaterializeRecurring_WhenOutstandingCapacityIsFull_ShouldPersistSkippedOccurrence()
+    {
+        await using var fixture = await StoreFixture.CreateAsync(START_TIME, TestContext.Current.CancellationToken);
+        var store = fixture.Store;
+        await ActivateAsync(store, fixture.Scope, "revision-1", JobType.Recurring);
+        var catalog = (await store.GetActiveCatalogAsync(fixture.Scope, TestContext.Current.CancellationToken))!;
+        var active = catalog.Definitions.Single();
+        var synchronized = await store.SynchronizeRecurringScheduleAsync(new RecurringScheduleSynchronization
+        {
+            Template = active.CreateExecutionTemplate(),
+            Schedule = new RecurringScheduleDefinition
+            {
+                CronExpression = active.Declaration.CronExpression!,
+                TimeZoneId = active.Declaration.TimeZoneId!
+            },
+            ChangeEpoch = catalog.Version.ChangeEpoch
+        }, TestContext.Current.CancellationToken);
+        var firstOccurrence = synchronized.Cursor!.NextOccurrenceUtc!.Value;
+        fixture.TimeProvider.Advance(firstOccurrence - START_TIME);
+        var first = await store.TryMaterializeRecurringOccurrenceAsync(new RecurringOccurrenceMaterialization
+        {
+            CursorKey = synchronized.Cursor.Key,
+            ExpectedVersion = synchronized.Cursor.Version,
+            ExpectedOccurrenceUtc = firstOccurrence,
+            NextOccurrenceUtc = firstOccurrence.AddMinutes(1),
+            InstanceId = "recurring-admitted"
+        }, TestContext.Current.CancellationToken);
+        fixture.TimeProvider.Advance(TimeSpan.FromMinutes(1));
+
+        var skipped = await store.TryMaterializeRecurringOccurrenceAsync(new RecurringOccurrenceMaterialization
+        {
+            CursorKey = first.Cursor!.Key,
+            ExpectedVersion = first.Cursor.Version,
+            ExpectedOccurrenceUtc = firstOccurrence.AddMinutes(1),
+            NextOccurrenceUtc = firstOccurrence.AddMinutes(2),
+            InstanceId = "recurring-skipped"
+        }, TestContext.Current.CancellationToken);
+        var detail = await store.GetExecutionAsync(
+            fixture.Scope,
+            "recurring-skipped",
+            TestContext.Current.CancellationToken);
+        var statistics = await store.GetExecutionStateStatisticsAsync(
+            fixture.Scope,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var cancellation = await store.RequestCancellationAsync(
+            fixture.Scope,
+            "recurring-skipped",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        first.Execution!.State.Should().Be(JobExecutionState.Queued);
+        skipped.Status.Should().Be(RecurringMaterializationStatus.Materialized);
+        skipped.Execution!.State.Should().Be(JobExecutionState.Skipped);
+        skipped.Execution.IsTerminal.Should().BeTrue();
+        skipped.Execution.Origin.Should().Be(JobExecutionOrigin.RecurringSchedule);
+        skipped.Execution.RecurringOccurrenceUtc.Should().Be(firstOccurrence.AddMinutes(1));
+        skipped.Execution.SkipReason.Should().Be(JobExecutionSkipReason.RecurringCapacityUnavailable);
+        skipped.Execution.StartedAtUtc.Should().BeNull();
+        skipped.Execution.CompletedAtUtc.Should().Be(fixture.TimeProvider.GetUtcNow());
+        skipped.Execution.ExecutionAttempt.Should().Be(0);
+        skipped.Cursor!.NextOccurrenceUtc.Should().Be(firstOccurrence.AddMinutes(2));
+        detail!.History.Should().ContainSingle(entry =>
+            entry.NewState == JobExecutionState.Skipped && entry.LogLevel == LogLevel.Warning);
+        statistics[JobExecutionState.Skipped].Should().Be(1);
+        cancellation.Status.Should().Be(JobCancellationStatus.AlreadyTerminal);
+        (await store.DeleteExecutionsAsync(
+            fixture.Scope,
+            ["recurring-skipped"],
+            TestContext.Current.CancellationToken)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RunRecurringNow_WhenRepeated_ShouldBeIdempotentAndPreserveScheduleCursor()
+    {
+        await using var fixture = await StoreFixture.CreateAsync(START_TIME, TestContext.Current.CancellationToken);
+        var store = fixture.Store;
+        await ActivateAsync(store, fixture.Scope, "revision-1", JobType.Recurring);
+        var catalog = (await store.GetActiveCatalogAsync(fixture.Scope, TestContext.Current.CancellationToken))!;
+        var active = catalog.Definitions.Single();
+        var synchronized = await store.SynchronizeRecurringScheduleAsync(new RecurringScheduleSynchronization
+        {
+            Template = active.CreateExecutionTemplate(),
+            Schedule = new RecurringScheduleDefinition
+            {
+                CronExpression = active.Declaration.CronExpression!,
+                TimeZoneId = active.Declaration.TimeZoneId!
+            },
+            ChangeEpoch = catalog.Version.ChangeEpoch
+        }, TestContext.Current.CancellationToken);
+        var command = new JobRecurringRunNowCommand
+        {
+            InstanceId = "recurring-run-now",
+            SchedulerScopeKey = fixture.Scope,
+            JobKey = active.Declaration.JobKey,
+            ExpectedOwnerId = active.OwnerId,
+            ExpectedJobRevisionId = active.JobRevisionId
+        };
+
+        var first = await store.RunRecurringNowAsync(command, TestContext.Current.CancellationToken);
+        fixture.TimeProvider.Advance(TimeSpan.FromMinutes(1));
+        var repeated = await fixture.SecondStore.RunRecurringNowAsync(
+            command,
+            TestContext.Current.CancellationToken);
+        var summary = await store.GetOperationalSummaryAsync(
+            fixture.Scope,
+            active.Declaration.JobKey,
+            TestContext.Current.CancellationToken);
+
+        first.State.Should().Be(JobExecutionState.Queued);
+        first.Origin.Should().Be(JobExecutionOrigin.RecurringRunNow);
+        first.RecurringOccurrenceUtc.Should().BeNull();
+        repeated.Should().BeEquivalentTo(first);
+        summary!.NextOccurrenceUtc.Should().Be(synchronized.Cursor!.NextOccurrenceUtc);
     }
 
     [Fact]

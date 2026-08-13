@@ -163,6 +163,36 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
         }
     }
 
+    private async Task RunRecurringNowAsync()
+    {
+        var state = PageState;
+        if (_disposed || state?.Summary is not { } summary)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await state.RunRecurringNowAsync();
+            if (_disposed || PageState != state)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error, out var execution))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:RunFailed"], Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(L["Catalog:Messages:Queued", execution.InstanceId], Severity.Success);
+            await state.RefreshAsync();
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+    }
+
     private async Task OpenTriggerAsync()
     {
         var state = PageState;

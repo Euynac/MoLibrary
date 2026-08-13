@@ -2,6 +2,8 @@ using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Execution;
+using Monica.JobScheduler.Models.Analytics;
 using Microsoft.Extensions.Localization;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
@@ -69,6 +71,11 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     public JobOperationalSummary? Summary { get; private set; }
 
     /// <summary>
+    /// Gets the latest 30-day bounded health projection for this job.
+    /// </summary>
+    public JobExecutionAnalyticsSnapshot? Analytics { get; private set; }
+
+    /// <summary>
     /// Gets whether the first access check completed.
     /// </summary>
     public bool AccessChecked { get; private set; }
@@ -92,6 +99,11 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     /// Gets the most recent load failure while preserving any prior snapshot.
     /// </summary>
     public string? Error { get; private set; }
+
+    /// <summary>
+    /// Gets the latest analytics-only load failure without hiding the operational dossier.
+    /// </summary>
+    public string? AnalyticsError { get; private set; }
 
     /// <summary>
     /// Gets whether the authorized lookup completed without finding an active definition.
@@ -127,15 +139,26 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             if (!IsAuthorized)
             {
                 Summary = null;
+                Analytics = null;
                 IsNotFound = false;
                 Error = null;
+                AnalyticsError = null;
                 ObservedAtUtc = null;
                 return;
             }
 
-            var result = await _facade.GetOperationalSummaryAsync(JobKey, cancellationToken);
+            var now = _timeProvider.GetUtcNow();
+            var summaryTask = _facade.GetOperationalSummaryAsync(JobKey, cancellationToken);
+            var analyticsTask = _facade.GetExecutionAnalyticsAsync(
+                SchedulerStatisticsPageState.CreateQuery(
+                    SchedulerAnalyticsTimeRange.Last30Days,
+                    now,
+                    JobKey),
+                cancellationToken);
+            await Task.WhenAll(summaryTask, analyticsTask);
             cancellationToken.ThrowIfCancellationRequested();
-            if (result.IsFailed(out var error, out var summary))
+            var summaryResult = await summaryTask;
+            if (summaryResult.IsFailed(out var error, out var summary))
             {
                 Error = error.Message;
                 return;
@@ -144,7 +167,18 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             Summary = summary;
             IsNotFound = summary is null;
             Error = null;
-            ObservedAtUtc = _timeProvider.GetUtcNow();
+            var analyticsResult = await analyticsTask;
+            if (analyticsResult.IsFailed(out var analyticsError, out var analytics))
+            {
+                AnalyticsError = analyticsError.Message;
+            }
+            else
+            {
+                Analytics = analytics;
+                AnalyticsError = null;
+            }
+
+            ObservedAtUtc = now;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -210,6 +244,66 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
                         ? JobRecurringScheduleStatus.Suspended
                         : JobRecurringScheduleStatus.AwaitingSynchronization,
                     NextOccurrenceUtc = null
+                };
+                ObservedAtUtc = _timeProvider.GetUtcNow();
+            }
+
+            return result;
+        }
+        finally
+        {
+            if (!IsDisposed)
+            {
+                IsMutating = false;
+                await NotifyChangedAsync();
+            }
+
+            _mutationGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Reauthorizes the circuit and admits an immediate operator occurrence without advancing the recurring cursor.
+    /// </summary>
+    public async Task<Res<JobExecutionInstance>> RunRecurringNowAsync()
+    {
+        var cancellationToken = _lifetimeCancellation.Token;
+        await _mutationGate.WaitAsync(cancellationToken);
+        try
+        {
+            ThrowIfDisposed();
+            IsMutating = true;
+            await NotifyChangedAsync();
+
+            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            AccessChecked = true;
+            if (!IsAuthorized)
+            {
+                return _localizer["Access:DeniedDescription"].Value;
+            }
+
+            if (Summary is not { } summary)
+            {
+                return _localizer["JobDetail:NotFound", JobKey].Value;
+            }
+
+            var definition = summary.Definition;
+            var result = await _facade.RunRecurringNowAsync(
+                new JobRecurringRunNowRequest
+                {
+                    JobKey = definition.Declaration.JobKey,
+                    ExpectedOwnerId = definition.OwnerId,
+                    ExpectedJobRevisionId = definition.JobRevisionId
+                },
+                cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!result.IsFailed(out _, out var execution))
+            {
+                Summary = summary with
+                {
+                    LatestExecution = execution,
+                    QueuedExecutionCount = summary.QueuedExecutionCount + 1
                 };
                 ObservedAtUtc = _timeProvider.GetUtcNow();
             }

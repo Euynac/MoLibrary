@@ -66,6 +66,9 @@ internal sealed class JobExecutionEntity
     public string JobRevisionId { get; set; } = string.Empty;
     public string JobKey { get; set; } = string.Empty;
     public string? JobArgs { get; set; }
+    public JobExecutionOrigin Origin { get; set; }
+    public long? RecurringOccurrenceUtcTicks { get; set; }
+    public JobExecutionSkipReason? SkipReason { get; set; }
     public long AvailableAtUtcTicks { get; set; }
     public JobExecutionState State { get; set; }
     public long CreatedAtUtcTicks { get; set; }

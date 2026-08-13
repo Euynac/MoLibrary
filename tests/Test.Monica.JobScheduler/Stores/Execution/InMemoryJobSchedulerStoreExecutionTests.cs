@@ -919,6 +919,117 @@ public sealed class InMemoryJobSchedulerStoreExecutionTests
     }
 
     [Fact]
+    public async Task TryMaterializeRecurringOccurrenceAsync_WhenOutstandingCapacityIsFull_ShouldRecordSkippedOccurrence()
+    {
+        var time = new ManualTimeProvider(START_TIME);
+        var store = new InMemoryJobSchedulerStore(time);
+        var active = await ActivateRecurringDefinitionAsync(store, TestContext.Current.CancellationToken);
+        var catalogVersion = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var synchronized = await store.SynchronizeRecurringScheduleAsync(new RecurringScheduleSynchronization
+        {
+            Template = active.CreateExecutionTemplate(),
+            Schedule = new RecurringScheduleDefinition
+            {
+                CronExpression = active.Declaration.CronExpression!,
+                TimeZoneId = active.Declaration.TimeZoneId!
+            },
+            ChangeEpoch = catalogVersion.ChangeEpoch
+        }, TestContext.Current.CancellationToken);
+        var firstOccurrence = synchronized.Cursor!.NextOccurrenceUtc!.Value;
+        time.Advance(firstOccurrence - START_TIME);
+        var first = await store.TryMaterializeRecurringOccurrenceAsync(new RecurringOccurrenceMaterialization
+        {
+            CursorKey = synchronized.Cursor.Key,
+            ExpectedVersion = synchronized.Cursor.Version,
+            ExpectedOccurrenceUtc = firstOccurrence,
+            NextOccurrenceUtc = firstOccurrence.AddMinutes(1),
+            InstanceId = "recurring-admitted"
+        }, TestContext.Current.CancellationToken);
+        time.Advance(TimeSpan.FromMinutes(1));
+
+        var skipped = await store.TryMaterializeRecurringOccurrenceAsync(new RecurringOccurrenceMaterialization
+        {
+            CursorKey = first.Cursor!.Key,
+            ExpectedVersion = first.Cursor.Version,
+            ExpectedOccurrenceUtc = firstOccurrence.AddMinutes(1),
+            NextOccurrenceUtc = firstOccurrence.AddMinutes(2),
+            InstanceId = "recurring-skipped"
+        }, TestContext.Current.CancellationToken);
+        var detail = await store.GetExecutionAsync(
+            SCOPE,
+            "recurring-skipped",
+            TestContext.Current.CancellationToken);
+        var statistics = await store.GetExecutionStateStatisticsAsync(
+            SCOPE,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var cancellation = await store.RequestCancellationAsync(
+            SCOPE,
+            "recurring-skipped",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        first.Execution!.State.Should().Be(JobExecutionState.Queued);
+        skipped.Status.Should().Be(RecurringMaterializationStatus.Materialized);
+        skipped.Execution!.State.Should().Be(JobExecutionState.Skipped);
+        skipped.Execution.IsTerminal.Should().BeTrue();
+        skipped.Execution.Origin.Should().Be(JobExecutionOrigin.RecurringSchedule);
+        skipped.Execution.RecurringOccurrenceUtc.Should().Be(firstOccurrence.AddMinutes(1));
+        skipped.Execution.SkipReason.Should().Be(JobExecutionSkipReason.RecurringCapacityUnavailable);
+        skipped.Execution.StartedAtUtc.Should().BeNull();
+        skipped.Execution.CompletedAtUtc.Should().Be(time.GetUtcNow());
+        skipped.Execution.ExecutionAttempt.Should().Be(0);
+        skipped.Cursor!.NextOccurrenceUtc.Should().Be(firstOccurrence.AddMinutes(2));
+        detail!.History.Should().ContainSingle(entry =>
+            entry.NewState == JobExecutionState.Skipped && entry.LogLevel == LogLevel.Warning);
+        statistics[JobExecutionState.Skipped].Should().Be(1);
+        cancellation.Status.Should().Be(JobCancellationStatus.AlreadyTerminal);
+        (await store.DeleteExecutionsAsync(
+            SCOPE,
+            ["recurring-skipped"],
+            TestContext.Current.CancellationToken)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RunRecurringNowAsync_WhenRepeated_ShouldBeIdempotentAndPreserveScheduleCursor()
+    {
+        var time = new ManualTimeProvider(START_TIME);
+        var store = new InMemoryJobSchedulerStore(time);
+        var active = await ActivateRecurringDefinitionAsync(store, TestContext.Current.CancellationToken);
+        var catalogVersion = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var synchronized = await store.SynchronizeRecurringScheduleAsync(new RecurringScheduleSynchronization
+        {
+            Template = active.CreateExecutionTemplate(),
+            Schedule = new RecurringScheduleDefinition
+            {
+                CronExpression = active.Declaration.CronExpression!,
+                TimeZoneId = active.Declaration.TimeZoneId!
+            },
+            ChangeEpoch = catalogVersion.ChangeEpoch
+        }, TestContext.Current.CancellationToken);
+        var command = new JobRecurringRunNowCommand
+        {
+            InstanceId = "recurring-run-now",
+            SchedulerScopeKey = SCOPE,
+            JobKey = active.Declaration.JobKey,
+            ExpectedOwnerId = active.OwnerId,
+            ExpectedJobRevisionId = active.JobRevisionId
+        };
+
+        var first = await store.RunRecurringNowAsync(command, TestContext.Current.CancellationToken);
+        time.Advance(TimeSpan.FromMinutes(1));
+        var repeated = await store.RunRecurringNowAsync(command, TestContext.Current.CancellationToken);
+        var summary = await store.GetOperationalSummaryAsync(
+            SCOPE,
+            active.Declaration.JobKey,
+            TestContext.Current.CancellationToken);
+
+        first.State.Should().Be(JobExecutionState.Queued);
+        first.Origin.Should().Be(JobExecutionOrigin.RecurringRunNow);
+        first.RecurringOccurrenceUtc.Should().BeNull();
+        repeated.Should().BeEquivalentTo(first);
+        summary!.NextOccurrenceUtc.Should().Be(synchronized.Cursor!.NextOccurrenceUtc);
+    }
+
+    [Fact]
     public async Task QueryOperationalSummariesAsync_ShouldProjectRecurringExecutionAndWorkerState()
     {
         var time = new ManualTimeProvider(START_TIME);

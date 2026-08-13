@@ -1,21 +1,35 @@
+@using Microsoft.AspNetCore.Components.Web
 @using Monica.JobScheduler.UI.Localization
 
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject NavigationManager Navigation
 @inject TimeProvider TimeProvider
 
-<section class="catalog-table" aria-labelledby="catalog-table-title">
-    <header class="catalog-table__heading">
+<section class="catalog-list" aria-labelledby="catalog-list-title">
+    <header class="catalog-list__heading">
         <div>
-            <MudText id="catalog-table-title" Typo="Typo.h6" HtmlTag="h2">@L["Catalog:Title"]</MudText>
+            <MudText id="catalog-list-title" Typo="Typo.h6" HtmlTag="h2">@L["Catalog:Title"]</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Catalog:Count", TotalCount]</MudText>
         </div>
-        <MudTooltip Text="@L["Common:Refresh"]">
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                           Color="Color.Primary"
-                           Disabled="@IsLoading"
-                           OnClick="RefreshRequested"
-                           aria-label="@L["Common:Refresh"]" />
-        </MudTooltip>
+        <div class="catalog-list__heading-actions">
+            @if (Summaries.Any(IsRecurring))
+            {
+                <MudCheckBox T="bool"
+                             Value="@AreAllRecurringSelected"
+                             ValueChanged="AllRecurringSelectionChanged"
+                             Dense="true"
+                             Color="Color.Primary"
+                             Label="@L["Catalog:Selection:SelectPage"]"
+                             aria-label="@L["Catalog:Selection:SelectAll"]" />
+            }
+            <MudTooltip Text="@L["Common:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Color="Color.Primary"
+                               Disabled="@IsLoading"
+                               OnClick="RefreshRequested"
+                               aria-label="@L["Common:Refresh"]" />
+            </MudTooltip>
+        </div>
     </header>
 
     @if (IsLoading)
@@ -23,184 +37,160 @@
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
     }
 
-    <div class="catalog-table__scroll">
-        <MudTable T="JobOperationalSummary"
-                  Items="@Summaries"
-                  Dense="true"
-                  Hover="true"
-                  Breakpoint="Breakpoint.None"
-                  Elevation="0">
-            <HeaderContent>
-                <MudTh Class="catalog-table__select-cell">
-                    <MudCheckBox T="bool"
-                                 Value="@AreAllRecurringSelected"
-                                 ValueChanged="AllRecurringSelectionChanged"
-                                 Disabled="@(!Summaries.Any(IsRecurring))"
-                                 Dense="true"
-                                 Color="Color.Primary"
-                                 aria-label="@L["Catalog:Selection:SelectAll"]" />
-                </MudTh>
-                <MudTh>@L["Catalog:Columns:Definition"]</MudTh>
-                <MudTh>@L["Catalog:Columns:Readiness"]</MudTh>
-                <MudTh>@L["Catalog:Columns:Schedule"]</MudTh>
-                <MudTh>@L["Catalog:Columns:NextRun"]</MudTh>
-                <MudTh>@L["Catalog:Columns:LastRun"]</MudTh>
-                <MudTh>@L["Catalog:Columns:Activity"]</MudTh>
-                <MudTh>@L["Catalog:Columns:Policy"]</MudTh>
-                <MudTh Class="catalog-table__actions">@L["Catalog:Columns:Actions"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["Catalog:Selection:Select"]" Class="catalog-table__select-cell">
-                    @if (IsRecurring(context))
-                    {
-                        <MudCheckBox T="bool"
-                                     Value="@SelectedJobKeys.Contains(context.Definition.Declaration.JobKey)"
-                                     ValueChanged="@(_ => SelectionToggled.InvokeAsync(context))"
-                                     Dense="true"
-                                     Color="Color.Primary"
-                                     aria-label="@L["Catalog:Selection:SelectJob", context.Definition.Declaration.JobName]" />
-                    }
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:Definition"]">
-                    <div class="catalog-table__definition">
-                        <MudLink Href="@GetDetailHref(context)" Typo="Typo.subtitle2">
-                            @context.Definition.Declaration.JobName
-                        </MudLink>
-                        <MudTooltip Text="@context.Definition.Declaration.JobKey">
-                            <code>@context.Definition.Declaration.JobKey</code>
-                        </MudTooltip>
-                        <span>@context.Definition.OwnerId</span>
+    @if (Summaries.Count == 0 && !IsLoading)
+    {
+        <div class="catalog-list__empty">
+            <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Large" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Catalog:Empty"]</MudText>
+        </div>
+    }
+    else
+    {
+        <div class="catalog-list__items">
+            @foreach (var summary in Summaries)
+            {
+                var definition = summary.Definition;
+                var declaration = definition.Declaration;
+                <article class="catalog-item"
+                         data-type="@declaration.JobType.ToString().ToLowerInvariant()"
+                         data-disabled="@definition.IsDisabled.ToString().ToLowerInvariant()"
+                         role="link"
+                         tabindex="0"
+                         aria-label="@L["Catalog:Actions:OpenJob", declaration.JobName]"
+                         @onclick="@(() => OpenDetail(summary))"
+                         @onkeydown="@(args => HandleItemKeyDown(args, summary))">
+                    <div class="catalog-item__selection" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                        @if (IsRecurring(summary))
+                        {
+                            <MudCheckBox T="bool"
+                                         Value="@SelectedJobKeys.Contains(declaration.JobKey)"
+                                         ValueChanged="@(_ => SelectionToggled.InvokeAsync(summary))"
+                                         Dense="true"
+                                         Color="Color.Primary"
+                                         aria-label="@L["Catalog:Selection:SelectJob", declaration.JobName]" />
+                        }
+                        else
+                        {
+                            <span class="catalog-item__type-icon" aria-hidden="true">
+                                <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+                            </span>
+                        }
                     </div>
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:Readiness"]">
-                    <div class="catalog-table__readiness">
-                        <MudChip T="string"
-                                 Size="Size.Small"
-                                 Variant="Variant.Text"
-                                 Color="@(context.HasCompatibleWorker ? Color.Success : Color.Warning)"
-                                 Icon="@(context.HasCompatibleWorker ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ReportProblem)">
-                            @(context.HasCompatibleWorker
-                                ? L["Catalog:Readiness:Workers", context.CompatibleWorkerCount]
-                                : L["Catalog:Readiness:NoWorker"])
-                        </MudChip>
-                        <MudTooltip Text="@context.Definition.WorkerRevisionId">
-                            <code>@JobSchedulerUiPresentation.ShortIdentity(context.Definition.WorkerRevisionId)</code>
-                        </MudTooltip>
+
+                    <div class="catalog-item__identity">
+                        <div class="catalog-item__title-line">
+                            <strong>@declaration.JobName</strong>
+                            <span class="catalog-item__policy" data-disabled="@definition.IsDisabled.ToString().ToLowerInvariant()">
+                                @(definition.IsDisabled ? L["Catalog:Disabled"] : L["Catalog:Enabled"])
+                            </span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(declaration.Description))
+                        {
+                            <p>@declaration.Description</p>
+                        }
+                        <div class="catalog-item__identity-meta">
+                            <code title="@declaration.JobKey">@declaration.JobKey</code>
+                            <span title="@definition.OwnerId">
+                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" />
+                                @definition.OwnerId
+                            </span>
+                        </div>
                     </div>
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:Schedule"]">
-                    @if (IsRecurring(context))
-                    {
-                        <div class="catalog-table__schedule">
-                            <MudTooltip Text="@context.Definition.Declaration.CronExpression">
-                                <code>@context.Definition.Declaration.CronExpression</code>
+
+                    <div class="catalog-item__schedule">
+                        @if (IsRecurring(summary))
+                        {
+                            <div class="catalog-item__schedule-label">
+                                <span>@L["Catalog:Columns:Schedule"]</span>
+                                <span class="catalog-item__cron">
+                                    <code>@declaration.CronExpression</code>
+                                    <MudTooltip Text="@GetCronTooltip(summary)" Placement="Placement.Top">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Info"
+                                                 Size="Size.Small"
+                                                 tabindex="0"
+                                                 aria-label="@GetCronTooltip(summary)" />
+                                    </MudTooltip>
+                                </span>
+                            </div>
+                            <strong>@JobSchedulerUiPresentation.DescribeCron(declaration.CronExpression, L)</strong>
+                            <small>@declaration.TimeZoneId · @GetNextRunLabel(summary)</small>
+                        }
+                        else
+                        {
+                            <div class="catalog-item__schedule-label">
+                                <span>@L["Catalog:Columns:Schedule"]</span>
+                                <span class="catalog-item__on-demand">
+                                    <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+                                    @L["Catalog:OnDemand"]
+                                </span>
+                            </div>
+                            <strong>@L["Catalog:Triggered:Ready"]</strong>
+                            <small>@(declaration.JobArgsKey ?? L["Catalog:Triggered:NoArguments"])</small>
+                        }
+                    </div>
+
+                    <div class="catalog-item__pulse">
+                        @if (summary.LatestExecution is { } latest)
+                        {
+                            <div class="catalog-item__last-state" data-state="@latest.State.ToString().ToLowerInvariant()">
+                                <MudIcon Icon="@GetStateIcon(latest.State)" Size="Size.Small" />
+                                <span>@L[$"ExecutionStates:{latest.State}"]</span>
+                            </div>
+                            <strong>@latest.CreatedAtUtc.ToLocalTime().ToString("g")</strong>
+                            <small>@JobSchedulerUiPresentation.FormatExecutionDuration(latest, TimeProvider.GetUtcNow(), L)</small>
+                        }
+                        else
+                        {
+                            <span class="catalog-item__eyebrow">@L["Catalog:Columns:LastRun"]</span>
+                            <strong>@L["Catalog:History:NeverRun"]</strong>
+                        }
+                        <div class="catalog-item__activity">
+                            <span>@L["Catalog:Activity:QueuedRunning", summary.QueuedExecutionCount, summary.RunningExecutionCount]</span>
+                            <span data-ready="@summary.HasCompatibleWorker.ToString().ToLowerInvariant()">
+                                <MudIcon Icon="@(summary.HasCompatibleWorker ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)"
+                                         Size="Size.Small" />
+                                @(summary.HasCompatibleWorker
+                                    ? L["Catalog:Readiness:Workers", summary.CompatibleWorkerCount]
+                                    : L["Catalog:Readiness:NoWorker"])
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="catalog-item__actions" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                        @if (IsRecurring(summary))
+                        {
+                            <MudTooltip Text="@(definition.IsDisabled ? L["Catalog:Actions:Resume"] : L["Catalog:Actions:Pause"])">
+                                <MudIconButton Icon="@(definition.IsDisabled ? Icons.Material.Filled.PlayCircleOutline : Icons.Material.Filled.PauseCircleOutline)"
+                                               Color="@(definition.IsDisabled ? Color.Success : Color.Warning)"
+                                               Size="Size.Small"
+                                               Disabled="@IsMutating"
+                                               OnClick="@(() => DisabledStateToggled.InvokeAsync(summary))"
+                                               aria-label="@(definition.IsDisabled ? L["Catalog:Actions:Resume"] : L["Catalog:Actions:Pause"])" />
                             </MudTooltip>
-                            <span>@context.Definition.Declaration.TimeZoneId</span>
-                        </div>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                            @L["Catalog:OnDemand"]
-                        </MudChip>
-                    }
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:NextRun"]">
-                    <div class="catalog-table__next">
-                        <MudIcon Icon="@GetScheduleStatusIcon(context)"
-                                 Color="@GetScheduleStatusColor(context)"
-                                 Size="Size.Small" />
-                        <span title="@GetNextRunTitle(context)">@GetNextRunLabel(context)</span>
-                    </div>
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:LastRun"]">
-                    @if (context.LatestExecution is { } latest)
-                    {
-                        <div class="catalog-table__last-run">
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Variant="Variant.Text"
-                                     Color="@JobSchedulerUiPresentation.GetStateColor(latest.State)">
-                                @L[$"ExecutionStates:{latest.State}"]
-                            </MudChip>
-                            <MudLink Href="@GetExecutionHref(latest.InstanceId)" Typo="Typo.caption">
-                                @latest.CreatedAtUtc.ToLocalTime().ToString("g")
-                            </MudLink>
-                            <span>@JobSchedulerUiPresentation.FormatExecutionDuration(latest, TimeProvider.GetUtcNow(), L)</span>
-                        </div>
-                    }
-                    else
-                    {
-                        <span class="catalog-table__muted">@L["Catalog:History:NeverRun"]</span>
-                    }
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:Activity"]">
-                    <div class="catalog-table__activity">
-                        <strong>@context.ActiveExecutionCount / @context.Definition.Declaration.MaxConcurrency</strong>
-                        <span>@L["Catalog:Activity:QueuedRunning", context.QueuedExecutionCount, context.RunningExecutionCount]</span>
-                    </div>
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:Policy"]">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined"
-                             Color="@(context.Definition.IsDisabled ? Color.Warning : Color.Success)">
-                        @(context.Definition.IsDisabled ? L["Catalog:Disabled"] : L["Catalog:Enabled"])
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:Actions"]" Class="catalog-table__actions">
-                    <MudTooltip Text="@L["Catalog:Actions:Details"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
-                                       Href="@GetDetailHref(context)"
-                                       Size="Size.Small"
-                                       aria-label="@L["Catalog:Actions:Details"]" />
-                    </MudTooltip>
-                    @if (IsRecurring(context))
-                    {
-                        <MudTooltip Text="@L["Catalog:Actions:InspectSchedule"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth"
-                                           Size="Size.Small"
-                                           OnClick="@(() => ScheduleRequested.InvokeAsync(context))"
-                                           aria-label="@L["Catalog:Actions:InspectSchedule"]" />
-                        </MudTooltip>
-                        <MudTooltip Text="@(context.Definition.IsDisabled ? L["Catalog:Actions:Resume"] : L["Catalog:Actions:Pause"])">
-                            <MudIconButton Icon="@(context.Definition.IsDisabled ? Icons.Material.Filled.PlayCircle : Icons.Material.Filled.PauseCircle)"
-                                           Color="@(context.Definition.IsDisabled ? Color.Success : Color.Warning)"
-                                           Size="Size.Small"
-                                           Disabled="@IsMutating"
-                                           OnClick="@(() => DisabledStateToggled.InvokeAsync(context))"
-                                           aria-label="@(context.Definition.IsDisabled ? L["Catalog:Actions:Resume"] : L["Catalog:Actions:Pause"])" />
-                        </MudTooltip>
-                    }
-                    else
-                    {
-                        <MudTooltip Text="@L["Catalog:Actions:Trigger"]">
+                        }
+                        <MudTooltip Text="@L["Catalog:Actions:Run"]">
                             <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
                                            Color="Color.Primary"
                                            Size="Size.Small"
-                                           Disabled="@(context.Definition.IsDisabled || IsMutating)"
-                                           OnClick="@(() => TriggerRequested.InvokeAsync(context))"
-                                           aria-label="@L["Catalog:Actions:Trigger"]" />
+                                           Disabled="@(IsMutating || (!IsRecurring(summary) && definition.IsDisabled))"
+                                           OnClick="@(() => RunRequested.InvokeAsync(summary))"
+                                           aria-label="@L["Catalog:Actions:Run"]" />
                         </MudTooltip>
-                    }
-                    <MudTooltip Text="@L["Catalog:Actions:Policy"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Tune"
-                                       Size="Size.Small"
-                                       Disabled="@IsMutating"
-                                       OnClick="@(() => PolicyRequested.InvokeAsync(context))"
-                                       aria-label="@L["Catalog:Actions:Policy"]" />
-                    </MudTooltip>
-                </MudTd>
-            </RowTemplate>
-            <NoRecordsContent>
-                <MudText Class="pa-6" Color="Color.Secondary">@L["Catalog:Empty"]</MudText>
-            </NoRecordsContent>
-        </MudTable>
-    </div>
+                        <MudTooltip Text="@L["Catalog:Actions:Details"]">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                           Href="@GetDetailHref(summary)"
+                                           Size="Size.Small"
+                                           aria-label="@L["Catalog:Actions:Details"]" />
+                        </MudTooltip>
+                    </div>
+                </article>
+            }
+        </div>
+    }
 
     @if (PageCount > 1)
     {
-        <div class="catalog-table__pagination">
+        <div class="catalog-list__pagination">
             <MudPagination Count="@PageCount" Selected="@PageNumber" SelectedChanged="PageChanged" />
         </div>
     }
@@ -244,13 +234,7 @@
     public EventCallback<JobOperationalSummary> DisabledStateToggled { get; set; }
 
     [Parameter]
-    public EventCallback<JobOperationalSummary> ScheduleRequested { get; set; }
-
-    [Parameter]
-    public EventCallback<JobOperationalSummary> TriggerRequested { get; set; }
-
-    [Parameter]
-    public EventCallback<JobOperationalSummary> PolicyRequested { get; set; }
+    public EventCallback<JobOperationalSummary> RunRequested { get; set; }
 
     private bool AreAllRecurringSelected
     {
@@ -265,6 +249,15 @@
     private static bool IsRecurring(JobOperationalSummary summary) =>
         summary.Definition.Declaration.JobType == JobType.Recurring;
 
+    private string GetCronTooltip(JobOperationalSummary summary)
+    {
+        var declaration = summary.Definition.Declaration;
+        return L["Catalog:Cron:Tooltip",
+            JobSchedulerUiPresentation.DescribeCron(declaration.CronExpression, L),
+            declaration.TimeZoneId ?? "—",
+            GetNextRunLabel(summary)];
+    }
+
     private string GetNextRunLabel(JobOperationalSummary summary) => summary.RecurringScheduleStatus switch
     {
         JobRecurringScheduleStatus.Scheduled when summary.NextOccurrenceUtc is { } next =>
@@ -275,30 +268,27 @@
         _ => L["Catalog:OnDemand"]
     };
 
-    private string GetNextRunTitle(JobOperationalSummary summary) => summary.NextOccurrenceUtc?.ToString("O")
-        ?? GetNextRunLabel(summary);
+    private void OpenDetail(JobOperationalSummary summary) => Navigation.NavigateTo(GetDetailHref(summary));
 
-    private static string GetScheduleStatusIcon(JobOperationalSummary summary) => summary.RecurringScheduleStatus switch
+    private void HandleItemKeyDown(KeyboardEventArgs args, JobOperationalSummary summary)
     {
-        JobRecurringScheduleStatus.Scheduled => Icons.Material.Filled.EventAvailable,
-        JobRecurringScheduleStatus.AwaitingSynchronization => Icons.Material.Filled.Sync,
-        JobRecurringScheduleStatus.Suspended => Icons.Material.Filled.PauseCircle,
-        JobRecurringScheduleStatus.Exhausted => Icons.Material.Filled.EventBusy,
-        _ => Icons.Material.Filled.Bolt
-    };
+        if (args.Key is "Enter" or " ")
+        {
+            OpenDetail(summary);
+        }
+    }
 
-    private static Color GetScheduleStatusColor(JobOperationalSummary summary) => summary.RecurringScheduleStatus switch
+    private static string GetStateIcon(JobExecutionState state) => state switch
     {
-        JobRecurringScheduleStatus.Scheduled => Color.Info,
-        JobRecurringScheduleStatus.AwaitingSynchronization => Color.Warning,
-        JobRecurringScheduleStatus.Suspended => Color.Warning,
-        JobRecurringScheduleStatus.Exhausted => Color.Default,
-        _ => Color.Primary
+        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
+        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
+        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
+        JobExecutionState.Failed => Icons.Material.Filled.Error,
+        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
+        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
+        _ => Icons.Material.Filled.Circle
     };
 
     private static string GetDetailHref(JobOperationalSummary summary) =>
         $"/job-scheduler/catalog/{Uri.EscapeDataString(summary.Definition.Declaration.JobKey)}";
-
-    private static string GetExecutionHref(string instanceId) =>
-        $"/job-scheduler/executions?instanceId={Uri.EscapeDataString(instanceId)}";
 }

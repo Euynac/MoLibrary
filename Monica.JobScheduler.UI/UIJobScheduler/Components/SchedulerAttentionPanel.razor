@@ -1,0 +1,82 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+@{
+    var failedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Failed);
+    var skippedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Skipped);
+    var ownerCount = Overview.Owners.Count(static owner => !owner.IsConverged);
+    var attentionCount = failedCount + skippedCount + ownerCount;
+}
+
+<section class="attention-panel" aria-labelledby="attention-panel-title">
+    <header class="attention-panel__heading">
+        <div>
+            <MudText id="attention-panel-title" Typo="Typo.h6" HtmlTag="h2">@L["Overview:Attention:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Attention:Description"]</MudText>
+        </div>
+        <span class="attention-panel__count" data-clear="@(attentionCount == 0).ToString().ToLowerInvariant()">
+            @attentionCount
+        </span>
+    </header>
+
+    @if (attentionCount == 0)
+    {
+        <div class="attention-panel__clear">
+            <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Verified" /></span>
+            <div>
+                <strong>@L["Overview:Attention:ClearTitle"]</strong>
+                <small>@L["Overview:Attention:ClearDescription"]</small>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="attention-panel__items">
+            @if (failedCount > 0)
+            {
+                <a href="/job-scheduler/executions?states=Failed" class="attention-panel__item" data-tone="error">
+                    <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" /></span>
+                    <span>
+                        <strong>@L["Overview:Attention:Failed"]</strong>
+                        <small>@L["Overview:Attention:FailedDescription"]</small>
+                    </span>
+                    <b>@failedCount</b>
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                </a>
+            }
+            @if (skippedCount > 0)
+            {
+                <a href="/job-scheduler/executions?states=Skipped" class="attention-panel__item" data-tone="warning">
+                    <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.SkipNext" Size="Size.Small" /></span>
+                    <span>
+                        <strong>@L["Overview:Attention:Skipped"]</strong>
+                        <small>@L["Overview:Attention:SkippedDescription"]</small>
+                    </span>
+                    <b>@skippedCount</b>
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                </a>
+            }
+            @if (ownerCount > 0)
+            {
+                <a href="#deployment-evidence" class="attention-panel__item" data-tone="info">
+                    <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Small" /></span>
+                    <span>
+                        <strong>@L["Overview:Attention:Owners"]</strong>
+                        <small>@L["Overview:Attention:OwnersDescription"]</small>
+                    </span>
+                    <b>@ownerCount</b>
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                </a>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the current bounded scheduler overview to triage.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobSchedulerOverview Overview { get; set; } = null!;
+}

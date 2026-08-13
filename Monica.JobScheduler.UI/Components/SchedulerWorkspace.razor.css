@@ -57,7 +57,7 @@
 }
 
 .scheduler-workspace__nav-wrap ::deep .mud-tabs {
-    min-width: 29rem;
+    min-width: 38rem;
     border-radius: 8px;
     background-color: var(--mud-palette-surface);
 }
@@ -85,6 +85,16 @@
     .scheduler-workspace__contract {
         width: 100%;
         min-width: 0;
+    }
+
+    .scheduler-workspace__nav-wrap ::deep .mud-tabs {
+        min-width: 0;
+    }
+
+    .scheduler-workspace__nav-wrap ::deep .mud-tab {
+        flex: 1 1 25%;
+        min-width: 0 !important;
+        padding-inline: 8px;
     }
 }
 

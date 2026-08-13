@@ -7,7 +7,7 @@ namespace Monica.JobScheduler.Abstractions;
 /// <summary>
 /// Provides the single durable correctness boundary for catalog and execution state.
 /// </summary>
-public interface IJobSchedulerStore : IJobCatalogStore, IJobExecutionStore
+public interface IJobSchedulerStore : IJobCatalogStore, IJobExecutionStore, IJobSchedulerAnalyticsStore
 {
     /// <summary>
     /// Gets the operational projection for one exact active logical job key.

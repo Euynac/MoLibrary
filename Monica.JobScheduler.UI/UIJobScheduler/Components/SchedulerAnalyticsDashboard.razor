@@ -1,0 +1,273 @@
+@using System.Globalization
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<div class="analytics-dashboard">
+    <section class="analytics-dashboard__pulse" aria-label="@L["Analytics:Metrics:AriaLabel"]">
+        <article data-tone="success">
+            <span class="analytics-dashboard__metric-icon"><MudIcon Icon="@Icons.Material.Filled.Verified" Size="Size.Small" /></span>
+            <div>
+                <span>@L["Analytics:Metrics:Reliability"]</span>
+                <strong>@FormatRatio(Snapshot.Reliability, DecidedCount > 0)</strong>
+                <small>@L["Analytics:Metrics:DecidedRuns", DecidedCount]</small>
+            </div>
+        </article>
+        <article data-tone="primary">
+            <span class="analytics-dashboard__metric-icon"><MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" /></span>
+            <div>
+                <span>@L["Analytics:Metrics:Throughput"]</span>
+                <strong>@Snapshot.ExecutedThroughputPerHour.ToString("N2", CultureInfo.CurrentCulture)</strong>
+                <small>@L["Analytics:Metrics:PerHour"]</small>
+            </div>
+        </article>
+        <article data-tone="info">
+            <span class="analytics-dashboard__metric-icon"><MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /></span>
+            <div>
+                <span>@L["Analytics:Metrics:ScheduleFulfillment"]</span>
+                <strong>@FormatRatio(ScheduleFulfillment, ScheduleDispositionCount > 0)</strong>
+                <small>@L["Analytics:Metrics:ScheduledDispositions", ScheduleDispositionCount]</small>
+            </div>
+        </article>
+        <article data-tone="warning">
+            <span class="analytics-dashboard__metric-icon"><MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" /></span>
+            <div>
+                <span>@L["Analytics:Duration:P95"]</span>
+                <strong>@FormatDuration(Snapshot.Duration.P95)</strong>
+                <small>@L["Analytics:Metrics:DurationSample", Snapshot.Duration.Count]</small>
+            </div>
+        </article>
+    </section>
+
+    <section class="analytics-dashboard__trend" aria-labelledby="analytics-trend-heading">
+        <header class="analytics-dashboard__section-heading">
+            <div>
+                <MudText Typo="Typo.overline" Color="Color.Primary">@L["Analytics:Trend:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6" HtmlTag="h2" id="analytics-trend-heading">@L["Analytics:Trend:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Trend:Description"]</MudText>
+            </div>
+            <div class="analytics-dashboard__legend" aria-label="@L["Analytics:Trend:LegendAriaLabel"]">
+                <span data-state="succeeded">@L["ExecutionStates:Succeeded"]</span>
+                <span data-state="failed">@L["ExecutionStates:Failed"]</span>
+                <span data-state="skipped">@L["ExecutionStates:Skipped"]</span>
+            </div>
+        </header>
+
+        <div class="analytics-dashboard__bars" role="img" aria-label="@L["Analytics:Trend:ChartAriaLabel"]">
+            @foreach (var bucket in SampledTrend)
+            {
+                <div class="analytics-dashboard__bar-column" title="@GetBucketTooltip(bucket)">
+                    <div class="analytics-dashboard__bar-stack">
+                        <span data-state="skipped" style="@GetHeight(bucket.SkippedCount)"></span>
+                        <span data-state="failed" style="@GetHeight(bucket.FailedCount)"></span>
+                        <span data-state="succeeded" style="@GetHeight(bucket.SucceededCount)"></span>
+                    </div>
+                    <time>@FormatBucketLabel(bucket.StartTimeUtc)</time>
+                </div>
+            }
+        </div>
+    </section>
+
+    <div class="analytics-dashboard__analysis-grid">
+        <section class="analytics-dashboard__panel" aria-labelledby="duration-heading">
+            <header class="analytics-dashboard__section-heading">
+                <div>
+                    <MudText Typo="Typo.h6" HtmlTag="h2" id="duration-heading">@L["Analytics:Duration:Title"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Duration:Description"]</MudText>
+                </div>
+            </header>
+            <dl class="analytics-dashboard__duration-grid">
+                @foreach (var metric in DurationMetrics)
+                {
+                    <div>
+                        <dt>@metric.Label</dt>
+                        <dd>@FormatDuration(metric.Value)</dd>
+                    </div>
+                }
+            </dl>
+        </section>
+
+        <section class="analytics-dashboard__panel" aria-labelledby="ranking-heading">
+            <header class="analytics-dashboard__section-heading">
+                <div>
+                    <MudText Typo="Typo.h6" HtmlTag="h2" id="ranking-heading">@L["Analytics:Rankings:Title"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Rankings:Description"]</MudText>
+                </div>
+            </header>
+            <div class="analytics-dashboard__ranking-groups">
+                @foreach (var group in RankingGroups)
+                {
+                    <section class="analytics-dashboard__ranking-group" data-tone="@group.Tone">
+                        <h3>
+                            <span>@group.Label</span>
+                            <b>@group.Items.Count</b>
+                        </h3>
+                        @if (group.Items.Count == 0)
+                        {
+                            <div class="analytics-dashboard__ranking-empty">@L["Analytics:Rankings:Empty"]</div>
+                        }
+                        else
+                        {
+                            <ol class="analytics-dashboard__ranking">
+                                @foreach (var item in group.Items)
+                                {
+                                    <li>
+                                        <a href="@GetJobHref(item.JobKey)">
+                                            <strong title="@item.JobKey">@item.JobKey</strong>
+                                            <span>@L["Analytics:Rankings:OutcomeSummary", item.CompletedTerminalCount, item.FailedCount, item.SkippedCount]</span>
+                                        </a>
+                                        <span class="analytics-dashboard__rank-value">@group.GetValue(item)</span>
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </section>
+                }
+            </div>
+        </section>
+    </div>
+
+    <section class="analytics-dashboard__panel" aria-labelledby="slowest-heading">
+        <header class="analytics-dashboard__section-heading">
+            <div>
+                <MudText Typo="Typo.h6" HtmlTag="h2" id="slowest-heading">@L["Analytics:Slowest:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Slowest:Description"]</MudText>
+            </div>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Snapshot.SlowestExecutions.Count</MudChip>
+        </header>
+        @if (Snapshot.SlowestExecutions.Count == 0)
+        {
+            <div class="analytics-dashboard__empty">@L["Analytics:Slowest:Empty"]</div>
+        }
+        else
+        {
+            <div class="analytics-dashboard__slow-list">
+                @foreach (var execution in Snapshot.SlowestExecutions)
+                {
+                    <a href="@GetExecutionHref(execution.InstanceId)">
+                        <span class="analytics-dashboard__slow-icon">
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" />
+                        </span>
+                        <span>
+                            <strong title="@execution.JobKey">@execution.JobKey</strong>
+                            <code title="@execution.InstanceId">@execution.InstanceId</code>
+                        </span>
+                        <time>@JobSchedulerUiPresentation.FormatUtc(execution.CompletedAtUtc)</time>
+                        <b>@FormatDuration(execution.Duration)</b>
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                    </a>
+                }
+            </div>
+        }
+    </section>
+
+    <footer class="analytics-dashboard__cohort-note">
+        <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+        <span>@L["Analytics:CohortNote"]</span>
+    </footer>
+</div>
+
+@code {
+    /// <summary>
+    /// Gets the bounded analytics snapshot rendered by this dashboard.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobExecutionAnalyticsSnapshot Snapshot { get; set; } = null!;
+
+    private long SucceededCount => Snapshot.Trend.Sum(static bucket => bucket.SucceededCount);
+    private long FailedCount => Snapshot.Trend.Sum(static bucket => bucket.FailedCount);
+    private long SkippedCount => Snapshot.Trend.Sum(static bucket => bucket.SkippedCount);
+    private long DecidedCount => SucceededCount + FailedCount;
+    private long ScheduleDispositionCount => DecidedCount + SkippedCount;
+    private double ScheduleFulfillment => ScheduleDispositionCount == 0 ? 0D : 1D - Snapshot.SkipRate;
+    private long MaximumBucketValue => Math.Max(
+        1,
+        Snapshot.Trend.Count == 0
+            ? 1
+            : Snapshot.Trend.Max(static bucket => bucket.CompletedTerminalCount));
+
+    private IReadOnlyList<JobExecutionAnalyticsBucket> SampledTrend
+    {
+        get
+        {
+            const int maximumBars = 32;
+            if (Snapshot.Trend.Count <= maximumBars)
+            {
+                return Snapshot.Trend;
+            }
+
+            var step = Math.Max(1, (int)Math.Ceiling(Snapshot.Trend.Count / (double)maximumBars));
+            return Snapshot.Trend
+                .Where((_, index) => index % step == 0 || index == Snapshot.Trend.Count - 1)
+                .ToArray();
+        }
+    }
+
+    private IReadOnlyList<(string Label, TimeSpan? Value)> DurationMetrics =>
+    [
+        (L["Analytics:Duration:Minimum"], Snapshot.Duration.Minimum),
+        (L["Analytics:Duration:Average"], Snapshot.Duration.Average),
+        (L["Analytics:Duration:P50"], Snapshot.Duration.P50),
+        (L["Analytics:Duration:P90"], Snapshot.Duration.P90),
+        (L["Analytics:Duration:P95"], Snapshot.Duration.P95),
+        (L["Analytics:Duration:P99"], Snapshot.Duration.P99),
+        (L["Analytics:Duration:Maximum"], Snapshot.Duration.Maximum)
+    ];
+
+    private IReadOnlyList<AnalyticsRankingGroup> RankingGroups =>
+    [
+        new(
+            L["Analytics:Rankings:Volume"],
+            Snapshot.TopJobsByVolume,
+            static item => item.CompletedTerminalCount,
+            "primary"),
+        new(
+            L["Analytics:Rankings:Failures"],
+            Snapshot.TopJobsByFailures,
+            static item => item.FailedCount,
+            "error"),
+        new(
+            L["Analytics:Rankings:Skips"],
+            Snapshot.TopJobsBySkips,
+            static item => item.SkippedCount,
+            "warning")
+    ];
+
+    private string GetHeight(long value) => FormattableString.Invariant(
+        $"height: {Math.Max(value > 0 ? 4D : 0D, value / (double)MaximumBucketValue * 100D):0.##}%");
+
+    private string GetBucketTooltip(JobExecutionAnalyticsBucket bucket) => L[
+        "Analytics:Trend:BucketTooltip",
+        FormatBucketLabel(bucket.StartTimeUtc),
+        bucket.SucceededCount,
+        bucket.FailedCount,
+        bucket.SkippedCount,
+        bucket.CancelledCount];
+
+    private string FormatBucketLabel(DateTimeOffset timestamp) => Snapshot.BucketSize switch
+    {
+        JobExecutionAnalyticsBucketSize.Hour => timestamp.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture),
+        JobExecutionAnalyticsBucketSize.Day => timestamp.ToLocalTime().ToString("MM-dd", CultureInfo.CurrentCulture),
+        _ => timestamp.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+    };
+
+    private static string FormatRatio(double value, bool hasSample) => hasSample
+        ? value.ToString("P1", CultureInfo.CurrentCulture)
+        : "—";
+
+    private string FormatDuration(TimeSpan? duration) => duration is { } value
+        ? JobSchedulerUiPresentation.FormatDuration(value)
+        : L["Common:NotAvailable"];
+
+    private static string GetJobHref(string jobKey) =>
+        $"/job-scheduler/catalog/{Uri.EscapeDataString(jobKey)}";
+
+    private static string GetExecutionHref(string instanceId) =>
+        $"/job-scheduler/executions?instanceId={Uri.EscapeDataString(instanceId)}";
+
+    private sealed record AnalyticsRankingGroup(
+        string Label,
+        IReadOnlyList<JobExecutionAnalyticsJobRank> Items,
+        Func<JobExecutionAnalyticsJobRank, long> GetValue,
+        string Tone);
+}

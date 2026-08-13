@@ -48,7 +48,9 @@ public class JobConfigAttribute : Attribute
     /// Gets or sets the maximum number of concurrent executions allowed for this job.
     /// Use this property in attribute declarations.
     /// If not specified, defaults to 1.
-    /// When the limit is reached, durable queued executions wait until capacity becomes available.
+    /// Triggered and operator run-now executions wait durably when all leased slots are occupied. A scheduled recurring
+    /// occurrence is instead recorded as skipped when queued and running occurrences already reach this limit, which
+    /// prevents overdue schedules from building an unbounded replay backlog.
     /// The limit applies to the scope-wide logical <c>JobKey</c> across catalog owners and revisions, including
     /// superseded attempts that are still cooperatively stopping after a cutover.
     /// Set to higher values for jobs that can safely run concurrently.

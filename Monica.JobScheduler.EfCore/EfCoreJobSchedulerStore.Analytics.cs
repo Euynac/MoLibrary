@@ -1,0 +1,332 @@
+using System.Data;
+using Microsoft.EntityFrameworkCore;
+using Monica.JobScheduler.EfCore.Entities;
+using Monica.JobScheduler.Models;
+using Monica.JobScheduler.Models.Analytics;
+using Monica.JobScheduler.Models.Execution;
+
+namespace Monica.JobScheduler.EfCore;
+
+public sealed partial class EfCoreJobSchedulerStore
+{
+    /// <inheritdoc />
+    public Task<JobExecutionAnalyticsSnapshot> GetExecutionAnalyticsAsync(
+        string schedulerScopeKey,
+        JobExecutionAnalyticsQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateIdentity(schedulerScopeKey, nameof(schedulerScopeKey));
+        ArgumentNullException.ThrowIfNull(query);
+        var range = query.ValidateAndNormalize();
+        return ReadAsync(async (dbContext, token) =>
+        {
+            // Analytics compose several bounded aggregates; one read transaction keeps every panel on the same
+            // database snapshot while workers concurrently advance execution state.
+            await using var transaction = dbContext.Database.IsRelational()
+                ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, token)
+                : null;
+            var snapshot = await GetExecutionAnalyticsCoreAsync(
+                dbContext,
+                schedulerScopeKey,
+                query,
+                range,
+                token);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(token);
+            }
+
+            return snapshot;
+        }, cancellationToken);
+    }
+
+    private static async Task<JobExecutionAnalyticsSnapshot> GetExecutionAnalyticsCoreAsync(
+        JobSchedulerDbContext dbContext,
+        string schedulerScopeKey,
+        JobExecutionAnalyticsQuery query,
+        JobExecutionAnalyticsRange range,
+        CancellationToken cancellationToken)
+    {
+        var scoped = dbContext.Executions.AsNoTracking()
+            .Where(item => item.SchedulerScopeKey == schedulerScopeKey);
+        if (query.JobKey is not null)
+        {
+            scoped = scoped.Where(item => item.JobKey == query.JobKey);
+        }
+
+        var startTicks = ToTicks(range.StartTimeUtc);
+        var endTicks = ToTicks(range.EndTimeUtc);
+        var cohortGroups = await scoped
+            .Where(item => item.CreatedAtUtcTicks >= startTicks && item.CreatedAtUtcTicks < endTicks)
+            .GroupBy(static item => item.State)
+            .Select(static group => new AnalyticsStateCount(group.Key, group.LongCount()))
+            .ToArrayAsync(cancellationToken);
+        var cohortByState = cohortGroups.ToDictionary(static item => item.State, static item => item.Count);
+        IReadOnlyDictionary<JobExecutionState, long> stateTotals = Enum.GetValues<JobExecutionState>()
+            .ToDictionary(state => state, state => cohortByState.GetValueOrDefault(state));
+
+        var completions = scoped.Where(item =>
+            item.CompletedAtUtcTicks != null
+            && item.CompletedAtUtcTicks >= startTicks
+            && item.CompletedAtUtcTicks < endTicks
+            && (item.State == JobExecutionState.Succeeded
+                || item.State == JobExecutionState.Failed
+                || item.State == JobExecutionState.Cancelled
+                || item.State == JobExecutionState.Skipped));
+        var outcomeRows = await completions
+            .GroupBy(static item => item.State)
+            .Select(static group => new AnalyticsStateCount(group.Key, group.LongCount()))
+            .ToArrayAsync(cancellationToken);
+        var outcomes = outcomeRows.ToDictionary(static item => item.State, static item => item.Count);
+        var succeededCount = outcomes.GetValueOrDefault(JobExecutionState.Succeeded);
+        var failedCount = outcomes.GetValueOrDefault(JobExecutionState.Failed);
+        var skippedCount = outcomes.GetValueOrDefault(JobExecutionState.Skipped);
+        var completedTerminalCount = outcomeRows.Sum(static item => item.Count);
+        var executedTerminalCount = await completions.LongCountAsync(
+            static item => item.StartedAtUtcTicks != null,
+            cancellationToken);
+
+        var durationTicks = completions
+            .Where(static item =>
+                item.StartedAtUtcTicks != null
+                && item.CompletedAtUtcTicks >= item.StartedAtUtcTicks)
+            .Select(static item => item.CompletedAtUtcTicks!.Value - item.StartedAtUtcTicks!.Value);
+        var duration = await GetDurationStatisticsAsync(durationTicks, cancellationToken);
+        var trend = await GetTrendAsync(
+            completions,
+            range,
+            startTicks,
+            cancellationToken);
+        var topByVolume = await GetJobRankingAsync(
+            completions,
+            query.TopJobLimit,
+            AnalyticsJobRanking.Volume,
+            cancellationToken);
+        var topByFailures = await GetJobRankingAsync(
+            completions,
+            query.TopJobLimit,
+            AnalyticsJobRanking.Failures,
+            cancellationToken);
+        var topBySkips = await GetJobRankingAsync(
+            completions,
+            query.TopJobLimit,
+            AnalyticsJobRanking.Skips,
+            cancellationToken);
+        var slowestRows = await completions
+            .Where(static execution =>
+                execution.StartedAtUtcTicks != null
+                && execution.CompletedAtUtcTicks >= execution.StartedAtUtcTicks)
+            .OrderByDescending(static execution =>
+                execution.CompletedAtUtcTicks!.Value - execution.StartedAtUtcTicks!.Value)
+            .ThenBy(static execution => execution.InstanceId)
+            .Take(query.SlowestExecutionLimit)
+            .Select(static execution => new
+            {
+                execution.InstanceId,
+                execution.JobKey,
+                execution.State,
+                StartedAtUtcTicks = execution.StartedAtUtcTicks!.Value,
+                CompletedAtUtcTicks = execution.CompletedAtUtcTicks!.Value
+            })
+            .ToArrayAsync(cancellationToken);
+
+        return new JobExecutionAnalyticsSnapshot
+        {
+            StartTimeUtc = range.StartTimeUtc,
+            EndTimeUtc = range.EndTimeUtc,
+            BucketSize = query.BucketSize,
+            JobKey = query.JobKey,
+            StateTotals = stateTotals,
+            CompletedTerminalCount = completedTerminalCount,
+            ExecutedTerminalCount = executedTerminalCount,
+            ExecutedThroughputPerHour = executedTerminalCount / (range.EndTimeUtc - range.StartTimeUtc).TotalHours,
+            Reliability = JobExecutionAnalyticsMath.Ratio(succeededCount, succeededCount + failedCount),
+            SkipRate = JobExecutionAnalyticsMath.Ratio(
+                skippedCount,
+                succeededCount + failedCount + skippedCount),
+            Duration = duration,
+            Trend = trend,
+            TopJobsByVolume = topByVolume,
+            TopJobsByFailures = topByFailures,
+            TopJobsBySkips = topBySkips,
+            SlowestExecutions = slowestRows.Select(static item => new JobExecutionAnalyticsSlowExecution
+            {
+                InstanceId = item.InstanceId,
+                JobKey = item.JobKey,
+                State = item.State,
+                StartedAtUtc = FromTicks(item.StartedAtUtcTicks),
+                CompletedAtUtc = FromTicks(item.CompletedAtUtcTicks)
+            }).ToArray()
+        };
+    }
+
+    private static async Task<JobExecutionDurationStatistics> GetDurationStatisticsAsync(
+        IQueryable<long> durationTicks,
+        CancellationToken cancellationToken)
+    {
+        var count = await durationTicks.LongCountAsync(cancellationToken);
+        if (count == 0)
+        {
+            return new JobExecutionDurationStatistics();
+        }
+
+        var ordered = durationTicks.Order();
+        var minimum = await ordered.FirstAsync(cancellationToken);
+        var maximum = await ordered.OrderDescending().FirstAsync(cancellationToken);
+        var average = await durationTicks.AverageAsync(cancellationToken);
+        var p50 = await GetPercentileAsync(ordered, count, 0.50, cancellationToken);
+        var p90 = await GetPercentileAsync(ordered, count, 0.90, cancellationToken);
+        var p95 = await GetPercentileAsync(ordered, count, 0.95, cancellationToken);
+        var p99 = await GetPercentileAsync(ordered, count, 0.99, cancellationToken);
+        return new JobExecutionDurationStatistics
+        {
+            Count = count,
+            Minimum = TimeSpan.FromTicks(minimum),
+            Average = TimeSpan.FromTicks(checked((long)average)),
+            P50 = TimeSpan.FromTicks(p50),
+            P90 = TimeSpan.FromTicks(p90),
+            P95 = TimeSpan.FromTicks(p95),
+            P99 = TimeSpan.FromTicks(p99),
+            Maximum = TimeSpan.FromTicks(maximum)
+        };
+    }
+
+    private static Task<long> GetPercentileAsync(
+        IOrderedQueryable<long> ordered,
+        long count,
+        double percentile,
+        CancellationToken cancellationToken)
+    {
+        var index = checked((int)Math.Max(0, Math.Ceiling(percentile * count) - 1));
+        return ordered.Skip(index).FirstAsync(cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<JobExecutionAnalyticsBucket>> GetTrendAsync(
+        IQueryable<JobExecutionEntity> completions,
+        JobExecutionAnalyticsRange range,
+        long startTicks,
+        CancellationToken cancellationToken)
+    {
+        var bucketTicks = range.BucketDuration.Ticks;
+        var rows = await completions
+            .Select(item => new
+            {
+                BucketIndex = (item.CompletedAtUtcTicks!.Value - startTicks) / bucketTicks,
+                item.State,
+                WasExecuted = item.StartedAtUtcTicks != null
+            })
+            .GroupBy(static item => item.BucketIndex)
+            .Select(static group => new AnalyticsTrendRow(
+                group.Key,
+                group.LongCount(item => item.State == JobExecutionState.Succeeded),
+                group.LongCount(item => item.State == JobExecutionState.Failed),
+                group.LongCount(item => item.State == JobExecutionState.Skipped),
+                group.LongCount(item => item.State == JobExecutionState.Cancelled),
+                group.LongCount(item => item.WasExecuted)))
+            .ToArrayAsync(cancellationToken);
+        var byBucket = rows.ToDictionary(static item => item.BucketIndex);
+        return Enumerable.Range(0, range.BucketCount).Select(index =>
+        {
+            byBucket.TryGetValue(index, out var row);
+            var start = range.StartTimeUtc.AddTicks(range.BucketDuration.Ticks * index);
+            return new JobExecutionAnalyticsBucket
+            {
+                StartTimeUtc = start,
+                EndTimeUtc = Min(start.Add(range.BucketDuration), range.EndTimeUtc),
+                SucceededCount = row?.SucceededCount ?? 0,
+                FailedCount = row?.FailedCount ?? 0,
+                SkippedCount = row?.SkippedCount ?? 0,
+                CancelledCount = row?.CancelledCount ?? 0,
+                ExecutedTerminalCount = row?.ExecutedTerminalCount ?? 0
+            };
+        }).ToArray();
+    }
+
+    private static async Task<IReadOnlyList<JobExecutionAnalyticsJobRank>> GetJobRankingAsync(
+        IQueryable<JobExecutionEntity> completions,
+        int limit,
+        AnalyticsJobRanking ranking,
+        CancellationToken cancellationToken)
+    {
+        var jobKeys = ranking switch
+        {
+            AnalyticsJobRanking.Volume => await completions
+                .GroupBy(static item => item.JobKey)
+                .Select(static group => new { JobKey = group.Key, Metric = group.LongCount() })
+                .OrderByDescending(static item => item.Metric)
+                .ThenBy(static item => item.JobKey)
+                .Select(static item => item.JobKey)
+                .Take(limit)
+                .ToArrayAsync(cancellationToken),
+            AnalyticsJobRanking.Failures => await completions
+                .Where(static item => item.State == JobExecutionState.Failed)
+                .GroupBy(static item => item.JobKey)
+                .Select(static group => new { JobKey = group.Key, Metric = group.LongCount() })
+                .OrderByDescending(static item => item.Metric)
+                .ThenBy(static item => item.JobKey)
+                .Select(static item => item.JobKey)
+                .Take(limit)
+                .ToArrayAsync(cancellationToken),
+            AnalyticsJobRanking.Skips => await completions
+                .Where(static item => item.State == JobExecutionState.Skipped)
+                .GroupBy(static item => item.JobKey)
+                .Select(static group => new { JobKey = group.Key, Metric = group.LongCount() })
+                .OrderByDescending(static item => item.Metric)
+                .ThenBy(static item => item.JobKey)
+                .Select(static item => item.JobKey)
+                .Take(limit)
+                .ToArrayAsync(cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(ranking), ranking, "Analytics ranking is not supported.")
+        };
+        if (jobKeys.Length == 0)
+        {
+            return [];
+        }
+
+        var rows = await completions
+            .Where(item => jobKeys.Contains(item.JobKey))
+            .GroupBy(static item => item.JobKey)
+            .Select(static group => new AnalyticsJobRankRow(
+                group.Key,
+                group.LongCount(item => item.State == JobExecutionState.Succeeded),
+                group.LongCount(item => item.State == JobExecutionState.Failed),
+                group.LongCount(item => item.State == JobExecutionState.Skipped),
+                group.LongCount(item => item.State == JobExecutionState.Cancelled)))
+            .ToArrayAsync(cancellationToken);
+        var byJobKey = rows.ToDictionary(static item => item.JobKey, StringComparer.Ordinal);
+        return jobKeys.Select(jobKey => byJobKey[jobKey]).Select(static item => new JobExecutionAnalyticsJobRank
+        {
+            JobKey = item.JobKey,
+            SucceededCount = item.SucceededCount,
+            FailedCount = item.FailedCount,
+            SkippedCount = item.SkippedCount,
+            CancelledCount = item.CancelledCount
+        }).ToArray();
+    }
+
+    private static DateTimeOffset Min(DateTimeOffset left, DateTimeOffset right) => left <= right ? left : right;
+
+    private sealed record AnalyticsStateCount(JobExecutionState State, long Count);
+
+    private sealed record AnalyticsTrendRow(
+        long BucketIndex,
+        long SucceededCount,
+        long FailedCount,
+        long SkippedCount,
+        long CancelledCount,
+        long ExecutedTerminalCount);
+
+    private sealed record AnalyticsJobRankRow(
+        string JobKey,
+        long SucceededCount,
+        long FailedCount,
+        long SkippedCount,
+        long CancelledCount);
+
+    private enum AnalyticsJobRanking
+    {
+        Volume,
+        Failures,
+        Skips
+    }
+}

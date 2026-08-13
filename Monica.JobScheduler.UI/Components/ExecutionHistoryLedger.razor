@@ -8,50 +8,61 @@
         <MudText Typo="Typo.subtitle1" id="execution-history-heading">@L["ExecutionDetail:History"]</MudText>
         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ExecutionDetail:HistoryCount", Entries.Count]</MudText>
     </div>
-    <div class="execution-history__scroll">
-        <MudTable T="JobExecutionHistoryEntry"
-                  Items="@Entries.OrderByDescending(entry => entry.TimestampUtc)"
-                  Dense="true"
-                  Hover="true"
-                  Breakpoint="Breakpoint.None"
-                  Elevation="0"
-                  Class="execution-history__table">
-            <HeaderContent>
-                <MudTh>@L["ExecutionDetail:HistoryTime"]</MudTh>
-                <MudTh>@L["ExecutionDetail:HistoryKind"]</MudTh>
-                <MudTh>@L["ExecutionDetail:HistoryLogLevel"]</MudTh>
-                <MudTh>@L["ExecutionDetail:HistoryTransition"]</MudTh>
-                <MudTh>@L["ExecutionDetail:HistoryWorker"]</MudTh>
-                <MudTh>@L["ExecutionDetail:HistoryMessage"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["ExecutionDetail:HistoryTime"]" Class="execution-history__time">
-                    <time>@ExecutionUiPresentation.FormatDateTime(context.TimestampUtc)</time>
-                </MudTd>
-                <MudTd DataLabel="@L["ExecutionDetail:HistoryKind"]">
-                    @L[$"ExecutionHistoryKinds:{context.Kind}"]
-                </MudTd>
-                <MudTd DataLabel="@L["ExecutionDetail:HistoryLogLevel"]">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                             Color="@ExecutionUiPresentation.GetLogLevelColor(context.LogLevel)">
-                        @L[$"LogLevels:{context.LogLevel}"]
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="@L["ExecutionDetail:HistoryTransition"]" Class="execution-history__transition">
-                    @GetTransition(context)
-                </MudTd>
-                <MudTd DataLabel="@L["ExecutionDetail:HistoryWorker"]">
-                    <code class="execution-history__identity" title="@context.WorkerInstanceId">@(context.WorkerInstanceId ?? "—")</code>
-                </MudTd>
-                <MudTd DataLabel="@L["ExecutionDetail:HistoryMessage"]">
-                    <div class="execution-history__message">@context.Message</div>
-                </MudTd>
-            </RowTemplate>
-            <NoRecordsContent>
-                <MudText Class="pa-4" Color="Color.Secondary">@L["ExecutionDetail:EmptyHistory"]</MudText>
-            </NoRecordsContent>
-        </MudTable>
-    </div>
+    @if (Entries.Count == 0)
+    {
+        <div class="execution-history__empty">
+            <MudIcon Icon="@Icons.Material.Filled.HistoryToggleOff" Color="Color.Secondary" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ExecutionDetail:EmptyHistory"]</MudText>
+        </div>
+    }
+    else
+    {
+        <ol class="execution-history__timeline">
+            @foreach (var entry in Entries.OrderBy(entry => entry.TimestampUtc))
+            {
+                <li class="execution-history__entry">
+                    <span class="execution-history__rail" aria-hidden="true">
+                        <span class="execution-history__node">
+                            <MudIcon Icon="@GetEntryIcon(entry)"
+                                     Color="@GetEntryColor(entry)"
+                                     Size="Size.Small" />
+                        </span>
+                    </span>
+                    <article>
+                        <header class="execution-history__entry-heading">
+                            <div>
+                                <strong>@L[$"ExecutionHistoryKinds:{entry.Kind}"]</strong>
+                                <time>@ExecutionUiPresentation.FormatDateTime(entry.TimestampUtc)</time>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                     Color="@ExecutionUiPresentation.GetLogLevelColor(entry.LogLevel)">
+                                @L[$"LogLevels:{entry.LogLevel}"]
+                            </MudChip>
+                        </header>
+
+                        <p class="execution-history__message">@entry.Message</p>
+
+                        <footer class="execution-history__metadata">
+                            @if (entry.PreviousState is not null || entry.NewState is not null)
+                            {
+                                <span>
+                                    <MudIcon Icon="@Icons.Material.Filled.SyncAlt" Size="Size.Small" />
+                                    <span>@GetTransition(entry)</span>
+                                </span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(entry.WorkerInstanceId))
+                            {
+                                <span>
+                                    <MudIcon Icon="@Icons.Material.Filled.Computer" Size="Size.Small" />
+                                    <code title="@entry.WorkerInstanceId">@entry.WorkerInstanceId</code>
+                                </span>
+                            }
+                        </footer>
+                    </article>
+                </li>
+            }
+        </ol>
+    }
 </section>
 
 @code {
@@ -76,4 +87,24 @@
             : "∅";
         return $"{previous} → {next}";
     }
+
+    private static string GetEntryIcon(JobExecutionHistoryEntry entry) => entry.Kind switch
+    {
+        JobExecutionHistoryKind.ExecutionLog => Icons.Material.Filled.Terminal,
+        JobExecutionHistoryKind.Cancellation => Icons.Material.Filled.CancelScheduleSend,
+        _ => entry.NewState switch
+        {
+            JobExecutionState.Queued => Icons.Material.Filled.Schedule,
+            JobExecutionState.Running => Icons.Material.Filled.PlayArrow,
+            JobExecutionState.Succeeded => Icons.Material.Filled.Check,
+            JobExecutionState.Failed => Icons.Material.Filled.ErrorOutline,
+            JobExecutionState.Cancelled => Icons.Material.Filled.Block,
+            JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
+            _ => Icons.Material.Filled.Circle
+        }
+    };
+
+    private static Color GetEntryColor(JobExecutionHistoryEntry entry) => entry.NewState is { } state
+        ? JobSchedulerUiPresentation.GetStateColor(state)
+        : ExecutionUiPresentation.GetLogLevelColor(entry.LogLevel);
 }
