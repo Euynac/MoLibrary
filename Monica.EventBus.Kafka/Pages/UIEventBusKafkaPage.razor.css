@@ -67,6 +67,21 @@
     gap: 8px;
 }
 
+.page-banner__actions ::deep .mud-tooltip-root,
+.page-banner__actions ::deep .mud-button-root {
+    height: 40px;
+    min-height: 40px;
+}
+
+.page-banner__actions ::deep .mud-tooltip-root {
+    display: flex;
+    align-items: center;
+}
+
+.page-banner__actions ::deep .mud-icon-button {
+    width: 40px;
+}
+
 ::deep .page-eyebrow {
     color: var(--mud-palette-primary);
     letter-spacing: 0.065em;
@@ -211,7 +226,7 @@
         justify-content: flex-start;
     }
 
-    .page-banner__actions ::deep .mud-button-root {
+    .page-banner__actions > ::deep .mud-button-root {
         flex: 1 1 auto;
     }
 

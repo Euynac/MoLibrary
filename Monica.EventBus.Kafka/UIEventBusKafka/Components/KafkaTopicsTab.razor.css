@@ -7,6 +7,12 @@
     min-width: 0;
 }
 
+.topics-actions ::deep .mud-input-control,
+.topics-actions ::deep .mud-button-root {
+    height: 40px;
+    min-height: 40px;
+}
+
 .topics-actions ::deep .mud-input-control {
     width: 260px;
     min-width: 220px;
