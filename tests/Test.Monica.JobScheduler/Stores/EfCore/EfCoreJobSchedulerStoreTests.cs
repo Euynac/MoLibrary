@@ -14,6 +14,7 @@ using Monica.JobScheduler.Exceptions.Catalog;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
+using Monica.JobScheduler.Models.Operations;
 using Monica.Modules;
 using Monica.Repository.Persistence.Services;
 using Xunit;
@@ -832,6 +833,98 @@ public sealed class EfCoreJobSchedulerStoreTests
         synchronized.Cursor!.NextOccurrenceUtc.Should().Be(occurrence);
         materialized.Status.Should().Be(RecurringMaterializationStatus.Materialized);
         materialized.Execution!.AvailableAtUtc.Should().Be(occurrence);
+    }
+
+    [Fact]
+    public async Task QueryOperationalSummaries_ShouldMatchRecurringExecutionAndWorkerState()
+    {
+        await using var fixture = await StoreFixture.CreateAsync(
+            START_TIME,
+            TestContext.Current.CancellationToken);
+        var store = fixture.Store;
+        await ActivateAsync(store, fixture.Scope, "revision-1", JobType.Recurring);
+        var active = (await store.GetActiveCatalogAsync(
+            fixture.Scope,
+            TestContext.Current.CancellationToken))!.Definitions.Single();
+        var version = await store.GetCatalogVersionAsync(fixture.Scope, TestContext.Current.CancellationToken);
+        var synchronized = await store.SynchronizeRecurringScheduleAsync(
+            new RecurringScheduleSynchronization
+            {
+                Template = active.CreateExecutionTemplate(),
+                Schedule = new RecurringScheduleDefinition
+                {
+                    CronExpression = active.Declaration.CronExpression!,
+                    TimeZoneId = active.Declaration.TimeZoneId!
+                },
+                ChangeEpoch = version.ChangeEpoch
+            },
+            TestContext.Current.CancellationToken);
+        var occurrence = synchronized.Cursor!.NextOccurrenceUtc!.Value;
+        fixture.TimeProvider.Advance(occurrence - START_TIME);
+        var nextOccurrence = occurrence.AddMinutes(1);
+        var materialized = await store.TryMaterializeRecurringOccurrenceAsync(
+            new RecurringOccurrenceMaterialization
+            {
+                CursorKey = synchronized.Cursor.Key,
+                ExpectedVersion = synchronized.Cursor.Version,
+                ExpectedOccurrenceUtc = occurrence,
+                NextOccurrenceUtc = nextOccurrence,
+                InstanceId = "operational-recurring"
+            },
+            TestContext.Current.CancellationToken);
+        await store.RegisterWorkerCapabilityAsync(
+            new WorkerCapabilityRegistration
+            {
+                SchedulerScopeKey = fixture.Scope,
+                OwnerKey = active.OwnerId,
+                WorkerRevisionId = active.WorkerRevisionId,
+                WorkerInstanceId = "operational-worker",
+                JobRevisionIds = [active.JobRevisionId]
+            },
+            TimeSpan.FromMinutes(5),
+            TestContext.Current.CancellationToken);
+
+        var page = await store.QueryOperationalSummariesAsync(
+            fixture.Scope,
+            new JobCatalogQuery(),
+            TestContext.Current.CancellationToken);
+
+        var summary = page.Items.Should().ContainSingle().Subject;
+        summary.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Scheduled);
+        summary.NextOccurrenceUtc.Should().Be(nextOccurrence);
+        summary.LatestExecution!.InstanceId.Should().Be(materialized.Execution!.InstanceId);
+        summary.LatestExecution.History.Should().BeEmpty();
+        summary.QueuedExecutionCount.Should().Be(1);
+        summary.RunningExecutionCount.Should().Be(0);
+        summary.ActiveExecutionCount.Should().Be(1);
+        summary.CompatibleWorkerCount.Should().Be(1);
+        (await store.GetOperationalSummaryAsync(
+            fixture.Scope,
+            active.Declaration.JobKey,
+            TestContext.Current.CancellationToken)).Should().BeEquivalentTo(summary);
+        (await store.GetOperationalSummaryAsync(
+            fixture.Scope,
+            "job-missing",
+            TestContext.Current.CancellationToken)).Should().BeNull();
+
+        await store.UpdatePolicyAsync(
+            fixture.Scope,
+            active.OwnerId,
+            active.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                DisabledOverride = true,
+                MaxRetainedHistoryRecords = active.Policy.MaxRetainedHistoryRecords,
+                MaxRetentionDays = active.Policy.MaxRetentionDays,
+                ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        var suspended = (await store.QueryOperationalSummariesAsync(
+            fixture.Scope,
+            new JobCatalogQuery(),
+            TestContext.Current.CancellationToken)).Items.Single();
+        suspended.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Suspended);
+        suspended.NextOccurrenceUtc.Should().BeNull();
     }
 
     [Fact]

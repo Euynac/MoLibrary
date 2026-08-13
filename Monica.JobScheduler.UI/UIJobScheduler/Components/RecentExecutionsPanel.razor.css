@@ -1,0 +1,49 @@
+.recent-panel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.recent-panel__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 15px 17px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.recent-panel__heading > div {
+    min-width: 0;
+}
+
+.recent-panel__table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.recent-panel__table-scroll ::deep .mud-table-root {
+    min-width: 42rem;
+}
+
+.recent-panel__job {
+    display: block;
+    max-width: 15rem;
+    overflow: hidden;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recent-panel__time {
+    white-space: nowrap;
+}
+
+.recent-panel ::deep .recent-panel__action-cell {
+    width: 3.5rem;
+    text-align: end;
+    white-space: nowrap;
+}

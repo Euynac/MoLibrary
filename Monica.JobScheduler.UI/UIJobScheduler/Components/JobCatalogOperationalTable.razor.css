@@ -1,0 +1,97 @@
+.catalog-table {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.catalog-table__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.catalog-table__scroll {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.catalog-table__scroll ::deep .mud-table-root {
+    min-width: 86rem;
+}
+
+.catalog-table__select-cell {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    text-align: center;
+}
+
+.catalog-table__definition,
+.catalog-table__readiness,
+.catalog-table__schedule,
+.catalog-table__last-run,
+.catalog-table__activity {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.catalog-table__definition code,
+.catalog-table__readiness code,
+.catalog-table__schedule code {
+    display: block;
+    max-width: 17rem;
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.catalog-table__definition span,
+.catalog-table__schedule span,
+.catalog-table__last-run span,
+.catalog-table__activity span,
+.catalog-table__muted {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+}
+
+.catalog-table__next {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.catalog-table__activity strong {
+    font-family: var(--mo-font-family-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.catalog-table__actions {
+    width: 12rem;
+    min-width: 12rem;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.catalog-table__pagination {
+    display: flex;
+    justify-content: center;
+    padding: 10px 12px;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+@media (max-width: 600px) {
+    .catalog-table__heading {
+        align-items: flex-start;
+        padding-inline: 12px;
+    }
+}

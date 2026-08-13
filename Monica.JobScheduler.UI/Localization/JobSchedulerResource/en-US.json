@@ -2,6 +2,7 @@
   "Pages": {
     "Overview": { "Title": "Scheduler overview" },
     "Catalog": { "Title": "Job catalog" },
+    "JobDetail": { "Title": "Job details" },
     "Executions": { "Title": "Execution ledger" }
   },
   "Workspace": {
@@ -22,6 +23,10 @@
       "Catalog": {
         "Title": "Immutable job catalog",
         "Description": "Inspect code-owned declarations and exact executable revisions. Operators can change only independent disable and retention policy."
+      },
+      "JobDetail": {
+        "Title": "Job operational dossier",
+        "Description": "Read one immutable declaration alongside its effective policy, schedule cursor, worker compatibility, and latest execution evidence."
       },
       "Executions": {
         "Title": "Durable execution ledger",
@@ -44,7 +49,9 @@
     "Saving": "Saving…",
     "Submitting": "Submitting…",
     "Close": "Close",
-    "Keep": "Keep execution"
+    "Keep": "Keep execution",
+    "NotAvailable": "Not available",
+    "RunningDuration": "{0} and running"
   },
   "ExecutionStates": {
     "Queued": "Queued",
@@ -71,7 +78,9 @@
       "Converged": "Converged",
       "Transitioning": "Cutover in progress",
       "WaitingWorkers": "Waiting for workers",
-      "TransitionMessage": "New execution admission and recurring materialization are paused until the complete desired release is activated."
+      "TransitionMessage": "New execution admission and recurring materialization are paused until the complete desired release is activated.",
+      "ReadinessDescription": "Desired publication and exact worker revisions must converge before the release can become the active execution contract.",
+      "EpochAriaLabel": "Catalog epoch progression"
     },
     "Queue": { "AriaLabel": "Durable execution state counts" },
     "Owners": {
@@ -82,6 +91,8 @@
       "Publication": "Published",
       "Workers": "Live workers",
       "Definitions": "Active jobs",
+      "Published": "Published",
+      "Pending": "Pending",
       "Empty": "No owners are present in the desired release."
     },
     "Recent": {
@@ -90,8 +101,11 @@
       "Job": "Job",
       "State": "State",
       "Created": "Enqueued",
+      "Duration": "Duration",
       "Empty": "No executions have been admitted yet."
-    }
+    },
+    "RefreshFailed": "The last refresh failed: {0}",
+    "LastRefreshed": "Last refreshed {0}"
   },
   "Catalog": {
     "PageTitle": "Job Scheduler · Catalog",
@@ -116,13 +130,57 @@
       "Type": "Type",
       "Schedule": "Schedule contract",
       "Concurrency": "Concurrency",
+      "Readiness": "Executable revision",
+      "NextRun": "Next run",
+      "LastRun": "Last run",
+      "Activity": "Active / limit",
       "Policy": "Effective policy",
       "Revision": "Job revision",
       "Actions": "Actions"
     },
     "Actions": {
       "Trigger": "Run through active catalog",
-      "Policy": "Edit operator policy"
+      "Policy": "Edit operator policy",
+      "Details": "Open job details",
+      "InspectSchedule": "Inspect schedule and upcoming occurrences",
+      "Pause": "Pause recurring materialization",
+      "Resume": "Resume recurring materialization",
+      "PauseSelected": "Pause selected",
+      "ResumeSelected": "Resume selected",
+      "Reset": "Reset filters"
+    },
+    "Readiness": {
+      "Workers": "{0} compatible worker(s)",
+      "NoWorker": "No compatible worker"
+    },
+    "ScheduleStatus": {
+      "Awaiting": "Awaiting synchronization",
+      "Suspended": "Suspended",
+      "Exhausted": "Schedule exhausted"
+    },
+    "History": { "NeverRun": "Never run" },
+    "Activity": { "QueuedRunning": "{0} queued · {1} running" },
+    "Selection": {
+      "SelectAll": "Select all recurring jobs on this page",
+      "Select": "Select",
+      "SelectJob": "Select {0}",
+      "ToolbarLabel": "Selected recurring job operations",
+      "Count": "{0} recurring job(s) selected",
+      "Description": "Batch changes retain each job's independent retention policy and optimistic concurrency fence.",
+      "Clear": "Clear selection"
+    },
+    "Messages": {
+      "Paused": "Recurring materialization is paused.",
+      "Resumed": "Recurring materialization will resume from the next future occurrence.",
+      "UpdateFailed": "The policy update failed."
+    },
+    "Batch": {
+      "Empty": "Select at least one recurring job.",
+      "PauseTitle": "Pause selected recurring jobs?",
+      "ResumeTitle": "Resume selected recurring jobs?",
+      "PauseMessage": "Pause new recurring occurrences for {0} selected job(s)? Existing queued and running executions are unchanged.",
+      "ResumeMessage": "Resume {0} selected job(s) from their next future occurrence? Disabled-period occurrences are not replayed.",
+      "Result": "{0} policy update(s) succeeded; {1} failed."
     }
   },
   "Policy": {
@@ -138,25 +196,171 @@
     "MaxDaysHelp": "Leave empty for no age limit.",
     "Saved": "Operator policy saved."
   },
+  "JobDetail": {
+    "PageTitle": "Job Scheduler · Job details",
+    "BreadcrumbAriaLabel": "Job catalog breadcrumb",
+    "NotFound": "No active catalog declaration exists for {0}.",
+    "RefreshFailed": "The latest refresh failed: {0}",
+    "ObservedAt": "Operational evidence observed {0}",
+    "Actions": {
+      "BackToCatalog": "Back to catalog",
+      "InspectSchedule": "Inspect schedule"
+    },
+    "Common": { "Unlimited": "Unlimited" },
+    "Header": {
+      "NoCompatibleWorker": "No compatible worker",
+      "EvidenceAriaLabel": "Current job operational evidence",
+      "CompatibleWorkers": "Compatible workers",
+      "ActiveExecutions": "Active executions",
+      "QueuedExecutions": "Queued",
+      "RunningExecutions": "Running"
+    },
+    "Schedule": {
+      "Title": "Recurring schedule",
+      "Description": "The durable cursor uses this immutable schedule and the active policy to materialize occurrences.",
+      "NextOccurrence": "Next occurrence",
+      "CronExpression": "Cron expression",
+      "TimeZone": "Schedule timezone",
+      "StartBoundary": "Start boundary",
+      "EndBoundary": "End boundary",
+      "TriggeredTitle": "On-demand admission",
+      "TriggeredDescription": "This job has no recurring cursor. Operators admit an execution explicitly through the active catalog.",
+      "StatusDescriptions": {
+        "NotRecurring": "No recurring cursor applies to an on-demand job.",
+        "AwaitingSynchronization": "The active declaration is waiting for the control plane to create its durable cursor.",
+        "Scheduled": "The durable cursor has a next occurrence ready for future materialization.",
+        "Suspended": "Operator policy has suspended new recurring occurrence materialization.",
+        "Exhausted": "No occurrence remains within the declared schedule boundaries."
+      }
+    },
+    "Contract": {
+      "Title": "Declaration and policy contract",
+      "Description": "Code-owned declaration fields remain immutable; operator policy is stored independently and updated with optimistic concurrency.",
+      "Immutable": "Immutable declaration",
+      "DeclarationTitle": "Execution declaration",
+      "Owner": "Catalog owner",
+      "ArgumentsKey": "Arguments contract",
+      "MaxConcurrency": "Maximum concurrency",
+      "RetryCount": "Allowed retries",
+      "ExecutionTimeout": "Execution timeout",
+      "DeclarationDefault": "Code default state",
+      "PolicyTitle": "Operator policy",
+      "EffectiveState": "Effective state",
+      "PolicyUpdated": "Policy updated",
+      "PolicyStamp": "Concurrency stamp",
+      "RevisionTitle": "Release and revision identity",
+      "SchedulerScope": "Scheduler scope",
+      "Release": "Catalog release",
+      "ActivationEpoch": "Activation epoch",
+      "WorkerRevision": "Worker revision",
+      "JobRevision": "Job revision"
+    },
+    "LatestExecution": {
+      "Title": "Latest execution",
+      "Description": "Newest durable execution evidence for this logical job across catalog revisions.",
+      "Empty": "This job has not produced any durable execution yet."
+    }
+  },
+  "RecurringScheduleStatuses": {
+    "NotRecurring": "On demand",
+    "AwaitingSynchronization": "Awaiting synchronization",
+    "Scheduled": "Scheduled",
+    "Suspended": "Suspended",
+    "Exhausted": "Exhausted"
+  },
+  "CronInspector": {
+    "Title": "Schedule inspector",
+    "ImmutableNotice": "This schedule belongs to the immutable release declaration. Change it in code and deploy a new catalog release; the inspector never mutates release history.",
+    "TimeZone": "Timezone",
+    "StartBoundary": "Start boundary",
+    "EndBoundary": "End boundary",
+    "OperationalNext": "Durable next occurrence",
+    "ResetDraft": "Reset draft",
+    "Expression": {
+      "Title": "Cron contract",
+      "Description": "Six-field expressions include seconds; five-field expressions begin with minutes.",
+      "Draft": "Cron expression draft",
+      "DraftHelp": "Edit locally to validate and preview. The draft is not persisted; publish a new catalog release to change the immutable schedule."
+    },
+    "Fields": {
+      "AriaLabel": "Cron expression fields",
+      "Second": "Second",
+      "Minute": "Minute",
+      "Hour": "Hour",
+      "Day": "Day",
+      "Month": "Month",
+      "Weekday": "Weekday"
+    },
+    "Preview": {
+      "Title": "Upcoming declaration occurrences",
+      "Description": "Calculated strictly after {0}; the durable cursor remains authoritative.",
+      "Unavailable": "This host cannot evaluate the declared Cron expression or timezone.",
+      "Empty": "No future occurrence remains within the declaration boundaries.",
+      "AriaLabel": "Upcoming schedule occurrences",
+      "Sequence": "#",
+      "ScheduleTime": "Schedule-local time",
+      "UtcTime": "UTC time"
+    }
+  },
   "Trigger": {
     "Title": "Admit execution",
     "Revision": "Expected immutable job revision",
+    "InstanceId": "Idempotency instance",
+    "PayloadSection": "Execution payload",
     "Arguments": "JSON arguments",
     "ArgumentsType": "Declared argument type: {0}",
     "ArgumentsUnknown": "Enter a JSON object matching the job's declared argument contract.",
+    "ArgumentsRequired": "JSON arguments are required.",
+    "InvalidJson": "Arguments must be valid JSON.",
     "Action": "Queue execution",
-    "Queued": "Execution {0} was durably queued."
+    "Queued": "Execution {0} was durably queued.",
+    "Delay": {
+      "Title": "Queue availability",
+      "Description": "Choose the first UTC instant at which a worker may claim this execution.",
+      "Enable": "Delay admission",
+      "Date": "Available date (UTC)",
+      "Time": "Available time (UTC)",
+      "UtcHelp": "The selected timestamp is interpreted as UTC and stored with the durable execution.",
+      "Required": "Choose both a UTC date and time.",
+      "Future": "Delayed availability must be in the future."
+    }
   },
   "Executions": {
     "PageTitle": "Job Scheduler · Executions",
     "Title": "Execution ledger",
     "Count": "{0} executions",
+    "LastRefreshed": "Observed {0}",
     "Empty": "No durable executions match the current filters.",
     "Filters": {
       "Search": "Execution",
       "SearchPlaceholder": "Instance ID or job key",
       "State": "State",
-      "AnyState": "Any state"
+      "AnyState": "Any state",
+      "States": "States",
+      "TimeRange": "Enqueued within",
+      "StartDate": "Start date",
+      "EndDate": "End date",
+      "SortBy": "Sort by",
+      "PageSize": "Rows per page",
+      "InvalidRange": "The end date must be on or after the start date."
+    },
+    "TimeRanges": {
+      "All": "All time",
+      "LastHour": "Last hour",
+      "Last24Hours": "Last 24 hours",
+      "Last7Days": "Last 7 days",
+      "Last30Days": "Last 30 days",
+      "Custom": "Custom range"
+    },
+    "SortFields": {
+      "CreatedAtUtc": "Enqueued time",
+      "AvailableAtUtc": "Available time",
+      "StartedAtUtc": "Start time",
+      "CompletedAtUtc": "Completion time"
+    },
+    "SortDirection": {
+      "Ascending": "Sort ascending",
+      "Descending": "Sort descending"
     },
     "Columns": {
       "Instance": "Instance",
@@ -164,19 +368,27 @@
       "State": "State",
       "Available": "Available",
       "Created": "Enqueued",
+      "Started": "Started",
+      "Completed": "Completed",
+      "Duration": "Duration",
       "Attempts": "Attempts / retries",
       "Worker": "Lease owner",
       "Actions": "Actions"
     },
     "Actions": {
       "Details": "Inspect execution",
-      "Cancel": "Request cancellation"
+      "Cancel": "Request cancellation",
+      "Apply": "Apply filters",
+      "Reset": "Reset"
     },
     "Cancel": {
       "Title": "Cancel execution?",
       "Message": "Queued execution {0} will be cancelled immediately. A running execution receives a durable cooperative cancellation request.",
       "Requested": "Cancellation was persisted.",
-      "Failed": "Cancellation could not be persisted."
+      "Failed": "Cancellation could not be persisted.",
+      "Cancelled": "The queued execution was cancelled.",
+      "AlreadyTerminal": "The execution was already terminal.",
+      "NotFound": "The execution no longer exists."
     }
   },
   "ExecutionDetail": {
@@ -198,6 +410,51 @@
     "HistoryTime": "Time",
     "HistoryKind": "Kind",
     "HistoryTransition": "Transition",
-    "HistoryMessage": "Evidence"
+    "HistoryMessage": "Evidence",
+    "Identity": "Execution identity",
+    "Instance": "Instance ID",
+    "Scope": "Scheduler scope",
+    "Observed": "Snapshot observed",
+    "JobType": "Job type",
+    "ArgumentsType": "Arguments contract",
+    "PolicySnapshot": "Captured execution policy",
+    "MaxConcurrency": "Maximum concurrency",
+    "RetryCount": "Allowed retries",
+    "Timeout": "Execution timeout",
+    "Timing": "Timing evidence",
+    "Created": "Enqueued at",
+    "Started": "Started at",
+    "Completed": "Completed at",
+    "Duration": "Duration",
+    "CancellationRequested": "Cancellation requested",
+    "Runtime": "Lease and recovery",
+    "LeaseLosses": "Recovered lease losses",
+    "LeaseExpires": "Lease expires",
+    "NoArguments": "No serialized arguments were captured.",
+    "HistoryCount": "{0} retained entries",
+    "HistoryLogLevel": "Level",
+    "HistoryWorker": "Worker",
+    "EmptyHistory": "No retained history entries are available.",
+    "CancellationPending": "A cooperative cancellation request has been pending since {0}.",
+    "Copied": "Diagnostics copied to the clipboard.",
+    "CopyFailed": "Diagnostics could not be copied.",
+    "Actions": {
+      "ViewCatalog": "Open job details",
+      "CopyDiagnostics": "Copy diagnostics"
+    }
+  },
+  "ExecutionHistoryKinds": {
+    "StateTransition": "State transition",
+    "ExecutionLog": "Execution log",
+    "Cancellation": "Cancellation"
+  },
+  "LogLevels": {
+    "Trace": "Trace",
+    "Debug": "Debug",
+    "Information": "Information",
+    "Warning": "Warning",
+    "Error": "Error",
+    "Critical": "Critical",
+    "None": "None"
   }
 }

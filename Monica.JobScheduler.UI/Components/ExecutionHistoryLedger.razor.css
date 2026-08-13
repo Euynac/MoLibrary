@@ -1,0 +1,52 @@
+.execution-history {
+    display: grid;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.execution-history__heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.execution-history__scroll {
+    max-width: 100%;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.execution-history__scroll ::deep .execution-history__table {
+    min-width: 76rem;
+}
+
+.execution-history__scroll ::deep .mud-table-cell {
+    vertical-align: top;
+}
+
+.execution-history__scroll ::deep .execution-history__time,
+.execution-history__scroll ::deep .execution-history__transition {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.execution-history__identity {
+    display: block;
+    max-width: 14rem;
+    overflow: hidden;
+    color: var(--mud-palette-text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.execution-history__message {
+    min-width: 20rem;
+    max-width: 42rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

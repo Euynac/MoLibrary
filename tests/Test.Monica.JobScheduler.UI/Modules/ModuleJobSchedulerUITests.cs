@@ -57,10 +57,11 @@ public sealed class ModuleJobSchedulerUITests
         var pages = app.Services.GetRequiredService<IPageCatalog>().GetRegisteredPages()
             .Where(page => page.ComponentType == typeof(SchedulerOverviewPage)
                            || page.ComponentType == typeof(JobCatalogPage)
+                           || page.ComponentType == typeof(JobDefinitionDetailPage)
                            || page.ComponentType == typeof(JobExecutionsPage))
             .ToArray();
 
-        pages.Should().HaveCount(3);
+        pages.Should().HaveCount(4);
         pages.Should().OnlyContain(page =>
             page.AccessPolicyType == typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
     }

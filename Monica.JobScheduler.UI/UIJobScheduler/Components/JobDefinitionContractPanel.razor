@@ -1,0 +1,146 @@
+@using System.Globalization
+@using Monica.JobScheduler.Models.Catalog
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<section class="job-contract-panel" aria-labelledby="job-contract-heading">
+    <header class="job-contract-panel__heading">
+        <div>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="job-contract-heading">
+                @L["JobDetail:Contract:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["JobDetail:Contract:Description"]
+            </MudText>
+        </div>
+        <MudChip T="string"
+                 Size="Size.Small"
+                 Variant="Variant.Outlined"
+                 Color="Color.Primary"
+                 Icon="@Icons.Material.Filled.Lock">
+            @L["JobDetail:Contract:Immutable"]
+        </MudChip>
+    </header>
+
+    <div class="job-contract-panel__sections">
+        <section aria-labelledby="job-declaration-heading">
+            <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-declaration-heading">
+                @L["JobDetail:Contract:DeclarationTitle"]
+            </MudText>
+            <dl>
+                <div>
+                    <dt>@L["JobDetail:Contract:Owner"]</dt>
+                    <dd><code>@Definition.OwnerId</code></dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:ArgumentsKey"]</dt>
+                    <dd><code>@Display(Definition.Declaration.JobArgsKey)</code></dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:MaxConcurrency"]</dt>
+                    <dd>@Definition.Declaration.MaxConcurrency</dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:RetryCount"]</dt>
+                    <dd>@Definition.Declaration.RetryCount</dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:ExecutionTimeout"]</dt>
+                    <dd>@JobSchedulerUiPresentation.FormatDuration(Definition.Declaration.MaxExecutionTimeout)</dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:DeclarationDefault"]</dt>
+                    <dd>@(Definition.Declaration.IsDisabledByDefault ? L["Catalog:Disabled"] : L["Catalog:Enabled"])</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section aria-labelledby="job-policy-heading">
+            <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-policy-heading">
+                @L["JobDetail:Contract:PolicyTitle"]
+            </MudText>
+            <dl>
+                <div>
+                    <dt>@L["JobDetail:Contract:EffectiveState"]</dt>
+                    <dd>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="@(Definition.IsDisabled ? Color.Warning : Color.Success)">
+                            @(Definition.IsDisabled ? L["Catalog:Disabled"] : L["Catalog:Enabled"])
+                        </MudChip>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:DisabledOverride"]</dt>
+                    <dd>@FormatDisabledOverride(Definition.Policy.DisabledOverride)</dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:MaxRecords"]</dt>
+                    <dd>@FormatLimit(Definition.Policy.MaxRetainedHistoryRecords)</dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:MaxDays"]</dt>
+                    <dd>@FormatLimit(Definition.Policy.MaxRetentionDays)</dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:PolicyUpdated"]</dt>
+                    <dd>@JobSchedulerUiPresentation.FormatUtc(Definition.Policy.UpdatedAtUtc)</dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:PolicyStamp"]</dt>
+                    <dd><code>@Definition.Policy.ConcurrencyStamp</code></dd>
+                </div>
+            </dl>
+        </section>
+    </div>
+
+    <section class="job-contract-panel__revision" aria-labelledby="job-revision-heading">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-revision-heading">
+            @L["JobDetail:Contract:RevisionTitle"]
+        </MudText>
+        <dl>
+            <div>
+                <dt>@L["JobDetail:Contract:SchedulerScope"]</dt>
+                <dd><code>@Definition.SchedulerScopeKey</code></dd>
+            </div>
+            <div>
+                <dt>@L["JobDetail:Contract:Release"]</dt>
+                <dd><code>@Definition.ReleaseId</code></dd>
+            </div>
+            <div>
+                <dt>@L["JobDetail:Contract:ActivationEpoch"]</dt>
+                <dd>@Definition.ActivationEpoch</dd>
+            </div>
+            <div>
+                <dt>@L["JobDetail:Contract:WorkerRevision"]</dt>
+                <dd><code>@Definition.WorkerRevisionId</code></dd>
+            </div>
+            <div class="job-contract-panel__revision-wide">
+                <dt>@L["JobDetail:Contract:JobRevision"]</dt>
+                <dd><code>@Definition.JobRevisionId</code></dd>
+            </div>
+        </dl>
+    </section>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the active definition whose code declaration, operator policy, and revision evidence are rendered.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public ActiveJobDefinition Definition { get; set; } = null!;
+
+    private string FormatDisabledOverride(bool? disabledOverride) => disabledOverride switch
+    {
+        true => L["Policy:ForceDisabled"],
+        false => L["Policy:ForceEnabled"],
+        null => L["Policy:InheritDefault"]
+    };
+
+    private string FormatLimit(int? value) => value?.ToString(CultureInfo.CurrentCulture)
+        ?? L["JobDetail:Common:Unlimited"];
+
+    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

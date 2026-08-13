@@ -1,72 +1,55 @@
-.execution-detail,
-.execution-detail__revision {
+.execution-detail__title {
     display: grid;
-    gap: 16px;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.execution-detail__title code {
+    max-width: min(70vw, 60rem);
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .execution-detail__loading {
     display: grid;
     place-items: center;
-    min-height: 240px;
+    align-content: center;
+    gap: 0.75rem;
+    min-height: 15rem;
 }
 
-.execution-detail__summary {
+.execution-detail {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1px;
-    overflow: hidden;
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 8px;
-    background-color: var(--mud-palette-lines-default);
-}
-
-.execution-detail__summary > div {
-    display: grid;
-    gap: 5px;
+    gap: 1.25rem;
+    width: 100%;
     min-width: 0;
-    padding: 12px;
-    background-color: var(--mud-palette-surface);
 }
 
-.execution-detail__summary span,
-.execution-detail__revision span {
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.72rem;
-    font-weight: 650;
-    text-transform: uppercase;
+.execution-detail__actions {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    min-width: 0;
 }
 
-.execution-detail__summary strong,
-.execution-detail__revision code {
-    overflow-wrap: anywhere;
+@media (max-width: 700px) {
+    .execution-detail__actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .execution-detail__actions ::deep .mud-button-root {
+        min-width: 0;
+    }
 }
 
-.execution-detail__revision {
-    gap: 6px;
-    margin-top: 10px;
-}
-
-.execution-detail__arguments {
-    max-height: 18rem;
-    margin: 10px 0 0;
-    padding: 12px;
-    overflow: auto;
-    border-radius: 6px;
-    color: var(--mud-palette-text-primary);
-    background-color: var(--mud-palette-background);
-}
-
-.execution-detail__history {
-    overflow: hidden;
-}
-
-.execution-detail__section-heading {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--mud-palette-lines-default);
-}
-
-@media (max-width: 600px) {
-    .execution-detail__summary {
+@media (max-width: 450px) {
+    .execution-detail__actions {
         grid-template-columns: minmax(0, 1fr);
     }
 }

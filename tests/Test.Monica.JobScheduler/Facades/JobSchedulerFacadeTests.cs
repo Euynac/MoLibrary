@@ -80,6 +80,41 @@ public sealed class JobSchedulerFacadeTests
     }
 
     [Fact]
+    public async Task QueryOperationalSummariesAsync_ShouldCombineDefinitionExecutionAndCapabilitySignals()
+    {
+        var fixture = await CreateFixtureAsync();
+        var execution = (await fixture.Facade.TriggerAsync(new JobTriggerRequest
+        {
+            JobKey = fixture.Definition.Declaration.JobKey,
+            JobArgs = "{}"
+        }, TestContext.Current.CancellationToken)).ShouldSucceed()!;
+
+        var page = (await fixture.Facade.QueryOperationalSummariesAsync(
+            new JobCatalogQuery(),
+            TestContext.Current.CancellationToken)).ShouldSucceed()!;
+
+        var summary = page.Items.Should().ContainSingle().Subject;
+        summary.Definition.Should().Be(fixture.Definition);
+        summary.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.NotRecurring);
+        summary.NextOccurrenceUtc.Should().BeNull();
+        summary.LatestExecution!.InstanceId.Should().Be(execution.InstanceId);
+        summary.LatestExecution.History.Should().BeEmpty();
+        summary.QueuedExecutionCount.Should().Be(1);
+        summary.RunningExecutionCount.Should().Be(0);
+        summary.ActiveExecutionCount.Should().Be(1);
+        summary.CompatibleWorkerCount.Should().Be(1);
+        summary.HasCompatibleWorker.Should().BeTrue();
+
+        var exact = (await fixture.Facade.GetOperationalSummaryAsync(
+            fixture.Definition.Declaration.JobKey,
+            TestContext.Current.CancellationToken)).ShouldSucceed();
+        exact.Should().BeEquivalentTo(summary);
+        (await fixture.Facade.GetOperationalSummaryAsync(
+            "Jobs.Missing",
+            TestContext.Current.CancellationToken)).ShouldSucceed().Should().BeNull();
+    }
+
+    [Fact]
     public async Task UpdatePolicyAsync_ShouldLeaveTheImmutableDeclarationUnchanged()
     {
         var fixture = await CreateFixtureAsync();
@@ -104,6 +139,44 @@ public sealed class JobSchedulerFacadeTests
         definition.Should().NotBeNull();
         definition!.Declaration.Should().Be(originalDeclaration);
         definition.IsDisabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdatePoliciesAsync_WhenOneItemFails_ShouldReturnPartialResults()
+    {
+        var fixture = await CreateFixtureAsync();
+
+        var batch = (await fixture.Facade.UpdatePoliciesAsync(new JobPolicyBatchUpdateRequest
+        {
+            Items =
+            [
+                new JobPolicyBatchUpdateItem
+                {
+                    OwnerId = fixture.Definition.OwnerId,
+                    JobKey = fixture.Definition.Declaration.JobKey,
+                    DisabledOverride = true,
+                    MaxRetainedHistoryRecords = fixture.Definition.Policy.MaxRetainedHistoryRecords,
+                    MaxRetentionDays = fixture.Definition.Policy.MaxRetentionDays,
+                    ExpectedConcurrencyStamp = fixture.Definition.Policy.ConcurrencyStamp
+                },
+                new JobPolicyBatchUpdateItem
+                {
+                    OwnerId = "missing-owner",
+                    JobKey = "Jobs.Missing",
+                    DisabledOverride = true,
+                    MaxRetainedHistoryRecords = 100,
+                    MaxRetentionDays = null,
+                    ExpectedConcurrencyStamp = "missing-stamp"
+                }
+            ]
+        }, TestContext.Current.CancellationToken)).ShouldSucceed()!;
+
+        batch.SucceededCount.Should().Be(1);
+        batch.FailedCount.Should().Be(1);
+        batch.Items[0].Policy!.DisabledOverride.Should().BeTrue();
+        batch.Items[0].Error.Should().BeNull();
+        batch.Items[1].Policy.Should().BeNull();
+        batch.Items[1].Error.Should().NotBeNullOrWhiteSpace();
     }
 
     private static async Task<Fixture> CreateFixtureAsync()

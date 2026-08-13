@@ -1,0 +1,95 @@
+@attribute [Route(PAGE_URL)]
+
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Components
+@using Monica.JobScheduler.UI.UIJobScheduler.State
+
+<PageTitle>@PageTitleText</PageTitle>
+
+<SchedulerWorkspace Title="@L["Workspace:Pages:JobDetail:Title"]"
+                    Description="@L["Workspace:Pages:JobDetail:Description"]"
+                    ActivePanelIndex="1">
+    <div class="job-detail-page">
+        <nav class="job-detail-page__breadcrumb" aria-label="@L["JobDetail:BreadcrumbAriaLabel"]">
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       Href="@JobCatalogPage.PAGE_URL">
+                @L["JobDetail:Actions:BackToCatalog"]
+            </MudButton>
+            <code title="@JobKey">@JobKey</code>
+        </nav>
+
+        @if (PageState is { } state)
+        {
+            <SchedulerAccessBoundary AccessChecked="@state.AccessChecked" IsAuthorized="@state.IsAuthorized">
+                @if (state.IsLoading && state.Summary is null)
+                {
+                    <div class="job-detail-page__loading" role="status">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                    </div>
+                }
+                else if (state.Error is not null && state.Summary is null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @state.Error
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="state.RefreshAsync">
+                            @L["Common:Retry"]
+                        </MudButton>
+                    </MudAlert>
+                }
+                else if (state.IsNotFound)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                        @L["JobDetail:NotFound", state.JobKey]
+                    </MudAlert>
+                }
+                else if (state.Summary is { } summary)
+                {
+                    <div class="job-detail-page__dossier">
+                        @if (state.IsLoading)
+                        {
+                            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                        }
+
+                        @if (state.Error is not null)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                @L["JobDetail:RefreshFailed", state.Error]
+                            </MudAlert>
+                        }
+
+                        <JobDefinitionDetailHeader Summary="@summary"
+                                                   IsRefreshing="@state.IsLoading"
+                                                   IsMutating="@state.IsMutating"
+                                                   OnRefresh="state.RefreshAsync"
+                                                   OnInspectSchedule="OpenScheduleInspectorAsync"
+                                                   OnEditPolicy="OpenPolicyAsync"
+                                                   OnToggleDisabled="ToggleDisabledAsync"
+                                                   OnTrigger="OpenTriggerAsync" />
+
+                        <div class="job-detail-page__evidence-grid">
+                            <JobDefinitionSchedulePanel Summary="@summary"
+                                                        OnInspectSchedule="OpenScheduleInspectorAsync" />
+                            <JobDefinitionLatestExecutionPanel Execution="@summary.LatestExecution"
+                                                               ObservedAtUtc="@(state.ObservedAtUtc ?? DateTimeOffset.UtcNow)" />
+                        </div>
+
+                        <JobDefinitionContractPanel Definition="@summary.Definition" />
+
+                        @if (state.ObservedAtUtc is { } observedAtUtc)
+                        {
+                            <footer class="job-detail-page__freshness">
+                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @L["JobDetail:ObservedAt", JobSchedulerUiPresentation.FormatUtc(observedAtUtc)]
+                                </MudText>
+                            </footer>
+                        }
+                    </div>
+                }
+            </SchedulerAccessBoundary>
+        }
+    </div>
+</SchedulerWorkspace>

@@ -1,0 +1,262 @@
+using Monica.Core.Results;
+using Monica.JobScheduler.Facades;
+using Monica.JobScheduler.Models.Operations;
+using Monica.JobScheduler.Models.Catalog;
+using Microsoft.Extensions.Localization;
+using Monica.JobScheduler.UI.Localization;
+using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+
+namespace Monica.JobScheduler.UI.UIJobScheduler.State;
+
+/// <summary>
+/// Creates component-owned job-definition detail sessions from circuit-scoped dependencies.
+/// </summary>
+internal sealed class JobDefinitionDetailPageStateFactory(
+    JobSchedulerFacade facade,
+    IJobSchedulerUiAccess access,
+    TimeProvider timeProvider,
+    IStringLocalizer<JobSchedulerResource> localizer)
+{
+    /// <summary>
+    /// Creates a fresh detail state owned by one rendered route instance.
+    /// </summary>
+    public JobDefinitionDetailPageState Create(string jobKey) =>
+        new(facade, access, timeProvider, localizer, jobKey);
+}
+
+/// <summary>
+/// Owns one job-definition detail snapshot, authorization boundary, refresh serialization, and async lifetime.
+/// </summary>
+public sealed class JobDefinitionDetailPageState : IAsyncDisposable
+{
+    private readonly JobSchedulerFacade _facade;
+    private readonly IJobSchedulerUiAccess _access;
+    private readonly TimeProvider _timeProvider;
+    private readonly IStringLocalizer<JobSchedulerResource> _localizer;
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly SemaphoreSlim _mutationGate = new(1, 1);
+    private int _disposed;
+
+    internal JobDefinitionDetailPageState(
+        JobSchedulerFacade facade,
+        IJobSchedulerUiAccess access,
+        TimeProvider timeProvider,
+        IStringLocalizer<JobSchedulerResource> localizer,
+        string jobKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
+        _facade = facade;
+        _access = access;
+        _timeProvider = timeProvider;
+        _localizer = localizer;
+        JobKey = jobKey;
+    }
+
+    /// <summary>
+    /// Raised after an accepted state transition.
+    /// </summary>
+    public event Func<Task>? Changed;
+
+    /// <summary>
+    /// Gets the exact logical job key represented by this state instance.
+    /// </summary>
+    public string JobKey { get; }
+
+    /// <summary>
+    /// Gets the latest bounded operational projection.
+    /// </summary>
+    public JobOperationalSummary? Summary { get; private set; }
+
+    /// <summary>
+    /// Gets whether the first access check completed.
+    /// </summary>
+    public bool AccessChecked { get; private set; }
+
+    /// <summary>
+    /// Gets whether the current circuit is authorized.
+    /// </summary>
+    public bool IsAuthorized { get; private set; }
+
+    /// <summary>
+    /// Gets whether a refresh currently owns the facade boundary.
+    /// </summary>
+    public bool IsLoading { get; private set; }
+
+    /// <summary>
+    /// Gets whether an operator mutation currently owns the persistence boundary.
+    /// </summary>
+    public bool IsMutating { get; private set; }
+
+    /// <summary>
+    /// Gets the most recent load failure while preserving any prior snapshot.
+    /// </summary>
+    public string? Error { get; private set; }
+
+    /// <summary>
+    /// Gets whether the authorized lookup completed without finding an active definition.
+    /// </summary>
+    public bool IsNotFound { get; private set; }
+
+    /// <summary>
+    /// Gets when the current snapshot was accepted.
+    /// </summary>
+    public DateTimeOffset? ObservedAtUtc { get; private set; }
+
+    /// <summary>
+    /// Performs the first access-checked load.
+    /// </summary>
+    public Task InitializeAsync() => RefreshAsync();
+
+    /// <summary>
+    /// Re-evaluates authorization and replaces the operational snapshot when the read succeeds.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        var cancellationToken = _lifetimeCancellation.Token;
+        await _refreshGate.WaitAsync(cancellationToken);
+        try
+        {
+            ThrowIfDisposed();
+            IsLoading = true;
+            await NotifyChangedAsync();
+
+            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            AccessChecked = true;
+            if (!IsAuthorized)
+            {
+                Summary = null;
+                IsNotFound = false;
+                Error = null;
+                ObservedAtUtc = null;
+                return;
+            }
+
+            var result = await _facade.GetOperationalSummaryAsync(JobKey, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (result.IsFailed(out var error, out var summary))
+            {
+                Error = error.Message;
+                return;
+            }
+
+            Summary = summary;
+            IsNotFound = summary is null;
+            Error = null;
+            ObservedAtUtc = _timeProvider.GetUtcNow();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Expected during route changes, page navigation, or host shutdown.
+        }
+        finally
+        {
+            if (!IsDisposed)
+            {
+                IsLoading = false;
+                await NotifyChangedAsync();
+            }
+
+            _refreshGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Reauthorizes the circuit and replaces only the disabled policy override for the current active definition.
+    /// </summary>
+    public async Task<Res<JobPolicy>> SetDisabledAsync(bool disabled)
+    {
+        var cancellationToken = _lifetimeCancellation.Token;
+        await _mutationGate.WaitAsync(cancellationToken);
+        try
+        {
+            ThrowIfDisposed();
+            IsMutating = true;
+            await NotifyChangedAsync();
+
+            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            AccessChecked = true;
+            if (!IsAuthorized)
+            {
+                return _localizer["Access:DeniedDescription"].Value;
+            }
+
+            if (Summary is not { } summary)
+            {
+                return _localizer["JobDetail:NotFound", JobKey].Value;
+            }
+
+            var definition = summary.Definition;
+            var result = await _facade.UpdatePolicyAsync(
+                definition.OwnerId,
+                definition.Declaration.JobKey,
+                new JobPolicyChange
+                {
+                    DisabledOverride = disabled,
+                    MaxRetainedHistoryRecords = definition.Policy.MaxRetainedHistoryRecords,
+                    MaxRetentionDays = definition.Policy.MaxRetentionDays,
+                    ExpectedConcurrencyStamp = definition.Policy.ConcurrencyStamp
+                },
+                cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!result.IsFailed(out _, out var policy))
+            {
+                Summary = summary with
+                {
+                    Definition = definition with { Policy = policy },
+                    RecurringScheduleStatus = disabled
+                        ? JobRecurringScheduleStatus.Suspended
+                        : JobRecurringScheduleStatus.AwaitingSynchronization,
+                    NextOccurrenceUtc = null
+                };
+                ObservedAtUtc = _timeProvider.GetUtcNow();
+            }
+
+            return result;
+        }
+        finally
+        {
+            if (!IsDisposed)
+            {
+                IsMutating = false;
+                await NotifyChangedAsync();
+            }
+
+            _mutationGate.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        Changed = null;
+        await _lifetimeCancellation.CancelAsync();
+        await _refreshGate.WaitAsync();
+        _refreshGate.Release();
+        await _mutationGate.WaitAsync();
+        _mutationGate.Release();
+        _refreshGate.Dispose();
+        _mutationGate.Dispose();
+        _lifetimeCancellation.Dispose();
+    }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private async Task NotifyChangedAsync()
+    {
+        var handlers = Changed?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
+        foreach (var handler in handlers)
+        {
+            await handler();
+        }
+    }
+
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(IsDisposed, this);
+}

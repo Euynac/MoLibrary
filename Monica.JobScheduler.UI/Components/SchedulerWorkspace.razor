@@ -4,34 +4,33 @@
 
 <div class="scheduler-workspace mo-page-shell mo-page-shell--full-width">
     <header class="scheduler-workspace__header">
-        <div class="scheduler-workspace__identity">
+        <div class="scheduler-workspace__heading">
             <MudText Typo="Typo.overline" Color="Color.Primary">@L["Workspace:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h3" HtmlTag="h1" Class="scheduler-workspace__title">@Title</MudText>
+            <MudText Typo="Typo.h4" HtmlTag="h1" Class="scheduler-workspace__title">@Title</MudText>
             <MudText Typo="Typo.body1" Class="scheduler-workspace__description">@Description</MudText>
         </div>
-        <div class="scheduler-workspace__contract">
-            <MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Medium" />
+        <div class="scheduler-workspace__contract" aria-label="@L["Workspace:ContractLabel"]">
+            <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Size="Size.Medium" Color="Color.Primary" />
             <div>
-                <span>@L["Workspace:ContractLabel"]</span>
-                <strong>@L["Workspace:ContractValue"]</strong>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Workspace:ContractLabel"]</MudText>
+                <MudText Typo="Typo.subtitle2">@L["Workspace:ContractValue"]</MudText>
             </div>
         </div>
     </header>
 
-    <nav class="scheduler-workspace__nav" aria-label="@L["Workspace:NavigationLabel"]">
-        <NavLink href="/job-scheduler" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
-            <MudIcon Icon="@Icons.Material.Filled.SpaceDashboard" Size="Size.Small" />
-            <span>@L["Workspace:Navigation:Overview"]</span>
-        </NavLink>
-        <NavLink href="/job-scheduler/catalog" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
-            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" />
-            <span>@L["Workspace:Navigation:Catalog"]</span>
-        </NavLink>
-        <NavLink href="/job-scheduler/executions" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
-            <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Size="Size.Small" />
-            <span>@L["Workspace:Navigation:Executions"]</span>
-        </NavLink>
-    </nav>
+    <div class="scheduler-workspace__nav-wrap">
+        <MudTabs Elevation="0"
+                 Rounded="true"
+                 Outlined="true"
+                 ApplyEffectsToContainer="true"
+                 TabPanelsClass="scheduler-workspace__unused-panels"
+                 ActivePanelIndex="@ActivePanelIndex"
+                 ActivePanelIndexChanged="NavigateAsync">
+            <MudTabPanel Icon="@Icons.Material.Filled.SpaceDashboard" Text="@L["Workspace:Navigation:Overview"]" />
+            <MudTabPanel Icon="@Icons.Material.Filled.Inventory2" Text="@L["Workspace:Navigation:Catalog"]" />
+            <MudTabPanel Icon="@Icons.Material.Filled.ReceiptLong" Text="@L["Workspace:Navigation:Executions"]" />
+        </MudTabs>
+    </div>
 
     <main class="scheduler-workspace__content">
         @ChildContent
@@ -39,6 +38,13 @@
 </div>
 
 @code {
+    private static readonly string[] ROUTES =
+    [
+        "/job-scheduler",
+        "/job-scheduler/catalog",
+        "/job-scheduler/executions"
+    ];
+
     /// <summary>
     /// Gets or sets the route-specific workspace heading.
     /// </summary>
@@ -52,8 +58,27 @@
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the selected workspace section.
+    /// </summary>
+    [Parameter]
+    public int ActivePanelIndex { get; set; }
+
+    /// <summary>
     /// Gets or sets the route body.
     /// </summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = null!;
+
+    private Task NavigateAsync(int index)
+    {
+        if (index >= 0 && index < ROUTES.Length && index != ActivePanelIndex)
+        {
+            Navigation.NavigateTo(ROUTES[index]);
+        }
+
+        return Task.CompletedTask;
+    }
 }

@@ -204,6 +204,11 @@ public sealed record JobCatalogSnapshot(
 
 public sealed record JobCatalogQuery
 {
+    /// <summary>
+    /// Gets an optional exact logical job key filter.
+    /// </summary>
+    public string? JobKey { get; init; }
+
     public string? OwnerId { get; init; }
     public string? SearchText { get; init; }
     public JobType? JobType { get; init; }

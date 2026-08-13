@@ -97,17 +97,46 @@ public sealed class JobSchedulerFacade(
         JobCatalogQuery query,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        var bounded = query with
-        {
-            PageNumber = Math.Max(1, query.PageNumber),
-            PageSize = Math.Clamp(query.PageSize, 1, MAX_PAGE_SIZE)
-        };
+        var bounded = BoundCatalogQuery(query);
         return ExecuteAsync(
             () => store.QueryActiveDefinitionsAsync(_schedulerScopeKey, bounded, cancellationToken),
             "query active job definitions",
             cancellationToken);
     }
+
+    /// <summary>
+    /// Queries active definitions together with recurring, latest-execution, active-queue, and compatible-worker
+    /// operational signals.
+    /// </summary>
+    /// <param name="query">Catalog filters and page bounds.</param>
+    /// <param name="cancellationToken">Cancels the read operation.</param>
+    /// <returns>A result containing the bounded operational page.</returns>
+    public Task<Res<QueryResult<JobOperationalSummary>>> QueryOperationalSummariesAsync(
+        JobCatalogQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var bounded = BoundCatalogQuery(query);
+        return ExecuteAsync(
+            () => store.QueryOperationalSummariesAsync(_schedulerScopeKey, bounded, cancellationToken),
+            "query job operational summaries",
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets the operational projection for one exact active logical job key.
+    /// </summary>
+    /// <param name="jobKey">The globally unique logical job key.</param>
+    /// <param name="cancellationToken">Cancels the read operation.</param>
+    /// <returns>
+    /// A result containing the projection, or <see langword="null"/> when the key is absent from the active catalog.
+    /// </returns>
+    public Task<Res<JobOperationalSummary?>> GetOperationalSummaryAsync(
+        string jobKey,
+        CancellationToken cancellationToken = default) =>
+        ExecuteAsync(
+            () => store.GetOperationalSummaryAsync(_schedulerScopeKey, jobKey, cancellationToken),
+            "load a job operational summary",
+            cancellationToken);
 
     /// <summary>
     /// Gets one active definition by its globally unique logical job key.
@@ -131,6 +160,24 @@ public sealed class JobSchedulerFacade(
         ExecuteAsync(
             () => store.UpdatePolicyAsync(_schedulerScopeKey, ownerId, jobKey, change, cancellationToken),
             "update job policy",
+            cancellationToken);
+
+    /// <summary>
+    /// Replaces policies for a bounded set of jobs and returns an ordered result for every item.
+    /// </summary>
+    /// <remarks>
+    /// Each item retains the store's optimistic concurrency boundary. A validation or concurrency failure does not
+    /// roll back successful items, enabling operators to refresh and retry only stale selections.
+    /// </remarks>
+    /// <param name="request">The bounded ordered set of complete policy replacements.</param>
+    /// <param name="cancellationToken">Cancels the batch between items.</param>
+    /// <returns>A result containing one ordered success or failure outcome per item.</returns>
+    public Task<Res<JobPolicyBatchUpdateResult>> UpdatePoliciesAsync(
+        JobPolicyBatchUpdateRequest request,
+        CancellationToken cancellationToken = default) =>
+        ExecuteAsync(
+            () => UpdatePoliciesCoreAsync(request, cancellationToken),
+            "update job policies",
             cancellationToken);
 
     /// <summary>
@@ -178,6 +225,73 @@ public sealed class JobSchedulerFacade(
             () => store.QueryExecutionsAsync(bounded, cancellationToken),
             "query job executions",
             cancellationToken);
+    }
+
+    private static JobCatalogQuery BoundCatalogQuery(JobCatalogQuery query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        return query with
+        {
+            PageNumber = Math.Max(1, query.PageNumber),
+            PageSize = Math.Clamp(query.PageSize, 1, MAX_PAGE_SIZE)
+        };
+    }
+
+    private async Task<JobPolicyBatchUpdateResult> UpdatePoliciesCoreAsync(
+        JobPolicyBatchUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Items);
+        if (request.Items.Count is < 1 or > JobPolicyBatchUpdateRequest.MAX_ITEM_COUNT)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                request.Items.Count,
+                $"A policy batch must contain between 1 and {JobPolicyBatchUpdateRequest.MAX_ITEM_COUNT} items.");
+        }
+
+        var results = new List<JobPolicyBatchUpdateItemResult>(request.Items.Count);
+        foreach (var item in request.Items)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ArgumentNullException.ThrowIfNull(item);
+            try
+            {
+                var policy = await store.UpdatePolicyAsync(
+                    _schedulerScopeKey,
+                    item.OwnerId,
+                    item.JobKey,
+                    item.ToChange(),
+                    cancellationToken);
+                results.Add(new JobPolicyBatchUpdateItemResult
+                {
+                    OwnerId = item.OwnerId,
+                    JobKey = item.JobKey,
+                    Policy = policy
+                });
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Failed to update policy for job {JobKey} owned by {OwnerId} in a batch.",
+                    item.JobKey,
+                    item.OwnerId);
+                results.Add(new JobPolicyBatchUpdateItemResult
+                {
+                    OwnerId = item.OwnerId,
+                    JobKey = item.JobKey,
+                    Error = exception.GetMessageRecursively()
+                });
+            }
+        }
+
+        return new JobPolicyBatchUpdateResult { Items = results };
     }
 
     /// <summary>

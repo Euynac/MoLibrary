@@ -1,0 +1,50 @@
+.owner-panel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.owner-panel__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 15px 17px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.owner-panel__heading > div {
+    min-width: 0;
+}
+
+.owner-panel__table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.owner-panel__table-scroll ::deep .mud-table-root {
+    min-width: 43rem;
+}
+
+.owner-panel__ellipsis,
+.owner-panel__identity {
+    display: block;
+    max-width: 13rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.owner-panel__identity {
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.78rem;
+}
+
+@media (max-width: 600px) {
+    .owner-panel__heading {
+        align-items: flex-start;
+    }
+}

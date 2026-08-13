@@ -335,24 +335,7 @@ public sealed partial class InMemoryJobSchedulerStore
                                                      && scope.ActiveReleaseId is not null
                 ? ProjectActiveDefinitions(schedulerScopeKey, scope)
                 : [];
-            if (!string.IsNullOrWhiteSpace(query.OwnerId))
-            {
-                filtered = filtered.Where(item => string.Equals(item.OwnerId, query.OwnerId, StringComparison.Ordinal));
-            }
-            if (!string.IsNullOrWhiteSpace(query.SearchText))
-            {
-                filtered = filtered.Where(item =>
-                    item.Declaration.JobKey.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase)
-                    || item.Declaration.JobName.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase));
-            }
-            if (query.JobType is { } jobType)
-            {
-                filtered = filtered.Where(item => item.Declaration.JobType == jobType);
-            }
-            if (query.IsDisabled is { } isDisabled)
-            {
-                filtered = filtered.Where(item => item.IsDisabled == isDisabled);
-            }
+            filtered = FilterDefinitions(filtered, query);
 
             var ordered = filtered.OrderBy(static item => item.Declaration.JobKey, StringComparer.Ordinal).ToArray();
             var page = ordered

@@ -1,86 +1,110 @@
+@using Microsoft.JSInterop
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.Pages
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.State
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
 
-@inject JobSchedulerFacade Facade
-@inject IJobSchedulerUiAccess Access
+@inject JobExecutionsStateFactory PageStateFactory
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject IDialogService DialogService
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 @implements IAsyncDisposable
 
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">@L["ExecutionDetail:Title"]</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@InstanceId</MudText>
+        <div class="execution-detail__title">
+            <MudText Typo="Typo.h6">@L["ExecutionDetail:Title"]</MudText>
+            <code title="@InstanceId">@InstanceId</code>
+        </div>
     </TitleContent>
     <DialogContent>
-        @if (_isLoading)
+        @if (DetailState.IsLoading && DetailState.Execution is null)
         {
             <div class="execution-detail__loading">
                 <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
             </div>
         }
-        else if (_error is not null)
+        else if (DetailState.AccessChecked && !DetailState.IsAuthorized)
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                @L["Access:DeniedDescription"]
+            </MudAlert>
         }
-        else if (_execution is not null)
+        else if (DetailState.Error is not null && DetailState.Execution is null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@DetailState.Error</MudAlert>
+        }
+        else if (DetailState.IsNotFound)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                @L["ExecutionDetail:NotFound"]
+            </MudAlert>
+        }
+        else if (DetailState.Execution is { } execution)
         {
             <div class="execution-detail">
-                <div class="execution-detail__summary">
-                    <div><span>@L["ExecutionDetail:State"]</span><MudChip T="string" Size="Size.Small" Color="@JobSchedulerUiPresentation.GetStateColor(_execution.State)">@L[$"ExecutionStates:{_execution.State}"]</MudChip></div>
-                    <div><span>@L["ExecutionDetail:Job"]</span><strong>@_execution.Template.Revision.JobKey</strong></div>
-                    <div><span>@L["ExecutionDetail:Owner"]</span><strong>@_execution.Template.Revision.OwnerKey</strong></div>
-                    <div><span>@L["ExecutionDetail:Release"]</span><strong>@_execution.Template.Revision.CatalogReleaseId</strong></div>
-                    <div><span>@L["ExecutionDetail:Activation"]</span><strong>@_execution.Template.Revision.ActivationEpoch</strong></div>
-                    <div><span>@L["ExecutionDetail:Attempts"]</span><strong>@_execution.ExecutionAttempt / @_execution.RetryAttempt</strong></div>
-                    <div><span>@L["ExecutionDetail:Available"]</span><strong>@_execution.AvailableAtUtc.ToLocalTime().ToString("g")</strong></div>
-                    <div><span>@L["ExecutionDetail:Worker"]</span><strong>@(_execution.RunningWorkerInstanceId ?? "—")</strong></div>
-                </div>
-
-                <MudPaper Outlined="true" Class="pa-3">
-                    <MudText Typo="Typo.subtitle2">@L["ExecutionDetail:Revision"]</MudText>
-                    <div class="execution-detail__revision">
-                        <span>@L["ExecutionDetail:WorkerRevision"]</span><code>@_execution.Template.Revision.WorkerRevisionId</code>
-                        <span>@L["ExecutionDetail:JobRevision"]</span><code>@_execution.Template.Revision.JobRevisionId</code>
-                    </div>
-                </MudPaper>
-
-                @if (!string.IsNullOrWhiteSpace(_execution.JobArgs))
+                @if (DetailState.IsLoading)
                 {
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2">@L["ExecutionDetail:Arguments"]</MudText>
-                        <pre class="execution-detail__arguments">@_execution.JobArgs</pre>
-                    </MudPaper>
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
                 }
 
-                <MudPaper Outlined="true" Class="pa-0 execution-detail__history">
-                    <div class="execution-detail__section-heading">
-                        <MudText Typo="Typo.subtitle1">@L["ExecutionDetail:History"]</MudText>
-                    </div>
-                    <MudTable T="JobExecutionHistoryEntry"
-                              Items="@_execution.History.OrderByDescending(entry => entry.TimestampUtc)"
-                              Dense="true"
-                              Hover="true"
-                              Breakpoint="Breakpoint.None"
-                              Elevation="0">
-                        <HeaderContent>
-                            <MudTh>@L["ExecutionDetail:HistoryTime"]</MudTh>
-                            <MudTh>@L["ExecutionDetail:HistoryKind"]</MudTh>
-                            <MudTh>@L["ExecutionDetail:HistoryTransition"]</MudTh>
-                            <MudTh>@L["ExecutionDetail:HistoryMessage"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["ExecutionDetail:HistoryTime"]">@context.TimestampUtc.ToLocalTime().ToString("G")</MudTd>
-                            <MudTd DataLabel="@L["ExecutionDetail:HistoryKind"]">@context.Kind</MudTd>
-                            <MudTd DataLabel="@L["ExecutionDetail:HistoryTransition"]">@GetTransition(context)</MudTd>
-                            <MudTd DataLabel="@L["ExecutionDetail:HistoryMessage"]">@context.Message</MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </MudPaper>
+                @if (DetailState.Error is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                        @DetailState.Error
+                    </MudAlert>
+                }
+
+                @if (execution.CancellationRequestedAtUtc.HasValue && !execution.IsTerminal)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                        @L["ExecutionDetail:CancellationPending", ExecutionUiPresentation.FormatDateTime(execution.CancellationRequestedAtUtc)]
+                    </MudAlert>
+                }
+
+                <ExecutionEvidenceFacts Execution="@execution"
+                                        ObservedAtUtc="@(DetailState.ObservedAtUtc ?? DateTimeOffset.UtcNow)" />
+                <ExecutionHistoryLedger Entries="@execution.History" />
             </div>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="Close">@L["Common:Close"]</MudButton>
+        <div class="execution-detail__actions">
+            <MudButton Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Inventory2"
+                       OnClick="OpenJobDetails">
+                @L["ExecutionDetail:Actions:ViewCatalog"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.ContentCopy"
+                       Disabled="@(DetailState.Execution is null)"
+                       OnClick="CopyDiagnosticsAsync">
+                @L["ExecutionDetail:Actions:CopyDiagnostics"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       Disabled="@DetailState.IsLoading"
+                       OnClick="@DetailState.RefreshAsync">
+                @L["Common:Refresh"]
+            </MudButton>
+            @if (DetailState.Execution is { IsTerminal: false } execution)
+            {
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Warning"
+                           StartIcon="@Icons.Material.Filled.Cancel"
+                           Disabled="@DetailState.IsMutating"
+                           OnClick="@(() => CancelAsync(execution))">
+                    @L["Executions:Actions:Cancel"]
+                </MudButton>
+            }
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">
+                @L["Common:Close"]
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
@@ -88,57 +112,110 @@
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
+    /// <summary>
+    /// Gets or sets the durable execution identifier whose complete evidence should be loaded.
+    /// </summary>
     [Parameter, EditorRequired]
     public string InstanceId { get; set; } = string.Empty;
 
-    private readonly CancellationTokenSource _lifetime = new();
-    private JobExecutionInstance? _execution;
-    private bool _isLoading = true;
-    private string? _error;
+    private ExecutionDetailState DetailState { get; set; } = null!;
+    private bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
+        DetailState = PageStateFactory.CreateDetailState();
+        DetailState.StateChanged += HandleStateChangedAsync;
+        await DetailState.InitializeAsync(InstanceId);
+    }
+
+    private async Task CopyDiagnosticsAsync()
+    {
+        if (DetailState.Execution is not { } execution)
+        {
+            return;
+        }
+
+        var cancellationToken = DetailState.LifetimeToken;
         try
         {
-            if (!await Access.IsAuthorizedAsync(_lifetime.Token))
+            var copied = await JsRuntime.InvokeAsync<bool>(
+                "MoClipboard.copyText",
+                cancellationToken,
+                ExecutionUiPresentation.ExportDiagnostics(
+                    execution,
+                    DetailState.ObservedAtUtc ?? DateTimeOffset.UtcNow));
+            if (!_disposed)
             {
-                _error = L["Access:DeniedDescription"];
-                return;
-            }
-
-            var result = await Facade.GetExecutionAsync(InstanceId, _lifetime.Token);
-            if (result.IsFailed(out var error, out var execution))
-            {
-                _error = error.Message;
-            }
-            else if (execution is null)
-            {
-                _error = L["ExecutionDetail:NotFound"];
-            }
-            else
-            {
-                _execution = execution;
+                Snackbar.Add(
+                    copied ? L["ExecutionDetail:Copied"] : L["ExecutionDetail:CopyFailed"],
+                    copied ? Severity.Success : Severity.Warning);
             }
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
-        finally
+        catch
         {
-            _isLoading = false;
+            if (!_disposed)
+            {
+                Snackbar.Add(L["ExecutionDetail:CopyFailed"], Severity.Warning);
+            }
         }
     }
 
-    private static string GetTransition(JobExecutionHistoryEntry entry) =>
-        entry.PreviousState is null && entry.NewState is null
-            ? "—"
-            : $"{entry.PreviousState?.ToString() ?? "∅"} → {entry.NewState?.ToString() ?? "∅"}";
+    private async Task CancelAsync(JobExecutionInstance execution)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Executions:Cancel:Title"],
+            L["Executions:Cancel:Message", execution.InstanceId],
+            yesText: L["Executions:Actions:Cancel"],
+            cancelText: L["Common:Keep"]);
+        if (confirmed != true || _disposed)
+        {
+            return;
+        }
+
+        var result = await DetailState.RequestCancellationAsync();
+        if (_disposed)
+        {
+            return;
+        }
+
+        var feedback = ExecutionUiPresentation.GetCancellationFeedback(result, L);
+        Snackbar.Add(feedback.Message, feedback.Severity);
+    }
+
+    private void OpenJobDetails()
+    {
+        MudDialog.Close();
+        var jobKey = DetailState.Execution?.Template.Revision.JobKey;
+        Navigation.NavigateTo(string.IsNullOrWhiteSpace(jobKey)
+            ? JobCatalogPage.PAGE_URL
+            : $"/job-scheduler/catalog/{Uri.EscapeDataString(jobKey)}");
+    }
 
     private void Close() => MudDialog.Close();
 
+    private Task HandleStateChangedAsync() => InvokeAsync(() =>
+    {
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
+    });
+
     public async ValueTask DisposeAsync()
     {
-        await _lifetime.CancelAsync();
-        _lifetime.Dispose();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (DetailState is not null)
+        {
+            DetailState.StateChanged -= HandleStateChangedAsync;
+            await DetailState.DisposeAsync();
+        }
     }
 }

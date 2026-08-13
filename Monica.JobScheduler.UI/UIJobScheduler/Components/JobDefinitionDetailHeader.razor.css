@@ -1,0 +1,114 @@
+.job-detail-header {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+    padding: clamp(18px, 3vw, 28px);
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
+}
+
+.job-detail-header__main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    min-width: 0;
+}
+
+.job-detail-header__identity {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.job-detail-header__chips,
+.job-detail-header__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.job-detail-header__description {
+    max-width: 62rem;
+}
+
+.job-detail-header__identity > code {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-detail-header__actions {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+}
+
+.job-detail-header__evidence {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.job-detail-header__evidence > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 12px 14px;
+    border-left: 3px solid var(--mud-palette-primary);
+    border-radius: 6px;
+    background-color: var(--mud-palette-background-gray);
+}
+
+.job-detail-header__evidence > .job-detail-header__metric--attention {
+    border-left-color: var(--mud-palette-error);
+}
+
+.job-detail-header__evidence dt {
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-detail-header__evidence dd {
+    margin: 0;
+    font-family: var(--mo-font-family-mono);
+    font-size: 1.3rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 820px) {
+    .job-detail-header__main {
+        display: grid;
+    }
+
+    .job-detail-header__actions {
+        justify-content: flex-start;
+    }
+
+    .job-detail-header__evidence {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .job-detail-header__actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .job-detail-header__evidence {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

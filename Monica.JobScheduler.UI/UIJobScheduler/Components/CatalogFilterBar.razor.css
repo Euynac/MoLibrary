@@ -1,0 +1,43 @@
+.catalog-filter {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 16px;
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.catalog-filter__fields {
+    display: grid;
+    grid-template-columns: minmax(13rem, 1.5fr) minmax(10rem, 1fr) minmax(9rem, 0.8fr) minmax(9rem, 0.8fr);
+    gap: 12px;
+    min-width: 0;
+}
+
+.catalog-filter__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+@media (max-width: 1100px) {
+    .catalog-filter {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .catalog-filter__fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .catalog-filter__fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .catalog-filter__actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

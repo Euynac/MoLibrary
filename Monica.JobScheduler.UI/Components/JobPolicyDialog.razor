@@ -4,61 +4,105 @@
 @inject IJobSchedulerUiAccess Access
 @inject IStringLocalizer<JobSchedulerResource> L
 
+@implements IAsyncDisposable
+
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">@L["Policy:Title"]</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">@Definition.Declaration.JobName</MudText>
+        <div class="policy-dialog__title">
+            <MudText Typo="Typo.h6">@L["Policy:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@Definition.Declaration.JobName</MudText>
+            <code title="@Definition.Declaration.JobKey">@Definition.Declaration.JobKey</code>
+        </div>
     </TitleContent>
     <DialogContent>
-        <MudStack Spacing="3">
+        <div class="policy-dialog">
+            <dl class="policy-dialog__identity">
+                <div>
+                    <dt>@L["Catalog:Columns:Owner"]</dt>
+                    <dd>
+                        <code title="@Definition.OwnerId">@Definition.OwnerId</code>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@L["Catalog:Columns:Revision"]</dt>
+                    <dd>
+                        <code title="@Definition.JobRevisionId">
+                            @JobSchedulerUiPresentation.ShortIdentity(Definition.JobRevisionId, 20)
+                        </code>
+                    </dd>
+                </div>
+            </dl>
+
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
                 @L["Policy:ImmutableNotice"]
             </MudAlert>
 
-            <MudSelect T="bool?"
-                       @bind-Value="_disabledOverride"
-                       Label="@L["Policy:DisabledOverride"]"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense">
-                <MudSelectItem T="bool?" Value="@(null)">@L["Policy:InheritDefault"]</MudSelectItem>
-                <MudSelectItem T="bool?" Value="@(false)">@L["Policy:ForceEnabled"]</MudSelectItem>
-                <MudSelectItem T="bool?" Value="@(true)">@L["Policy:ForceDisabled"]</MudSelectItem>
-            </MudSelect>
+            <div class="policy-dialog__fields">
+                <div class="policy-dialog__state-field">
+                    <MudSelect T="bool?"
+                               @bind-Value="_disabledOverride"
+                               Label="@L["Policy:DisabledOverride"]"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Disabled="@_isSaving">
+                        <MudSelectItem T="bool?" Value="@(null)">@L["Policy:InheritDefault"]</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@(false)">@L["Policy:ForceEnabled"]</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@(true)">@L["Policy:ForceDisabled"]</MudSelectItem>
+                    </MudSelect>
+                </div>
 
-            <MudNumericField T="int?"
-                             @bind-Value="_maxRecords"
-                             Label="@L["Policy:MaxRecords"]"
-                             HelperText="@L["Policy:MaxRecordsHelp"]"
-                             Min="1"
-                             Variant="Variant.Outlined"
-                             Margin="Margin.Dense" />
+                <MudNumericField T="int?"
+                                 @bind-Value="_maxRecords"
+                                 Label="@L["Policy:MaxRecords"]"
+                                 HelperText="@L["Policy:MaxRecordsHelp"]"
+                                 Min="1"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Disabled="@_isSaving" />
 
-            <MudNumericField T="int?"
-                             @bind-Value="_maxDays"
-                             Label="@L["Policy:MaxDays"]"
-                             HelperText="@L["Policy:MaxDaysHelp"]"
-                             Min="1"
-                             Variant="Variant.Outlined"
-                             Margin="Margin.Dense" />
+                <MudNumericField T="int?"
+                                 @bind-Value="_maxDays"
+                                 Label="@L["Policy:MaxDays"]"
+                                 HelperText="@L["Policy:MaxDaysHelp"]"
+                                 Min="1"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Disabled="@_isSaving" />
+            </div>
 
             @if (_error is not null)
             {
                 <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
             }
-        </MudStack>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   Disabled="@_isSaving"
-                   OnClick="SaveAsync">
-            @(_isSaving ? L["Common:Saving"] : L["Common:Save"])
-        </MudButton>
+        <div class="policy-dialog__actions">
+            <MudButton Variant="Variant.Text"
+                       Disabled="@_isSaving"
+                       OnClick="Cancel"
+                       aria-label="@L["Common:Cancel"]">
+                @L["Common:Cancel"]
+            </MudButton>
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       Disabled="@_isSaving"
+                       OnClick="SaveAsync"
+                       aria-label="@L["Common:Save"]">
+                @(_isSaving ? L["Common:Saving"] : L["Common:Save"])
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
 @code {
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly CancellationToken _lifetimeToken;
+    private readonly object _operationSync = new();
+    private TaskCompletionSource? _operationCompletion;
+    private int _disposed;
+
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
@@ -71,6 +115,13 @@
     private bool _isSaving;
     private string? _error;
 
+    public JobPolicyDialog()
+    {
+        _lifetimeToken = _lifetimeCancellation.Token;
+    }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
     protected override void OnInitialized()
     {
         _disabledOverride = Definition.Policy.DisabledOverride;
@@ -80,16 +131,20 @@
 
     private async Task SaveAsync()
     {
-        if (_isSaving)
+        if (!TryBeginSave())
         {
             return;
         }
 
-        _isSaving = true;
-        _error = null;
         try
         {
-            if (!await Access.IsAuthorizedAsync())
+            var isAuthorized = await Access.IsAuthorizedAsync(_lifetimeToken);
+            if (ShouldStop())
+            {
+                return;
+            }
+
+            if (!isAuthorized)
             {
                 _error = L["Access:DeniedDescription"];
                 return;
@@ -104,7 +159,13 @@
                     MaxRetainedHistoryRecords = _maxRecords,
                     MaxRetentionDays = _maxDays,
                     ExpectedConcurrencyStamp = Definition.Policy.ConcurrencyStamp
-                });
+                },
+                _lifetimeToken);
+            if (ShouldStop())
+            {
+                return;
+            }
+
             if (result.IsFailed(out var error, out var policy))
             {
                 _error = error.Message;
@@ -113,11 +174,73 @@
 
             MudDialog.Close(DialogResult.Ok(policy));
         }
+        catch (OperationCanceledException) when (_lifetimeToken.IsCancellationRequested)
+        {
+        }
         finally
         {
-            _isSaving = false;
+            CompleteSave();
         }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private bool TryBeginSave()
+    {
+        lock (_operationSync)
+        {
+            if (IsDisposed || _operationCompletion is not null)
+            {
+                return false;
+            }
+
+            _operationCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _isSaving = true;
+            _error = null;
+            return true;
+        }
+    }
+
+    private void CompleteSave()
+    {
+        TaskCompletionSource? completion;
+        lock (_operationSync)
+        {
+            completion = _operationCompletion;
+            _operationCompletion = null;
+            if (!IsDisposed)
+            {
+                _isSaving = false;
+            }
+        }
+
+        completion?.TrySetResult();
+    }
+
+    private bool ShouldStop() => IsDisposed || _lifetimeToken.IsCancellationRequested;
+
+    private void Cancel()
+    {
+        if (!IsDisposed)
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        _lifetimeCancellation.Cancel();
+
+        Task activeOperation;
+        lock (_operationSync)
+        {
+            activeOperation = _operationCompletion?.Task ?? Task.CompletedTask;
+        }
+
+        await activeOperation.ConfigureAwait(false);
+        _lifetimeCancellation.Dispose();
+    }
 }

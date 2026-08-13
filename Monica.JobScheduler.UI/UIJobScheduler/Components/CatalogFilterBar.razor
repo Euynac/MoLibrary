@@ -1,0 +1,101 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<MudPaper Outlined="true" Class="catalog-filter pa-4">
+    <div class="catalog-filter__fields">
+        <MudTextField T="string"
+                      Value="@SearchText"
+                      ValueChanged="SearchTextChanged"
+                      Label="@L["Catalog:Filters:Search"]"
+                      Placeholder="@L["Catalog:Filters:SearchPlaceholder"]"
+                      Immediate="true"
+                      Clearable="true"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" />
+        <MudTextField T="string"
+                      Value="@OwnerId"
+                      ValueChanged="OwnerIdChanged"
+                      Label="@L["Catalog:Filters:Owner"]"
+                      Clearable="true"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense" />
+        <MudSelect T="JobType?"
+                   Value="@SelectedJobType"
+                   ValueChanged="SelectedJobTypeChanged"
+                   Label="@L["Catalog:Filters:Type"]"
+                   Clearable="true"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="JobType?" Value="@(null)">@L["Catalog:Filters:AnyType"]</MudSelectItem>
+            @foreach (var type in Enum.GetValues<JobType>())
+            {
+                <MudSelectItem T="JobType?" Value="@type">@L[$"JobTypes:{type}"]</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="bool?"
+                   Value="@SelectedDisabledState"
+                   ValueChanged="SelectedDisabledStateChanged"
+                   Label="@L["Catalog:Filters:State"]"
+                   Clearable="true"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="bool?" Value="@(null)">@L["Catalog:Filters:AnyState"]</MudSelectItem>
+            <MudSelectItem T="bool?" Value="@(false)">@L["Catalog:Enabled"]</MudSelectItem>
+            <MudSelectItem T="bool?" Value="@(true)">@L["Catalog:Disabled"]</MudSelectItem>
+        </MudSelect>
+    </div>
+
+    <div class="catalog-filter__actions">
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Filled.FilterAltOff"
+                   Disabled="@IsLoading"
+                   OnClick="ResetRequested">
+            @L["Catalog:Actions:Reset"]
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Search"
+                   Disabled="@IsLoading"
+                   OnClick="SearchRequested">
+            @L["Common:Search"]
+        </MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string? SearchText { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public string? OwnerId { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> OwnerIdChanged { get; set; }
+
+    [Parameter]
+    public JobType? SelectedJobType { get; set; }
+
+    [Parameter]
+    public EventCallback<JobType?> SelectedJobTypeChanged { get; set; }
+
+    [Parameter]
+    public bool? SelectedDisabledState { get; set; }
+
+    [Parameter]
+    public EventCallback<bool?> SelectedDisabledStateChanged { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public EventCallback SearchRequested { get; set; }
+
+    [Parameter]
+    public EventCallback ResetRequested { get; set; }
+}

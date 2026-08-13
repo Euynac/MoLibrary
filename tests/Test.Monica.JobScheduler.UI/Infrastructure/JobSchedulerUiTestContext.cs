@@ -9,7 +9,9 @@ using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Providers;
 using Monica.JobScheduler.UI.Localization;
+using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.State;
 using Monica.Modules;
 using Monica.Testing.Localization;
 using Monica.Testing.UI;
@@ -48,6 +50,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         Services.AddSingleton<IStringLocalizer<JobSchedulerResource>, EchoStringLocalizer<JobSchedulerResource>>();
         Services.AddSingleton<IThemeState, TestThemeState>();
         Services.AddSingleton<IOptions<ModuleJobSchedulerOption>>(Options.Create(schedulerOptions));
+        Services.AddSingleton(TimeProvider.System);
         Services.AddSingleton<IOptions<ModuleJobSchedulerUIOption>>(Options.Create(new ModuleJobSchedulerUIOption
         {
             AutoRefreshInterval = TimeSpan.Zero,
@@ -56,6 +59,10 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         Access = new TestJobSchedulerUiAccess(isAuthorized);
         Services.AddSingleton<IJobSchedulerUiAccess>(Access);
         Services.AddSingleton(facade);
+        Services.AddScoped<SchedulerOverviewPageStateFactory>();
+        Services.AddScoped<JobCatalogPageStateFactory>();
+        Services.AddScoped<JobDefinitionDetailPageStateFactory>();
+        Services.AddScoped<JobExecutionsStateFactory>();
         _ = Render<MudPopoverProvider>();
         DialogProvider = Render<MudDialogProvider>();
     }
@@ -67,6 +74,8 @@ public sealed class JobSchedulerUiTestContext : BunitContext
     internal TestJobSchedulerUiAccess Access { get; }
 
     public ActiveJobDefinition TriggeredDefinition { get; private set; } = null!;
+
+    public ActiveJobDefinition RecurringDefinition { get; private set; } = null!;
 
     private void SeedStore()
     {
@@ -103,6 +112,21 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         var activeCatalog = Store.GetActiveCatalogAsync(SCOPE).GetAwaiter().GetResult()!;
         TriggeredDefinition = activeCatalog.Definitions.Single(definition =>
             definition.Declaration.JobType == JobType.Triggered);
+        RecurringDefinition = activeCatalog.Definitions.Single(definition =>
+            definition.Declaration.JobType == JobType.Recurring);
+        Store.SynchronizeRecurringScheduleAsync(new RecurringScheduleSynchronization
+        {
+            Template = RecurringDefinition.CreateExecutionTemplate(),
+            Schedule = new RecurringScheduleDefinition
+            {
+                CronExpression = RecurringDefinition.Declaration.CronExpression!,
+                TimeZoneId = RecurringDefinition.Declaration.TimeZoneId!,
+                StartTimeUtc = RecurringDefinition.Declaration.StartTimeUtc,
+                EndTimeUtc = RecurringDefinition.Declaration.EndTimeUtc
+            },
+            ChangeEpoch = activeCatalog.Version.ChangeEpoch,
+            IsSuspended = RecurringDefinition.IsDisabled
+        }).GetAwaiter().GetResult();
         Store.RegisterWorkerCapabilityAsync(
             new WorkerCapabilityRegistration
             {
@@ -117,12 +141,29 @@ public sealed class JobSchedulerUiTestContext : BunitContext
 
     internal sealed class TestJobSchedulerUiAccess(bool isAuthorized) : IJobSchedulerUiAccess
     {
+        private TaskCompletionSource<bool>? _authorizationGate;
+        private TaskCompletionSource<bool>? _authorizationStarted;
+
         internal bool IsAuthorized { get; set; } = isAuthorized;
 
-        public Task<bool> IsAuthorizedAsync(CancellationToken cancellationToken = default)
+        internal Task AuthorizationStarted => _authorizationStarted?.Task ?? Task.CompletedTask;
+
+        internal void BlockAuthorization()
+        {
+            _authorizationStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _authorizationGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        public async Task<bool> IsAuthorizedAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(IsAuthorized);
+            _authorizationStarted?.TrySetResult(true);
+            if (_authorizationGate is not null)
+            {
+                await _authorizationGate.Task.WaitAsync(cancellationToken);
+            }
+
+            return IsAuthorized;
         }
     }
 }

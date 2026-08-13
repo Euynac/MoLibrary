@@ -1,0 +1,97 @@
+@using Monica.JobScheduler.Models
+@using Monica.JobScheduler.Models.Catalog
+@using Monica.JobScheduler.Models.Operations
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<section class="job-schedule-panel" aria-labelledby="job-schedule-heading">
+    <header class="job-schedule-panel__heading">
+        <div>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="job-schedule-heading">
+                @L["JobDetail:Schedule:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["JobDetail:Schedule:Description"]
+            </MudText>
+        </div>
+        @if (Declaration.JobType == JobType.Recurring)
+        {
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Variant="Variant.Outlined"
+                     Color="@JobSchedulerUiPresentation.GetRecurringScheduleStatusColor(Summary.RecurringScheduleStatus)">
+                @L[$"RecurringScheduleStatuses:{Summary.RecurringScheduleStatus}"]
+            </MudChip>
+        }
+    </header>
+
+    @if (Declaration.JobType == JobType.Recurring)
+    {
+        <div class="job-schedule-panel__next">
+            <div>
+                <MudText Typo="Typo.overline" Color="Color.Primary">
+                    @L["JobDetail:Schedule:NextOccurrence"]
+                </MudText>
+                <strong>@JobSchedulerUiPresentation.FormatUtc(Summary.NextOccurrenceUtc)</strong>
+            </div>
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Primary"
+                       EndIcon="@Icons.Material.Filled.ArrowForward"
+                       OnClick="OnInspectSchedule">
+                @L["JobDetail:Actions:InspectSchedule"]
+            </MudButton>
+        </div>
+
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="job-schedule-panel__status-note">
+            @L[$"JobDetail:Schedule:StatusDescriptions:{Summary.RecurringScheduleStatus}"]
+        </MudText>
+
+        <dl class="job-schedule-panel__facts">
+            <div class="job-schedule-panel__fact job-schedule-panel__fact--wide">
+                <dt>@L["JobDetail:Schedule:CronExpression"]</dt>
+                <dd><code>@Declaration.CronExpression</code></dd>
+            </div>
+            <div>
+                <dt>@L["JobDetail:Schedule:TimeZone"]</dt>
+                <dd><code>@Declaration.TimeZoneId</code></dd>
+            </div>
+            <div>
+                <dt>@L["JobDetail:Schedule:StartBoundary"]</dt>
+                <dd>@JobSchedulerUiPresentation.FormatUtc(Declaration.StartTimeUtc)</dd>
+            </div>
+            <div>
+                <dt>@L["JobDetail:Schedule:EndBoundary"]</dt>
+                <dd>@JobSchedulerUiPresentation.FormatUtc(Declaration.EndTimeUtc)</dd>
+            </div>
+        </dl>
+    }
+    else
+    {
+        <div class="job-schedule-panel__triggered">
+            <MudIcon Icon="@Icons.Material.Filled.Bolt" Color="Color.Primary" Size="Size.Large" />
+            <div>
+                <MudText Typo="Typo.subtitle1">@L["JobDetail:Schedule:TriggeredTitle"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["JobDetail:Schedule:TriggeredDescription"]
+                </MudText>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the operational snapshot whose schedule is rendered.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobOperationalSummary Summary { get; set; } = null!;
+
+    /// <summary>
+    /// Gets the callback that opens the read-only recurring schedule inspector.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnInspectSchedule { get; set; }
+
+    private JobDeclaration Declaration => Summary.Definition.Declaration;
+}

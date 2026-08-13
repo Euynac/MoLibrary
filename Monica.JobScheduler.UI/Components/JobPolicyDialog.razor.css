@@ -1,0 +1,109 @@
+.policy-dialog__title {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.policy-dialog__title code {
+    max-width: min(70vw, 44rem);
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.policy-dialog {
+    display: grid;
+    gap: 16px;
+    width: 100%;
+    min-width: 0;
+}
+
+.policy-dialog__identity {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-lines-default);
+}
+
+.policy-dialog__identity > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 10px 12px;
+    background-color: var(--mud-palette-background);
+}
+
+.policy-dialog__identity dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.7rem;
+    font-weight: 650;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+}
+
+.policy-dialog__identity dd {
+    min-width: 0;
+    margin: 0;
+}
+
+.policy-dialog__identity code {
+    display: block;
+    overflow: hidden;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.policy-dialog__fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    min-width: 0;
+}
+
+.policy-dialog__state-field {
+    grid-column: 1 / -1;
+    min-width: 0;
+}
+
+.policy-dialog__actions {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+@media (max-width: 600px) {
+    .policy-dialog__identity,
+    .policy-dialog__fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .policy-dialog__state-field {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 390px) {
+    .policy-dialog__actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .policy-dialog__actions ::deep .mud-button-root {
+        min-width: 0;
+    }
+}

@@ -2,6 +2,7 @@
   "Pages": {
     "Overview": { "Title": "调度总览" },
     "Catalog": { "Title": "作业目录" },
+    "JobDetail": { "Title": "作业详情" },
     "Executions": { "Title": "执行账本" }
   },
   "Workspace": {
@@ -22,6 +23,10 @@
       "Catalog": {
         "Title": "不可变作业目录",
         "Description": "检查代码声明与精确执行版本。运维人员只能修改独立的启停与保留策略。"
+      },
+      "JobDetail": {
+        "Title": "作业运行档案",
+        "Description": "将单个不可变声明与生效策略、调度游标、工作节点兼容性和最近执行证据集中呈现。"
       },
       "Executions": {
         "Title": "持久化执行账本",
@@ -44,7 +49,9 @@
     "Saving": "保存中…",
     "Submitting": "提交中…",
     "Close": "关闭",
-    "Keep": "保留执行"
+    "Keep": "保留执行",
+    "NotAvailable": "暂无",
+    "RunningDuration": "已运行 {0}"
   },
   "ExecutionStates": {
     "Queued": "排队中",
@@ -71,7 +78,9 @@
       "Converged": "已收敛",
       "Transitioning": "切换中",
       "WaitingWorkers": "等待工作节点",
-      "TransitionMessage": "在完整的期望发布激活前，新执行准入与周期实例物化将暂停。"
+      "TransitionMessage": "在完整的期望发布激活前，新执行准入与周期实例物化将暂停。",
+      "ReadinessDescription": "期望发布与精确工作节点版本全部收敛后，该发布才能成为活动执行契约。",
+      "EpochAriaLabel": "目录纪元推进状态"
     },
     "Queue": { "AriaLabel": "持久化执行状态统计" },
     "Owners": {
@@ -82,6 +91,8 @@
       "Publication": "已发布",
       "Workers": "在线节点",
       "Definitions": "活动作业",
+      "Published": "已发布",
+      "Pending": "待发布",
       "Empty": "期望发布中没有所有者。"
     },
     "Recent": {
@@ -90,8 +101,11 @@
       "Job": "作业",
       "State": "状态",
       "Created": "入队时间",
+      "Duration": "耗时",
       "Empty": "尚未准入任何执行。"
-    }
+    },
+    "RefreshFailed": "最近一次刷新失败：{0}",
+    "LastRefreshed": "最近刷新：{0}"
   },
   "Catalog": {
     "PageTitle": "任务调度 · 作业目录",
@@ -116,13 +130,57 @@
       "Type": "类型",
       "Schedule": "调度契约",
       "Concurrency": "并发数",
+      "Readiness": "可执行版本",
+      "NextRun": "下次执行",
+      "LastRun": "上次执行",
+      "Activity": "活动数 / 上限",
       "Policy": "生效策略",
       "Revision": "作业版本",
       "Actions": "操作"
     },
     "Actions": {
       "Trigger": "通过活动目录执行",
-      "Policy": "编辑运维策略"
+      "Policy": "编辑运维策略",
+      "Details": "打开作业详情",
+      "InspectSchedule": "检查调度与后续执行时间",
+      "Pause": "暂停周期实例物化",
+      "Resume": "继续周期实例物化",
+      "PauseSelected": "暂停所选",
+      "ResumeSelected": "继续所选",
+      "Reset": "重置筛选"
+    },
+    "Readiness": {
+      "Workers": "{0} 个兼容工作节点",
+      "NoWorker": "没有兼容工作节点"
+    },
+    "ScheduleStatus": {
+      "Awaiting": "等待同步",
+      "Suspended": "已暂停",
+      "Exhausted": "调度已结束"
+    },
+    "History": { "NeverRun": "从未执行" },
+    "Activity": { "QueuedRunning": "排队 {0} · 执行中 {1}" },
+    "Selection": {
+      "SelectAll": "选择本页全部周期作业",
+      "Select": "选择",
+      "SelectJob": "选择 {0}",
+      "ToolbarLabel": "所选周期作业操作",
+      "Count": "已选择 {0} 个周期作业",
+      "Description": "批量变更会保留每个作业独立的历史保留策略和乐观并发栅栏。",
+      "Clear": "清除选择"
+    },
+    "Messages": {
+      "Paused": "周期实例物化已暂停。",
+      "Resumed": "周期实例物化将从下一个未来时点继续。",
+      "UpdateFailed": "策略更新失败。"
+    },
+    "Batch": {
+      "Empty": "请至少选择一个周期作业。",
+      "PauseTitle": "暂停所选周期作业？",
+      "ResumeTitle": "继续所选周期作业？",
+      "PauseMessage": "暂停 {0} 个所选作业的新周期实例？现有排队及运行中的执行不受影响。",
+      "ResumeMessage": "从下一个未来时点继续 {0} 个所选作业？暂停期间的执行时点不会补跑。",
+      "Result": "{0} 项策略更新成功，{1} 项失败。"
     }
   },
   "Policy": {
@@ -138,25 +196,171 @@
     "MaxDaysHelp": "留空表示不限制保留时长。",
     "Saved": "运维策略已保存。"
   },
+  "JobDetail": {
+    "PageTitle": "任务调度 · 作业详情",
+    "BreadcrumbAriaLabel": "作业目录导航",
+    "NotFound": "活动目录中不存在作业 {0} 的声明。",
+    "RefreshFailed": "最近一次刷新失败：{0}",
+    "ObservedAt": "运行证据观测时间：{0}",
+    "Actions": {
+      "BackToCatalog": "返回作业目录",
+      "InspectSchedule": "检查调度"
+    },
+    "Common": { "Unlimited": "不限制" },
+    "Header": {
+      "NoCompatibleWorker": "没有兼容工作节点",
+      "EvidenceAriaLabel": "当前作业运行证据",
+      "CompatibleWorkers": "兼容工作节点",
+      "ActiveExecutions": "活动执行",
+      "QueuedExecutions": "排队中",
+      "RunningExecutions": "执行中"
+    },
+    "Schedule": {
+      "Title": "周期调度",
+      "Description": "持久化游标依据此不可变调度和活动策略物化执行时点。",
+      "NextOccurrence": "下次执行时点",
+      "CronExpression": "Cron 表达式",
+      "TimeZone": "调度时区",
+      "StartBoundary": "开始边界",
+      "EndBoundary": "结束边界",
+      "TriggeredTitle": "按需准入",
+      "TriggeredDescription": "该作业没有周期游标，运维人员需通过活动目录显式准入执行。",
+      "StatusDescriptions": {
+        "NotRecurring": "按需作业不使用周期游标。",
+        "AwaitingSynchronization": "活动声明正在等待控制平面创建持久化游标。",
+        "Scheduled": "持久化游标已确定下一个待物化的未来时点。",
+        "Suspended": "运维策略已暂停新的周期实例物化。",
+        "Exhausted": "声明的调度边界内已没有后续执行时点。"
+      }
+    },
+    "Contract": {
+      "Title": "声明与策略契约",
+      "Description": "代码声明字段保持不可变；运维策略独立存储，并通过乐观并发更新。",
+      "Immutable": "不可变声明",
+      "DeclarationTitle": "执行声明",
+      "Owner": "目录所有者",
+      "ArgumentsKey": "参数契约",
+      "MaxConcurrency": "最大并发数",
+      "RetryCount": "允许重试次数",
+      "ExecutionTimeout": "执行超时",
+      "DeclarationDefault": "代码默认状态",
+      "PolicyTitle": "运维策略",
+      "EffectiveState": "生效状态",
+      "PolicyUpdated": "策略更新时间",
+      "PolicyStamp": "并发标识",
+      "RevisionTitle": "发布与版本身份",
+      "SchedulerScope": "调度范围",
+      "Release": "目录发布",
+      "ActivationEpoch": "激活纪元",
+      "WorkerRevision": "工作节点版本",
+      "JobRevision": "作业版本"
+    },
+    "LatestExecution": {
+      "Title": "最近执行",
+      "Description": "该逻辑作业跨目录版本的最新持久化执行证据。",
+      "Empty": "该作业尚未生成持久化执行。"
+    }
+  },
+  "RecurringScheduleStatuses": {
+    "NotRecurring": "按需触发",
+    "AwaitingSynchronization": "等待同步",
+    "Scheduled": "已调度",
+    "Suspended": "已暂停",
+    "Exhausted": "已结束"
+  },
+  "CronInspector": {
+    "Title": "调度检查器",
+    "ImmutableNotice": "此调度属于不可变发布声明。请在代码中修改并部署新的目录发布；检查器不会篡改发布历史。",
+    "TimeZone": "时区",
+    "StartBoundary": "开始边界",
+    "EndBoundary": "结束边界",
+    "OperationalNext": "持久化下次执行时点",
+    "ResetDraft": "重置草稿",
+    "Expression": {
+      "Title": "Cron 契约",
+      "Description": "六字段表达式包含秒，五字段表达式从分钟开始。",
+      "Draft": "Cron 表达式草稿",
+      "DraftHelp": "可在本地编辑、校验和预览；草稿不会持久化。要修改不可变调度，请发布新的目录版本。"
+    },
+    "Fields": {
+      "AriaLabel": "Cron 表达式字段",
+      "Second": "秒",
+      "Minute": "分",
+      "Hour": "时",
+      "Day": "日",
+      "Month": "月",
+      "Weekday": "星期"
+    },
+    "Preview": {
+      "Title": "后续声明执行时点",
+      "Description": "严格从 {0} 之后计算；持久化游标仍是权威来源。",
+      "Unavailable": "当前主机无法计算声明的 Cron 表达式或时区。",
+      "Empty": "声明边界内已没有未来执行时点。",
+      "AriaLabel": "后续调度执行时点",
+      "Sequence": "序号",
+      "ScheduleTime": "调度本地时间",
+      "UtcTime": "UTC 时间"
+    }
+  },
   "Trigger": {
     "Title": "准入执行",
     "Revision": "预期的不可变作业版本",
+    "InstanceId": "幂等执行标识",
+    "PayloadSection": "执行参数载荷",
     "Arguments": "JSON 参数",
     "ArgumentsType": "声明的参数类型：{0}",
     "ArgumentsUnknown": "请输入符合该作业参数契约的 JSON 对象。",
+    "ArgumentsRequired": "请输入 JSON 参数。",
+    "InvalidJson": "参数必须是有效的 JSON。",
     "Action": "加入队列",
-    "Queued": "执行 {0} 已持久化入队。"
+    "Queued": "执行 {0} 已持久化入队。",
+    "Delay": {
+      "Title": "队列可用时间",
+      "Description": "设置工作节点最早可领取此执行的 UTC 时间。",
+      "Enable": "延迟准入",
+      "Date": "可用日期（UTC）",
+      "Time": "可用时间（UTC）",
+      "UtcHelp": "所选时间按 UTC 解释，并随持久化执行一并存储。",
+      "Required": "请选择完整的 UTC 日期和时间。",
+      "Future": "延迟可用时间必须晚于当前时间。"
+    }
   },
   "Executions": {
     "PageTitle": "任务调度 · 执行账本",
     "Title": "执行账本",
     "Count": "共 {0} 个执行",
+    "LastRefreshed": "观测时间：{0}",
     "Empty": "没有符合当前筛选条件的持久化执行。",
     "Filters": {
       "Search": "执行",
       "SearchPlaceholder": "实例 ID 或作业键",
       "State": "状态",
-      "AnyState": "全部状态"
+      "AnyState": "全部状态",
+      "States": "状态",
+      "TimeRange": "入队时间范围",
+      "StartDate": "开始日期",
+      "EndDate": "结束日期",
+      "SortBy": "排序字段",
+      "PageSize": "每页行数",
+      "InvalidRange": "结束日期不能早于开始日期。"
+    },
+    "TimeRanges": {
+      "All": "全部时间",
+      "LastHour": "最近 1 小时",
+      "Last24Hours": "最近 24 小时",
+      "Last7Days": "最近 7 天",
+      "Last30Days": "最近 30 天",
+      "Custom": "自定义范围"
+    },
+    "SortFields": {
+      "CreatedAtUtc": "入队时间",
+      "AvailableAtUtc": "可执行时间",
+      "StartedAtUtc": "开始时间",
+      "CompletedAtUtc": "完成时间"
+    },
+    "SortDirection": {
+      "Ascending": "升序排列",
+      "Descending": "降序排列"
     },
     "Columns": {
       "Instance": "实例",
@@ -164,19 +368,27 @@
       "State": "状态",
       "Available": "可执行时间",
       "Created": "入队时间",
+      "Started": "开始时间",
+      "Completed": "完成时间",
+      "Duration": "耗时",
       "Attempts": "执行 / 重试次数",
       "Worker": "租约所有者",
       "Actions": "操作"
     },
     "Actions": {
       "Details": "检查执行",
-      "Cancel": "请求取消"
+      "Cancel": "请求取消",
+      "Apply": "应用筛选",
+      "Reset": "重置"
     },
     "Cancel": {
       "Title": "取消执行？",
       "Message": "排队中的执行 {0} 会立即取消；执行中的实例会收到持久化的协作取消请求。",
       "Requested": "取消请求已持久化。",
-      "Failed": "无法持久化取消请求。"
+      "Failed": "无法持久化取消请求。",
+      "Cancelled": "排队中的执行已取消。",
+      "AlreadyTerminal": "该执行已经结束。",
+      "NotFound": "该执行已不存在。"
     }
   },
   "ExecutionDetail": {
@@ -198,6 +410,51 @@
     "HistoryTime": "时间",
     "HistoryKind": "类型",
     "HistoryTransition": "状态变更",
-    "HistoryMessage": "证据"
+    "HistoryMessage": "证据",
+    "Identity": "执行身份",
+    "Instance": "实例 ID",
+    "Scope": "调度范围",
+    "Observed": "快照观测时间",
+    "JobType": "作业类型",
+    "ArgumentsType": "参数契约",
+    "PolicySnapshot": "已捕获执行策略",
+    "MaxConcurrency": "最大并发数",
+    "RetryCount": "允许重试次数",
+    "Timeout": "执行超时",
+    "Timing": "时间证据",
+    "Created": "入队时间",
+    "Started": "开始时间",
+    "Completed": "完成时间",
+    "Duration": "耗时",
+    "CancellationRequested": "请求取消时间",
+    "Runtime": "租约与恢复",
+    "LeaseLosses": "已恢复租约丢失次数",
+    "LeaseExpires": "租约到期时间",
+    "NoArguments": "没有捕获序列化参数。",
+    "HistoryCount": "保留 {0} 条记录",
+    "HistoryLogLevel": "级别",
+    "HistoryWorker": "工作节点",
+    "EmptyHistory": "没有可用的保留历史记录。",
+    "CancellationPending": "协作取消请求自 {0} 起等待处理。",
+    "Copied": "诊断信息已复制到剪贴板。",
+    "CopyFailed": "无法复制诊断信息。",
+    "Actions": {
+      "ViewCatalog": "打开作业详情",
+      "CopyDiagnostics": "复制诊断信息"
+    }
+  },
+  "ExecutionHistoryKinds": {
+    "StateTransition": "状态变更",
+    "ExecutionLog": "执行日志",
+    "Cancellation": "取消"
+  },
+  "LogLevels": {
+    "Trace": "跟踪",
+    "Debug": "调试",
+    "Information": "信息",
+    "Warning": "警告",
+    "Error": "错误",
+    "Critical": "严重",
+    "None": "无"
   }
 }

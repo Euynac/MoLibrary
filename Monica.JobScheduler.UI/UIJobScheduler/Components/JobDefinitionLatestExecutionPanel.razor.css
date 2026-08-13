@@ -1,0 +1,107 @@
+.job-latest-panel {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+    min-width: 0;
+    padding: 18px;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.job-latest-panel__heading,
+.job-latest-panel__instance {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.job-latest-panel__heading > div,
+.job-latest-panel__instance > div {
+    min-width: 0;
+}
+
+.job-latest-panel__empty {
+    display: grid;
+    min-height: 11rem;
+    place-items: center;
+    align-content: center;
+    gap: 10px;
+    padding: 22px;
+    border-radius: 6px;
+    background-color: var(--mud-palette-background-gray);
+    text-align: center;
+}
+
+.job-latest-panel__instance {
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 6px;
+    background-color: var(--mud-palette-background-gray);
+}
+
+.job-latest-panel__instance > div {
+    display: grid;
+    gap: 3px;
+}
+
+.job-latest-panel__instance code {
+    display: block;
+    max-width: 32rem;
+    overflow: hidden;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-latest-panel__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 6px;
+    background-color: var(--mud-palette-lines-default);
+}
+
+.job-latest-panel__facts > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 10px 12px;
+    background-color: var(--mud-palette-surface);
+}
+
+.job-latest-panel__facts dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+}
+
+.job-latest-panel__facts dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.job-latest-panel__facts code {
+    font-family: inherit;
+}
+
+@media (max-width: 580px) {
+    .job-latest-panel__heading,
+    .job-latest-panel__instance {
+        display: grid;
+    }
+
+    .job-latest-panel__facts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

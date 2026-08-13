@@ -1,0 +1,108 @@
+.job-schedule-panel {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+    min-width: 0;
+    padding: 18px;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.job-schedule-panel__heading,
+.job-schedule-panel__next {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.job-schedule-panel__heading > div,
+.job-schedule-panel__next > div {
+    min-width: 0;
+}
+
+.job-schedule-panel__next {
+    align-items: center;
+    padding: 14px 16px;
+    border-left: 3px solid var(--mud-palette-primary);
+    border-radius: 6px;
+    background-color: var(--mud-palette-background-gray);
+}
+
+.job-schedule-panel__next > div {
+    display: grid;
+    gap: 2px;
+}
+
+.job-schedule-panel__next strong {
+    font-family: var(--mo-font-family-mono);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.job-schedule-panel__status-note {
+    min-height: 2.5em;
+}
+
+.job-schedule-panel__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 6px;
+    background-color: var(--mud-palette-lines-default);
+}
+
+.job-schedule-panel__fact,
+.job-schedule-panel__facts > div {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    padding: 11px 13px;
+    background-color: var(--mud-palette-surface);
+}
+
+.job-schedule-panel__fact--wide {
+    grid-column: 1 / -1;
+}
+
+.job-schedule-panel__facts dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+}
+
+.job-schedule-panel__facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.84rem;
+}
+
+.job-schedule-panel__facts code {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.8rem;
+}
+
+.job-schedule-panel__triggered {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 20px;
+    border-radius: 6px;
+    background-color: var(--mud-palette-background-gray);
+}
+
+@media (max-width: 580px) {
+    .job-schedule-panel__heading,
+    .job-schedule-panel__next {
+        display: grid;
+    }
+
+    .job-schedule-panel__facts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

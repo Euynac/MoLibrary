@@ -372,24 +372,7 @@ public sealed partial class EfCoreJobSchedulerStore
             IEnumerable<ActiveJobDefinition> filtered = scope?.ActiveReleaseId is null
                 ? []
                 : await ProjectActiveDefinitionsAsync(dbContext, scope, token);
-            if (!string.IsNullOrWhiteSpace(query.OwnerId))
-            {
-                filtered = filtered.Where(item => string.Equals(item.OwnerId, query.OwnerId, StringComparison.Ordinal));
-            }
-            if (!string.IsNullOrWhiteSpace(query.SearchText))
-            {
-                filtered = filtered.Where(item =>
-                    item.Declaration.JobKey.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase)
-                    || item.Declaration.JobName.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase));
-            }
-            if (query.JobType is { } jobType)
-            {
-                filtered = filtered.Where(item => item.Declaration.JobType == jobType);
-            }
-            if (query.IsDisabled is { } disabled)
-            {
-                filtered = filtered.Where(item => item.IsDisabled == disabled);
-            }
+            filtered = FilterDefinitions(filtered, query);
 
             var ordered = filtered.OrderBy(item => item.Declaration.JobKey, StringComparer.Ordinal).ToArray();
             return new QueryResult<ActiveJobDefinition>(

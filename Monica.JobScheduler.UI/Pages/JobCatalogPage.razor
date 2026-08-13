@@ -2,8 +2,7 @@
 
 @using Monica.JobScheduler.UI.Localization
 
-@inject JobSchedulerFacade Facade
-@inject IJobSchedulerUiAccess Access
+@inject JobCatalogPageStateFactory PageStateFactory
 @inject IOptions<ModuleJobSchedulerUIOption> UiOptions
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -14,269 +13,292 @@
 <PageTitle>@L["Catalog:PageTitle"]</PageTitle>
 
 <SchedulerWorkspace Title="@L["Workspace:Pages:Catalog:Title"]"
-                    Description="@L["Workspace:Pages:Catalog:Description"]">
-    <SchedulerAccessBoundary AccessChecked="@_accessChecked" IsAuthorized="@_isAuthorized">
-    <div class="catalog-page">
-        <MudPaper Outlined="true" Class="catalog-page__filters pa-4">
-            <MudTextField T="string"
-                          @bind-Value="_searchText"
-                          Label="@L["Catalog:Filters:Search"]"
-                          Placeholder="@L["Catalog:Filters:SearchPlaceholder"]"
-                          Immediate="true"
-                          Clearable="true"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search" />
-            <MudTextField T="string"
-                          @bind-Value="_ownerId"
-                          Label="@L["Catalog:Filters:Owner"]"
-                          Clearable="true" />
-            <MudSelect T="JobType?"
-                       @bind-Value="_jobType"
-                       Label="@L["Catalog:Filters:Type"]"
-                       Clearable="true">
-                <MudSelectItem T="JobType?" Value="@(null)">@L["Catalog:Filters:AnyType"]</MudSelectItem>
-                @foreach (var type in Enum.GetValues<JobType>())
+                    Description="@L["Workspace:Pages:Catalog:Description"]"
+                    ActivePanelIndex="1">
+    @if (_state is not null)
+    {
+        <SchedulerAccessBoundary AccessChecked="@_state.AccessChecked" IsAuthorized="@_state.IsAuthorized">
+            <div class="catalog-page">
+                <CatalogFilterBar SearchText="@_state.SearchText"
+                                  SearchTextChanged="@(value => _state.SearchText = value)"
+                                  OwnerId="@_state.OwnerId"
+                                  OwnerIdChanged="@(value => _state.OwnerId = value)"
+                                  SelectedJobType="@_state.SelectedJobType"
+                                  SelectedJobTypeChanged="@(value => _state.SelectedJobType = value)"
+                                  SelectedDisabledState="@_state.SelectedDisabledState"
+                                  SelectedDisabledStateChanged="@(value => _state.SelectedDisabledState = value)"
+                                  IsLoading="@_state.IsLoading"
+                                  SearchRequested="@_state.SearchAsync"
+                                  ResetRequested="@_state.ResetAsync" />
+
+                @if (_state.Error is not null)
                 {
-                    <MudSelectItem T="JobType?" Value="@type">@L[$"JobTypes:{type}"]</MudSelectItem>
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_state.Error</MudAlert>
                 }
-            </MudSelect>
-            <MudSelect T="bool?"
-                       @bind-Value="_isDisabled"
-                       Label="@L["Catalog:Filters:State"]"
-                       Clearable="true">
-                <MudSelectItem T="bool?" Value="@(null)">@L["Catalog:Filters:AnyState"]</MudSelectItem>
-                <MudSelectItem T="bool?" Value="@(false)">@L["Catalog:Enabled"]</MudSelectItem>
-                <MudSelectItem T="bool?" Value="@(true)">@L["Catalog:Disabled"]</MudSelectItem>
-            </MudSelect>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Search"
-                       OnClick="SearchAsync">
-                @L["Common:Search"]
-            </MudButton>
-        </MudPaper>
 
-        @if (_error is not null)
-        {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
-        }
-
-        <MudPaper Outlined="true" Class="catalog-page__table pa-0">
-            <div class="catalog-page__heading">
-                <div>
-                    <MudText Typo="Typo.h6">@L["Catalog:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Catalog:Count", _totalCount]</MudText>
-                </div>
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Color="Color.Primary"
-                               Disabled="@_isLoading"
-                               OnClick="LoadAsync"
-                               aria-label="@L["Common:Refresh"]" />
-            </div>
-
-            @if (_isLoading && _definitions.Count == 0)
-            {
-                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-            }
-
-            <MudTable T="ActiveJobDefinition"
-                      Items="@_definitions"
-                      Dense="true"
-                      Hover="true"
-                      Breakpoint="Breakpoint.None"
-                      Elevation="0">
-                <HeaderContent>
-                    <MudTh>@L["Catalog:Columns:Definition"]</MudTh>
-                    <MudTh>@L["Catalog:Columns:Owner"]</MudTh>
-                    <MudTh>@L["Catalog:Columns:Type"]</MudTh>
-                    <MudTh>@L["Catalog:Columns:Schedule"]</MudTh>
-                    <MudTh>@L["Catalog:Columns:Concurrency"]</MudTh>
-                    <MudTh>@L["Catalog:Columns:Policy"]</MudTh>
-                    <MudTh>@L["Catalog:Columns:Revision"]</MudTh>
-                    <MudTh Class="catalog-page__actions">@L["Catalog:Columns:Actions"]</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="@L["Catalog:Columns:Definition"]">
-                        <div class="catalog-page__definition">
-                            <strong>@context.Declaration.JobName</strong>
-                            <span title="@context.Declaration.JobKey">@context.Declaration.JobKey</span>
+                @if (_state.HasSelection)
+                {
+                    <MudPaper Outlined="true" Class="catalog-page__selection pa-3" role="region"
+                              aria-label="@L["Catalog:Selection:ToolbarLabel"]">
+                        <div class="catalog-page__selection-copy">
+                            <MudIcon Icon="@Icons.Material.Filled.Checklist" Color="Color.Primary" />
+                            <div>
+                                <MudText Typo="Typo.subtitle2">
+                                    @L["Catalog:Selection:Count", _state.SelectedRecurringSummaries.Count]
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @L["Catalog:Selection:Description"]
+                                </MudText>
+                            </div>
                         </div>
-                    </MudTd>
-                    <MudTd DataLabel="@L["Catalog:Columns:Owner"]">@context.OwnerId</MudTd>
-                    <MudTd DataLabel="@L["Catalog:Columns:Type"]">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                            @L[$"JobTypes:{context.Declaration.JobType}"]
-                        </MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="@L["Catalog:Columns:Schedule"]">
-                        <div class="catalog-page__schedule">@GetSchedule(context.Declaration)</div>
-                    </MudTd>
-                    <MudTd DataLabel="@L["Catalog:Columns:Concurrency"]">@context.Declaration.MaxConcurrency</MudTd>
-                    <MudTd DataLabel="@L["Catalog:Columns:Policy"]">
-                        <MudChip T="string"
-                                 Size="Size.Small"
-                                 Variant="Variant.Outlined"
-                                 Color="@(context.IsDisabled ? Color.Warning : Color.Success)">
-                            @(context.IsDisabled ? L["Catalog:Disabled"] : L["Catalog:Enabled"])
-                        </MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="@L["Catalog:Columns:Revision"]" Class="catalog-page__mono" title="@context.JobRevisionId">
-                        @JobSchedulerUiPresentation.ShortIdentity(context.JobRevisionId)
-                    </MudTd>
-                    <MudTd DataLabel="@L["Catalog:Columns:Actions"]" Class="catalog-page__actions">
-                        @if (context.Declaration.JobType == JobType.Triggered)
-                        {
-                            <MudTooltip Text="@L["Catalog:Actions:Trigger"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
-                                               Color="Color.Primary"
-                                               Disabled="@context.IsDisabled"
-                                               OnClick="@(() => OpenTriggerAsync(context))" />
-                            </MudTooltip>
-                        }
-                        <MudTooltip Text="@L["Catalog:Actions:Policy"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Policy"
-                                           OnClick="@(() => OpenPolicyAsync(context))" />
-                        </MudTooltip>
-                    </MudTd>
-                </RowTemplate>
-                <NoRecordsContent>
-                    <MudText Class="pa-6" Color="Color.Secondary">@L["Catalog:Empty"]</MudText>
-                </NoRecordsContent>
-            </MudTable>
+                        <div class="catalog-page__selection-actions">
+                            <MudButton Variant="Variant.Text"
+                                       Disabled="@_state.IsMutating"
+                                       OnClick="@(() => SetAllRecurringSelection(false))">
+                                @L["Catalog:Selection:Clear"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Warning"
+                                       StartIcon="@Icons.Material.Filled.PauseCircle"
+                                       Disabled="@_state.IsMutating"
+                                       OnClick="@(() => ApplyBatchDisabledAsync(true))">
+                                @L["Catalog:Actions:PauseSelected"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Success"
+                                       StartIcon="@Icons.Material.Filled.PlayCircle"
+                                       Disabled="@_state.IsMutating"
+                                       OnClick="@(() => ApplyBatchDisabledAsync(false))">
+                                @L["Catalog:Actions:ResumeSelected"]
+                            </MudButton>
+                        </div>
+                    </MudPaper>
+                }
 
-            @if (_pageCount > 1)
-            {
-                <div class="catalog-page__pagination">
-                    <MudPagination Count="@_pageCount" Selected="@_pageNumber" SelectedChanged="PageChangedAsync" />
-                </div>
-            }
-        </MudPaper>
-    </div>
-    </SchedulerAccessBoundary>
+                <JobCatalogOperationalTable Summaries="@_state.Summaries"
+                                            SelectedJobKeys="@_state.SelectedJobKeys"
+                                            TotalCount="@_state.TotalCount"
+                                            PageNumber="@_state.PageNumber"
+                                            PageCount="@_state.PageCount"
+                                            IsLoading="@_state.IsLoading"
+                                            IsMutating="@_state.IsMutating"
+                                            RefreshRequested="@_state.RefreshAsync"
+                                            PageChanged="@_state.ChangePageAsync"
+                                            AllRecurringSelectionChanged="SetAllRecurringSelection"
+                                            SelectionToggled="ToggleSelection"
+                                            DisabledStateToggled="ToggleDisabledAsync"
+                                            ScheduleRequested="OpenScheduleAsync"
+                                            TriggerRequested="OpenTriggerAsync"
+                                            PolicyRequested="OpenPolicyAsync" />
+            </div>
+        </SchedulerAccessBoundary>
+    }
 </SchedulerWorkspace>
 
 @code {
     public const string PAGE_URL = "/job-scheduler/catalog";
 
-    private readonly CancellationTokenSource _lifetime = new();
-    private List<ActiveJobDefinition> _definitions = [];
-    private string? _searchText;
-    private string? _ownerId;
-    private JobType? _jobType;
-    private bool? _isDisabled;
-    private bool _accessChecked;
-    private bool _isAuthorized;
-    private bool _isLoading;
-    private string? _error;
-    private int _pageNumber = 1;
-    private int _pageCount;
-    private int _totalCount;
+    private JobCatalogPageState? _state;
+    private bool _disposed;
 
-    protected override Task OnInitializedAsync() => LoadAsync();
-
-    private async Task SearchAsync()
+    protected override async Task OnInitializedAsync()
     {
-        _pageNumber = 1;
-        await LoadAsync();
+        _state = PageStateFactory.Create(UiOptions.Value.DefaultPageSize);
+        _state.Changed += OnStateChangedAsync;
+        await _state.InitializeAsync();
     }
 
-    private async Task PageChangedAsync(int page)
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    private void ToggleSelection(JobOperationalSummary summary)
     {
-        _pageNumber = page;
-        await LoadAsync();
+        _state?.ToggleSelection(summary);
     }
 
-    private async Task LoadAsync()
+    private void SetAllRecurringSelection(bool selected)
     {
-        if (_isLoading || _lifetime.IsCancellationRequested)
+        _state?.SelectAllRecurring(selected);
+    }
+
+    private async Task ToggleDisabledAsync(JobOperationalSummary summary)
+    {
+        var state = _state;
+        if (state is null || _disposed)
         {
             return;
         }
 
-        _isLoading = true;
         try
         {
-            _isAuthorized = await Access.IsAuthorizedAsync(_lifetime.Token);
-            _accessChecked = true;
-            if (!_isAuthorized)
+            var disabled = !summary.Definition.IsDisabled;
+            var result = await state.SetDisabledAsync(summary, disabled);
+            if (_disposed || _state != state)
             {
-                _definitions = [];
-                _totalCount = 0;
-                _pageCount = 1;
-                _error = null;
                 return;
             }
 
-            var pageSize = Math.Max(1, UiOptions.Value.DefaultPageSize);
-            var result = await Facade.QueryDefinitionsAsync(new JobCatalogQuery
+            if (result.IsFailed(out var error))
             {
-                SearchText = _searchText,
-                OwnerId = _ownerId,
-                JobType = _jobType,
-                IsDisabled = _isDisabled,
-                PageNumber = _pageNumber,
-                PageSize = pageSize
-            }, _lifetime.Token);
-            if (result.IsFailed(out var error, out var page))
-            {
-                _error = error.Message;
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:UpdateFailed"], Severity.Error);
                 return;
             }
 
-            _definitions = page.Items;
-            _totalCount = page.TotalCount;
-            _pageCount = Math.Max(1, (int)Math.Ceiling((double)_totalCount / pageSize));
-            _error = null;
+            Snackbar.Add(
+                disabled ? L["Catalog:Messages:Paused"] : L["Catalog:Messages:Resumed"],
+                Severity.Success);
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
         {
-        }
-        finally
-        {
-            _isLoading = false;
         }
     }
 
-    private async Task OpenPolicyAsync(ActiveJobDefinition definition)
+    private async Task ApplyBatchDisabledAsync(bool disabled)
     {
-        if (!await RefreshAccessAsync())
+        var state = _state;
+        var selectedCount = state?.SelectedRecurringSummaries.Count ?? 0;
+        if (state is null || _disposed || selectedCount == 0)
         {
             return;
         }
 
-        var parameters = new DialogParameters<JobPolicyDialog> { { dialog => dialog.Definition, definition } };
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            disabled ? L["Catalog:Batch:PauseTitle"] : L["Catalog:Batch:ResumeTitle"],
+            disabled
+                ? L["Catalog:Batch:PauseMessage", selectedCount]
+                : L["Catalog:Batch:ResumeMessage", selectedCount],
+            yesText: disabled ? L["Catalog:Actions:PauseSelected"] : L["Catalog:Actions:ResumeSelected"],
+            cancelText: L["Common:Cancel"],
+            options: DialogOptions);
+        if (confirmed != true || _disposed || _state != state)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await state.SetSelectedDisabledAsync(disabled);
+            if (_disposed || _state != state)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error, out var batch))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:UpdateFailed"], Severity.Error);
+                return;
+            }
+
+            var severity = batch.FailedCount > 0 ? Severity.Warning : Severity.Success;
+            Snackbar.Add(L["Catalog:Batch:Result", batch.SucceededCount, batch.FailedCount], severity);
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+        }
+    }
+
+    private async Task OpenPolicyAsync(JobOperationalSummary summary)
+    {
+        var state = _state;
+        if (state is null || !await CanMutateAsync(state))
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<JobPolicyDialog>
+        {
+            { dialog => dialog.Definition, summary.Definition }
+        };
         var dialog = await DialogService.ShowAsync<JobPolicyDialog>(L["Policy:Title"], parameters, DialogOptions);
         var result = await dialog.Result;
+        if (_disposed || _state != state)
+        {
+            return;
+        }
+
         if (result is { Canceled: false, Data: JobPolicy policy })
         {
-            var index = _definitions.FindIndex(item => item.Declaration.JobKey == definition.Declaration.JobKey);
-            if (index >= 0)
-            {
-                _definitions[index] = definition with { Policy = policy };
-            }
+            state.ApplyPolicy(summary.Definition.Declaration.JobKey, policy);
             Snackbar.Add(L["Policy:Saved"], Severity.Success);
         }
     }
 
-    private async Task OpenTriggerAsync(ActiveJobDefinition definition)
+    private async Task OpenTriggerAsync(JobOperationalSummary summary)
     {
-        if (!await RefreshAccessAsync())
+        var state = _state;
+        if (state is null || !await CanMutateAsync(state))
         {
             return;
         }
 
-        var parameters = new DialogParameters<JobTriggerDialog> { { dialog => dialog.Definition, definition } };
+        var parameters = new DialogParameters<JobTriggerDialog>
+        {
+            { dialog => dialog.Definition, summary.Definition }
+        };
         var dialog = await DialogService.ShowAsync<JobTriggerDialog>(L["Trigger:Title"], parameters, DialogOptions);
         var result = await dialog.Result;
+        if (_disposed || _state != state)
+        {
+            return;
+        }
+
         if (result is { Canceled: false, Data: JobExecutionInstance execution })
         {
             Snackbar.Add(L["Trigger:Queued", execution.InstanceId], Severity.Success);
+            await state.RefreshAsync();
         }
     }
 
-    private string GetSchedule(JobDeclaration declaration) => declaration.JobType == JobType.Recurring
-        ? $"{declaration.CronExpression} · {declaration.TimeZoneId}"
-        : L["Catalog:OnDemand"];
+    private async Task OpenScheduleAsync(JobOperationalSummary summary)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<CronScheduleInspectorDialog>
+        {
+            { dialog => dialog.Definition, summary.Definition },
+            { dialog => dialog.OperationalSummary, summary }
+        };
+        await DialogService.ShowAsync<CronScheduleInspectorDialog>(
+            L["CronInspector:Title"],
+            parameters,
+            WideDialogOptions);
+    }
+
+    private async Task<bool> CanMutateAsync(JobCatalogPageState state)
+    {
+        if (_disposed || _state != state)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await state.ReauthorizeAsync() && !_disposed && _state == state;
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+            return false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        var state = _state;
+        _state = null;
+        if (state is not null)
+        {
+            state.Changed -= OnStateChangedAsync;
+            await state.DisposeAsync();
+        }
+    }
 
     private static DialogOptions DialogOptions { get; } = new()
     {
@@ -286,22 +308,5 @@
         MaxWidth = MaxWidth.Small
     };
 
-    private async Task<bool> RefreshAccessAsync()
-    {
-        _isAuthorized = await Access.IsAuthorizedAsync(_lifetime.Token);
-        _accessChecked = true;
-        if (!_isAuthorized)
-        {
-            _definitions = [];
-            _error = null;
-        }
-
-        return _isAuthorized;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _lifetime.CancelAsync();
-        _lifetime.Dispose();
-    }
+    private static DialogOptions WideDialogOptions { get; } = DialogOptions with { MaxWidth = MaxWidth.Medium };
 }

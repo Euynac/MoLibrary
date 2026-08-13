@@ -5,7 +5,9 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.Pages;
+using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.State;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
 using MudBlazor;
@@ -69,6 +71,14 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
             addToNav: true,
             navOrder: 101,
             accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
+        registry.RegisterLocalizedPage<JobDefinitionDetailPage, JobSchedulerResource>(
+            JobDefinitionDetailPage.PAGE_URL,
+            "Pages:JobDetail:Title",
+            Icons.Material.Filled.WorkHistory,
+            BuiltInNavigationCategoryIds.TaskScheduling,
+            addToNav: false,
+            navOrder: 102,
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
     }
 
     /// <inheritdoc />
@@ -76,6 +86,10 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
     {
         context.Services.TryAddScoped<OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>>();
         context.Services.TryAddScoped<IJobSchedulerUiAccess, JobSchedulerUiAccess>();
+        context.Services.TryAddScoped<SchedulerOverviewPageStateFactory>();
+        context.Services.TryAddScoped<JobCatalogPageStateFactory>();
+        context.Services.TryAddScoped<JobDefinitionDetailPageStateFactory>();
+        context.Services.TryAddScoped<JobExecutionsStateFactory>();
     }
 }
 

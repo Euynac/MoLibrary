@@ -1,0 +1,40 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<section class="execution-flow" aria-label="@L["Overview:Queue:AriaLabel"]">
+    @foreach (var state in Enum.GetValues<JobExecutionState>())
+    {
+        <a class="execution-flow__step execution-flow__step--@state.ToString().ToLowerInvariant()"
+           href="@GetExecutionHref(state)">
+            <MudIcon Icon="@GetStateIcon(state)" Size="Size.Medium" Color="@JobSchedulerUiPresentation.GetStateColor(state)" />
+            <div>
+                <span>@L[$"ExecutionStates:{state}"]</span>
+                <strong>@Counts.GetValueOrDefault(state)</strong>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="execution-flow__chevron" />
+        </a>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the current durable execution counts by state.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyDictionary<JobExecutionState, int> Counts { get; set; } =
+        new Dictionary<JobExecutionState, int>();
+
+    private static string GetExecutionHref(JobExecutionState state) =>
+        $"/job-scheduler/executions?states={Uri.EscapeDataString(state.ToString())}";
+
+    private static string GetStateIcon(JobExecutionState state) => state switch
+    {
+        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
+        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
+        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
+        JobExecutionState.Failed => Icons.Material.Filled.Error,
+        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
+        _ => Icons.Material.Filled.Circle
+    };
+}

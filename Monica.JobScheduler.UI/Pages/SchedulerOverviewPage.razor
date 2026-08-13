@@ -1,9 +1,10 @@
 @attribute [Route(PAGE_URL)]
 
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Components
+@using Monica.JobScheduler.UI.UIJobScheduler.State
 
-@inject JobSchedulerFacade Facade
-@inject IJobSchedulerUiAccess Access
+@inject SchedulerOverviewPageStateFactory PageStateFactory
 @inject IOptions<ModuleJobSchedulerUIOption> UiOptions
 @inject IStringLocalizer<JobSchedulerResource> L
 
@@ -12,260 +13,88 @@
 <PageTitle>@L["Overview:PageTitle"]</PageTitle>
 
 <SchedulerWorkspace Title="@L["Workspace:Pages:Overview:Title"]"
-                    Description="@L["Workspace:Pages:Overview:Description"]">
-    <SchedulerAccessBoundary AccessChecked="@_accessChecked" IsAuthorized="@_isAuthorized">
-    <div class="overview-page">
-        @if (_isLoading && _overview is null)
-        {
-            <div class="overview-page__loading" role="status">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
-            </div>
-        }
-        else if (_error is not null && _overview is null)
-        {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                @_error
-                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadAsync">
-                    @L["Common:Retry"]
-                </MudButton>
-            </MudAlert>
-        }
-        else if (_overview is not null)
-        {
-            var version = _overview.CatalogPublication.Version;
-            <section class="overview-page__release" aria-label="@L["Overview:Release:AriaLabel"]">
-                <div class="overview-page__release-heading">
-                    <div>
-                        <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Overview:Release:Desired"]</MudText>
-                        <MudText Typo="Typo.h5" Class="overview-page__identity">@(version.DesiredReleaseId ?? "—")</MudText>
-                    </div>
-                    <MudChip T="string"
-                             Color="@(_overview.IsConverged ? Color.Success : version.IsTransitionInProgress ? Color.Warning : Color.Info)"
-                             Variant="Variant.Filled"
-                             Icon="@(_overview.IsConverged ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Sync)">
-                        @GetConvergenceText()
-                    </MudChip>
-                </div>
-                <div class="overview-page__release-grid">
-                    <div><span>@L["Overview:Release:Active"]</span><strong>@(version.ActiveReleaseId ?? "—")</strong></div>
-                    <div><span>@L["Overview:Release:Generation"]</span><strong>@version.LastSeenDeploymentGeneration</strong></div>
-                    <div><span>@L["Overview:Release:Intent"]</span><strong>@version.ActiveIntentEpoch / @version.DesiredIntentEpoch</strong></div>
-                    <div><span>@L["Overview:Release:Activation"]</span><strong>@version.ActivationEpoch</strong></div>
-                    <div><span>@L["Overview:Release:Change"]</span><strong>@version.ChangeEpoch</strong></div>
-                    <div><span>@L["Overview:Release:Publication"]</span><strong>@version.PublicationEpoch</strong></div>
-                </div>
-                @if (version.IsTransitionInProgress)
+                    Description="@L["Workspace:Pages:Overview:Description"]"
+                    ActivePanelIndex="0">
+    @if (_state is not null)
+    {
+        <SchedulerAccessBoundary AccessChecked="@_state.AccessChecked" IsAuthorized="@_state.IsAuthorized">
+            <div class="overview-page">
+                @if (_state.IsLoading && _state.Overview is null)
                 {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                        @L["Overview:Release:TransitionMessage"]
+                    <div class="overview-page__loading" role="status">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                    </div>
+                }
+                else if (_state.Error is not null && _state.Overview is null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @_state.Error
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="_state.RefreshAsync">
+                            @L["Common:Retry"]
+                        </MudButton>
                     </MudAlert>
                 }
-            </section>
-
-            <section class="overview-page__metrics" aria-label="@L["Overview:Queue:AriaLabel"]">
-                @foreach (var state in Enum.GetValues<JobExecutionState>())
+                else if (_state.Overview is { } overview)
                 {
-                    <div class="overview-page__metric">
-                        <MudIcon Icon="@GetStateIcon(state)" Color="@JobSchedulerUiPresentation.GetStateColor(state)" />
-                        <div>
-                            <span>@L[$"ExecutionStates:{state}"]</span>
-                            <strong>@GetStateCount(state)</strong>
-                        </div>
+                    <ReleaseReadinessBand Overview="@overview" />
+                    <ExecutionStateFlow Counts="@overview.ExecutionStateCounts" />
+
+                    @if (_state.Error is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                            @L["Overview:RefreshFailed", _state.Error]
+                        </MudAlert>
+                    }
+
+                    <div class="overview-page__evidence-grid">
+                        <OwnerConvergencePanel Owners="@overview.Owners" />
+                        <RecentExecutionsPanel Executions="@overview.RecentExecutions"
+                                               IsRefreshing="@_state.IsLoading"
+                                               OnRefresh="_state.RefreshAsync" />
                     </div>
+
+                    <footer class="overview-page__freshness">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Overview:LastRefreshed", (_state.LastRefreshedUtc ?? overview.CapturedAtUtc).ToLocalTime().ToString("G")]
+                        </MudText>
+                    </footer>
                 }
-            </section>
-
-            <div class="overview-page__grid">
-                <MudPaper Outlined="true" Class="overview-page__panel pa-0">
-                    <div class="overview-page__panel-heading">
-                        <div>
-                            <MudText Typo="Typo.h6">@L["Overview:Owners:Title"]</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Owners:Description"]</MudText>
-                        </div>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                            @_overview.Owners.Count
-                        </MudChip>
-                    </div>
-                    <MudTable T="JobOwnerConvergence"
-                              Items="@_overview.Owners"
-                              Dense="true"
-                              Hover="true"
-                              Breakpoint="Breakpoint.None"
-                              Elevation="0">
-                        <HeaderContent>
-                            <MudTh>@L["Overview:Owners:Owner"]</MudTh>
-                            <MudTh>@L["Overview:Owners:Revision"]</MudTh>
-                            <MudTh>@L["Overview:Owners:Publication"]</MudTh>
-                            <MudTh>@L["Overview:Owners:Workers"]</MudTh>
-                            <MudTh>@L["Overview:Owners:Definitions"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["Overview:Owners:Owner"]"><strong>@context.OwnerId</strong></MudTd>
-                            <MudTd DataLabel="@L["Overview:Owners:Revision"]" Class="overview-page__mono" title="@context.WorkerRevisionId">
-                                @JobSchedulerUiPresentation.ShortIdentity(context.WorkerRevisionId)
-                            </MudTd>
-                            <MudTd DataLabel="@L["Overview:Owners:Publication"]">
-                                <MudIcon Icon="@(context.HasPublishedSnapshot ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Pending)"
-                                         Color="@(context.HasPublishedSnapshot ? Color.Success : Color.Warning)"
-                                         Size="Size.Small" />
-                            </MudTd>
-                            <MudTd DataLabel="@L["Overview:Owners:Workers"]">@context.ActiveWorkerCount</MudTd>
-                            <MudTd DataLabel="@L["Overview:Owners:Definitions"]">@context.ActiveDefinitionCount</MudTd>
-                        </RowTemplate>
-                        <NoRecordsContent>
-                            <MudText Class="pa-4" Color="Color.Secondary">@L["Overview:Owners:Empty"]</MudText>
-                        </NoRecordsContent>
-                    </MudTable>
-                </MudPaper>
-
-                <MudPaper Outlined="true" Class="overview-page__panel pa-0">
-                    <div class="overview-page__panel-heading">
-                        <div>
-                            <MudText Typo="Typo.h6">@L["Overview:Recent:Title"]</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Recent:Description"]</MudText>
-                        </div>
-                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                       Color="Color.Primary"
-                                       Disabled="@_isLoading"
-                                       OnClick="LoadAsync"
-                                       aria-label="@L["Common:Refresh"]" />
-                    </div>
-                    <MudTable T="JobExecutionInstance"
-                              Items="@_overview.RecentExecutions"
-                              Dense="true"
-                              Hover="true"
-                              Breakpoint="Breakpoint.None"
-                              Elevation="0">
-                        <HeaderContent>
-                            <MudTh>@L["Overview:Recent:Job"]</MudTh>
-                            <MudTh>@L["Overview:Recent:State"]</MudTh>
-                            <MudTh>@L["Overview:Recent:Created"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["Overview:Recent:Job"]" title="@context.Template.Revision.JobKey">
-                                @JobSchedulerUiPresentation.GetJobKeyLabel(context.Template.Revision.JobKey)
-                            </MudTd>
-                            <MudTd DataLabel="@L["Overview:Recent:State"]">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                         Color="@JobSchedulerUiPresentation.GetStateColor(context.State)">
-                                    @L[$"ExecutionStates:{context.State}"]
-                                </MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="@L["Overview:Recent:Created"]">@context.CreatedAtUtc.ToLocalTime().ToString("g")</MudTd>
-                        </RowTemplate>
-                        <NoRecordsContent>
-                            <MudText Class="pa-4" Color="Color.Secondary">@L["Overview:Recent:Empty"]</MudText>
-                        </NoRecordsContent>
-                    </MudTable>
-                </MudPaper>
             </div>
-        }
-    </div>
-    </SchedulerAccessBoundary>
+        </SchedulerAccessBoundary>
+    }
 </SchedulerWorkspace>
 
 @code {
     public const string PAGE_URL = "/job-scheduler";
 
-    private readonly CancellationTokenSource _lifetime = new();
-    private JobSchedulerOverview? _overview;
-    private PeriodicTimer? _timer;
-    private Task? _refreshLoop;
-    private bool _accessChecked;
-    private bool _isAuthorized;
-    private bool _isLoading;
-    private string? _error;
+    private SchedulerOverviewPageState? _state;
+    private bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
-        if (!_lifetime.IsCancellationRequested && UiOptions.Value.AutoRefreshInterval > TimeSpan.Zero)
-        {
-            _timer = new PeriodicTimer(UiOptions.Value.AutoRefreshInterval);
-            _refreshLoop = RefreshLoopAsync(_timer, _lifetime.Token);
-        }
+        _state = PageStateFactory.Create(UiOptions.Value.AutoRefreshInterval);
+        _state.Changed += OnStateChangedAsync;
+        await _state.InitializeAsync();
     }
 
-    private async Task LoadAsync()
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
     {
-        if (_isLoading || _lifetime.IsCancellationRequested)
+        if (_disposed)
         {
             return;
         }
 
-        _isLoading = true;
-        try
+        _disposed = true;
+        var state = _state;
+        _state = null;
+        if (state is not null)
         {
-            _isAuthorized = await Access.IsAuthorizedAsync(_lifetime.Token);
-            _accessChecked = true;
-            if (!_isAuthorized)
-            {
-                _overview = null;
-                _error = null;
-                return;
-            }
-
-            var result = await Facade.GetOverviewAsync(_lifetime.Token);
-            if (result.IsFailed(out var error, out var overview))
-            {
-                _error = error.Message;
-                return;
-            }
-
-            _overview = overview;
-            _error = null;
+            state.Changed -= OnStateChangedAsync;
+            await state.DisposeAsync();
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
-        {
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
-    {
-        try
-        {
-            while (await timer.WaitForNextTickAsync(cancellationToken))
-            {
-                await InvokeAsync(LoadAsync);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-    }
-
-    private int GetStateCount(JobExecutionState state) =>
-        _overview?.ExecutionStateCounts.GetValueOrDefault(state) ?? 0;
-
-    private string GetConvergenceText() => _overview!.IsConverged
-        ? L["Overview:Release:Converged"]
-        : _overview.CatalogPublication.Version.IsTransitionInProgress
-            ? L["Overview:Release:Transitioning"]
-            : L["Overview:Release:WaitingWorkers"];
-
-    private static string GetStateIcon(JobExecutionState state) => state switch
-    {
-        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
-        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
-        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
-        JobExecutionState.Failed => Icons.Material.Filled.Error,
-        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
-        _ => Icons.Material.Filled.Circle
-    };
-
-    public async ValueTask DisposeAsync()
-    {
-        await _lifetime.CancelAsync();
-        _timer?.Dispose();
-        if (_refreshLoop is not null)
-        {
-            await _refreshLoop;
-        }
-        _lifetime.Dispose();
     }
 }

@@ -1,0 +1,66 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<section class="owner-panel">
+    <header class="owner-panel__heading">
+        <div>
+            <MudText Typo="Typo.h6" HtmlTag="h2">@L["Overview:Owners:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Owners:Description"]</MudText>
+        </div>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+            @Owners.Count
+        </MudChip>
+    </header>
+
+    <div class="owner-panel__table-scroll">
+        <MudTable T="JobOwnerConvergence"
+                  Items="@Owners"
+                  Dense="true"
+                  Hover="true"
+                  Breakpoint="Breakpoint.None"
+                  Elevation="0">
+            <HeaderContent>
+                <MudTh>@L["Overview:Owners:Owner"]</MudTh>
+                <MudTh>@L["Overview:Owners:Revision"]</MudTh>
+                <MudTh>@L["Overview:Owners:Publication"]</MudTh>
+                <MudTh>@L["Overview:Owners:Workers"]</MudTh>
+                <MudTh>@L["Overview:Owners:Definitions"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["Overview:Owners:Owner"]">
+                    <MudTooltip Text="@context.OwnerId">
+                        <strong class="owner-panel__ellipsis">@context.OwnerId</strong>
+                    </MudTooltip>
+                </MudTd>
+                <MudTd DataLabel="@L["Overview:Owners:Revision"]">
+                    <MudTooltip Text="@context.WorkerRevisionId">
+                        <code class="owner-panel__identity">@context.WorkerRevisionId</code>
+                    </MudTooltip>
+                </MudTd>
+                <MudTd DataLabel="@L["Overview:Owners:Publication"]">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Text"
+                             Color="@(context.HasPublishedSnapshot ? Color.Success : Color.Warning)"
+                             Icon="@(context.HasPublishedSnapshot ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Pending)">
+                        @(context.HasPublishedSnapshot ? L["Overview:Owners:Published"] : L["Overview:Owners:Pending"])
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="@L["Overview:Owners:Workers"]">@context.ActiveWorkerCount</MudTd>
+                <MudTd DataLabel="@L["Overview:Owners:Definitions"]">@context.ActiveDefinitionCount</MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4" Color="Color.Secondary">@L["Overview:Owners:Empty"]</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    </div>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the desired-owner publication and runtime capability projections.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<JobOwnerConvergence> Owners { get; set; } = [];
+}
