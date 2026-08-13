@@ -1,225 +1,232 @@
-@using Monica.DataChannel.UIDataChannel.Components
-@using System.Timers
 @using Monica.DataChannel.Middlewares
+@using Monica.DataChannel.Pipeline
+@inject IStringLocalizer<DataChannelResource> L
+@implements IAsyncDisposable
 
 <MudDialog>
     <DialogContent>
-        <MudStack Spacing="3">
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_filterKeyword" 
+        <div class="debugger-console">
+            <section class="debugger-controls" aria-label="@L["Debugger:Controls:AriaLabel"]">
+                <div class="debugger-controls__field debugger-controls__field--query">
+                    <MudTextField @bind-Value="_filterKeyword"
                                   T="string"
-                                  Label="过滤关键字" 
-                                  Placeholder="输入要监听的消息内容"
+                                  Label="@L["Debugger:Fields:FilterKeyword"]"
+                                  Placeholder="@L["Debugger:Fields:FilterPlaceholder"]"
                                   Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
                                   Immediate="true"
-                                  Disabled="_isListening" />
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudNumericField @bind-Value="_maxQueueSize" 
+                                  Disabled="@_isListening" />
+                </div>
+                <div class="debugger-controls__field">
+                    <MudNumericField @bind-Value="_maxQueueSize"
                                      T="int"
-                                     Label="队列长度" 
-                                     Min="1" 
+                                     Label="@L["Debugger:Fields:QueueLength"]"
+                                     Min="1"
                                      Max="1000"
                                      Variant="Variant.Outlined"
-                                     Disabled="_isListening" />
-                </MudItem>
-                <MudItem xs="12" md="2" Class="d-flex align-center">
-                    <MudButton Color="@(_isListening ? Color.Error : Color.Primary)" 
-                               Variant="Variant.Filled"
-                               FullWidth="true"
-                               OnClick="ToggleListening">
-                        @if (_isListening)
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Stop" Class="mr-2" />
-                            <text>停止监听</text>
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-2" />
-                            <text>开始监听</text>
-                        }
-                    </MudButton>
-                </MudItem>
-            </MudGrid>
+                                     Margin="Margin.Dense"
+                                     Disabled="@_isListening" />
+                </div>
+                <MudButton Color="@(_isListening ? Color.Error : Color.Primary)"
+                           Variant="Variant.Filled"
+                           StartIcon="@(_isListening ? Icons.Material.Filled.Stop : Icons.Material.Filled.PlayArrow)"
+                           OnClick="ToggleListeningAsync">
+                    @(_isListening ? L["Debugger:Actions:Stop"] : L["Debugger:Actions:Start"])
+                </MudButton>
+            </section>
 
-            @if (_isListening)
-            {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
-                        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
-                        <MudText>正在监听消息...</MudText>
-                        <MudSpacer />
-                        <MudText Typo="Typo.body2">已捕获: @_messages.Count 条</MudText>
-                    </MudStack>
-                </MudAlert>
-            }
-
-            <MudPaper Elevation="0" Class="pa-2" Style="border: 1px solid var(--mud-palette-lines-default);">
-                <MudStack Spacing="2">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="pb-2">
-                        <MudText Typo="Typo.h6">捕获的消息</MudText>
-                        <MudSpacer />
-                        <MudButton Variant="Variant.Text" 
-                                   Color="Color.Primary" 
+            <section class="debugger-stream" aria-labelledby="debugger-stream-title">
+                <header class="debugger-stream__header">
+                    <div>
+                        <MudText Typo="Typo.overline" Color="@(_isListening ? Color.Success : Color.Secondary)">
+                            @(_isListening ? L["Debugger:States:Listening"] : L["Debugger:States:Paused"])
+                        </MudText>
+                        <MudText Typo="Typo.h6" id="debugger-stream-title">@L["Debugger:CapturedMessages"]</MudText>
+                    </div>
+                    <div class="debugger-stream__tools">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="@(_isListening ? Color.Success : Color.Default)">
+                            @L["Debugger:MessageCount", _messages.Count]
+                        </MudChip>
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Primary"
                                    Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.ClearAll"
                                    OnClick="ClearMessages"
                                    Disabled="@(_messages.Count == 0)">
-                            <MudIcon Icon="@Icons.Material.Filled.Clear" Size="Size.Small" Class="mr-1" />
-                            清空
+                            @L["Common:Actions:Clear"]
                         </MudButton>
-                    </MudStack>
+                    </div>
+                </header>
 
-                    <MudDivider />
+                @if (_messages.Count == 0)
+                {
+                    <div class="debugger-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Default" />
+                        <MudText Typo="Typo.subtitle1">@L["Debugger:States:NoMessages"]</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Debugger:States:NoMessagesDescription"]</MudText>
+                    </div>
+                }
+                else
+                {
+                    <div class="debugger-message-list">
+                        @foreach (var message in _messages.OrderByDescending(item => item.Timestamp))
+                        {
+                            var isExpanded = _expandedMessages.Contains(message);
+                            <article class="debugger-message">
+                                <button type="button"
+                                        class="debugger-message__summary"
+                                        @onclick="@(() => ToggleMessageExpansion(message))"
+                                        aria-expanded="@isExpanded">
+                                    <span class="debugger-message__direction debugger-message__direction--@GetSourceTone(message.Source)">
+                                        <MudIcon Icon="@GetSourceIcon(message.Source)" Size="Size.Small" />
+                                        <span>@GetSourceLabel(message.Source)</span>
+                                    </span>
+                                    <span class="debugger-message__type">@message.MessageType</span>
+                                    <time class="debugger-message__time">@message.Timestamp.ToString("HH:mm:ss.fff")</time>
+                                    @if (message.Metadata?.Count > 0)
+                                    {
+                                        <span class="debugger-message__metadata" title="@L["Debugger:MetadataAvailable"]">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                                        </span>
+                                    }
+                                    <MudIcon Icon="@(isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                             Size="Size.Small" />
+                                </button>
 
-                    @if (_messages.Count == 0)
-                    {
-                        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 300px;">
-                            <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Default" />
-                            <MudText Typo="Typo.body1" Color="Color.Default">暂无捕获的消息</MudText>
-                        </MudStack>
-                    }
-                    else
-                    {
-                        <MudStack Spacing="2" Style="max-height: 400px; overflow-y: auto;">
-                            @foreach (var msg in _messages.OrderByDescending(m => m.Timestamp))
-                            {
-                                <MudCard Elevation="1">
-                                    <MudCardContent Class="pa-3">
-                                        <MudStack Spacing="2">
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                    <MudChip T="string" 
-                                                             Size="Size.Small" 
-                                                             Color="@(msg.Source == Pipeline.ChannelSide.Inner ? Color.Info : Color.Success)">
-                                                        @msg.Source
-                                                    </MudChip>
-                                                    <MudChip T="string" 
-                                                             Size="Size.Small" 
-                                                             Color="Color.Primary" 
-                                                             Variant="Variant.Outlined">
-                                                        @msg.MessageType
-                                                    </MudChip>
-                                                    <MudText Typo="Typo.caption" Color="Color.Default">
-                                                        @msg.Timestamp.ToString("HH:mm:ss.fff")
-                                                    </MudText>
-                                                </MudStack>
-                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                    @if (msg.Metadata?.Any() == true)
-                                                    {
-                                                        <MudTooltip Text="包含元数据">
-                                                            <MudIcon Icon="@Icons.Material.Filled.Info" 
-                                                                     Size="Size.Small" 
-                                                                     Color="Color.Info" />
-                                                        </MudTooltip>
-                                                    }
-                                                    <MudIconButton Icon="@(_expandedMessages.Contains(msg) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" 
-                                                                   Size="Size.Small"
-                                                                   OnClick="() => ToggleMessageExpansion(msg)" />
-                                                </MudStack>
-                                            </MudStack>
-
-                                            @if (!_expandedMessages.Contains(msg))
+                                @if (!isExpanded)
+                                {
+                                    <p class="debugger-message__preview">@GetMessagePreview(message.FormattedContent)</p>
+                                }
+                                else
+                                {
+                                    <div class="debugger-message__details">
+                                        <MudTabs Elevation="0" Rounded="true" Outlined="true" ApplyEffectsToContainer="true">
+                                            <MudTabPanel Text="@L["Debugger:Tabs:FormattedContent"]" PanelClass="pa-0">
+                                                <pre class="debugger-message__payload">@message.FormattedContent</pre>
+                                            </MudTabPanel>
+                                            @if (message.Metadata?.Count > 0)
                                             {
-                                                <MudText Typo="Typo.body2" Style="word-break: break-all; color: var(--mud-palette-text-secondary);">
-                                                    @GetMessagePreview(msg.FormattedContent)
-                                                </MudText>
+                                                <MudTabPanel Text="@L["Debugger:Tabs:Metadata"]" PanelClass="pa-3">
+                                                    <MetadataDisplay Metadata="message.Metadata" />
+                                                </MudTabPanel>
                                             }
-
-                                            @if (_expandedMessages.Contains(msg))
-                                            {
-                                                <MudDivider />
-                                                <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
-                                                    <MudTabPanel Text="格式化内容" PanelClass="pa-2">
-                                                        <MudPaper Elevation="0" Class="pa-2" Style="background-color: var(--mud-palette-background-gray);">
-                                                            <pre style="margin: 0; font-family: monospace; font-size: 0.875rem; overflow-x: auto;">@msg.FormattedContent</pre>
-                                                        </MudPaper>
-                                                    </MudTabPanel>
-                                                    @if (msg.Metadata?.Any() == true)
-                                                    {
-                                                        <MudTabPanel Text="元数据" PanelClass="pa-2">
-                                                            <MetadataDisplay Metadata="msg.Metadata" />
-                                                        </MudTabPanel>
-                                                    }
-                                                </MudTabs>
-                                            }
-                                        </MudStack>
-                                    </MudCardContent>
-                                </MudCard>
-                            }
-                        </MudStack>
-                    }
-                </MudStack>
-            </MudPaper>
-        </MudStack>
+                                        </MudTabs>
+                                    </div>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
     </DialogContent>
 </MudDialog>
 
 @code {
-    [CascadingParameter] IDialogReference? MudDialog { get; set; }
-    [Parameter] public MessageDebuggerMiddleware Middleware { get; set; } = null!;
+    [Parameter, EditorRequired]
+    public MessageDebuggerMiddleware Middleware { get; set; } = null!;
 
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private readonly HashSet<MessageDebuggerMiddleware.DebugMessage> _expandedMessages = [];
+    private CancellationTokenSource? _refreshCts;
+    private Task? _refreshTask;
     private string _filterKeyword = string.Empty;
     private int _maxQueueSize = 100;
-    private bool _isListening = false;
-    private List<MessageDebuggerMiddleware.DebugMessage> _messages = new();
-    private HashSet<MessageDebuggerMiddleware.DebugMessage> _expandedMessages = new();
-    private Timer? _refreshTimer;
+    private bool _isListening;
+    private bool _disposed;
+    private List<MessageDebuggerMiddleware.DebugMessage> _messages = [];
 
     protected override void OnInitialized()
     {
-        // Initialize default state
         _filterKeyword = Middleware.FilterKeyword;
         _maxQueueSize = Middleware.MaxQueueSize;
         _isListening = Middleware.IsActive;
-        
+        RefreshMessages();
         if (_isListening)
         {
-            RefreshMessages();
-            StartRefreshTimer();
+            StartRefreshLoop();
         }
     }
 
-    private void ToggleListening()
+    private async Task ToggleListeningAsync()
     {
-        _isListening = !_isListening;
+        if (_disposed)
+        {
+            return;
+        }
 
+        _isListening = !_isListening;
         if (_isListening)
         {
-            // Apply settings and start listening
             Middleware.FilterKeyword = _filterKeyword;
             Middleware.MaxQueueSize = _maxQueueSize;
             Middleware.IsActive = true;
-            StartRefreshTimer();
+            RefreshMessages();
+            StartRefreshLoop();
+            return;
         }
-        else
-        {
-            // Stop listening
-            Middleware.IsActive = false;
-            StopRefreshTimer();
-        }
+
+        Middleware.IsActive = false;
+        await StopRefreshLoopAsync();
     }
 
-    private void StartRefreshTimer()
+    private void StartRefreshLoop()
     {
-        _refreshTimer?.Dispose();
-        _refreshTimer = new Timer(500); // Refresh every 500ms
-        _refreshTimer.Elapsed += async (sender, e) =>
+        if (_disposed || _refreshTask is { IsCompleted: false })
         {
-            await InvokeAsync(() =>
+            return;
+        }
+
+        _refreshCts = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
+        _refreshTask = RefreshLoopAsync(_refreshCts.Token);
+    }
+
+    private async Task RefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                RefreshMessages();
-                StateHasChanged();
-            });
-        };
-        _refreshTimer.Start();
+                await InvokeAsync(() =>
+                {
+                    if (_disposed)
+                    {
+                        return;
+                    }
+
+                    RefreshMessages();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Closing the dialog and pausing capture are normal cancellation paths.
+        }
     }
 
-    private void StopRefreshTimer()
+    private async Task StopRefreshLoopAsync()
     {
-        _refreshTimer?.Stop();
-        _refreshTimer?.Dispose();
-        _refreshTimer = null;
+        var refreshCts = _refreshCts;
+        var refreshTask = _refreshTask;
+        _refreshCts = null;
+        _refreshTask = null;
+        if (refreshCts is null)
+        {
+            return;
+        }
+
+        refreshCts.Cancel();
+        if (refreshTask is not null)
+        {
+            await refreshTask;
+        }
+
+        refreshCts.Dispose();
     }
 
     private void RefreshMessages()
@@ -230,19 +237,15 @@
     private void ClearMessages()
     {
         Middleware.ClearDebugMessages();
-        _messages.Clear();
+        _messages = [];
         _expandedMessages.Clear();
     }
 
     private void ToggleMessageExpansion(MessageDebuggerMiddleware.DebugMessage message)
     {
-        if (_expandedMessages.Contains(message))
+        if (!_expandedMessages.Add(message))
         {
             _expandedMessages.Remove(message);
-        }
-        else
-        {
-            _expandedMessages.Add(message);
         }
     }
 
@@ -250,20 +253,33 @@
     {
         if (string.IsNullOrEmpty(content))
         {
-            return "(空消息)";
+            return L["Debugger:Values:EmptyMessage"];
         }
 
         var firstLine = content.Split('\n').FirstOrDefault() ?? content;
-        if (firstLine.Length > 100)
-        {
-            return firstLine.Substring(0, 100) + "...";
-        }
-        return firstLine;
+        return firstLine.Length > 120 ? $"{firstLine[..120]}…" : firstLine;
     }
 
+    private string GetSourceLabel(ChannelSide source) => source == ChannelSide.Inner
+        ? L["Debugger:Sources:Ingress"]
+        : L["Debugger:Sources:Egress"];
 
-    public void Dispose()
+    private static string GetSourceTone(ChannelSide source) => source == ChannelSide.Inner ? "ingress" : "egress";
+
+    private static string GetSourceIcon(ChannelSide source) => source == ChannelSide.Inner
+        ? Icons.Material.Filled.SouthEast
+        : Icons.Material.Filled.NorthEast;
+
+    public async ValueTask DisposeAsync()
     {
-        StopRefreshTimer();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _lifetimeCts.Cancel();
+        await StopRefreshLoopAsync();
+        _lifetimeCts.Dispose();
     }
 }

@@ -1,17 +1,74 @@
-.diff-text-input {
-    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+.diff-highlight-page {
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
 }
 
-/* Make sure the text box displays correctly */
-::deep .diff-text-input .mud-input-control .mud-input {
-    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
-    font-size: 13px;
-    line-height: 1.4;
+.diff-highlight-page ::deep .diff-highlight-page__container {
+    width: 100%;
+    min-width: 0;
+    padding: clamp(.75rem, 2vw, 2rem);
 }
 
-/* Responsive adjustments */
-@media (max-width: 960px) {
-    ::deep .diff-text-input .mud-input-control .mud-input {
-        font-size: 12px;
+.diff-highlight-page__editor {
+    min-width: 0;
+    height: 31rem;
+}
+
+.diff-highlight-page__editor ::deep .mud-paper,
+.diff-highlight-page__editor ::deep .mud-stack {
+    height: 100%;
+    min-width: 0;
+}
+
+.diff-highlight-page ::deep .diff-text-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.diff-highlight-page ::deep .diff-text-input .mud-input-control,
+.diff-highlight-page ::deep .diff-text-input .mud-input,
+.diff-highlight-page ::deep .diff-text-input textarea {
+    min-width: 0;
+    font-family: var(--mo-font-family-mono);
+    font-size: .8125rem;
+    line-height: 1.45;
+}
+
+.diff-highlight-page__output {
+    max-width: 100%;
+    margin: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    font-family: var(--mo-font-family-mono);
+}
+
+@media (max-width: 929px) {
+    .diff-highlight-page__editor {
+        height: 25rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .diff-highlight-page ::deep .diff-highlight-page__container {
+        padding: .75rem;
+    }
+
+    .diff-highlight-page__editor {
+        height: 22rem;
+    }
+
+    .diff-highlight-page ::deep .diff-text-input .mud-input,
+    .diff-highlight-page ::deep .diff-text-input textarea {
+        font-size: .75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diff-highlight-page ::deep .mud-button-root,
+    .diff-highlight-page ::deep .mud-expand-panel,
+    .diff-highlight-page ::deep .mud-progress-circular {
+        transition: none !important;
+        animation: none !important;
     }
 }

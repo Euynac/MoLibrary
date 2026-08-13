@@ -1,0 +1,15 @@
+{
+  "Unavailable": {
+    "Eyebrow": "可选性能分析模块",
+    "RuntimeMetrics": {
+      "PageTitle": "运行时指标不可用",
+      "Title": "未启用运行时指标",
+      "Description": "请在当前主机中启用运行时指标 UI 模块，以采集并检查实时进程证据。"
+    },
+    "MemoryAnalysis": {
+      "PageTitle": "内存分析不可用",
+      "Title": "未启用内存分析",
+      "Description": "请在当前主机中启用内存分析 UI 模块，以检查内存、GC 与分配证据。"
+    }
+  }
+}

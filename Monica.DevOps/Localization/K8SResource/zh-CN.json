@@ -7,7 +7,16 @@
   "Page": {
     "DocumentTitle": "K8S 运维",
     "Title": "K8S 运维",
+    "Eyebrow": "Monica / 集群控制",
     "Subtitle": "基于 SSH + 远程 kubectl 的运行时配置与受控重启操作。",
+    "Summary": {
+      "AriaLabel": "Kubernetes 集群运行摘要",
+      "ExecutionNode": "执行节点",
+      "Namespaces": "命名空间",
+      "Resources": "已加载资源",
+      "Restrictions": "保护关键字",
+      "NotConfigured": "未配置"
+    },
     "SearchHelper": "搜索当前已加载资源的全部信息。",
     "LoadingResources": "正在从 {1} 加载{0}...",
     "SelectNamespace": "请选择一个命名空间以浏览资源。",
@@ -47,18 +56,6 @@
     "Replicas": "Ready / Desired",
     "LastRestart": "最后重启时间",
     "Actions": "操作"
-  },
-  "Chips": {
-    "ExecutionNodeMissing": "执行节点：未配置",
-    "ExecutionNode": "执行节点：{0}",
-    "NamespaceScopeAll": "命名空间范围：全部",
-    "NamespaceScopeCount": "命名空间范围：{0} 项",
-    "SensitiveRestrictionsNone": "敏感限制：无",
-    "SensitiveRestrictionsCount": "敏感限制：{0}",
-    "CurrentListRefreshing": "当前列表：刷新中",
-    "CurrentListNotLoaded": "当前列表：未加载",
-    "CurrentListAt": "当前列表：{0}",
-    "SelectedCount": "已选择：{0}"
   },
   "ResourceTypes": {
     "Services": "Services",

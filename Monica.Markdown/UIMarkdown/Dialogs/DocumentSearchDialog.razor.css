@@ -58,7 +58,7 @@
 }
 
 ::deep .document-search-input .mud-input-outlined-border {
-    border-radius: 20px;
+    border-radius: 8px;
 }
 
 ::deep input.document-search-input.mud-input-slot.mud-input-root {
@@ -112,7 +112,7 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    border-radius: 24px;
+    border-radius: 12px;
 }
 
 .document-search-state ::deep .document-search-empty-icon {
@@ -125,25 +125,22 @@
     flex-direction: column;
     gap: 12px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 22px;
-    background:
-        linear-gradient(180deg,
-            rgba(var(--mud-palette-surface-rgb), 0.96),
-            rgba(var(--mud-palette-primary-rgb), 0.02));
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
     padding: 16px 18px;
     text-align: left;
     cursor: pointer;
-    transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
 .document-search-result:hover {
-    transform: translateY(-1px);
-    border-color: rgba(var(--mud-palette-primary-rgb), 0.24);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-lines-default));
+    background-color: var(--mud-palette-action-default-hover);
+    box-shadow: var(--mud-elevation-2);
 }
 
 .document-search-result:focus-visible {
-    outline: 2px solid rgba(var(--mud-palette-primary-rgb), 0.36);
+    outline: 2px solid var(--mud-palette-primary);
     outline-offset: 2px;
 }
 
@@ -168,13 +165,7 @@
     text-transform: uppercase;
     color: var(--mud-palette-primary);
     font-weight: 700;
-    background:
-        linear-gradient(135deg,
-            rgba(var(--mud-palette-primary-rgb), 0.16),
-            rgba(var(--mud-palette-primary-rgb), 0.07));
-    box-shadow:
-        inset 0 1px 0 rgba(var(--mud-palette-surface-rgb), 0.42),
-        0 6px 16px rgba(var(--mud-palette-primary-rgb), 0.08);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface));
 }
 
 .document-search-result-location {
@@ -198,7 +189,7 @@
 
 .document-search-result-preview {
     padding: 12px 14px;
-    border-radius: 16px;
+    border-radius: 8px;
     font-size: 0.95rem;
     line-height: 1.65;
     color: var(--mud-palette-text-secondary);

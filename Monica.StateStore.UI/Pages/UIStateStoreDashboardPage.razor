@@ -9,15 +9,19 @@
 @inject IOptions<ModuleStateStoreUIOption> Options
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<StateStoreResource> L
+@implements IDisposable
 
 <PageTitle>@L["Dashboard:PageTitle"]</PageTitle>
 
 <div class="state-store-dashboard-page">
     <MudPaper Class="dashboard-banner" Elevation="0">
-        <div class="dashboard-banner__copy">
-            <MudText Typo="Typo.overline" Class="dashboard-eyebrow">@L["Dashboard:Eyebrow"]</MudText>
-            <MudText Typo="Typo.h5">@L["Dashboard:Title"]</MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Dashboard:Subtitle"]</MudText>
+        <div class="dashboard-banner__identity">
+            <span class="dashboard-banner__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Storage" /></span>
+            <div class="dashboard-banner__copy">
+                <MudText Typo="Typo.overline" Class="dashboard-eyebrow">@L["Dashboard:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h4">@L["Dashboard:Title"]</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Dashboard:Subtitle"]</MudText>
+            </div>
         </div>
 
         <div class="dashboard-banner__metrics">
@@ -79,6 +83,7 @@
 
     private List<StateStoreProviderInfo> providers = [];
     private bool isLoading;
+    private bool isDisposed;
 
     private StateStoreProviderInfo? DefaultProvider => providers.FirstOrDefault(provider => provider.IsDefaultStateStore);
 
@@ -88,7 +93,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !isDisposed)
         {
             await LoadProvidersAsync();
         }
@@ -96,10 +101,20 @@
 
     private async Task LoadProvidersAsync()
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         isLoading = true;
         StateHasChanged();
 
         await Task.Yield();
+
+        if (isDisposed)
+        {
+            return;
+        }
 
         if (StateStoreService.GetRegisteredProviders().IsFailed(out var error, out var data))
         {
@@ -111,6 +126,11 @@
         }
 
         isLoading = false;
-        StateHasChanged();
+        if (!isDisposed)
+        {
+            StateHasChanged();
+        }
     }
+
+    public void Dispose() => isDisposed = true;
 }

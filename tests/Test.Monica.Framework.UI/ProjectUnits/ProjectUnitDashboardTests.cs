@@ -57,6 +57,40 @@ public sealed class ProjectUnitDashboardTests
     }
 
     [Fact]
+    public async Task Long_operational_identifiers_remain_available_to_responsive_surfaces()
+    {
+        const string version = "1.0.0-rc.12+01be8bf141939bf820187df9f2fd2775313434e7";
+        const string key = "Ordering.Application.Commands.Handlers.ApproveOrderWithAnUninterruptedTechnicalIdentity";
+        var summary = CreateSummary(key);
+        var snapshot = CreateSnapshot(
+            summary,
+            new ProjectUnitServiceIdentity
+            {
+                ProjectName = "Ordering.Api",
+                AppId = "ordering-api",
+                AppName = "Ordering Service",
+                AppVersion = version,
+                DomainName = "Ordering"
+            });
+        await using var context = new ProjectUnitsUiTestContext(
+            new StubProjectUnitsUiDataSource(Res.Ok(snapshot)));
+
+        var cut = context.Render<ProjectUnitDashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var versionChip = cut.Find(".project-unit-dashboard__service-version");
+            versionChip.TextContent.Should().Contain(version);
+            versionChip.GetAttribute("title").Should().Be(version);
+
+            var gapKey = cut.Find(".project-unit-dashboard__gap-key");
+            gapKey.TextContent.Should().Contain(key);
+            gapKey.GetAttribute("title").Should().Be(key);
+            cut.Find(".project-unit-dashboard__gap-chevron").Should().NotBeNull();
+        });
+    }
+
+    [Fact]
     public async Task Empty_dashboard_renders_no_data_state_and_never_full_coverage()
     {
         var baseline = CreateSnapshot();
@@ -187,11 +221,12 @@ public sealed class ProjectUnitDashboardTests
         };
     }
 
-    private static ProjectUnitSummary CreateSummary()
+    private static ProjectUnitSummary CreateSummary(
+        string key = "Ordering.Application.CommandApproveOrder")
     {
         return new ProjectUnitSummary
         {
-            Key = "Ordering.Application.CommandApproveOrder",
+            Key = key,
             Title = "Approve Order",
             Description = "Approves an eligible order.",
             UnitType = EProjectUnitType.ApplicationService,

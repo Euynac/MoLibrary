@@ -1,0 +1,26 @@
+.provider-list-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.provider-list-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.provider-list-panel__rows {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.provider-list-panel__state {
+    display: grid;
+    min-height: 160px;
+    place-items: center;
+}

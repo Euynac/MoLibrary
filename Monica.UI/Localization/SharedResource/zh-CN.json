@@ -101,6 +101,9 @@
       "NewValue": "新值",
       "OldValue": "旧值"
     },
+    "OriginalContent": "原始内容",
+    "NewContent": "新内容",
+    "NoDifferences": "两段文本没有差异。",
     "ComparisonFailed": "差异对比失败",
     "ComparisonError": "差异对比出错"
   },
@@ -143,12 +146,16 @@
     "NotProvided": "未提供堆栈信息"
   },
   "Error": {
-    "Title": "Error.",
-    "Message": "An error occurred while processing your request.",
-    "RequestId": "Request ID:",
-    "DevelopmentMode": "Development Mode",
-    "DevelopmentModeWarning": "Swapping to Development environment will display more detailed information about the error that occurred.",
-    "DevelopmentModeNote": "The Development environment shouldn't be enabled for deployed applications."
+    "PageTitle": "请求处理失败",
+    "Eyebrow": "MONICA / 请求状态",
+    "Title": "请求处理失败",
+    "Message": "应用未能完成此请求，且未继续执行后续操作。",
+    "RequestId": "请求 ID",
+    "BackToOverview": "返回概览",
+    "DevelopmentMode": "本地故障排查",
+    "DevelopmentModeWarning": "在本地调试时，开发环境可以提供更详细的错误证据。",
+    "DevelopmentModeNote": "请勿在已部署的宿主上启用开发环境，因为异常详情可能暴露敏感信息。",
+    "DevelopmentModeInstruction": "如需本地调试，请将 ASPNETCORE_ENVIRONMENT 设置为 Development，然后重启应用。"
   },
   "PageNotFound": {
     "PageTitle": "页面未找到",

@@ -1,97 +1,69 @@
 .diff-viewer {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
     border: 1px solid var(--mud-palette-divider);
     border-radius: 8px;
-    overflow: hidden;
-    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
-    font-size: 13px;
-    line-height: 1.4;
-    position: relative;
+    font-family: var(--mo-font-family-mono);
+    font-size: .8125rem;
+    line-height: 1.45;
 }
 
 .diff-error {
-    margin: 16px;
-    border-radius: 4px;
+    margin: 1rem;
+    border-radius: 8px;
 }
 
 .diff-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background-color: var(--mud-palette-background-gray);
+    gap: .5rem;
+    min-width: 0;
+    padding: .75rem 1rem;
     border-bottom: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-background-gray);
     flex-wrap: wrap;
 }
 
 .diff-content {
-    max-height: 600px;
-    overflow-y: auto;
-    background-color: var(--mud-palette-surface);
+    max-height: 38rem;
+    min-width: 0;
+    overflow: auto;
+    background: var(--mud-palette-surface);
+    scrollbar-color: var(--mud-palette-text-disabled) var(--mud-palette-background-gray);
+    scrollbar-width: thin;
 }
 
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .diff-viewer {
-        font-size: 12px;
-    }
+.diff-viewer ::deep .mud-alert {
+    margin: 1rem;
 }
 
-/* Scroll bar style */
-.diff-content::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.diff-content::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-gray);
-}
-
-.diff-content::-webkit-scrollbar-thumb {
-    background: var(--mud-palette-text-disabled);
-    border-radius: 4px;
-}
-
-.diff-content::-webkit-scrollbar-thumb:hover {
-    background: var(--mud-palette-text-secondary);
-}
-
-/* Empty state style */
-.diff-viewer .mud-alert {
-    margin: 16px;
-}
-
-
-/* View mode switch button style */
-.view-mode-toggle {
+.view-mode-toggle,
+.display-mode-chips {
     display: flex;
-    gap: 4px;
-}
-
-.view-mode-toggle .mud-chip {
-    transition: all 0.2s ease;
+    gap: .25rem;
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
 .display-mode-chips {
-    display: flex;
-    gap: 4px;
-    margin-right: 8px;
+    margin-inline-end: .5rem;
 }
 
-.display-mode-chips .mud-chip {
-    transition: all 0.2s ease;
-}
-
-
-/* Responsive design - control buttons */
-@media (max-width: 768px) {
-    .display-mode-chips {
-        flex-wrap: wrap;
-        gap: 2px;
+@media (max-width: 600px) {
+    .diff-viewer {
+        font-size: .75rem;
     }
-    
-    .view-mode-toggle {
-        flex-wrap: wrap;
-        gap: 2px;
+
+    .diff-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diff-viewer ::deep .mud-button-root,
+    .diff-viewer ::deep .mud-chip {
+        transition: none !important;
     }
 }

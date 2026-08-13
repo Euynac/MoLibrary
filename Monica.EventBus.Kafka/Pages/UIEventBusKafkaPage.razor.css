@@ -5,8 +5,7 @@
     max-width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding: 20px;
+    gap: var(--mo-page-section-gap, 20px);
 }
 
 .page-banner {
@@ -17,12 +16,9 @@
     gap: 24px;
     padding: 20px;
     overflow: hidden;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 12px;
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-lines-default));
-    background: linear-gradient(
-        125deg,
-        color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface)),
-        var(--mud-palette-surface) 48%);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
     box-shadow: var(--mud-elevation-1);
 }
 
@@ -40,7 +36,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 12px;
     color: var(--mud-palette-primary);
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-lines-default));
@@ -97,12 +93,9 @@
     gap: 10px;
     padding: 28px;
     text-align: center;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 12px;
     border: 1px dashed color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-lines-default));
-    background: linear-gradient(
-        145deg,
-        color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-background-gray)),
-        var(--mud-palette-surface));
+    background-color: var(--mud-palette-surface);
 }
 
 .workspace-shell {
@@ -141,7 +134,7 @@
     min-width: 126px;
     min-height: 42px;
     padding: 6px 14px;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 8px;
     text-transform: none;
     letter-spacing: normal;
 }
@@ -157,7 +150,7 @@
 }
 
 .eventbus-kafka-page ::deep .mud-tabs-scroll-button .mud-icon-button {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 8px;
 }
 
 .workspace-shell ::deep .mud-tabs-panels {
@@ -179,7 +172,7 @@
 }
 
 .eventbus-kafka-page ::deep .mud-alert {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 8px;
 }
 
 .eventbus-kafka-page ::deep button:focus-visible,
@@ -195,7 +188,6 @@
 @media (max-width: 720px) {
     .eventbus-kafka-page {
         gap: 14px;
-        padding: 14px;
     }
 
     .page-banner {

@@ -57,11 +57,11 @@
 
 .line-added .line-marker {
     color: var(--mud-palette-success);
-    background-color: rgba(var(--mud-palette-success-rgb), 0.15);
+    background-color: var(--mo-color-state-success-soft-background);
 }
 
 .line-added .line-content {
-    background-color: rgba(var(--mud-palette-success-rgb), 0.05);
+    background-color: color-mix(in srgb, var(--mud-palette-success) 5%, transparent);
 }
 
 .line-deleted {
@@ -70,11 +70,11 @@
 
 .line-deleted .line-marker {
     color: var(--mud-palette-error);
-    background-color: rgba(var(--mud-palette-error-rgb), 0.15);
+    background-color: var(--mo-color-state-error-soft-background);
 }
 
 .line-deleted .line-content {
-    background-color: rgba(var(--mud-palette-error-rgb), 0.05);
+    background-color: color-mix(in srgb, var(--mud-palette-error) 5%, transparent);
 }
 
 .line-modified {
@@ -83,11 +83,11 @@
 
 .line-modified .line-marker {
     color: var(--mud-palette-warning);
-    background-color: rgba(var(--mud-palette-warning-rgb), 0.15);
+    background-color: var(--mo-color-state-warning-soft-background);
 }
 
 .line-modified .line-content {
-    background-color: rgba(var(--mud-palette-warning-rgb), 0.05);
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 5%, transparent);
 }
 
 /* Character-level diff styles */
@@ -95,20 +95,20 @@
     background-color: var(--mud-palette-success);
     color: var(--mud-palette-success-text);
     padding: 1px 2px;
-    border-radius: 2px;
+    border-radius: 6px;
     font-weight: bold;
-    box-shadow: 0 0 0 1px rgba(var(--mud-palette-success-rgb), 0.3);
+    box-shadow: 0 0 0 1px var(--mo-color-state-success-soft-border);
 }
 
 ::deep .char-deleted {
     background-color: var(--mud-palette-error);
     color: var(--mud-palette-error-text);
     padding: 1px 2px;
-    border-radius: 2px;
+    border-radius: 6px;
     font-weight: bold;
     text-decoration: line-through;
     text-decoration-thickness: 2px;
-    box-shadow: 0 0 0 1px rgba(var(--mud-palette-error-rgb), 0.3);
+    box-shadow: 0 0 0 1px var(--mo-color-state-error-soft-border);
 }
 
 /* split view container */
@@ -181,7 +181,7 @@
 }
 
 .split-line-added .split-line-content {
-    background-color: rgba(var(--mud-palette-success-rgb), 0.05);
+    background-color: color-mix(in srgb, var(--mud-palette-success) 5%, transparent);
 }
 
 .split-line-deleted {
@@ -189,7 +189,7 @@
 }
 
 .split-line-deleted .split-line-content {
-    background-color: rgba(var(--mud-palette-error-rgb), 0.05);
+    background-color: color-mix(in srgb, var(--mud-palette-error) 5%, transparent);
 }
 
 .split-line-modified-old {
@@ -197,7 +197,7 @@
 }
 
 .split-line-modified-old .split-line-content {
-    background-color: rgba(var(--mud-palette-error-rgb), 0.05);
+    background-color: color-mix(in srgb, var(--mud-palette-error) 5%, transparent);
 }
 
 .split-line-modified-new {
@@ -205,7 +205,7 @@
 }
 
 .split-line-modified-new .split-line-content {
-    background-color: rgba(var(--mud-palette-success-rgb), 0.05);
+    background-color: color-mix(in srgb, var(--mud-palette-success) 5%, transparent);
 }
 
 .split-line-unchanged {
@@ -214,23 +214,23 @@
 
 /* Split view character level diff style */
 ::deep .char-modified-old {
-    background-color: rgba(var(--mud-palette-error-rgb), 0.2);
+    background-color: var(--mo-color-state-error-soft-background);
     color: var(--mud-palette-error-text);
     padding: 1px 2px;
-    border-radius: 2px;
+    border-radius: 6px;
     font-weight: bold;
-    border: 1px solid rgba(var(--mud-palette-error-rgb), 0.5);
-    box-shadow: 0 0 0 1px rgba(var(--mud-palette-error-rgb), 0.3);
+    border: 1px solid var(--mo-color-state-error-soft-border);
+    box-shadow: 0 0 0 1px var(--mo-color-state-error-soft-border);
 }
 
 ::deep .char-modified-new {
-    background-color: rgba(var(--mud-palette-success-rgb), 0.2);
+    background-color: var(--mo-color-state-success-soft-background);
     color: var(--mud-palette-success-text);
     padding: 1px 2px;
-    border-radius: 2px;
+    border-radius: 6px;
     font-weight: bold;
-    border: 1px solid rgba(var(--mud-palette-success-rgb), 0.5);
-    box-shadow: 0 0 0 1px rgba(var(--mud-palette-success-rgb), 0.3);
+    border: 1px solid var(--mo-color-state-success-soft-border);
+    box-shadow: 0 0 0 1px var(--mo-color-state-success-soft-border);
 }
 
 /* Responsive Design - Split View */
@@ -286,30 +286,6 @@
 }
 
 /* Dark theme adaptation - split view */
-@media (prefers-color-scheme: dark) {
-    ::deep .char-added {
-        background-color: rgba(var(--mud-palette-success-rgb), 0.8);
-        box-shadow: 0 0 0 1px rgba(var(--mud-palette-success-rgb), 0.6);
-    }
-    
-    ::deep .char-deleted {
-        background-color: rgba(var(--mud-palette-error-rgb), 0.8);
-        box-shadow: 0 0 0 1px rgba(var(--mud-palette-error-rgb), 0.6);
-    }
-
-    ::deep .char-modified-old {
-        background-color: rgba(var(--mud-palette-error-rgb), 0.8);
-        border-color: rgba(var(--mud-palette-error-rgb), 0.8);
-        box-shadow: 0 0 0 1px rgba(var(--mud-palette-error-rgb), 0.6);
-    }
-    
-    ::deep .char-modified-new {
-        background-color: rgba(var(--mud-palette-success-rgb), 0.8);
-        border-color: rgba(var(--mud-palette-success-rgb), 0.8);
-        box-shadow: 0 0 0 1px rgba(var(--mud-palette-success-rgb), 0.6);
-    }
-}
-
 /* High contrast mode support - split view */
 @media (prefers-contrast: high) {
     ::deep .char-added,
@@ -323,5 +299,12 @@
         border-width: 2px;
         border-style: solid;
         padding: 0 1px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .line,
+    .split-view-panel .line {
+        transition: none;
     }
 }

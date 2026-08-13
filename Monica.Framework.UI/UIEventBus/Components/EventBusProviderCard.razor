@@ -2,6 +2,7 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @inject IStringLocalizer<EventBusResource> L
 
+<div class="provider-card">
 <MudCard Elevation="2">
     <MudCardHeader>
         <CardHeaderAvatar>
@@ -32,7 +33,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.Subscriptions" Size="Size.Small" Color="Color.Primary" />
                 <MudText Typo="Typo.body2">
                     @L["Providers:Card:Subscriptions", Provider.SubscriptionCount]
-                    (<span style="color: var(--mud-palette-success);">@L["Providers:Card:Active", Provider.ActiveSubscriptionCount]</span>)
+                    (<span class="provider-card__active-count">@L["Providers:Card:Active", Provider.ActiveSubscriptionCount]</span>)
                 </MudText>
             </MudStack>
 
@@ -83,6 +84,7 @@
         </MudButton>
     </MudCardActions>
 </MudCard>
+</div>
 
 @code {
     [Parameter] public EventBusProviderInfo Provider { get; set; } = null!;

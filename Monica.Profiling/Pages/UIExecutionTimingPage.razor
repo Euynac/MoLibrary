@@ -1,231 +1,122 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Profiling.ExecutionTiming.Models
-@inject ExecutionTimingPageState PageState
+@inject ExecutionTimingPageStateFactory PageStateFactory
 @inject ISnackbar Snackbar
-@implements IDisposable
+@inject IStringLocalizer<ExecutionTimingResource> L
+@implements IAsyncDisposable
 
-<PageTitle>执行耗时</PageTitle>
+<PageTitle>@L["Pages:ExecutionTiming:Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <MudPaper Class="pa-4 mb-4" Style="background: var(--mo-color-page-hero-background); color: var(--mo-color-page-hero-text); overflow: hidden;">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Large" />
-                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">执行耗时</MudText>
-            </MudStack>
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                <MudSwitch T="bool"
-                           Value="@PageState.AutoRefresh"
-                           ValueChanged="SetAutoRefresh"
-                           Color="Color.Inherit"
-                           Label="自动刷新" />
-                <MudButton StartIcon="@Icons.Material.Filled.Refresh"
-                           Color="Color.Inherit"
-                           Variant="Variant.Outlined"
-                           OnClick="RefreshDataAsync"
-                           Disabled="PageState.IsLoading"
-                           Size="Size.Medium"
-                           Style="border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
-                    刷新数据
-                </MudButton>
-            </MudStack>
-        </MudStack>
-    </MudPaper>
+<div class="execution-timing-page">
+    <header class="execution-timing-header">
+        <div class="execution-timing-header__identity">
+            <span class="execution-timing-header__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Timer" /></span>
+            <div>
+                <MudText Typo="Typo.overline" Class="execution-timing-eyebrow">@L["Page:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h4">@L["Pages:ExecutionTiming:Title"]</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+            </div>
+        </div>
+        <div class="execution-timing-header__actions">
+            <MudChip T="string" Size="Size.Small" Color="@(PageState.AutoRefresh ? Color.Success : Color.Default)" Icon="@(PageState.AutoRefresh ? Icons.Material.Filled.Sensors : Icons.Material.Filled.Pause)">
+                @(PageState.AutoRefresh ? L["Page:Status:Live"] : L["Page:Status:Paused"])
+            </MudChip>
+            <MudSwitch T="bool" Value="PageState.AutoRefresh" ValueChanged="SetAutoRefresh" Color="Color.Primary" Label="@L["Page:Actions:AutoRefresh"]" />
+            <MudTooltip Text="@L["Page:Actions:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" Variant="Variant.Outlined" OnClick="RefreshDataAsync" Disabled="PageState.IsLoading" />
+            </MudTooltip>
+        </div>
+    </header>
 
-    @if (PageState.IsLoading)
-    {
-        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
-            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载数据...</MudText>
-        </MudStack>
-    }
-    else
-    {
-        <MudGrid Spacing="3">
-            <MudItem xs="12" lg="6">
-                <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
-                    <MudCardHeader Class="pb-2">
-                        <CardHeaderContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Success" />
-                                <MudText Typo="Typo.h6" Style="font-weight: 500;">正在运行的操作</MudText>
-                                <MudBadge Content="@PageState.RunningOperations.Count" Color="Color.Primary" Overlap="false" />
-                            </MudStack>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Class="flex-grow-1">
-                        @if (PageState.RunningOperations.Any())
-                        {
-                            <MudTable Items="@PageState.RunningOperations" Hover="true" Striped="true" Dense="true" FixedHeader="true">
-                                <HeaderContent>
-                                    <MudTh>名称</MudTh>
-                                    <MudTh>说明</MudTh>
-                                    <MudTh>开始时间</MudTh>
-                                    <MudTh>当前耗时</MudTh>
-                                    <MudTh>运行时长</MudTh>
-                                </HeaderContent>
-                                <RowTemplate>
-                                    @{
-                                        var operation = (RunningExecutionTimingInfo)context;
-                                    }
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@operation.DisplayName</MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@(operation.Description ?? "无")</MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatDateTime(operation.StartedAt)</MudTd>
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-success);">
-                                        @ExecutionTimingDisplayFormatter.FormatDuration(operation.GetCurrentElapsedMs())
-                                    </MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatRunningDuration(operation)</MudTd>
-                                </RowTemplate>
-                            </MudTable>
-                        }
-                        else
-                        {
-                            <MudAlert Severity="Severity.Info" Class="mb-4">
-                                <MudText>当前没有正在运行的操作</MudText>
-                            </MudAlert>
-                        }
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+    <main class="execution-timing-content">
+        <section class="timing-summary" aria-label="@L["Summary:AriaLabel"]">
+            <article><span>@L["Summary:Running"]</span><strong class="mud-success-text">@PageState.RunningOperations.Count</strong></article>
+            <article><span>@L["Summary:Operations"]</span><strong class="mud-primary-text">@PageState.Statistics.Count</strong></article>
+            <article><span>@L["Summary:Samples"]</span><strong class="mud-info-text">@PageState.Statistics.Sum(item => item.ExecutionCount)</strong></article>
+            <article><span>@L["Summary:Average"]</span><strong class="mud-warning-text">@FormatAverageDuration()</strong></article>
+        </section>
 
-            <MudItem xs="12" lg="6">
-                <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
-                    <MudCardHeader Class="pb-2">
-                        <CardHeaderContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Primary" />
-                                <MudText Typo="Typo.h6" Style="font-weight: 500;">统计信息</MudText>
-                                <MudBadge Content="@PageState.Statistics.Count" Color="Color.Secondary" Overlap="false" />
-                            </MudStack>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Class="flex-grow-1">
-                        @if (PageState.Statistics.Any())
-                        {
-                            <MudTable Items="@PageState.Statistics" Hover="true" Striped="true" Dense="true" FixedHeader="true">
-                                <HeaderContent>
-                                    <MudTh>名称</MudTh>
-                                    <MudTh>次数</MudTh>
-                                    <MudTh>平均耗时</MudTh>
-                                    <MudTh>最后耗时</MudTh>
-                                    <MudTh>频率/分钟</MudTh>
-                                </HeaderContent>
-                                <RowTemplate>
-                                    @{
-                                        var statistics = (ExecutionTimingStatistics)context;
-                                    }
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@statistics.DisplayName</MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@statistics.ExecutionCount</MudTd>
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-warning);">
-                                        @ExecutionTimingDisplayFormatter.FormatDuration(statistics.AverageDurationMs)
-                                    </MudTd>
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">
-                                        @ExecutionTimingDisplayFormatter.FormatDuration(statistics.LastDurationMs)
-                                    </MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatRatePerMinute(statistics)</MudTd>
-                                </RowTemplate>
-                            </MudTable>
-                        }
-                        else
-                        {
-                            <MudAlert Severity="Severity.Info" Class="mb-4">
-                                <MudText>暂无统计信息</MudText>
-                            </MudAlert>
-                        }
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            @if (PageState.Statistics.Any())
+        <section class="timing-panel timing-panel--running">
+            <header class="timing-panel__header">
+                <div><MudText Typo="Typo.overline" Class="execution-timing-eyebrow">@L["Running:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Running:Title"]</MudText></div>
+                <MudChip T="string" Size="Size.Small" Color="Color.Success">@L["Common:Count", PageState.RunningOperations.Count]</MudChip>
+            </header>
+            @if (PageState.RunningOperations.Count > 0)
             {
-                <MudItem xs="12">
-                    <MudCard Elevation="2">
-                        <MudCardHeader Class="pb-2">
-                            <CardHeaderContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.TableChart" Color="Color.Info" />
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">详细统计信息</MudText>
-                                </MudStack>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudTable Items="@PageState.Statistics" Hover="true" Striped="true" Dense="true" FixedHeader="true">
-                                <HeaderContent>
-                                    <MudTh>名称</MudTh>
-                                    <MudTh>执行次数</MudTh>
-                                    <MudTh>平均耗时</MudTh>
-                                    <MudTh>最后耗时</MudTh>
-                                    <MudTh>首次记录</MudTh>
-                                    <MudTh>频率/分钟</MudTh>
-                                    <MudTh>平均内存</MudTh>
-                                    <MudTh>最后内存</MudTh>
-                                    <MudTh>最后执行时间</MudTh>
-                                </HeaderContent>
-                                <RowTemplate>
-                                    @{
-                                        var statistics = (ExecutionTimingStatistics)context;
-                                    }
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@statistics.DisplayName</MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@statistics.ExecutionCount</MudTd>
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-warning);">
-                                        @ExecutionTimingDisplayFormatter.FormatDuration(statistics.AverageDurationMs)
-                                    </MudTd>
-                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">
-                                        @ExecutionTimingDisplayFormatter.FormatDuration(statistics.LastDurationMs)
-                                    </MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatDateTime(statistics.FirstRecordedAt)</MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatRatePerMinute(statistics)</MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatMemory(statistics.AverageMemoryBytes)</MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatMemory(statistics.LastMemoryBytes)</MudTd>
-                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatDateTime(statistics.LastRecordedAt)</MudTd>
-                                </RowTemplate>
-                            </MudTable>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
+                <div class="timing-table-scroll">
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead><tr><th>@L["Columns:Name"]</th><th>@L["Columns:Description"]</th><th>@L["Columns:StartedAt"]</th><th class="number-cell">@L["Columns:CurrentDuration"]</th><th class="number-cell">@L["Columns:RunningFor"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var operation in PageState.RunningOperations)
+                            {
+                                <tr><td class="diagnostic-value">@operation.DisplayName</td><td>@(operation.Description ?? L["Common:Unavailable"])</td><td>@ExecutionTimingDisplayFormatter.FormatDateTime(operation.StartedAt)</td><td class="number-cell diagnostic-value mud-success-text">@ExecutionTimingDisplayFormatter.FormatDuration(operation.GetCurrentElapsedMs())</td><td class="number-cell">@ExecutionTimingDisplayFormatter.FormatRunningDuration(operation)</td></tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </div>
             }
-        </MudGrid>
-    }
-</MudContainer>
+            else
+            {
+                <div class="timing-empty"><MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty" /><span>@L["Running:Empty"]</span></div>
+            }
+        </section>
+
+        <section class="timing-panel">
+            <header class="timing-panel__header">
+                <div><MudText Typo="Typo.overline" Class="execution-timing-eyebrow">@L["Statistics:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Statistics:Title"]</MudText></div>
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@L["Common:Count", PageState.Statistics.Count]</MudChip>
+            </header>
+            @if (PageState.Statistics.Count > 0)
+            {
+                <div class="timing-table-scroll">
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead><tr><th>@L["Columns:Name"]</th><th class="number-cell">@L["Columns:Executions"]</th><th class="number-cell">@L["Columns:AverageDuration"]</th><th class="number-cell">@L["Columns:LastDuration"]</th><th class="number-cell">@L["Columns:Rate"]</th><th class="number-cell">@L["Columns:AverageMemory"]</th><th class="number-cell">@L["Columns:LastMemory"]</th><th>@L["Columns:LastRecordedAt"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var statistics in PageState.Statistics)
+                            {
+                                <tr><td class="diagnostic-value">@statistics.DisplayName</td><td class="number-cell">@statistics.ExecutionCount</td><td class="number-cell diagnostic-value mud-warning-text">@ExecutionTimingDisplayFormatter.FormatDuration(statistics.AverageDurationMs)</td><td class="number-cell diagnostic-value">@ExecutionTimingDisplayFormatter.FormatDuration(statistics.LastDurationMs)</td><td class="number-cell">@ExecutionTimingDisplayFormatter.FormatRatePerMinute(statistics)</td><td class="number-cell">@ExecutionTimingDisplayFormatter.FormatMemory(statistics.AverageMemoryBytes)</td><td class="number-cell">@ExecutionTimingDisplayFormatter.FormatMemory(statistics.LastMemoryBytes)</td><td>@ExecutionTimingDisplayFormatter.FormatDateTime(statistics.LastRecordedAt)</td></tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </div>
+            }
+            else
+            {
+                <div class="timing-empty"><MudIcon Icon="@Icons.Material.Outlined.QueryStats" /><span>@L["Statistics:Empty"]</span></div>
+            }
+        </section>
+    </main>
+</div>
 
 @code {
     public const string PAGE_URL = "/execution-timing";
+    private ExecutionTimingPageState PageState { get; set; } = null!;
+    private bool _disposed;
+
+    protected override void OnInitialized() => PageState = PageStateFactory.Create();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
+        if (!firstRender) return;
         PageState.StateChanged += HandleStateChanged;
         var result = await PageState.InitializeAsync();
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
-        }
+        if (!_disposed && result.IsFailed(out var error)) Snackbar.Add(error.Message ?? L["Page:Messages:RefreshFailed"], Severity.Error);
     }
 
     private async Task RefreshDataAsync()
     {
         var result = await PageState.RefreshAsync();
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
-        }
+        if (!_disposed && result.IsFailed(out var error)) Snackbar.Add(error.Message ?? L["Page:Messages:RefreshFailed"], Severity.Error);
     }
 
-    private Task SetAutoRefresh(bool value)
-    {
-        PageState.SetAutoRefresh(value);
-        return Task.CompletedTask;
-    }
+    private Task SetAutoRefresh(bool value) => PageState.SetAutoRefreshAsync(value);
+    private string FormatAverageDuration() => PageState.Statistics.Count == 0 ? L["Common:Unavailable"] : ExecutionTimingDisplayFormatter.FormatDuration(PageState.Statistics.Average(item => item.AverageDurationMs));
+    private void HandleStateChanged() { if (!_disposed) _ = InvokeAsync(StateHasChanged); }
 
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
-
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         PageState.StateChanged -= HandleStateChanged;
-        PageState.Dispose();
+        await PageState.DisposeAsync();
     }
 }

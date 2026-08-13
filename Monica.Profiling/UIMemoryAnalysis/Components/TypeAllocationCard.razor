@@ -1,266 +1,144 @@
-@inject TypeAllocationPanelState State
-@inject ISnackbar Snackbar
 @using Monica.Profiling.TypeAllocation.Models
+@inject TypeAllocationPanelStateFactory StateFactory
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<MemoryAnalysisResource> L
 @implements IDisposable
 
-<MudGrid Spacing="3">
-    <MudItem xs="12">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex flex-wrap justify-space-between align-center gap-2 mb-3">
-                <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.Category" Class="mr-2"/>
-                    类型分配跟踪
-                </MudText>
-                <div class="d-flex flex-wrap gap-2 align-center">
-                    @if (!State.IsCollecting)
-                    {
-                        <MudSelect T="AllocationSamplingMode"
-                                   @bind-Value="State.SelectedMode"
-                                   Label="采样模式"
-                                   Variant="Variant.Outlined"
-                                   Dense="true"
-                                   Style="min-width: 150px;">
-                            <MudSelectItem Value="AllocationSamplingMode.Low">低频 (~5/秒)</MudSelectItem>
-                            <MudSelectItem Value="AllocationSamplingMode.High">高频 (~100/秒)</MudSelectItem>
-                        </MudSelect>
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   OnClick="StartCollection"
-                                   Disabled="IsLoading"
-                                   StartIcon="@Icons.Material.Filled.PlayArrow">
-                            开始收集
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Color="Color.Success" Size="Size.Small">
-                            收集中 (@GetModeDisplayName(State.CurrentMode))
-                        </MudChip>
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Error"
-                                   OnClick="StopCollection"
-                                   Disabled="IsLoading"
-                                   StartIcon="@Icons.Material.Filled.Stop">
-                            停止
-                        </MudButton>
-                    }
-                    <MudDivider Vertical="true" FlexItem="true" Class="mx-2"/>
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Info"
-                               OnClick="TakeHeapSnapshot"
-                               Disabled="IsLoading || State.IsSnapshotting"
-                               StartIcon="@Icons.Material.Filled.CameraAlt">
-                        @(State.IsSnapshotting ? "快照中..." : "堆快照")
-                    </MudButton>
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   OnClick="RefreshData"
-                                   Disabled="IsLoading"/>
-                    <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
-                                   OnClick="ResetData"
-                                   Disabled="IsLoading || State.IsCollecting"
-                                   Color="Color.Warning"/>
-                </div>
-            </div>
+<section class="allocation-panel">
+    <header class="allocation-header">
+        <div class="allocation-header__identity">
+            <span class="allocation-header__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Category" /></span>
+            <div><MudText Typo="Typo.overline" Class="allocation-eyebrow">@L["Allocation:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Allocation:Title"]</MudText></div>
+        </div>
 
-            @if (State.Snapshot != null)
+        <div class="allocation-header__actions">
+            @if (!State.IsCollecting)
             {
-                <MudGrid Spacing="2">
-                    <MudItem xs="6" sm="3">
-                        <div class="text-center">
-                            <MudText Typo="Typo.h5" Color="Color.Primary">@State.Snapshot.UniqueTypeCount</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">唯一类型数</MudText>
-                        </div>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <div class="text-center">
-                            <MudText Typo="Typo.h5" Color="Color.Info">@ProfilingDisplayFormatter.FormatCount(State.Snapshot.TotalAllocationCount)</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">总分配数</MudText>
-                        </div>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <div class="text-center">
-                            <MudText Typo="Typo.h5" Color="Color.Warning">@ProfilingDisplayFormatter.FormatBytes(State.Snapshot.TotalBytes)</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">总字节数</MudText>
-                        </div>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <div class="text-center">
-                            <MudText Typo="Typo.h5" Color="Color.Success">@State.Snapshot.Duration.ToString(@"mm\:ss")</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">持续时间</MudText>
-                        </div>
-                    </MudItem>
-                </MudGrid>
+                <MudSelect T="AllocationSamplingMode" @bind-Value="State.SelectedMode" Label="@L["Allocation:SamplingMode"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="AllocationSamplingMode.Low">@L["Allocation:Modes:LowWithRate"]</MudSelectItem>
+                    <MudSelectItem Value="AllocationSamplingMode.High">@L["Allocation:Modes:HighWithRate"]</MudSelectItem>
+                </MudSelect>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="StartCollection" Disabled="IsLoading" StartIcon="@Icons.Material.Filled.PlayArrow">@L["Allocation:Actions:Start"]</MudButton>
             }
-        </MudPaper>
-    </MudItem>
+            else
+            {
+                <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.Sensors">@L["Allocation:Collecting", GetModeDisplayName(State.CurrentMode)]</MudChip>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="StopCollection" Disabled="IsLoading" StartIcon="@Icons.Material.Filled.Stop">@L["Allocation:Actions:Stop"]</MudButton>
+            }
+            <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="TakeHeapSnapshot" Disabled="@(IsLoading || State.IsSnapshotting)" StartIcon="@Icons.Material.Filled.CameraAlt">
+                @(State.IsSnapshotting ? L["Allocation:Actions:Snapshotting"] : L["Allocation:Actions:Snapshot"])
+            </MudButton>
+            <MudTooltip Text="@L["Allocation:Actions:Refresh"]"><MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="RefreshData" Disabled="IsLoading" /></MudTooltip>
+            <MudTooltip Text="@L["Allocation:Actions:Reset"]"><MudIconButton Icon="@Icons.Material.Filled.DeleteSweep" OnClick="ResetData" Disabled="@(IsLoading || State.IsCollecting)" Color="Color.Warning" /></MudTooltip>
+        </div>
+    </header>
 
-    @if (State.Snapshot != null && State.Snapshot.DataSource != TypeAllocationDataSource.None)
+    @if (State.Snapshot is not null)
     {
-        <MudItem xs="12">
-            <MudChip T="string"
-                     Color="@(State.Snapshot.DataSource == TypeAllocationDataSource.HeapSnapshot ? Color.Info : Color.Success)"
-                     Size="Size.Small">
-                @(State.Snapshot.DataSource == TypeAllocationDataSource.HeapSnapshot ? "堆快照数据" : "实时分配跟踪数据")
-                - @ProfilingDisplayFormatter.FormatLocalTime(State.Snapshot.Timestamp)
-            </MudChip>
-        </MudItem>
+        <div class="allocation-summary" aria-label="@L["Allocation:SummaryAriaLabel"]">
+            <div><strong class="mud-primary-text">@State.Snapshot.UniqueTypeCount</strong><span>@L["Allocation:Summary:UniqueTypes"]</span></div>
+            <div><strong class="mud-info-text">@ProfilingDisplayFormatter.FormatCount(State.Snapshot.TotalAllocationCount)</strong><span>@L["Allocation:Summary:Allocations"]</span></div>
+            <div><strong class="mud-warning-text">@ProfilingDisplayFormatter.FormatBytes(State.Snapshot.TotalBytes)</strong><span>@L["Allocation:Summary:Bytes"]</span></div>
+            <div><strong class="mud-success-text">@State.Snapshot.Duration.ToString(@"mm\:ss")</strong><span>@L["Allocation:Summary:Duration"]</span></div>
+        </div>
+
+        @if (State.Snapshot.DataSource != TypeAllocationDataSource.None)
+        {
+            <MudAlert Severity="@(State.Snapshot.DataSource == TypeAllocationDataSource.HeapSnapshot ? Severity.Info : Severity.Success)" Variant="Variant.Outlined" Dense="true">
+                @L[State.Snapshot.DataSource == TypeAllocationDataSource.HeapSnapshot ? "Allocation:Sources:HeapSnapshot" : "Allocation:Sources:Live", ProfilingDisplayFormatter.FormatLocalTime(State.Snapshot.Timestamp)]
+            </MudAlert>
+        }
     }
 
-    <MudItem xs="12">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center mb-3">
-                <MudText Typo="Typo.h6">内存占用类型排名</MudText>
-                <div class="d-flex align-center gap-2">
-                    <MudTooltip Text="@(State.ShowFullTypeName ? "显示简短类型名" : "显示完整类型名")">
-                        <MudToggleIconButton @bind-Toggled="State.ShowFullTypeName"
-                                             Icon="@Icons.Material.Filled.ShortText"
-                                             ToggledIcon="@Icons.Material.Filled.Subject"
-                                             ToggledColor="Color.Primary"/>
-                    </MudTooltip>
-                    <MudNumericField T="int" @bind-Value="State.TopN"
-                                     Label="显示数量"
-                                     Min="5" Max="200"
-                                     Style="width: 120px;"
-                                     Variant="Variant.Outlined"
-                                     Margin="Margin.Dense"/>
-                </div>
+    <article class="allocation-table-panel">
+        <header class="allocation-table-panel__header">
+            <div><MudText Typo="Typo.overline" Class="allocation-eyebrow">@L["Allocation:Ranking:Eyebrow"]</MudText><MudText Typo="Typo.h6">@L["Allocation:Ranking:Title"]</MudText></div>
+            <div class="allocation-table-panel__controls">
+                <MudTooltip Text="@(State.ShowFullTypeName ? L["Allocation:Actions:ShowShortNames"] : L["Allocation:Actions:ShowFullNames"])">
+                    <MudToggleIconButton @bind-Toggled="State.ShowFullTypeName" Icon="@Icons.Material.Filled.ShortText" ToggledIcon="@Icons.Material.Filled.Subject" ToggledColor="Color.Primary" />
+                </MudTooltip>
+                <MudNumericField T="int" @bind-Value="State.TopN" Label="@L["Allocation:Ranking:Limit"]" Min="5" Max="200" Variant="Variant.Outlined" Margin="Margin.Dense" />
             </div>
+        </header>
 
-            @if (State.Snapshot?.Types.Count > 0)
-            {
-                <MudSimpleTable Dense="true" Hover="true" FixedHeader="true"
-                                Style="max-height: 500px; overflow-y: auto; table-layout: fixed; width: 100%;">
-                    <thead>
-                        <tr>
-                            <th style="width: 40px;">#</th>
-                            <th style="width: auto;">类型名称</th>
-                            <th style="text-align: right; width: 80px;">实例数</th>
-                            <th style="text-align: right; width: 80px;">总大小</th>
-                            <th style="text-align: right; width: 80px;">平均大小</th>
-                            <th style="text-align: right; width: 140px;">占比</th>
-                            <th style="width: 50px;">LOH</th>
-                        </tr>
-                    </thead>
+        @if (State.Snapshot?.Types.Count > 0)
+        {
+            <div class="allocation-table-scroll">
+                <MudSimpleTable Dense="true" Hover="true" FixedHeader="true">
+                    <thead><tr><th>#</th><th>@L["Allocation:Ranking:Columns:Type"]</th><th class="number-cell">@L["Allocation:Ranking:Columns:Instances"]</th><th class="number-cell">@L["Allocation:Ranking:Columns:TotalSize"]</th><th class="number-cell">@L["Allocation:Ranking:Columns:AverageSize"]</th><th class="number-cell">@L["Allocation:Ranking:Columns:Share"]</th><th>LOH</th></tr></thead>
                     <tbody>
-                        @{
-                            var rank = 1;
-                        }
+                        @{ var rank = 1; }
                         @foreach (var type in State.Snapshot.Types.Take(State.TopN))
                         {
                             <tr>
                                 <td>@rank</td>
-                                <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                    <MudTooltip Text="@type.TypeName" Placement="Placement.Right">
-                                        <span style="font-family: monospace; font-size: 0.85em;">
-                                            @(State.ShowFullTypeName ? type.TypeName : type.ShortTypeName)
-                                        </span>
-                                    </MudTooltip>
-                                </td>
-                                <td style="text-align: right;">@ProfilingDisplayFormatter.FormatCount(type.AllocationCount)</td>
-                                <td style="text-align: right;">@ProfilingDisplayFormatter.FormatBytes(type.TotalBytes)</td>
-                                <td style="text-align: right;">@ProfilingDisplayFormatter.FormatBytes((long)type.AverageSize)</td>
-                                <td style="text-align: right;">
-                                    <div class="d-flex align-center justify-end gap-2">
-                                        <MudProgressLinear Value="@type.BytesPercentage"
-                                                           Color="@ProfilingSeverityColorResolver.GetPercentageColor(type.BytesPercentage)"
-                                                           Size="Size.Small"
-                                                           Style="width: 80px;"/>
-                                        <span style="min-width: 50px;">@type.BytesPercentage.ToString("F1")%</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    @if (type.IsLargeObjectHeap)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">LOH</MudChip>
-                                    }
-                                </td>
+                                <td class="type-name-cell"><MudTooltip Text="@type.TypeName" Placement="Placement.Right"><span class="diagnostic-value">@(State.ShowFullTypeName ? type.TypeName : type.ShortTypeName)</span></MudTooltip></td>
+                                <td class="number-cell">@ProfilingDisplayFormatter.FormatCount(type.AllocationCount)</td>
+                                <td class="number-cell">@ProfilingDisplayFormatter.FormatBytes(type.TotalBytes)</td>
+                                <td class="number-cell">@ProfilingDisplayFormatter.FormatBytes((long)type.AverageSize)</td>
+                                <td class="number-cell"><div class="allocation-share"><MudProgressLinear Value="@type.BytesPercentage" Color="@ProfilingSeverityColorResolver.GetPercentageColor(type.BytesPercentage)" Size="Size.Small" /><span>@type.BytesPercentage.ToString("F1")%</span></div></td>
+                                <td>@if (type.IsLargeObjectHeap) { <MudChip T="string" Size="Size.Small" Color="Color.Warning">LOH</MudChip> }</td>
                             </tr>
                             rank++;
                         }
                     </tbody>
                 </MudSimpleTable>
-            }
-            else if (!State.IsCollecting && State.Snapshot?.DataSource == TypeAllocationDataSource.None)
-            {
-                <MudAlert Severity="Severity.Info" Class="mt-2">
-                    暂无数据。点击"开始收集"开始跟踪类型分配，或点击"堆快照"获取当前堆状态。
-                </MudAlert>
-            }
-            else if (State.IsCollecting && State.Snapshot?.Types.Count == 0)
-            {
-                <div class="d-flex align-center gap-2 pa-4">
-                    <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
-                    <MudText>正在收集数据...</MudText>
-                </div>
-            }
-        </MudPaper>
-    </MudItem>
+            </div>
+        }
+        else if (!State.IsCollecting && State.Snapshot?.DataSource == TypeAllocationDataSource.None)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Allocation:Ranking:Empty"]</MudAlert>
+        }
+        else if (State.IsCollecting && State.Snapshot?.Types.Count == 0)
+        {
+            <div class="allocation-loading"><MudProgressCircular Indeterminate="true" Size="Size.Small" /><MudText>@L["Allocation:Ranking:Collecting"]</MudText></div>
+        }
+    </article>
 
     @if (State.Snapshot?.DroppedEventCount > 0)
     {
-        <MudItem xs="12">
-            <MudAlert Severity="Severity.Warning">
-                有 @State.Snapshot.DroppedEventCount 个事件因未知类型 ID 而被丢弃。
-                这在启动时是正常的，因为类型元数据正在加载。
-            </MudAlert>
-        </MudItem>
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@L["Allocation:DroppedEvents", State.Snapshot.DroppedEventCount]</MudAlert>
     }
 
-    <MudItem xs="12">
-        <MudExpansionPanels>
-            <MudExpansionPanel Text="使用说明">
-                <MudText Typo="Typo.body2" Class="mb-2">
-                    <strong>实时分配跟踪 (ETW)</strong>：监控新对象分配，适合发现分配热点。
-                </MudText>
-                <MudList T="string" Dense="true">
-                    <MudListItem Icon="@Icons.Material.Filled.Info">低频模式：约 5 事件/秒，开销较低</MudListItem>
-                    <MudListItem Icon="@Icons.Material.Filled.Info">高频模式：约 100 事件/秒，精度更高</MudListItem>
-                    <MudListItem Icon="@Icons.Material.Filled.Warning">需要管理员权限 (Windows)</MudListItem>
-                </MudList>
-                <MudText Typo="Typo.body2" Class="mt-3 mb-2">
-                    <strong>堆快照 (ClrMD)</strong>：获取当前堆中所有对象的精确状态。
-                </MudText>
-                <MudList T="string" Dense="true">
-                    <MudListItem Icon="@Icons.Material.Filled.Info">显示当前堆中实际存在的对象</MudListItem>
-                    <MudListItem Icon="@Icons.Material.Filled.Warning">会短暂暂停进程</MudListItem>
-                </MudList>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
-    </MudItem>
-</MudGrid>
+    <MudExpansionPanels Elevation="0">
+        <MudExpansionPanel Text="@L["Allocation:Guidance:Title"]">
+            <div class="allocation-guidance">
+                <div><strong>@L["Allocation:Guidance:Live:Title"]</strong><span>@L["Allocation:Guidance:Live:Description"]</span></div>
+                <div><strong>@L["Allocation:Guidance:Low:Title"]</strong><span>@L["Allocation:Guidance:Low:Description"]</span></div>
+                <div><strong>@L["Allocation:Guidance:High:Title"]</strong><span>@L["Allocation:Guidance:High:Description"]</span></div>
+                <div><strong>@L["Allocation:Guidance:Snapshot:Title"]</strong><span>@L["Allocation:Guidance:Snapshot:Description"]</span></div>
+            </div>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+</section>
 
 @code {
     [Parameter] public bool IsLoading { get; set; }
+    private TypeAllocationPanelState State { get; set; } = null!;
 
     protected override async Task OnInitializedAsync()
     {
+        State = StateFactory.Create();
         State.StateChanged += HandleStateChanged;
         var result = await State.InitializeAsync();
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? "加载数据失败", Severity.Error);
+            Snackbar.Add(error.Message ?? L["Allocation:Messages:LoadFailed"], Severity.Error);
         }
     }
 
-    private void RefreshData()
-    {
-        var result = State.RefreshData();
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
-        }
-    }
+    private void RefreshData() => ShowResult(State.RefreshData(), "Allocation:Messages:RefreshFailed");
 
     private Task StartCollection()
     {
         var result = State.StartCollection();
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? "启动收集失败", Severity.Error);
+            Snackbar.Add(error.Message ?? L["Allocation:Messages:StartFailed"], Severity.Error);
         }
         else
         {
-            Snackbar.Add($"收集已启动 ({GetModeDisplayName(State.SelectedMode)} 模式)", Severity.Success);
+            Snackbar.Add(L["Allocation:Messages:Started", GetModeDisplayName(State.SelectedMode)], Severity.Success);
         }
 
         return Task.CompletedTask;
@@ -271,25 +149,25 @@
         var result = State.StopCollection();
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? "停止收集失败", Severity.Error);
+            Snackbar.Add(error.Message ?? L["Allocation:Messages:StopFailed"], Severity.Error);
         }
         else
         {
-            Snackbar.Add("收集已停止", Severity.Success);
+            Snackbar.Add(L["Allocation:Messages:Stopped"], Severity.Success);
         }
     }
 
     private async Task TakeHeapSnapshot()
     {
-        Snackbar.Add("正在获取堆快照，这可能需要几秒钟...", Severity.Info);
+        Snackbar.Add(L["Allocation:Messages:SnapshotStarting"], Severity.Info);
         var result = await State.TakeHeapSnapshotAsync();
         if (result.IsFailed(out var error, out var snapshot))
         {
-            Snackbar.Add(error.Message ?? "获取堆快照失败", Severity.Error);
+            Snackbar.Add(error.Message ?? L["Allocation:Messages:SnapshotFailed"], Severity.Error);
             return;
         }
 
-        Snackbar.Add($"堆快照完成，发现 {snapshot!.UniqueTypeCount} 种类型", Severity.Success);
+        Snackbar.Add(L["Allocation:Messages:SnapshotCompleted", snapshot!.UniqueTypeCount], Severity.Success);
     }
 
     private void ResetData()
@@ -297,18 +175,26 @@
         var result = State.ResetData();
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? "重置数据失败", Severity.Error);
+            Snackbar.Add(error.Message ?? L["Allocation:Messages:ResetFailed"], Severity.Error);
             return;
         }
 
-        Snackbar.Add("数据已重置", Severity.Info);
+        Snackbar.Add(L["Allocation:Messages:Reset"], Severity.Info);
     }
 
-    private static string GetModeDisplayName(AllocationSamplingMode mode) => mode switch
+    private void ShowResult(Res result, string fallbackKey)
     {
-        AllocationSamplingMode.Low => "低频",
-        AllocationSamplingMode.High => "高频",
-        _ => "未知"
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? L[fallbackKey], Severity.Error);
+        }
+    }
+
+    private string GetModeDisplayName(AllocationSamplingMode mode) => mode switch
+    {
+        AllocationSamplingMode.Low => L["Allocation:Modes:Low"],
+        AllocationSamplingMode.High => L["Allocation:Modes:High"],
+        _ => L["Common:Unknown"]
     };
 
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);

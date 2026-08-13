@@ -39,7 +39,7 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:ProviderType"]</MudText>
+                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:ProviderType"]</MudText>
                                     </div>
                                     <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
                                         @L.GetProviderKindText(Provider.ProviderType)
@@ -50,7 +50,7 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Key" Color="Color.Info" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:ServiceKey"]</MudText>
+                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:ServiceKey"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         @(Provider.ServiceKey ?? L["Services:Common:DefaultProviderKeyWithNoKey"].Value)
@@ -63,7 +63,7 @@
                                         <MudIcon Icon="@(Provider.IsDistributed ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Memory)"
                                                  Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
                                                  Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:BusMode"]</MudText>
+                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:BusMode"]</MudText>
                                     </div>
                                     <MudChip T="string"
                                              Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
@@ -76,7 +76,7 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Secondary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:ImplementationType"]</MudText>
+                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:ImplementationType"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         @Provider.ImplementationType
@@ -87,7 +87,7 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-3">
                                         <MudIcon Icon="@Icons.Material.Filled.Extension" Color="Color.Tertiary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:Capabilities"]</MudText>
+                                        <MudText Typo="Typo.subtitle1" Class="provider-detail__field-label">@L["Providers:Detail:Fields:Capabilities"]</MudText>
                                     </div>
                                     <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                                         @if (Provider.SupportsBulkPublish)

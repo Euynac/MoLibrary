@@ -5,6 +5,7 @@
 @inject StateStoreUIService StateStoreService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<StateStoreResource> L
+@implements IDisposable
 
 <MudDialog>
     <DialogContent>
@@ -14,7 +15,7 @@
                           Label="@L["KeyEditor:Labels:KeyName"]"
                           Variant="Variant.Outlined"
                           ReadOnly="true"
-                          Style="font-family: monospace;" />
+                          Class="key-dialog__diagnostic-input" />
 
             @* ETag *@
             @if (!string.IsNullOrEmpty(KeyInfo.ETag))
@@ -23,7 +24,7 @@
                               Label="@L["KeyEditor:Labels:ETag"]"
                               Variant="Variant.Outlined"
                               ReadOnly="true"
-                              Style="font-family: monospace;" />
+                              Class="key-dialog__diagnostic-input" />
             }
 
             @* TTL (edit mode only) *@
@@ -43,7 +44,7 @@
                           Variant="Variant.Outlined"
                           Lines="15"
                           ReadOnly="@ReadOnly"
-                          Style="font-family: monospace;"
+                          Class="key-dialog__diagnostic-input"
                           HelperText="@(ReadOnly ? "" : L["KeyEditor:Labels:JsonHelperText"])" />
 
             @if (!ReadOnly)
@@ -100,6 +101,7 @@
     private string editedValue = "";
     private int ttlSeconds = 0;
     private bool isSaving = false;
+    private bool isDisposed;
     private string? errorMessage;
 
     protected override void OnInitialized()
@@ -162,6 +164,11 @@
 
             var result = await StateStoreService.SaveKeyAsync(ServiceKey, request);
 
+            if (isDisposed)
+            {
+                return;
+            }
+
             if (result.IsFailed(out var error))
             {
                 errorMessage = error.Message;
@@ -169,6 +176,10 @@
             else
             {
                 var refreshedKey = await StateStoreService.GetKeyAsync(ServiceKey, KeyInfo.Key);
+                if (isDisposed)
+                {
+                    return;
+                }
                 if (refreshedKey.IsOk(out var loadedKey))
                 {
                     await OnSaved.InvokeAsync(loadedKey);
@@ -189,9 +200,14 @@
         finally
         {
             isSaving = false;
-            StateHasChanged();
+            if (!isDisposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
     private void Cancel() => MudDialog.Cancel();
+
+    public void Dispose() => isDisposed = true;
 }

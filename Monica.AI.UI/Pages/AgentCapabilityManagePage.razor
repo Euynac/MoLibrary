@@ -235,71 +235,79 @@
             <MudExpansionPanels Elevation="0" Dense="true" Class="skill-source-panels">
                 @foreach (var source in _management.FileSkillSources)
                 {
-                    <MudExpansionPanel Text="@GetFileSkillSourceTitle(source)" Icon="@Icons.Material.Filled.FolderOpen">
-                        <div class="skill-source-body">
-                            <div class="skill-source-chips">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                    @L["Capabilities:Skill:Sources:Loaded", source.LoadedSkillCount]
-                                </MudChip>
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="@(source.HasScriptRunner ? Color.Success : Color.Warning)"
-                                         Variant="Variant.Outlined">
-                                    @(source.UsesSubprocessRunner
-                                        ? L["Capabilities:Skill:Sources:SubprocessRunner"]
-                                        : source.HasScriptRunner
-                                            ? L["Capabilities:Skill:Sources:CustomRunner"]
-                                            : L["Capabilities:Skill:Sources:NoRunner"])
-                                </MudChip>
-                            </div>
+                    var sourceTitle = GetFileSkillSourceTitle(source);
+                    <MudExpansionPanel Icon="@Icons.Material.Filled.FolderOpen">
+                        <TitleContent>
+                            <span class="skill-source-panel-title" title="@sourceTitle">@sourceTitle</span>
+                        </TitleContent>
+                        <ChildContent>
+                            <div class="skill-source-body">
+                                <div class="skill-source-chips">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                        @L["Capabilities:Skill:Sources:Loaded", source.LoadedSkillCount]
+                                    </MudChip>
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="@(source.HasScriptRunner ? Color.Success : Color.Warning)"
+                                             Variant="Variant.Outlined">
+                                        @(source.UsesSubprocessRunner
+                                            ? L["Capabilities:Skill:Sources:SubprocessRunner"]
+                                            : source.HasScriptRunner
+                                                ? L["Capabilities:Skill:Sources:CustomRunner"]
+                                                : L["Capabilities:Skill:Sources:NoRunner"])
+                                    </MudChip>
+                                </div>
 
-                            @if (source.Issues.Count > 0)
-                            {
-                                @RenderIssueList(source.Issues)
-                            }
-
-                            <div class="skill-path-list">
-                                @foreach (var path in source.Paths)
+                                @if (source.Issues.Count > 0)
                                 {
-                                    <div class="skill-path-row">
-                                        <div class="skill-path-main">
-                                            <MudIcon Icon="@(path.Exists ? Icons.Material.Filled.Folder : Icons.Material.Filled.FolderOff)"
-                                                     Size="Size.Small"
-                                                     Color="@(path.Exists ? Color.Primary : Color.Warning)" />
-                                            <div class="skill-path-text">
-                                                <MudText Typo="Typo.body2">@path.Path</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                    @L["Capabilities:Skill:Sources:PathLoaded", path.LoadedSkillCount]
-                                                </MudText>
-                                            </div>
-                                        </div>
-                                        <MudChip T="string"
-                                                 Size="Size.Small"
-                                                 Color="@(path.Issues.Count == 0 ? Color.Success : Color.Warning)"
-                                                 Variant="Variant.Outlined">
-                                            @(path.Issues.Count == 0
-                                                ? L["Capabilities:Skill:Sources:PathOk"]
-                                                : L["Capabilities:Skill:Sources:IssueCount", path.Issues.Count])
-                                        </MudChip>
-                                    </div>
-
-                                    @if (path.LoadedSkillNames.Count > 0)
-                                    {
-                                        <div class="skill-name-list">
-                                            @foreach (var skillName in path.LoadedSkillNames)
-                                            {
-                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@skillName</MudChip>
-                                            }
-                                        </div>
-                                    }
-
-                                    @if (path.Issues.Count > 0)
-                                    {
-                                        @RenderIssueList(path.Issues)
-                                    }
+                                    @RenderIssueList(source.Issues)
                                 }
+
+                                <div class="skill-path-list">
+                                    @foreach (var path in source.Paths)
+                                    {
+                                        <div class="skill-path-row">
+                                            <div class="skill-path-main">
+                                                <MudIcon Icon="@(path.Exists ? Icons.Material.Filled.Folder : Icons.Material.Filled.FolderOff)"
+                                                         Size="Size.Small"
+                                                         Color="@(path.Exists ? Color.Primary : Color.Warning)" />
+                                                <div class="skill-path-text">
+                                                    <MudText Typo="Typo.body2"
+                                                             Class="skill-path-value"
+                                                             title="@path.Path">@path.Path</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        @L["Capabilities:Skill:Sources:PathLoaded", path.LoadedSkillCount]
+                                                    </MudText>
+                                                </div>
+                                            </div>
+                                            <MudChip T="string"
+                                                     Size="Size.Small"
+                                                     Color="@(path.Issues.Count == 0 ? Color.Success : Color.Warning)"
+                                                     Variant="Variant.Outlined">
+                                                @(path.Issues.Count == 0
+                                                    ? L["Capabilities:Skill:Sources:PathOk"]
+                                                    : L["Capabilities:Skill:Sources:IssueCount", path.Issues.Count])
+                                            </MudChip>
+                                        </div>
+
+                                        @if (path.LoadedSkillNames.Count > 0)
+                                        {
+                                            <div class="skill-name-list">
+                                                @foreach (var skillName in path.LoadedSkillNames)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@skillName</MudChip>
+                                                }
+                                            </div>
+                                        }
+
+                                        @if (path.Issues.Count > 0)
+                                        {
+                                            @RenderIssueList(path.Issues)
+                                        }
+                                    }
+                                </div>
                             </div>
-                        </div>
+                        </ChildContent>
                     </MudExpansionPanel>
                 }
             </MudExpansionPanels>
@@ -310,8 +318,8 @@
     {
         return @<div class="detail-panel">
             <div class="detail-header">
-                <div>
-                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                <div class="detail-heading">
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="detail-title-row">
                         <MudIcon Icon="@GetEntryIcon(entry)" Color="@GetKindColor(entry.Kind)" />
                         <MudText Typo="Typo.h5">@entry.Title</MudText>
                     </MudStack>

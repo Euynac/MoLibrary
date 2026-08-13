@@ -12,8 +12,9 @@
 @inject IDialogService DialogService
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 
-<div>
+<div class="service-list">
     <MudDataGrid T="RegisteredServiceStatus" Items="@Services" Hover="true" Dense="true" Loading="@IsLoading"
+                 Class="service-list__grid"
                  RowContextMenuClick="OnRowContextMenuClick">
         <Columns>
             <PropertyColumn Property="x => x.AppId" Title="@L["ServiceList:Columns:AppId"]" />
@@ -88,7 +89,7 @@
                             var leaderBadge = instance.IsLeader ? $" · {L["Shared:LeaderStatuses:Leader"]}" : string.Empty;
                             var tooltipText = $"{instance.InstanceId}: {instance.Status.GetText(L)}{leaderBadge}";
 
-                            <MudStack Row="false" Spacing="0" AlignItems="AlignItems.Center" Style="position: relative;">
+                            <MudStack Row="false" Spacing="0" AlignItems="AlignItems.Center" Class="service-list__instance-status">
                                 <MudTooltip Text="@tooltipText">
                                     <MudIcon Icon="@Icons.Material.Filled.Circle" Color="@instance.Status.GetColor()" Size="Size.Small" />
                                 </MudTooltip>
@@ -97,7 +98,7 @@
                                     <MudIcon Icon="@Icons.Material.Filled.WorkspacePremium"
                                              Color="Color.Warning"
                                              Size="Size.Small"
-                                             Style="position: absolute; top: -4px; right: -4px; font-size: 0.75rem;" />
+                                             Class="service-list__leader-badge" />
                                 }
                             </MudStack>
                         }
@@ -120,6 +121,7 @@
                    OnItemClick="@OnContextMenuItemClick"
                    OnClose="@CloseContextMenu" />
 </div>
+
 
 @code {
     [Parameter] public List<RegisteredServiceStatus> Services { get; set; } = [];

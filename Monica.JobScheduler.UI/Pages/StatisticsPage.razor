@@ -12,6 +12,8 @@
 
 <PageTitle>@L["Statistics:Title"]</PageTitle>
 
+<SchedulerWorkspace Title="@L["Workspace:Pages:Statistics:Title"]"
+                    Description="@L["Workspace:Pages:Statistics:Description"]">
 <div class="statistics-page">
     @* Time Range Selector *@
     <TimeRangeSelector Preset="@_preset"
@@ -66,6 +68,7 @@
         </MudGrid>
     }
 </div>
+</SchedulerWorkspace>
 
 @code {
     public const string PAGE_URL = "/job-scheduler/statistics";
@@ -84,20 +87,17 @@
     private List<JobRanking> _topByFailure = [];
     private FailureAnalysis? _failureAnalysis;
 
-    private CancellationTokenSource? _cts;
+    private readonly CancellationTokenSource _cts = new();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            _cts = new CancellationTokenSource();
-            await LoadDataAsync();
-        }
+        await LoadDataAsync();
     }
 
-    private async Task OnPresetChanged(TimeRangePreset preset)
+    private Task OnPresetChanged(TimeRangePreset preset)
     {
         _preset = preset;
+        return Task.CompletedTask;
     }
 
     private async Task LoadDataAsync()
@@ -108,11 +108,12 @@
             _loadError = null;
             StateHasChanged();
 
-            var token = _cts?.Token ?? CancellationToken.None;
+            var token = _cts.Token;
             var (startTime, endTime) = GetEffectiveTimeRange();
             var granularity = GetGranularity();
 
             var result = await AnalyticsFacade.GetAnalyticsAsync(startTime, endTime, granularity, 10, token);
+            token.ThrowIfCancellationRequested();
             if (result.IsFailed(out var error, out var snapshot))
             {
                 _loadError = error.Message;
@@ -136,8 +137,11 @@
         }
         finally
         {
-            _isLoading = false;
-            StateHasChanged();
+            if (!_cts.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
         }
     }
 
@@ -187,9 +191,7 @@
 
     public async ValueTask DisposeAsync()
     {
-        _cts?.Cancel();
-        _cts?.Dispose();
-
-        await ValueTask.CompletedTask;
+        await _cts.CancelAsync();
+        _cts.Dispose();
     }
 }

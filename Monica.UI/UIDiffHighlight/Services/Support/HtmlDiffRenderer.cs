@@ -217,10 +217,10 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
         return @"
 <style>
 .diff-container {
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: var(--mo-font-family-mono);
     font-size: 12px;
     line-height: 1.4;
-    border: 1px solid #d1d9e0;
+    border: 1px solid var(--mud-palette-divider);
     border-radius: 8px;
     overflow: hidden;
 }
@@ -228,20 +228,20 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
 .diff-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #ffffff;
+    background-color: var(--mud-palette-surface);
 }
 
 .diff-table tr:hover {
-    background-color: rgba(0, 0, 0, 0.03);
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 .diff-line-number {
     width: 40px;
     padding: 2px 8px;
     text-align: right;
-    color: #656d76;
-    background-color: #f6f8fa;
-    border-right: 1px solid #d1d9e0;
+    color: var(--mud-palette-text-secondary);
+    background-color: var(--mud-palette-background-gray);
+    border-right: 1px solid var(--mud-palette-divider);
     user-select: none;
     vertical-align: top;
 }
@@ -262,45 +262,45 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
 }
 
 .diff-added {
-    background-color: #ccffd8;
+    background-color: var(--mo-color-state-success-soft-background);
 }
 
 .diff-added .diff-symbol {
-    color: #1a7f37;
-    background-color: #ccffd8;
+    color: var(--mo-color-state-success-soft-text);
+    background-color: var(--mo-color-state-success-soft-background);
 }
 
 .diff-deleted {
-    background-color: #ffd7d5;
+    background-color: var(--mo-color-state-error-soft-background);
 }
 
 .diff-deleted .diff-symbol {
-    color: #cf222e;
-    background-color: #ffd7d5;
+    color: var(--mo-color-state-error-soft-text);
+    background-color: var(--mo-color-state-error-soft-background);
 }
 
 .diff-modified {
-    background-color: #fff8c5;
+    background-color: var(--mo-color-state-warning-soft-background);
 }
 
 .diff-modified .diff-symbol {
-    color: #bf8700;
-    background-color: #fff8c5;
+    color: var(--mo-color-state-warning-soft-text);
+    background-color: var(--mo-color-state-warning-soft-background);
 }
 
 .diff-unchanged {
-    background-color: #ffffff;
+    background-color: var(--mud-palette-surface);
 }
 
 .diff-added-char {
-    background-color: #abf2bc;
-    color: #1a7f37;
+    background-color: var(--mud-palette-success);
+    color: var(--mud-palette-success-text);
     font-weight: bold;
 }
 
 .diff-deleted-char {
-    background-color: #ffc1cc;
-    color: #cf222e;
+    background-color: var(--mud-palette-error);
+    color: var(--mud-palette-error-text);
     font-weight: bold;
     text-decoration: line-through;
 }

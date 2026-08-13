@@ -4,6 +4,7 @@
 @using Monica.AI.KnowledgeBase.Models
 @using Monica.AI.RAG.Models
 @using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIRAG.Support
 @implements IAsyncDisposable
 @inject IStringLocalizer<AIResource> L
 @inject IJSRuntime JSRuntime
@@ -94,7 +95,7 @@
 
     private readonly List<ChunkHighlight> OrderedChunks = [];
     private ElementReference _viewerRoot;
-    private IJSObjectReference? _jsModule;
+    private ChunkViewerInteropSession? _interopSession;
     private string _lastAppliedSignature = string.Empty;
 
     private int ChunkCount => OrderedChunks.Count;
@@ -118,51 +119,18 @@
             return;
         }
 
-        await EnsureJsModuleAsync();
-        if (_jsModule is null)
-        {
-            return;
-        }
-
         var signature = BuildScrollSignature();
         if (string.Equals(signature, _lastAppliedSignature, StringComparison.Ordinal))
         {
             return;
         }
 
-        _lastAppliedSignature = signature;
-
-        try
+        _interopSession ??= new ChunkViewerInteropSession(JSRuntime);
+        if (await _interopSession.ScrollToMatchedChunkAsync(_viewerRoot))
         {
-            await _jsModule.InvokeVoidAsync("scrollToMatchedChunk", _viewerRoot);
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (JSException)
-        {
-        }
-    }
-
-    private async Task EnsureJsModuleAsync()
-    {
-        if (_jsModule is not null)
-        {
-            return;
+            _lastAppliedSignature = signature;
         }
 
-        try
-        {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/Monica.AI.UI/UIRAG/Components/ChunkViewerDialog.razor.js");
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (JSException)
-        {
-        }
     }
 
     private void Close() => MudDialog.Close();
@@ -293,20 +261,12 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule is null)
+        var interopSession = Interlocked.Exchange(ref _interopSession, null);
+        if (interopSession is null)
         {
             return;
         }
 
-        try
-        {
-            await _jsModule.DisposeAsync();
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (JSException)
-        {
-        }
+        await interopSession.DisposeAsync();
     }
 }

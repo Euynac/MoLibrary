@@ -3,6 +3,7 @@
 @using Monica.DevOps.Localization
 @using Monica.DevOps.K8S.Models
 @attribute [Route(PAGE_URL)]
+@implements IDisposable
 @inject K8SFacade K8SFacade
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -10,18 +11,17 @@
 
 <PageTitle>@L["Page:DocumentTitle"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="page-root pa-4">
-    <MudStack Spacing="3">
-        <MudPaper Class="pa-4">
-            <MudStack Spacing="3">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                    <MudStack Spacing="1">
-                        <MudText Typo="Typo.h4">@L["Page:Title"]</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            @L["Page:Subtitle"]
-                        </MudText>
-                    </MudStack>
-                    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+<div class="k8s-page">
+<MudContainer MaxWidth="MaxWidth.False" Class="page-root">
+    <div class="k8s-page__content">
+        <header class="k8s-header">
+            <div class="k8s-header__eyebrow"><span aria-hidden="true"></span><span>@L["Page:Eyebrow"]</span></div>
+            <div class="k8s-header__heading-row">
+                <div>
+                    <MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Title"]</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="k8s-header__description">@L["Page:Subtitle"]</MudText>
+                </div>
+                <div class="k8s-header__actions">
                         <MudButton Variant="Variant.Outlined"
                                    StartIcon="@Icons.Material.Filled.Settings"
                                    Disabled="@_busy"
@@ -95,28 +95,16 @@
                                 </MudMenuItem>
                             </ChildContent>
                         </MudMenu>
-                    </MudStack>
-                </MudStack>
+                </div>
+            </div>
+        </header>
 
-                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                    <MudChip T="string" Value="@GetExecutionNodeChipText()" Variant="Variant.Outlined" Color="Color.Primary">
-                        @GetExecutionNodeChipText()
-                    </MudChip>
-                    <MudChip T="string" Value="@GetNamespaceScopeChipText()" Variant="Variant.Outlined" Color="Color.Info">
-                        @GetNamespaceScopeChipText()
-                    </MudChip>
-                    <MudChip T="string" Value="@GetRestrictionChipText()" Variant="Variant.Outlined" Color="Color.Warning">
-                        @GetRestrictionChipText()
-                    </MudChip>
-                    <MudChip T="string" Value="@GetListStatusChipText()" Variant="Variant.Outlined" Color="Color.Secondary">
-                        @GetListStatusChipText()
-                    </MudChip>
-                    <MudChip T="string" Value="@GetSelectionChipText()" Variant="Variant.Outlined" Color="Color.Success">
-                        @GetSelectionChipText()
-                    </MudChip>
-                </MudStack>
-            </MudStack>
-        </MudPaper>
+        <section class="k8s-pulse" aria-label="@L["Page:Summary:AriaLabel"]">
+            <article class="k8s-pulse__item k8s-pulse__item--primary"><MudIcon Icon="@Icons.Material.Filled.Dns" /><span><small>@L["Page:Summary:ExecutionNode"]</small><strong>@GetExecutionNodeValue()</strong></span></article>
+            <article class="k8s-pulse__item k8s-pulse__item--info"><MudIcon Icon="@Icons.Material.Filled.ViewModule" /><span><small>@L["Page:Summary:Namespaces"]</small><strong>@_namespaces.Count(namespaceInfo => namespaceInfo.Exists)</strong></span></article>
+            <article class="k8s-pulse__item k8s-pulse__item--success"><MudIcon Icon="@Icons.Material.Filled.Dataset" /><span><small>@L["Page:Summary:Resources"]</small><strong>@(_resourceList?.Items.Count ?? 0)</strong></span></article>
+            <article class="k8s-pulse__item k8s-pulse__item--warning"><MudIcon Icon="@Icons.Material.Filled.Security" /><span><small>@L["Page:Summary:Restrictions"]</small><strong>@_runtimeConfig.SensitiveOperationNameRestrictions.Count</strong></span></article>
+        </section>
 
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
         {
@@ -125,7 +113,7 @@
             </MudAlert>
         }
 
-        <MudPaper Class="pa-4">
+        <div class="k8s-filter-surface"><MudPaper Elevation="0" Outlined="true" Class="pa-4">
             <MudGrid Spacing="2">
                 <MudItem xs="12" md="4">
                     <MudSelect T="string"
@@ -183,9 +171,9 @@
                     </MudStack>
                 </MudItem>
             </MudGrid>
-        </MudPaper>
+        </MudPaper></div>
 
-        <MudPaper Class="pa-0">
+        <div class="k8s-grid-surface"><MudPaper Elevation="0" Outlined="true" Class="pa-0">
             @if (_loadingResources)
             {
                 <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-6">
@@ -262,9 +250,10 @@
                     </PagerContent>
                 </MudDataGrid>
             }
-        </MudPaper>
-    </MudStack>
+        </MudPaper></div>
+    </div>
 </MudContainer>
+</div>
 
 @code {
     public const string PAGE_URL = "/ui/k8s";
@@ -281,6 +270,7 @@
 
     private bool _busy;
     private bool _loadingResources;
+    private bool _disposed;
     private string _statusMessage = string.Empty;
     private Severity _statusSeverity = Severity.Info;
     private K8SRuntimeConfig _runtimeConfig = new();
@@ -301,7 +291,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_disposed)
         {
             await RefreshEverythingAsync();
         }
@@ -454,7 +444,7 @@
     private Task OnSearchTextChanged(string value)
     {
         _searchText = value;
-        return InvokeAsync(StateHasChanged);
+        return RefreshViewAsync();
     }
 
     private async Task RefreshCurrentResourceListAsync()
@@ -470,11 +460,17 @@
     private async Task LoadResourceListAsync(string namespaceName, K8SResourceType resourceType)
     {
         _loadingResources = true;
-        await InvokeAsync(StateHasChanged);
+        await RefreshViewAsync();
 
         try
         {
-            if ((await K8SFacade.ListResourcesAsync(namespaceName, resourceType)).IsFailed(out var error, out var resourceList))
+            var response = await K8SFacade.ListResourcesAsync(namespaceName, resourceType);
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (response.IsFailed(out var error, out var resourceList))
             {
                 Snackbar.Add(error, Severity.Error);
                 SetStatus(error, Severity.Error);
@@ -492,7 +488,7 @@
         finally
         {
             _loadingResources = false;
-            await InvokeAsync(StateHasChanged);
+            await RefreshViewAsync();
         }
     }
 
@@ -841,13 +837,13 @@
 
     private async Task ExecuteBusyAsync(Func<Task> action)
     {
-        if (_busy)
+        if (_busy || _disposed)
         {
             return;
         }
 
         _busy = true;
-        await InvokeAsync(StateHasChanged);
+        await RefreshViewAsync();
 
         try
         {
@@ -856,19 +852,19 @@
         finally
         {
             _busy = false;
-            await InvokeAsync(StateHasChanged);
+            await RefreshViewAsync();
         }
     }
 
     private async Task<T?> ExecuteBusyAsync<T>(Func<Task<T>> action) where T : class
     {
-        if (_busy)
+        if (_busy || _disposed)
         {
             return null;
         }
 
         _busy = true;
-        await InvokeAsync(StateHasChanged);
+        await RefreshViewAsync();
 
         try
         {
@@ -877,52 +873,31 @@
         finally
         {
             _busy = false;
-            await InvokeAsync(StateHasChanged);
+            await RefreshViewAsync();
         }
     }
 
     private void SetStatus(string message, Severity severity)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _statusMessage = message;
         _statusSeverity = severity;
     }
 
-    private string GetExecutionNodeChipText()
+    private Task RefreshViewAsync()
+    {
+        return _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+    }
+
+    private string GetExecutionNodeValue()
     {
         return string.IsNullOrWhiteSpace(_runtimeConfig.ExecutionNode)
-            ? L["Chips:ExecutionNodeMissing"]
-            : L["Chips:ExecutionNode", _runtimeConfig.ExecutionNode];
-    }
-
-    private string GetNamespaceScopeChipText()
-    {
-        return _runtimeConfig.NamespaceScope.Count == 0
-            ? L["Chips:NamespaceScopeAll"]
-            : L["Chips:NamespaceScopeCount", _runtimeConfig.NamespaceScope.Count];
-    }
-
-    private string GetRestrictionChipText()
-    {
-        return _runtimeConfig.SensitiveOperationNameRestrictions.Count == 0
-            ? L["Chips:SensitiveRestrictionsNone"]
-            : L["Chips:SensitiveRestrictionsCount", _runtimeConfig.SensitiveOperationNameRestrictions.Count];
-    }
-
-    private string GetListStatusChipText()
-    {
-        if (_loadingResources)
-        {
-            return L["Chips:CurrentListRefreshing"];
-        }
-
-        return _resourceList == null
-            ? L["Chips:CurrentListNotLoaded"]
-            : L["Chips:CurrentListAt", _resourceList.FetchedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")];
-    }
-
-    private string GetSelectionChipText()
-    {
-        return L["Chips:SelectedCount", _selectedResources.Count];
+            ? L["Page:Summary:NotConfigured"]
+            : _runtimeConfig.ExecutionNode;
     }
 
     private string GetNamespaceDisplayName(K8SNamespaceInfo namespaceInfo)
@@ -973,6 +948,11 @@
         }
 
         return message;
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
     }
 
     private string BuildScaleResultMessage(K8SScaleResult result)

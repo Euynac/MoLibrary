@@ -1,9 +1,11 @@
 @using Monica.SignalR.UISignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<!-- connection status -->
-<MudPaper Class="pa-4 mb-4" Elevation="2">
-    <MudText Typo="Typo.h5" Class="mb-3">@L["UISignalR:ConnectionStatus:Title"]</MudText>
+<MudPaper Class="signalr-connection-status" Elevation="0">
+    <div class="signalr-component-heading">
+        <MudIcon Icon="@Icons.Material.Outlined.Sensors" Color="@GetConnectionStatusColor()" />
+        <MudText Typo="Typo.h6">@L["UISignalR:ConnectionStatus:Title"]</MudText>
+    </div>
     <MudChip Color="@GetConnectionStatusColor()" 
             Label="true" 
             Size="Size.Medium"

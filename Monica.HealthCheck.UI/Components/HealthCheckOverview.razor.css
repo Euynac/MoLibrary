@@ -27,7 +27,15 @@
     min-width: 0;
     padding: 1rem;
     border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
     background: var(--mud-palette-surface);
+    transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.health-summary:hover {
+    border-color: var(--mud-palette-lines-inputs);
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
+    box-shadow: var(--mud-elevation-1);
 }
 
 .health-summary > div {
@@ -50,9 +58,15 @@
     border-block-start: .25rem solid var(--mud-palette-info);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 929px) {
     .health-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .health-summary {
+        transition-duration: 0.01ms;
     }
 }
 

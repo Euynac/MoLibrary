@@ -12,6 +12,18 @@
     border-radius: 8px;
     background-color: var(--mud-palette-surface);
     overflow: hidden;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.instrument-card:hover ::deep .instrument-card-surface {
+    border-color: var(--mud-palette-lines-inputs);
+    box-shadow: var(--mud-elevation-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .instrument-card ::deep .instrument-card-surface {
+        transition-duration: 0.01ms;
+    }
 }
 
 .instrument-header {

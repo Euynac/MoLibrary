@@ -6,11 +6,8 @@
     height: 100%;
     min-height: 0;
     overflow: hidden;
-    padding: 16px;
     position: relative;
-    background:
-        radial-gradient(circle at top left, rgba(var(--mud-palette-primary-rgb), 0.08), transparent 34%),
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.5), var(--mud-palette-background));
+    background-color: var(--mud-palette-background);
 }
 
 .doc-center-state {
@@ -19,10 +16,8 @@
     justify-content: center;
     align-items: center;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: var(--mud-default-borderradius);
-    background:
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.92), rgba(var(--mud-palette-surface-rgb), 0.76)),
-        rgba(var(--mud-palette-primary-rgb), 0.02);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
 }
 
 .doc-center-state ::deep .empty-state-icon {
@@ -68,17 +63,12 @@
     flex-direction: column;
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: var(--mud-default-borderradius);
-    background:
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.94), rgba(var(--mud-palette-surface-rgb), 0.82)),
-        rgba(var(--mud-palette-primary-rgb), 0.02);
-    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
 }
 
 .doc-toc-rail {
-    background:
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.92), rgba(var(--mud-palette-surface-rgb), 0.78)),
-        rgba(var(--mud-palette-primary-rgb), 0.01);
+    background-color: var(--mud-palette-background-gray);
 }
 
 .doc-sidebar-backdrop {
@@ -86,10 +76,6 @@
 }
 
 @media (max-width: 960px) {
-    .doc-layout {
-        padding: 12px;
-    }
-
     .doc-workspace,
     .doc-workspace.sidebar-hidden,
     .doc-main-stage,
@@ -123,16 +109,11 @@
         z-index: 20;
         border: 0;
         background: rgba(var(--mud-palette-dark-rgb), 0.18);
-        backdrop-filter: blur(2px);
     }
 }
 
 @media (max-width: 720px) {
-    .doc-layout {
-        padding: 10px;
-    }
-
     .doc-center-state {
-        border-radius: var(--mud-default-borderradius);
+        border-radius: 12px;
     }
 }

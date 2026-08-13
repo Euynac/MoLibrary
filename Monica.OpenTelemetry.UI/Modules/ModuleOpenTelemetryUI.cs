@@ -57,7 +57,7 @@ public class ModuleOpenTelemetryUI : MonicaModule<ModuleOpenTelemetryUIOption>, 
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleOpenTelemetryUIOption> context)
     {
-        context.Services.AddScoped<OpenTelemetryDashboardPageState>();
+        context.Services.AddScoped<OpenTelemetryDashboardPageStateFactory>();
     }
 }
 

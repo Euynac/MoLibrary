@@ -16,9 +16,13 @@
 @using Monica.UI.Shell.Support
 
 @using Monica.UI.Shell.State
+@implements IAsyncDisposable
 
-<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">@L["JobDefinitions:Title"]</MudText>
+<PageTitle>@L["JobDefinitions:Title"]</PageTitle>
+
+<SchedulerWorkspace Title="@L["Workspace:Pages:Definitions:Title"]"
+                    Description="@L["Workspace:Pages:Definitions:Description"]">
+<div class="scheduler-page-content">
 
     <div class="job-filter-wrapper mb-4">
         <MudPaper Class="job-filter-surface" Elevation="0" Outlined="true">
@@ -385,7 +389,8 @@
             </MudStack>
         </MudPaper>
     }
-</MudContainer>
+</div>
+</SchedulerWorkspace>
 
 @code {
     public const string PAGE_URL = "/job-scheduler/definitions";
@@ -422,35 +427,51 @@
 
     // State loading flag - controls conditional rendering of MudTabs
     private bool _stateLoaded = false;
+    private readonly BrowserStorageRestoreSession _browserStorageRestore = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadSourceProjectOptionsAsync();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        return firstRender
+            ? _browserStorageRestore.RunAsync(RestoreTableStateAsync)
+            : Task.CompletedTask;
+    }
+
+    private async Task RestoreTableStateAsync(CancellationToken cancellationToken)
+    {
+        var recurringState = await BrowserStorage.GetTableStateAsync("job-definitions-recurring");
+        if (cancellationToken.IsCancellationRequested)
         {
-            var recurringState = await BrowserStorage.GetTableStateAsync("job-definitions-recurring");
-            if (!string.IsNullOrEmpty(recurringState.SortBy))
-            {
-                _recurringSortBy = recurringState.SortBy;
-                _recurringSortDescending = recurringState.SortDescending;
-            }
-            _recurringPageSize = recurringState.PageSize;
-
-            var triggerState = await BrowserStorage.GetTableStateAsync("job-definitions-trigger");
-            if (!string.IsNullOrEmpty(triggerState.SortBy))
-            {
-                _triggerSortBy = triggerState.SortBy;
-                _triggerSortDescending = triggerState.SortDescending;
-            }
-            _triggerPageSize = triggerState.PageSize;
-
-            _stateLoaded = true;
-            await InvokeAsync(StateHasChanged);
+            return;
         }
+
+        var triggerState = await BrowserStorage.GetTableStateAsync("job-definitions-trigger");
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(recurringState.SortBy))
+        {
+            _recurringSortBy = recurringState.SortBy;
+            _recurringSortDescending = recurringState.SortDescending;
+        }
+
+        _recurringPageSize = recurringState.PageSize;
+
+        if (!string.IsNullOrEmpty(triggerState.SortBy))
+        {
+            _triggerSortBy = triggerState.SortBy;
+            _triggerSortDescending = triggerState.SortDescending;
+        }
+
+        _triggerPageSize = triggerState.PageSize;
+        _stateLoaded = true;
+        StateHasChanged();
     }
 
     private async Task<TableData<JobDefinitionWithLastExecution>> LoadRecurringJobsAsync(TableState state, CancellationToken cancellationToken)
@@ -1028,4 +1049,6 @@
     {
         public string DisplayText => $"{ProjectName}({DefinitionCount})";
     }
+
+    public ValueTask DisposeAsync() => _browserStorageRestore.DisposeAsync();
 }

@@ -1,6 +1,5 @@
 .monitor-page {
-    padding: 24px;
-    margin: 0 auto;
+    min-width: 0;
 }
 
 .loading-container {
@@ -19,16 +18,4 @@
 
 .monitor-page ::deep .monitor-equal-card > * {
     width: 100%;
-}
-
-@media (max-width: 960px) {
-    .monitor-page {
-        padding: 16px;
-    }
-}
-
-@media (max-width: 600px) {
-    .monitor-page {
-        padding: 12px;
-    }
 }

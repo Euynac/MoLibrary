@@ -1,39 +1,45 @@
-<MudPaper Class="logging-toolbar pa-3">
+@inject IStringLocalizer<LoggingResource> L
+
+<div class="logging-toolbar-shell">
+<MudPaper Class="logging-toolbar pa-3" Elevation="0" Outlined="true">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Justify="Justify.SpaceBetween">
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.PlayArrow"
                        Disabled="@IsRunning"
-                       OnClick="HandleStart">开始</MudButton>
+                       OnClick="HandleStart">@L["Page:Components:Toolbar:Start"]</MudButton>
 
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Secondary"
                        StartIcon="@Icons.Material.Filled.Pause"
                        Disabled="@(!IsRunning)"
-                       OnClick="HandlePause">暂停</MudButton>
+                       OnClick="HandlePause">@L["Page:Components:Toolbar:Pause"]</MudButton>
 
             <MudButton Variant="Variant.Text"
                        StartIcon="@Icons.Material.Filled.Refresh"
-                       OnClick="HandleRefresh">刷新</MudButton>
+                       OnClick="HandleRefresh">@L["Page:Components:Toolbar:Refresh"]</MudButton>
 
             <MudButton Variant="Variant.Text"
                        StartIcon="@Icons.Material.Filled.Download"
-                       OnClick="HandleExport">导出临时日志</MudButton>
+                       OnClick="HandleExport">@L["Page:Components:Toolbar:Export"]</MudButton>
         </MudStack>
 
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudSelect T="int" Value="@SelectedLineLimit" ValueChanged="HandleLineLimitChanged" Dense="true" Label="显示行数" Style="min-width: 150px;">
+            <div class="logging-toolbar__line-limit">
+            <MudSelect T="int" Value="@SelectedLineLimit" ValueChanged="HandleLineLimitChanged" Dense="true" Label="@L["Page:Components:Toolbar:LineLimit"]">
                 @foreach (var option in PresetLineCounts)
                 {
                     <MudSelectItem Value="@option">@option</MudSelectItem>
                 }
             </MudSelect>
+            </div>
 
-            <MudSwitch T="bool" Value="@_autoScroll" ValueChanged="OnAutoScrollChanged" Color="Color.Primary">自动滚动</MudSwitch>
+            <MudSwitch T="bool" Value="@_autoScroll" ValueChanged="OnAutoScrollChanged" Color="Color.Primary">@L["Page:Components:Toolbar:AutoScroll"]</MudSwitch>
         </MudStack>
     </MudStack>
 </MudPaper>
+</div>
 
 @code {
     [Parameter]

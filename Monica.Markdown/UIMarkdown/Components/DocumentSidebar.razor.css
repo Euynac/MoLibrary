@@ -35,19 +35,17 @@
     min-width: 0;
     padding: 14px 16px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: var(--mud-default-borderradius);
-    background:
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.92), rgba(var(--mud-palette-surface-rgb), 0.72)),
-        rgba(var(--mud-palette-primary-rgb), 0.04);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
     color: inherit;
     cursor: pointer;
-    transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .knowledge-base-switcher:hover {
-    transform: translateY(-1px);
     background-color: rgba(var(--mud-palette-primary-rgb), 0.05);
     border-color: rgba(var(--mud-palette-primary-rgb), 0.28);
+    box-shadow: var(--mud-elevation-1);
 }
 
 .knowledge-base-switcher-leading {
@@ -121,7 +119,7 @@
 .sidebar-pane-rule {
     flex: 1;
     height: 1px;
-    background: linear-gradient(90deg, rgba(var(--mud-palette-primary-rgb), 0.18), transparent);
+    background-color: var(--mud-palette-lines-default);
 }
 
 .sidebar-tree {
@@ -133,7 +131,7 @@
 
 ::deep .sidebar-collapse-button {
     border: 1px solid rgba(var(--mud-palette-primary-rgb), 0.2);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 8px;
     background-color: var(--mud-palette-surface);
 }
 

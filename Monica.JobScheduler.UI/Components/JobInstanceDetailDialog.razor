@@ -14,6 +14,7 @@
 
 <MudDialog>
     <DialogContent>
+        <div class="job-instance-detail">
         @if (_isLoading)
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2">
@@ -68,7 +69,7 @@
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:InstanceId"]</MudText>
                             <MudTooltip Text="@_jobInstance.InstanceId">
                                 <MudLink Typo="Typo.body1"
-                                         Style="display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; cursor: pointer;"
+                                         Class="job-instance-detail__instance-link"
                                          OnClick="CopyInstanceIdAsync">
                                     @_jobInstance.InstanceId
                                 </MudLink>
@@ -77,11 +78,11 @@
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:JobKey"]</MudText>
-                        <MudText Typo="Typo.body1" Style="overflow-wrap: anywhere;" title="@_jobInstance.JobKey">@_jobInstance.JobKey</MudText>
+                        <MudText Typo="Typo.body1" Class="job-instance-detail__breakable" title="@_jobInstance.JobKey">@_jobInstance.JobKey</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:RunningClient"]</MudText>
-                        <MudText Typo="Typo.body1" Style="font-family: monospace; overflow-wrap: anywhere;" title="@_jobInstance.RunningClientId">@(_jobInstance.RunningClientId ?? "-")</MudText>
+                        <MudText Typo="Typo.body1" Class="job-instance-detail__breakable job-instance-detail__mono" title="@_jobInstance.RunningClientId">@(_jobInstance.RunningClientId ?? "-")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudStack Spacing="1" AlignItems="AlignItems.Start">
@@ -143,13 +144,14 @@
                                   Variant="Variant.Outlined"
                                   Lines="10"
                                   Sizing="InputSizing.Auto"
-                                  Style="font-family: monospace; overflow-x: auto;" />
+                                  Class="job-instance-detail__args" />
                 </MudPaper>
             }
 
             <!-- State history -->
             <StateHistoryViewer Instance="@_jobInstance" />
         }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>

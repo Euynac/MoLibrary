@@ -53,12 +53,24 @@
     gap: 8px;
     text-align: left;
     cursor: pointer;
+    transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .context-item:hover,
 .context-item.selected {
     border-color: var(--mud-palette-primary);
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+}
+
+.context-item:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .context-item {
+        transition-duration: 0.01ms;
+    }
 }
 
 .context-item__main {

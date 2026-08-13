@@ -1,0 +1,19 @@
+.diagnostic-value {
+    font-family: var(--mo-font-family-mono);
+}
+
+.break-value {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.claims-table-scroll {
+    max-height: 400px;
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+}
+
+.claims-table-scroll ::deep table {
+    min-width: 520px;
+}

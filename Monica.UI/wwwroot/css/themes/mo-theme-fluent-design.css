@@ -4,8 +4,8 @@
 :root[data-theme="fluent-design-dark"],
 .mo-theme-fluent-design-light,
 .mo-theme-fluent-design-dark {
-    --mo-fluent-font-text: "Segoe UI Variable", "Segoe UI", Roboto, Arial, sans-serif;
-    --mo-fluent-font-mono: "Cascadia Mono", Consolas, "Geist Mono", monospace;
+    --mo-fluent-font-text: "Segoe UI Variable", "Segoe UI", var(--mo-font-family-body);
+    --mo-fluent-font-mono: "Cascadia Mono", Consolas, var(--mo-font-family-mono);
     --mo-fluent-radius-control: 4px;
     --mo-fluent-radius-overlay: 8px;
     --mo-fluent-radius-window: 8px;
@@ -47,6 +47,15 @@
     --mo-color-page-hero-action: var(--mud-palette-primary);
     --mo-color-highlight-background: var(--mo-fluent-accent-subtle);
     --mo-color-highlight-text: var(--mud-palette-text-primary);
+    --mo-navbar-brand-gap: 10px;
+    --mo-navbar-brand-padding: 4px 8px 4px 4px;
+    --mo-navbar-brand-radius: var(--mo-fluent-radius-control);
+    --mo-navbar-brand-hover-background: var(--mo-fluent-fill-subtle-secondary);
+    --mo-navbar-brand-hover-opacity: 1;
+    --mo-navbar-brand-logo-size: 32px;
+    --mo-navbar-brand-name-size: 1rem;
+    --mo-navbar-brand-name-weight: 600;
+    --mo-navbar-control-radius: var(--mo-fluent-radius-control);
 }
 
 :root[data-theme="fluent-design-light"],
@@ -261,6 +270,12 @@
     border-radius: var(--mo-fluent-radius-overlay);
     box-shadow: var(--mo-fluent-shadow-flyout) !important;
     backdrop-filter: blur(30px) saturate(1.25);
+}
+
+:root[data-theme="fluent-design-light"] :is(.mud-popover.mo-navbar-menu-popover, .mud-popover.mo-context-menu-popover),
+:root[data-theme="fluent-design-dark"] :is(.mud-popover.mo-navbar-menu-popover, .mud-popover.mo-context-menu-popover),
+.mo-theme-fluent-design-light :is(.mud-popover.mo-navbar-menu-popover, .mud-popover.mo-context-menu-popover),
+.mo-theme-fluent-design-dark :is(.mud-popover.mo-navbar-menu-popover, .mud-popover.mo-context-menu-popover) {
     overflow: hidden;
 }
 
@@ -287,23 +302,22 @@
     color: var(--mud-palette-text-primary) !important;
 }
 
-.mo-theme-fluent-design-light :is(.mud-card, .theme-card),
-.mo-theme-fluent-design-dark :is(.mud-card, .theme-card),
-.mo-theme-fluent-design-light :is(.mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs),
-.mo-theme-fluent-design-dark :is(.mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs) {
+.mo-theme-fluent-design-light :is(.mud-card:not(.mo-self-painted), .theme-card),
+.mo-theme-fluent-design-dark :is(.mud-card:not(.mo-self-painted), .theme-card),
+.mo-theme-fluent-design-light :is(.mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-tabs),
+.mo-theme-fluent-design-dark :is(.mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-tabs) {
     background: var(--mo-fluent-surface-card);
     border: 1px solid var(--mo-fluent-stroke-card);
     border-radius: var(--mo-fluent-radius-window);
     box-shadow: var(--mo-fluent-shadow-card) !important;
-    overflow: hidden;
     transition:
         background-color var(--mo-fluent-motion),
         border-color var(--mo-fluent-motion),
         box-shadow var(--mo-fluent-motion);
 }
 
-.mo-theme-fluent-design-light :is(.mud-card:hover, .theme-card:hover),
-.mo-theme-fluent-design-dark :is(.mud-card:hover, .theme-card:hover) {
+.mo-theme-fluent-design-light :is(.mud-card:not(.mo-self-painted):hover, .theme-card:hover),
+.mo-theme-fluent-design-dark :is(.mud-card:not(.mo-self-painted):hover, .theme-card:hover) {
     background: var(--mo-fluent-surface-card-strong);
     border-color: var(--mo-fluent-stroke-surface);
     box-shadow: var(--mud-elevation-2) !important;
@@ -317,9 +331,22 @@
     box-shadow: 0 0 0 1px var(--mud-palette-primary) inset, var(--mo-fluent-shadow-card) !important;
 }
 
-.mo-theme-fluent-design-light .mud-card-content,
-.mo-theme-fluent-design-dark .mud-card-content {
+.mo-theme-fluent-design-light .mud-card:not(.mo-self-painted) .mud-card-content,
+.mo-theme-fluent-design-dark .mud-card:not(.mo-self-painted) .mud-card-content {
     padding: 16px !important;
+}
+
+.mo-theme-fluent-design-light :is(.mud-table-container, .mud-data-grid),
+.mo-theme-fluent-design-dark :is(.mud-table-container, .mud-data-grid) {
+    background: var(--mo-fluent-surface-card);
+    border: 1px solid var(--mo-fluent-stroke-card);
+    border-radius: var(--mo-fluent-radius-window);
+    box-shadow: var(--mo-fluent-shadow-card);
+}
+
+.mo-theme-fluent-design-light .mud-table-container,
+.mo-theme-fluent-design-dark .mud-table-container {
+    overflow-x: auto;
 }
 
 .mo-theme-fluent-design-light .mud-appbar,

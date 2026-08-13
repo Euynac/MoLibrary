@@ -35,13 +35,24 @@
     padding: 10px 12px;
     border-radius: 8px;
     background: var(--mud-palette-background);
+    border: 0;
+    color: inherit;
     cursor: pointer;
-    transition: all 0.2s ease;
+    font: inherit;
+    text-align: start;
+    width: 100%;
+    transition: background-color 180ms ease, box-shadow 180ms ease;
 }
 
-.ranking-wrapper ::deep .ranking-item:hover {
+.ranking-wrapper ::deep .ranking-item:hover,
+.ranking-wrapper ::deep .ranking-item:focus-visible {
     background: var(--mud-palette-action-default-hover);
-    transform: translateX(4px);
+    box-shadow: inset 3px 0 0 var(--mud-palette-primary);
+}
+
+.ranking-wrapper ::deep .ranking-item:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 .ranking-wrapper ::deep .rank-badge {
@@ -59,33 +70,24 @@
 }
 
 .ranking-wrapper ::deep .rank-badge.gold {
-    background:
-        linear-gradient(
-            135deg,
-            var(--mud-palette-warning) 0%,
-            color-mix(in srgb, var(--mud-palette-warning) 72%, var(--mud-palette-surface)) 100%);
+    background-color: var(--mud-palette-warning);
     color: var(--mud-palette-warning-text);
-    box-shadow: 0 2px 4px rgba(var(--mud-palette-warning-rgb), 0.3);
 }
 
 .ranking-wrapper ::deep .rank-badge.silver {
-    background:
-        linear-gradient(
-            135deg,
-            var(--mud-palette-dark) 0%,
-            color-mix(in srgb, var(--mud-palette-dark) 68%, var(--mud-palette-surface)) 100%);
+    background-color: var(--mud-palette-dark);
     color: var(--mud-palette-dark-text);
-    box-shadow: 0 2px 4px rgba(var(--mud-palette-dark-rgb), 0.24);
 }
 
 .ranking-wrapper ::deep .rank-badge.bronze {
-    background:
-        linear-gradient(
-            135deg,
-            var(--mud-palette-tertiary) 0%,
-            color-mix(in srgb, var(--mud-palette-tertiary) 72%, var(--mud-palette-surface)) 100%);
+    background-color: var(--mud-palette-tertiary);
     color: var(--mud-palette-tertiary-text);
-    box-shadow: 0 2px 4px rgba(var(--mud-palette-tertiary-rgb), 0.24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ranking-wrapper ::deep .ranking-item {
+        transition-duration: 0.01ms;
+    }
 }
 
 .ranking-wrapper ::deep .job-info {

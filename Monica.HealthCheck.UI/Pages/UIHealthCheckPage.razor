@@ -6,7 +6,7 @@
 
 <PageTitle>@L["Page:Title"]</PageTitle>
 
-<div class="health-page">
+<div class="health-page mo-page-shell mo-page-shell--full-width">
     @if (!_accessChecked)
     {
         <div class="health-page-state" role="status">
@@ -94,6 +94,7 @@
 @code {
     public const string PAGE_URL = "/health-checks";
 
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
     private HealthCheckPageSession? _session;
     private bool _accessChecked;
     private bool _isAuthorized;
@@ -101,7 +102,16 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var isAuthorized = await PageAccess.IsAuthorizedAsync(PAGE_URL);
+        bool isAuthorized;
+        try
+        {
+            isAuthorized = await PageAccess.IsAuthorizedAsync(PAGE_URL, _lifetimeCancellation.Token);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
         if (_disposed)
         {
             return;
@@ -142,14 +152,17 @@
         }
 
         _disposed = true;
+        await _lifetimeCancellation.CancelAsync();
         var session = _session;
         _session = null;
         if (session is null)
         {
+            _lifetimeCancellation.Dispose();
             return;
         }
 
         session.Changed -= HandleSessionChangedAsync;
         await session.DisposeAsync();
+        _lifetimeCancellation.Dispose();
     }
 }

@@ -5,18 +5,23 @@ using Monica.OpenTelemetry.InProcessCollector.Models;
 namespace Monica.OpenTelemetry.UI.UIOpenTelemetry.State;
 
 /// <summary>
-/// Holds mutable state and snapshot projection logic for the OpenTelemetry metrics dashboard.
+/// Owns one metrics dashboard's snapshot, filters, refresh loop, and async lifetime.
 /// </summary>
-public sealed class OpenTelemetryDashboardPageState(OpenTelemetryFacade facade) : IDisposable
+public sealed class OpenTelemetryDashboardPageState(
+    OpenTelemetryFacade facade,
+    string snapshotLoadFailedMessage) : IAsyncDisposable
 {
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly SemaphoreSlim _timerGate = new(1, 1);
     private PeriodicTimer? _autoRefreshTimer;
-    private CancellationTokenSource? _autoRefreshCts;
     private Task? _autoRefreshTask;
+    private bool _disposed;
 
     /// <summary>
     /// Raised whenever the dashboard should re-render.
     /// </summary>
-    public event Action? StateChanged;
+    public event Func<Task>? StateChanged;
 
     /// <summary>
     /// Gets the latest loaded in-process metric snapshot.
@@ -44,48 +49,47 @@ public sealed class OpenTelemetryDashboardPageState(OpenTelemetryFacade facade) 
     public string InstrumentNameFilter { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the auto-refresh interval. Null disables automatic refresh.
+    /// Gets the auto-refresh interval. Null disables automatic refresh.
     /// </summary>
-    public TimeSpan? AutoRefreshInterval { get; set; } = TimeSpan.FromSeconds(5);
+    public TimeSpan? AutoRefreshInterval { get; private set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Loads the initial dashboard snapshot and starts the auto-refresh loop when configured.
     /// </summary>
-    public async Task<Res> LoadAsync(CancellationToken cancellationToken = default)
+    public async Task<Res> LoadAsync()
     {
-        var result = await RefreshAsync(cancellationToken);
-        RestartAutoRefreshLoop();
+        ThrowIfDisposed();
+        var result = await RefreshAsync();
+        await RestartAutoRefreshLoopAsync();
         return result;
     }
 
     /// <summary>
-    /// Refreshes the dashboard snapshot.
+    /// Refreshes the dashboard snapshot while joining the component-owned lifetime.
     /// </summary>
-    public async Task<Res> RefreshAsync(CancellationToken cancellationToken = default)
+    public async Task<Res> RefreshAsync()
     {
-        if (IsLoading)
-        {
-            return Res.Ok();
-        }
-
-        IsLoading = true;
-        Error = null;
-        NotifyStateChanged();
-
+        var cancellationToken = _lifetimeCancellation.Token;
+        await _refreshGate.WaitAsync(cancellationToken);
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfDisposed();
+            IsLoading = true;
+            Error = null;
+            await NotifyStateChangedAsync();
+
             var result = await facade.GetSnapshotAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             if (result.IsFailed(out var error, out var snapshot) || snapshot is null)
             {
-                Error = error?.Message;
-                return Res.Fail(Error ?? "Failed to load OpenTelemetry metrics snapshot.");
+                Error = error?.Message ?? snapshotLoadFailedMessage;
+                return Res.Fail(Error);
             }
 
             Snapshot = snapshot;
             return Res.Ok();
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return Res.Ok();
         }
@@ -96,19 +100,25 @@ public sealed class OpenTelemetryDashboardPageState(OpenTelemetryFacade facade) 
         }
         finally
         {
-            IsLoading = false;
-            NotifyStateChanged();
+            if (!_disposed)
+            {
+                IsLoading = false;
+                await NotifyStateChangedAsync();
+            }
+
+            _refreshGate.Release();
         }
     }
 
     /// <summary>
-    /// Updates the auto-refresh interval and restarts the timer loop.
+    /// Updates the auto-refresh interval and restarts the owned loop.
     /// </summary>
-    public void SetAutoRefreshInterval(TimeSpan? interval)
+    public async Task SetAutoRefreshIntervalAsync(TimeSpan? interval)
     {
+        ThrowIfDisposed();
         AutoRefreshInterval = interval;
-        RestartAutoRefreshLoop();
-        NotifyStateChanged();
+        await RestartAutoRefreshLoopAsync();
+        await NotifyStateChangedAsync();
     }
 
     /// <summary>
@@ -135,7 +145,6 @@ public sealed class OpenTelemetryDashboardPageState(OpenTelemetryFacade facade) 
         }
 
         var query = Snapshot.Instruments.AsEnumerable();
-
         if (!string.IsNullOrWhiteSpace(MeterPrefixFilter))
         {
             query = query.Where(instrument => string.Equals(
@@ -168,73 +177,110 @@ public sealed class OpenTelemetryDashboardPageState(OpenTelemetryFacade facade) 
     /// <summary>
     /// Serializes a compact current-state JSON view for clipboard export.
     /// </summary>
-    public string ExportJson()
-    {
-        return Snapshot is null
-            ? string.Empty
-            : OpenTelemetryJsonSummaryExporter.Export(Snapshot);
-    }
+    public string ExportJson() => Snapshot is null
+        ? string.Empty
+        : OpenTelemetryJsonSummaryExporter.Export(Snapshot);
 
     /// <summary>
-    /// Converts the current snapshot to a simple Prometheus-compatible text view for clipboard export.
+    /// Converts the current snapshot to a Prometheus-compatible text view.
     /// </summary>
-    public string ExportPrometheusText()
+    public string ExportPrometheusText() => Snapshot is null
+        ? string.Empty
+        : PrometheusTextExporter.Export(Snapshot);
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
     {
-        if (Snapshot is null)
-        {
-            return string.Empty;
-        }
-
-        return PrometheusTextExporter.Export(Snapshot);
-    }
-
-    public void Dispose()
-    {
-        _autoRefreshCts?.Cancel();
-        _autoRefreshCts?.Dispose();
-        _autoRefreshTimer?.Dispose();
-    }
-
-    private void RestartAutoRefreshLoop()
-    {
-        _autoRefreshCts?.Cancel();
-        _autoRefreshCts?.Dispose();
-        _autoRefreshTimer?.Dispose();
-        _autoRefreshCts = null;
-        _autoRefreshTimer = null;
-        _autoRefreshTask = null;
-
-        if (AutoRefreshInterval is null || AutoRefreshInterval <= TimeSpan.Zero)
+        if (_disposed)
         {
             return;
         }
 
-        _autoRefreshCts = new CancellationTokenSource();
-        _autoRefreshTimer = new PeriodicTimer(AutoRefreshInterval.Value);
-        _autoRefreshTask = RunAutoRefreshLoopAsync(_autoRefreshCts.Token);
+        _disposed = true;
+        StateChanged = null;
+        await _lifetimeCancellation.CancelAsync();
+        await StopAutoRefreshLoopAsync();
+
+        await _refreshGate.WaitAsync();
+        _refreshGate.Release();
+        _refreshGate.Dispose();
+        _timerGate.Dispose();
+        _lifetimeCancellation.Dispose();
     }
 
-    private async Task RunAutoRefreshLoopAsync(CancellationToken cancellationToken)
+    private async Task RestartAutoRefreshLoopAsync()
     {
-        if (_autoRefreshTimer is null)
-        {
-            return;
-        }
-
+        await _timerGate.WaitAsync(_lifetimeCancellation.Token);
         try
         {
-            while (await _autoRefreshTimer.WaitForNextTickAsync(cancellationToken))
+            await StopAutoRefreshLoopCoreAsync();
+            if (_disposed || AutoRefreshInterval is null || AutoRefreshInterval <= TimeSpan.Zero)
             {
-                await RefreshAsync(cancellationToken);
+                return;
             }
+
+            _autoRefreshTimer = new PeriodicTimer(AutoRefreshInterval.Value);
+            _autoRefreshTask = RunAutoRefreshLoopAsync(_autoRefreshTimer, _lifetimeCancellation.Token);
         }
-        catch (OperationCanceledException)
+        finally
         {
-        }
-        catch (ObjectDisposedException)
-        {
+            _timerGate.Release();
         }
     }
 
-    private void NotifyStateChanged() => StateChanged?.Invoke();
+    private async Task StopAutoRefreshLoopAsync()
+    {
+        await _timerGate.WaitAsync();
+        try
+        {
+            await StopAutoRefreshLoopCoreAsync();
+        }
+        finally
+        {
+            _timerGate.Release();
+        }
+    }
+
+    private async Task StopAutoRefreshLoopCoreAsync()
+    {
+        var timer = _autoRefreshTimer;
+        var task = _autoRefreshTask;
+        _autoRefreshTimer = null;
+        _autoRefreshTask = null;
+        timer?.Dispose();
+
+        if (task is not null)
+        {
+            await task;
+        }
+    }
+
+    private async Task RunAutoRefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await RefreshAsync();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Expected when the page changes interval or is disposed.
+        }
+    }
+
+    private async Task NotifyStateChangedAsync()
+    {
+        var handlers = StateChanged?.GetInvocationList().Cast<Func<Task>>().ToArray() ?? [];
+        foreach (var handler in handlers)
+        {
+            await handler();
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+    }
 }

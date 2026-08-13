@@ -1,7 +1,15 @@
 {
-  "Pages": {
-    "ExecutionTiming": {
-      "Title": "Execution Timing"
-    }
-  }
+  "Pages": { "ExecutionTiming": { "Title": "Execution Timing" } },
+  "Page": {
+    "Eyebrow": "RUNTIME INSTRUMENTATION",
+    "Subtitle": "Inspect active operations and compare their observed latency, frequency, and allocation evidence.",
+    "Status": { "Live": "Live sampling", "Paused": "Sampling paused" },
+    "Actions": { "AutoRefresh": "Auto refresh", "Refresh": "Refresh evidence" },
+    "Messages": { "RefreshFailed": "Failed to refresh execution timing evidence." }
+  },
+  "Summary": { "AriaLabel": "Execution timing summary", "Running": "Running now", "Operations": "Operation types", "Samples": "Recorded samples", "Average": "Mean latency" },
+  "Running": { "Eyebrow": "ACTIVE SPANS", "Title": "Operations in flight", "Empty": "No operations are currently running." },
+  "Statistics": { "Eyebrow": "AGGREGATED EVIDENCE", "Title": "Completed operation statistics", "Empty": "No completed timing samples have been recorded." },
+  "Columns": { "Name": "Operation", "Description": "Description", "StartedAt": "Started", "CurrentDuration": "Current latency", "RunningFor": "Running for", "Executions": "Executions", "AverageDuration": "Mean latency", "LastDuration": "Latest latency", "Rate": "Per minute", "AverageMemory": "Mean allocation", "LastMemory": "Latest allocation", "LastRecordedAt": "Last observed" },
+  "Common": { "Count": "{0} records", "Unavailable": "—" }
 }

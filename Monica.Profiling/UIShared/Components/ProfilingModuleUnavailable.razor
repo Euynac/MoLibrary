@@ -1,0 +1,45 @@
+<section class="profiling-module-unavailable"
+         role="status"
+         aria-labelledby="@HeadingId"
+         data-testid="profiling-module-unavailable">
+    <span class="profiling-module-unavailable__icon" aria-hidden="true">
+        <MudIcon Icon="@Icon" />
+    </span>
+    <div class="profiling-module-unavailable__copy">
+        <MudText Typo="Typo.overline" Class="profiling-module-unavailable__eyebrow">@Eyebrow</MudText>
+        <MudText Typo="Typo.h5" id="@HeadingId">@Title</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">@Description</MudText>
+    </div>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets or sets the stable heading identifier used by the status region.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required string HeadingId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the icon that identifies the unavailable profiling capability.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required string Icon { get; set; }
+
+    /// <summary>
+    /// Gets or sets the localized category label.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required string Eyebrow { get; set; }
+
+    /// <summary>
+    /// Gets or sets the localized unavailable-state heading.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the localized explanation of how the host enables the capability.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required string Description { get; set; }
+}

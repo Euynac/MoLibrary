@@ -1,6 +1,7 @@
 @inject IStringLocalizer<RepositoryUIResource> L
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
+@implements IAsyncDisposable
 
 <MudDialog>
     <DialogContent>
@@ -77,6 +78,9 @@
 </MudDialog>
 
 @code {
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private bool _disposed;
+
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter, EditorRequired] public RepositoryActivityProviderGuide Guide { get; set; } = null!;
@@ -115,12 +119,26 @@
 
         try
         {
-            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Guide.Sql);
-            Snackbar.Add(L["Activity:Guide:Copied"], Severity.Success);
+            var copied = await JsRuntime.InvokeAsync<bool>(
+                "MoClipboard.copyText",
+                _lifetimeCancellation.Token,
+                Guide.Sql);
+            if (!_disposed)
+            {
+                Snackbar.Add(
+                    copied ? L["Activity:Guide:Copied"] : L["Activity:Guide:CopyFailed"],
+                    copied ? Severity.Success : Severity.Warning);
+            }
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
         }
         catch
         {
-            Snackbar.Add(L["Activity:Guide:CopyFailed"], Severity.Warning);
+            if (!_disposed)
+            {
+                Snackbar.Add(L["Activity:Guide:CopyFailed"], Severity.Warning);
+            }
         }
     }
 
@@ -155,5 +173,17 @@
     private void Close()
     {
         MudDialog.Close();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        await _lifetimeCancellation.CancelAsync();
+        _lifetimeCancellation.Dispose();
     }
 }

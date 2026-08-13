@@ -60,7 +60,7 @@ public sealed class ModuleEventBusKafkaUI : MonicaModule<ModuleEventBusKafkaUIOp
         var services = context.Services;
         services.AddScoped<EventBusKafkaPageState>();
         services.AddScoped<KafkaPerformancePollingState>();
-        services.AddTransient<KafkaConsumerMetricsPollingState>();
+        services.AddScoped<KafkaConsumerMetricsPollingStateFactory>();
     }
 }
 

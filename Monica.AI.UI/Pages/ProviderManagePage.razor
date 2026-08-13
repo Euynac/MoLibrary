@@ -13,7 +13,10 @@
 
 <MudContainer MaxWidth="MaxWidth.False" Class="ai-provider-page pa-4">
     <div class="page-header">
-        <MudText Typo="Typo.h4">@L["ProviderManage:Title"]</MudText>
+        <div class="page-heading">
+            <MudText Typo="Typo.h4">@L["ProviderManage:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ProviderManage:Subtitle"]</MudText>
+        </div>
         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadProvidersAsync">
                 @L["ProviderManage:Refresh"]
@@ -224,7 +227,7 @@
     {
         if (request.Model is not EmbeddingModelInfo)
         {
-            Snackbar.Add("仅 Embedding 模型支持维度探测", Severity.Info);
+            Snackbar.Add(L["ProviderManage:OnlyEmbeddingSupported"], Severity.Info);
             return;
         }
 

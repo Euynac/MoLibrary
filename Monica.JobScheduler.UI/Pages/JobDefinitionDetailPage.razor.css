@@ -23,3 +23,6 @@
 .job-detail-card-frame ::deep .mud-card-content {
     flex: 1 1 auto;
 }
+.scheduler-page-content {
+    min-width: 0;
+}

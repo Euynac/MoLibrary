@@ -52,8 +52,11 @@ public class ModuleMemoryAnalysisUI : MonicaModule<ModuleMemoryAnalysisUIOption>
     {
         module.Require<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption>();
         module.Require<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>(
-            static option => option.AddResource<MemoryAnalysisResource>());
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(static option =>
+        {
+            option.AddResource<ProfilingResource>();
+            option.AddResource<MemoryAnalysisResource>();
+        });
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
                 registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
@@ -68,8 +71,11 @@ public class ModuleMemoryAnalysisUI : MonicaModule<ModuleMemoryAnalysisUIOption>
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleMemoryAnalysisUIOption> context)
     {
-        context.Services.AddScoped<MemoryAnalysisPageState>();
-        context.Services.AddScoped<TypeAllocationPanelState>();
+        context.Services.AddScoped<MemoryAnalysisPageStateFactory>();
+        if (Option.EnableTypeAllocationTab)
+        {
+            context.Services.AddScoped<TypeAllocationPanelStateFactory>();
+        }
     }
 }
 

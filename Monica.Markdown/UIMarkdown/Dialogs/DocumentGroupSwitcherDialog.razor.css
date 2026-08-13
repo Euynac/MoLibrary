@@ -42,3 +42,7 @@
     min-height: 220px;
     justify-content: center;
 }
+
+.group-switcher-empty ::deep .group-switcher-empty-icon {
+    opacity: 0.38;
+}

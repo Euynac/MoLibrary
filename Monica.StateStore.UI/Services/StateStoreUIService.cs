@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Localization;
 using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
@@ -12,6 +13,7 @@ using Monica.StateStore.UI.Models;
 using Monica.StateStore.UI.Services.Browser;
 using Monica.Core.Results;
 using Monica.StateStore.Abstractions;
+using Monica.StateStore.UI.Localization;
 
 namespace Monica.StateStore.UI.Services;
 
@@ -23,6 +25,7 @@ public class StateStoreUIService(
     MonicaApplication application,
     IOptions<ModuleStateStoreOption> stateStoreOption,
     IEnumerable<IStateStoreBrowserApi> browserApis,
+    IStringLocalizer<StateStoreResource> localizer,
     ILogger<StateStoreUIService> logger)
 {
     private readonly IReadOnlyList<IStateStoreBrowserApi> _browserApis = browserApis.ToList();
@@ -70,7 +73,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get registered state store providers.");
-            return Res.Fail(BuildDetailedErrorMessage("获取已注册 Provider 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:ProviderList", ex));
         }
     }
 
@@ -84,7 +87,7 @@ public class StateStoreUIService(
 
             if (provider == null)
             {
-                return Res.Fail($"未找到 Provider: {serviceKey ?? "默认"}");
+                return Res.Fail(localizer["Service:Errors:ProviderNotFound", serviceKey ?? localizer["Service:Labels:DefaultProvider"]]);
             }
 
             return Res.Ok(provider);
@@ -92,7 +95,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get state store provider: {ServiceKey}", serviceKey);
-            return Res.Fail(BuildDetailedErrorMessage("获取 Provider 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:ProviderLoad", ex));
         }
     }
 
@@ -218,7 +221,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to search keys for query: {Query}", request.Query);
-            return Res.Fail(BuildDetailedErrorMessage("搜索 Key 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:KeySearch", ex));
         }
     }
 
@@ -238,14 +241,14 @@ public class StateStoreUIService(
             var browserApi = GetBrowserApi(providerType, provider);
             return Res.Ok(await browserApi.LoadKeyAsync(provider, key, cancellationToken));
         }
-        catch (KeyNotFoundException ex)
+        catch (KeyNotFoundException)
         {
-            return Res.Fail(ex.GetMessageRecursively());
+            return Res.Fail(localizer["Service:Errors:KeyNotFound", key]);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load state store key: {Key}", key);
-            return Res.Fail(BuildDetailedErrorMessage("获取 Key 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:KeyLoad", ex));
         }
     }
 
@@ -266,7 +269,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to check whether key exists: {Key}", key);
-            return Res.Fail(BuildDetailedErrorMessage("检查 Key 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:KeyCheck", ex));
         }
     }
 
@@ -295,7 +298,7 @@ public class StateStoreUIService(
 
                 if (!success)
                 {
-                    return Res.Fail("ETag 不匹配 - Key 已被其他进程修改");
+                    return Res.Fail(localizer["Service:Errors:ETagMismatch"]);
                 }
             }
             else
@@ -303,12 +306,12 @@ public class StateStoreUIService(
                 await provider.SaveStateAsync(request.Key, value, cancellationToken, request.TTL);
             }
 
-            return Res.Ok("Key 保存成功");
+            return Res.Ok(localizer["Service:Success:KeySaved"]);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to save state store key: {Key}", request.Key);
-            return Res.Fail(BuildDetailedErrorMessage("保存 Key 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:KeySave", ex));
         }
     }
 
@@ -333,7 +336,7 @@ public class StateStoreUIService(
 
             if (!created)
             {
-                return Res.Fail("Key 已存在，请使用其他名称或编辑现有 Key");
+                return Res.Fail(localizer["Service:Errors:KeyExists"]);
             }
 
             var createdKey = await GetKeyAsync(serviceKey, request.Key, cancellationToken);
@@ -352,7 +355,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create state store key: {Key}", request.Key);
-            return Res.Fail(BuildDetailedErrorMessage("创建 Key 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:KeyCreate", ex));
         }
     }
 
@@ -374,7 +377,7 @@ public class StateStoreUIService(
                 var success = await provider.TryDeleteStateWithETagAsync(key, etag, cancellationToken);
                 if (!success)
                 {
-                    return Res.Fail("ETag 不匹配 - Key 已被其他进程修改");
+                    return Res.Fail(localizer["Service:Errors:ETagMismatch"]);
                 }
             }
             else
@@ -382,12 +385,12 @@ public class StateStoreUIService(
                 await provider.DeleteStateAsync(key, cancellationToken);
             }
 
-            return Res.Ok("Key 删除成功");
+            return Res.Ok(localizer["Service:Success:KeyDeleted"]);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete state store key: {Key}", key);
-            return Res.Fail(BuildDetailedErrorMessage("删除 Key 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:KeyDelete", ex));
         }
     }
 
@@ -404,20 +407,20 @@ public class StateStoreUIService(
         try
         {
             await provider.DeleteBulkStateAsync(keys, cancellationToken);
-            return Res.Ok($"已删除 {keys.Count} 个 Key");
+            return Res.Ok(localizer["Service:Success:KeysDeleted", keys.Count]);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete state store keys in bulk.");
-            return Res.Fail(BuildDetailedErrorMessage("批量删除 Key 失败", ex));
+            return Res.Fail(BuildDetailedErrorMessage("Service:Errors:KeysDelete", ex));
         }
     }
 
     #endregion
 
-    private static string BuildDetailedErrorMessage(string operation, Exception ex)
+    private string BuildDetailedErrorMessage(string operationKey, Exception ex)
     {
-        return $"{operation}: {ex.GetMessageRecursively()}";
+        return localizer["Service:Errors:OperationDetail", localizer[operationKey], ex.GetMessageRecursively()];
     }
 
     private static object? ParseRequestValue(StateStoreKeyUpdateRequest request)

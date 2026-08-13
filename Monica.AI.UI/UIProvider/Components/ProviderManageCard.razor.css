@@ -1,7 +1,12 @@
-.provider-card {
+.provider-card-shell {
+    height: 100%;
+}
+
+.provider-card-shell ::deep .provider-card {
+    height: 100%;
     background-color: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 12px;
 }
 
 .provider-card-inner {

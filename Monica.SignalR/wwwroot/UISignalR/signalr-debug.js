@@ -1,12 +1,6 @@
 "use strict";
 
-let connection = null;
-let hubsData = [];
-let registeredListeners = new Map();
-let messageCallback = null;
-let connectionStatusCallback = null;
-let connectionIdCallback = null;
-let localization = {
+const DEFAULT_MESSAGES = {
     NoArguments: "No arguments",
     NotConnected: "Not connected",
     ConnectionClosedWithError: "Connection closed with error: {0}",
@@ -17,330 +11,316 @@ let localization = {
     ConnectionFailed: "Connection failed: {0}",
     Disconnected: "Disconnected",
     RegisteredListener: "Registered listener for: {0}",
-    UnregisteredListener: "Unregistered listener for: {0}",
-    AllListenersCleared: "All listeners cleared"
+    UnregisteredListener: "Unregistered listener for: {0}"
 };
 
-function getLocalizedText(key, fallback, ...args) {
-    let text = localization[key] || fallback;
+export async function createSession(callback, localizedMessages) {
+    if (!globalThis.signalR) {
+        await import("./signalr.js");
+    }
 
-    args.forEach((arg, index) => {
-        text = text.replaceAll(`{${index}}`, arg ?? "");
-    });
+    const signalRApi = globalThis.signalR;
+    let connection = null;
+    let callbackReference = callback;
+    let isShuttingDown = false;
+    let shutdownPromise = null;
+    const registeredListeners = new Map();
+    const pendingCallbacks = new Set();
+    const stoppingConnections = new WeakMap();
+    const messages = { ...DEFAULT_MESSAGES, ...(localizedMessages || {}) };
 
-    return text;
-}
+    function text(key, ...args) {
+        let value = messages[key] || DEFAULT_MESSAGES[key] || key;
+        args.forEach((argument, index) => {
+            value = value.replaceAll(`{${index}}`, argument ?? "");
+        });
+        return value;
+    }
 
-// Initialize the SignalR debug functionality
-const signalRDebug = {
-    // Set callbacks for C# interop
-    setMessageCallback: function (callback) {
-        messageCallback = callback;
-    },
+    function closedResult() {
+        return { success: false, error: text("NotConnected") };
+    }
 
-    setConnectionStatusCallback: function (callback) {
-        connectionStatusCallback = callback;
-    },
+    function notify(method, ...args) {
+        if (isShuttingDown || !callbackReference) {
+            return;
+        }
 
-    setConnectionIdCallback: function (callback) {
-        connectionIdCallback = callback;
-    },
-
-    setLocalization: function (messages) {
-        localization = {
-            ...localization,
-            ...(messages || {})
-        };
-    },
-
-    // Load available hubs from the server
-    loadHubs: async function (apiUrl) {
+        let callbackPromise;
         try {
-            const response = await fetch(`${apiUrl}`);
-            const apiResponse = await response.json();
-
-            if (response.ok && apiResponse && !apiResponse.isFailed) {
-                hubsData = apiResponse.data || [];
-                return { success: true, data: hubsData };
-            } else {
-                const error = apiResponse?.error?.message || "Failed to load hubs";
-                return { success: false, error: error };
-            }
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Get currently loaded hubs data
-    getHubsData: function () {
-        return hubsData;
-    },
-
-    // Connect to SignalR hub
-    connect: async function (hubUrl, accessToken) {
-        try {
-            // Disconnect if already connected
-            if (connection) {
-                await connection.stop();
-            }
-
-            // Create new connection
-            const connectionBuilder = new signalR.HubConnectionBuilder()
-                .withUrl(hubUrl, {
-                    accessTokenFactory: () => accessToken || ""
-                })
-                .configureLogging(signalR.LogLevel.Information)
-                .withAutomaticReconnect();
-
-            connection = connectionBuilder.build();
-
-            // Set up connection event handlers
-            connection.onclose((error) => {
-                if (connectionStatusCallback) {
-                    connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Disconnected');
-                }
-                if (connectionIdCallback) {
-                    connectionIdCallback.invokeMethodAsync('SetConnectionId', '');
-                }
-                if (messageCallback) {
-                    messageCallback.invokeMethodAsync('Invoke', 'System',
-                        error
-                            ? getLocalizedText('ConnectionClosedWithError', 'Connection closed with error: {0}', error)
-                            : getLocalizedText('ConnectionClosed', 'Connection closed'),
-                        'Error');
-                }
-            });
-
-            connection.onreconnecting((error) => {
-                if (connectionStatusCallback) {
-                    connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Reconnecting');
-                }
-                if (messageCallback) {
-                    messageCallback.invokeMethodAsync('Invoke', 'System', getLocalizedText('Reconnecting', 'Reconnecting...'), 'Info');
-                }
-            });
-
-            connection.onreconnected((connectionId) => {
-                if (connectionStatusCallback) {
-                    connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Connected');
-                }
-                if (connectionIdCallback) {
-                    connectionIdCallback.invokeMethodAsync('SetConnectionId', connectionId || '');
-                }
-                if (messageCallback) {
-                    messageCallback.invokeMethodAsync('Invoke', 'System', getLocalizedText('ReconnectedSuccessfully', 'Reconnected successfully'), 'Success');
-                }
-            });
-
-            // Start connection
-            await connection.start();
-
-            console.log('SignalR connection started successfully');
-
-            if (connectionStatusCallback) {
-                console.log('Calling OnConnectionStatusChanged with: Connected');
-                connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Connected');
-            } else {
-                console.log('Warning: connectionStatusCallback is null');
-            }
-
-            if (connectionIdCallback) {
-                console.log('Calling SetConnectionId with:', connection.connectionId || '');
-                connectionIdCallback.invokeMethodAsync('SetConnectionId', connection.connectionId || '');
-            } else {
-                console.log('Warning: connectionIdCallback is null');
-            }
-
-            if (messageCallback) {
-                messageCallback.invokeMethodAsync('Invoke', 'System', getLocalizedText('ConnectedSuccessfully', 'Connected successfully'), 'Success');
-            }
-
-            return { success: true };
-        } catch (error) {
-            if (connectionStatusCallback) {
-                connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Disconnected');
-            }
-            if (messageCallback) {
-                messageCallback.invokeMethodAsync(
-                    'Invoke',
-                    'System',
-                    getLocalizedText('ConnectionFailed', 'Connection failed: {0}', error.message),
-                    'Error');
-            }
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Disconnect from SignalR hub
-    disconnect: async function () {
-        try {
-            if (connection) {
-                await connection.stop();
-                connection = null;
-            }
-
-            // Clear all listeners
-            registeredListeners.clear();
-
-            if (connectionStatusCallback) {
-                connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Disconnected');
-            }
-            if (connectionIdCallback) {
-                connectionIdCallback.invokeMethodAsync('SetConnectionId', '');
-            }
-            if (messageCallback) {
-                messageCallback.invokeMethodAsync('Invoke', 'System', getLocalizedText('Disconnected', 'Disconnected'), 'Info');
-            }
-
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Check if connected
-    isConnected: function () {
-        return connection && connection.state === signalR.HubConnectionState.Connected;
-    },
-
-    // Get connection state
-    getConnectionState: function () {
-        if (!connection) return 'Disconnected';
-
-        switch (connection.state) {
-            case signalR.HubConnectionState.Connected:
-                return 'Connected';
-            case signalR.HubConnectionState.Connecting:
-                return 'Connecting';
-            case signalR.HubConnectionState.Disconnected:
-                return 'Disconnected';
-            case signalR.HubConnectionState.Disconnecting:
-                return 'Disconnecting';
-            case signalR.HubConnectionState.Reconnecting:
-                return 'Reconnecting';
-            default:
-                return 'Unknown';
-        }
-    },
-
-    // Register method listener
-    registerListener: function (methodName, methodDisplayName) {
-        if (!connection) {
-            return { success: false, error: getLocalizedText('NotConnected', 'Not connected') };
+            callbackPromise = Promise.resolve(callbackReference.invokeMethodAsync(method, ...args));
+        } catch {
+            return;
         }
 
-        try {
-            // Remove existing listener if any
-            if (registeredListeners.has(methodName)) {
-                connection.off(methodName);
-            }
+        pendingCallbacks.add(callbackPromise);
+        callbackPromise.then(
+            () => pendingCallbacks.delete(callbackPromise),
+            () => pendingCallbacks.delete(callbackPromise));
+    }
 
-            // Register new listener
-            connection.on(methodName, (...args) => {
-                if (messageCallback) {
-                    const argsDisplay = args.length > 0
-                        ? JSON.stringify(args)
-                        : getLocalizedText('NoArguments', 'No arguments');
-                    messageCallback.invokeMethodAsync('Invoke', 'Received',
-                        `${methodDisplayName}: ${argsDisplay}`, 'Received');
-                }
-            });
+    function log(source, content, type) {
+        notify("Invoke", source, content, type);
+    }
 
-            registeredListeners.set(methodName, methodDisplayName);
-
-            if (messageCallback) {
-                messageCallback.invokeMethodAsync('Invoke', 'System',
-                    getLocalizedText('RegisteredListener', 'Registered listener for: {0}', methodDisplayName),
-                    'Info');
-            }
-
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Unregister method listener
-    unregisterListener: function (methodName, methodDisplayName) {
-        if (!connection) {
-            return { success: false, error: getLocalizedText('NotConnected', 'Not connected') };
-        }
-
-        try {
-            connection.off(methodName);
-            registeredListeners.delete(methodName);
-
-            if (messageCallback) {
-                messageCallback.invokeMethodAsync('Invoke', 'System',
-                    getLocalizedText('UnregisteredListener', 'Unregistered listener for: {0}', methodDisplayName),
-                    'Info');
-            }
-
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Invoke hub method
-    invokeMethod: async function (methodName, args) {
-        if (!connection) {
-            return { success: false, error: getLocalizedText('NotConnected', 'Not connected') };
-        }
-
-        try {
-            // No automatic type conversion is performed, keeping the type passed by C#
-            // The C# side has done the correct type conversion, and the JavaScript side should be used directly.
-            const convertedArgs = args.map(arg => {
-                // Return parameters directly without any automatic conversion
-                // Let the SignalRDebugService.ConvertParameterValue method on the C# side be responsible for type conversion
-                return arg;
-            });
-
-            await connection.invoke(methodName, ...convertedArgs);
-
-            if (messageCallback) {
-                const argsDisplay = convertedArgs.length > 0
-                    ? JSON.stringify(convertedArgs)
-                    : getLocalizedText('NoArguments', 'No arguments');
-                messageCallback.invokeMethodAsync('Invoke', 'Sent',
-                    `${methodName}: ${argsDisplay}`, 'Sent');
-            }
-
-            return { success: true };
-        } catch (error) {
-            // Don't send error message here - let C# handle it to avoid duplicate messages
-            return { success: false, error: error.message };
-        }
-    },
-
-    // Send message (for quick message sending)
-    sendMessage: async function (user, message) {
-        return await this.invokeMethod('ReceiveTestMessage', [user, message]);
-    },
-
-    // Get registered listeners
-    getRegisteredListeners: function () {
-        return Array.from(registeredListeners.entries()).map(([name, displayName]) => ({
-            name: name,
-            displayName: displayName
-        }));
-    },
-
-    // Clear all listeners
-    clearAllListeners: function () {
-        if (connection) {
-            for (const methodName of registeredListeners.keys()) {
-                connection.off(methodName);
+    function detachRegisteredListeners(activeConnection) {
+        for (const methodName of registeredListeners.keys()) {
+            try {
+                activeConnection.off(methodName);
+            } catch {
+                // Continue detaching the remaining callback producers before teardown.
             }
         }
         registeredListeners.clear();
+    }
 
-        if (messageCallback) {
-            messageCallback.invokeMethodAsync('Invoke', 'System', getLocalizedText('AllListenersCleared', 'All listeners cleared'), 'Info');
+    function stopConnection(activeConnection) {
+        const existingStop = stoppingConnections.get(activeConnection);
+        if (existingStop) {
+            return existingStop;
+        }
+
+        const stopPromise = Promise.resolve()
+            .then(() => activeConnection.stop())
+            .finally(() => {
+                if (stoppingConnections.get(activeConnection) === stopPromise) {
+                    stoppingConnections.delete(activeConnection);
+                }
+            });
+        stoppingConnections.set(activeConnection, stopPromise);
+        return stopPromise;
+    }
+
+    async function disconnectCore(notifyClient) {
+        const activeConnection = connection;
+        if (activeConnection) {
+            connection = null;
+            detachRegisteredListeners(activeConnection);
+            await stopConnection(activeConnection);
+            if (isShuttingDown) {
+                return false;
+            }
+        } else {
+            registeredListeners.clear();
+        }
+
+        if (notifyClient && !isShuttingDown) {
+            notify("OnConnectionStatusChanged", "Disconnected");
+            notify("SetConnectionId", "");
+            log("System", text("Disconnected"), "Info");
+        }
+
+        return !isShuttingDown;
+    }
+
+    async function connect(hubUrl, accessToken) {
+        if (isShuttingDown) {
+            return closedResult();
+        }
+
+        let activeConnection = null;
+        try {
+            await disconnectCore(false);
+            if (isShuttingDown) {
+                return closedResult();
+            }
+
+            activeConnection = new signalRApi.HubConnectionBuilder()
+                .withUrl(hubUrl, { accessTokenFactory: () => accessToken || "" })
+                .configureLogging(signalRApi.LogLevel.Information)
+                .withAutomaticReconnect()
+                .build();
+
+            activeConnection.onclose(error => {
+                if (isShuttingDown || connection !== activeConnection) {
+                    return;
+                }
+
+                connection = null;
+                notify("OnConnectionStatusChanged", "Disconnected");
+                notify("SetConnectionId", "");
+                log(
+                    "System",
+                    error ? text("ConnectionClosedWithError", error.message || error) : text("ConnectionClosed"),
+                    error ? "Error" : "Info");
+            });
+            activeConnection.onreconnecting(() => {
+                if (isShuttingDown || connection !== activeConnection) {
+                    return;
+                }
+
+                notify("OnConnectionStatusChanged", "Reconnecting");
+                log("System", text("Reconnecting"), "Info");
+            });
+            activeConnection.onreconnected(connectionId => {
+                if (isShuttingDown || connection !== activeConnection) {
+                    return;
+                }
+
+                notify("OnConnectionStatusChanged", "Connected");
+                notify("SetConnectionId", connectionId || "");
+                log("System", text("ReconnectedSuccessfully"), "Success");
+            });
+
+            connection = activeConnection;
+            await activeConnection.start();
+            if (isShuttingDown || connection !== activeConnection) {
+                if (connection === activeConnection) {
+                    connection = null;
+                }
+                await stopConnection(activeConnection);
+                return closedResult();
+            }
+
+            notify("OnConnectionStatusChanged", "Connected");
+            notify("SetConnectionId", activeConnection.connectionId || "");
+            log("System", text("ConnectedSuccessfully"), "Success");
+            return { success: true };
+        } catch (error) {
+            if (connection === activeConnection) {
+                connection = null;
+            }
+
+            if (activeConnection) {
+                try {
+                    await stopConnection(activeConnection);
+                } catch {
+                    // Preserve the original connection error after best-effort cleanup.
+                }
+
+                if (isShuttingDown) {
+                    return closedResult();
+                }
+            }
+
+            if (isShuttingDown) {
+                return closedResult();
+            }
+
+            const errorMessage = error?.message || String(error);
+            notify("OnConnectionStatusChanged", "Disconnected");
+            log("System", text("ConnectionFailed", errorMessage), "Error");
+            return { success: false, error: errorMessage };
         }
     }
-};
 
-// Assign the signalRDebug object to window for global access
-window.signalRDebug = signalRDebug;
+    async function disconnect() {
+        try {
+            await disconnectCore(true);
+            return isShuttingDown ? closedResult() : { success: true };
+        } catch (error) {
+            return isShuttingDown
+                ? closedResult()
+                : { success: false, error: error?.message || String(error) };
+        }
+    }
+
+    async function invokeMethod(methodName, args) {
+        const activeConnection = connection;
+        if (isShuttingDown
+            || !activeConnection
+            || activeConnection.state !== signalRApi.HubConnectionState.Connected) {
+            return closedResult();
+        }
+
+        try {
+            const invocationArguments = args || [];
+            await activeConnection.invoke(methodName, ...invocationArguments);
+            if (isShuttingDown || connection !== activeConnection) {
+                return closedResult();
+            }
+
+            const argumentDisplay = invocationArguments.length > 0
+                ? JSON.stringify(invocationArguments)
+                : text("NoArguments");
+            log("Sent", `${methodName}: ${argumentDisplay}`, "Sent");
+            return { success: true };
+        } catch (error) {
+            return isShuttingDown
+                ? closedResult()
+                : { success: false, error: error?.message || String(error) };
+        }
+    }
+
+    function sendMessage(userName, message) {
+        return invokeMethod("ReceiveTestMessage", [userName, message]);
+    }
+
+    function registerListener(methodName, methodDisplayName) {
+        const activeConnection = connection;
+        if (isShuttingDown || !activeConnection) {
+            return closedResult();
+        }
+
+        try {
+            activeConnection.off(methodName);
+            activeConnection.on(methodName, (...args) => {
+                if (isShuttingDown || connection !== activeConnection) {
+                    return;
+                }
+
+                const argumentDisplay = args.length > 0 ? JSON.stringify(args) : text("NoArguments");
+                log("Received", `${methodDisplayName}: ${argumentDisplay}`, "Received");
+            });
+            registeredListeners.set(methodName, methodDisplayName);
+            log("System", text("RegisteredListener", methodDisplayName), "Info");
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error?.message || String(error) };
+        }
+    }
+
+    function unregisterListener(methodName, methodDisplayName) {
+        const activeConnection = connection;
+        if (isShuttingDown || !activeConnection) {
+            return closedResult();
+        }
+
+        try {
+            activeConnection.off(methodName);
+            registeredListeners.delete(methodName);
+            log("System", text("UnregisteredListener", methodDisplayName), "Info");
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error?.message || String(error) };
+        }
+    }
+
+    async function shutdownCore() {
+        isShuttingDown = true;
+        let shutdownError = null;
+
+        try {
+            await disconnectCore(false);
+        } catch (error) {
+            shutdownError = error;
+        } finally {
+            registeredListeners.clear();
+        }
+
+        await Promise.allSettled([...pendingCallbacks]);
+        callbackReference = null;
+        return {
+            drained: true,
+            error: shutdownError?.message || (shutdownError ? String(shutdownError) : null)
+        };
+    }
+
+    function shutdown() {
+        if (!shutdownPromise) {
+            isShuttingDown = true;
+            shutdownPromise = shutdownCore();
+        }
+        return shutdownPromise;
+    }
+
+    return {
+        connect,
+        disconnect,
+        invokeMethod,
+        sendMessage,
+        registerListener,
+        unregisterListener,
+        shutdown
+    };
+}

@@ -38,8 +38,11 @@ public class ModuleRuntimeMetricsUI : MonicaModule<ModuleRuntimeMetricsUIOption>
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>(
-            static option => option.AddResource<RuntimeMetricsResource>());
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(static option =>
+        {
+            option.AddResource<ProfilingResource>();
+            option.AddResource<RuntimeMetricsResource>();
+        });
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
                 registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
@@ -54,7 +57,7 @@ public class ModuleRuntimeMetricsUI : MonicaModule<ModuleRuntimeMetricsUIOption>
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleRuntimeMetricsUIOption> context)
     {
-        context.Services.AddScoped<RuntimeMetricsPageState>();
+        context.Services.AddScoped<RuntimeMetricsPageStateFactory>();
     }
 }
 

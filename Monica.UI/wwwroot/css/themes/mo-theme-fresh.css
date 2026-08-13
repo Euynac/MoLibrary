@@ -134,8 +134,8 @@
 }
 
 /* Cards - Quiet and airy */
-.mo-theme-fresh-light .mud-card,
-.mo-theme-fresh-dark .mud-card {
+.mo-theme-fresh-light .mud-card:not(.mo-self-painted),
+.mo-theme-fresh-dark .mud-card:not(.mo-self-painted) {
     border-radius: var(--mo-card-border-radius) !important;
     transition: all var(--mo-transition-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
     overflow: hidden;
@@ -143,24 +143,26 @@
     box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03) !important;
 }
 
-.mo-theme-fresh-light .mud-card {
+.mo-theme-fresh-light .mud-card:not(.mo-self-painted) {
     background-color: var(--mud-palette-surface) !important;
     border-color: rgba(102, 203, 163, 0.08) !important;
 }
 
-.mo-theme-fresh-dark .mud-card {
+.mo-theme-fresh-dark .mud-card:not(.mo-self-painted) {
     border-color: rgba(255, 255, 255, 0.04) !important;
     box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.2) !important;
 }
 
-.mo-theme-fresh-light .mud-card:hover,
-.mo-theme-fresh-dark .mud-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--mo-clean-hover-shadow) !important;
+@media (hover: hover) and (pointer: fine) {
+    .mo-theme-fresh-light .mud-card:not(.mo-self-painted):hover,
+    .mo-theme-fresh-dark .mud-card:not(.mo-self-painted):hover {
+        transform: translateY(-1px);
+        box-shadow: var(--mo-clean-hover-shadow) !important;
+    }
 }
 
-.mo-theme-fresh-light .mud-card-content,
-.mo-theme-fresh-dark .mud-card-content {
+.mo-theme-fresh-light .mud-card:not(.mo-self-painted) .mud-card-content,
+.mo-theme-fresh-dark .mud-card:not(.mo-self-painted) .mud-card-content {
     padding: var(--mo-card-padding) !important;
 }
 

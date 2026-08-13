@@ -1,4 +1,4 @@
-@inject KafkaConsumerMetricsPollingState PollingState
+@inject KafkaConsumerMetricsPollingStateFactory PollingStateFactory
 @inject IStringLocalizer<EventBusKafkaResource> L
 @implements IAsyncDisposable
 
@@ -309,6 +309,7 @@
 </MudDialog>
 
 @code {
+    private KafkaConsumerMetricsPollingState PollingState { get; set; } = null!;
     private int _memberRowsPerPage = 10;
     private int _partitionRowsPerPage = 25;
     private bool _isDisposed;
@@ -333,6 +334,7 @@
 
     protected override void OnInitialized()
     {
+        PollingState = PollingStateFactory.Create();
         PollingState.StateChanged += HandleStateChanged;
     }
 

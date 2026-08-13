@@ -88,13 +88,30 @@
     padding: 10px 12px;
     border-radius: 8px;
     background: var(--mud-palette-background);
+    border: 0;
+    color: inherit;
     cursor: pointer;
-    transition: all 0.2s ease;
+    font: inherit;
+    text-align: start;
+    width: 100%;
+    transition: background-color 180ms ease, box-shadow 180ms ease;
 }
 
-.failure-analysis-wrapper ::deep .failure-item:hover {
+.failure-analysis-wrapper ::deep .failure-item:hover,
+.failure-analysis-wrapper ::deep .failure-item:focus-visible {
     background: var(--mud-palette-action-default-hover);
-    transform: translateX(4px);
+    box-shadow: inset 3px 0 0 var(--mud-palette-error);
+}
+
+.failure-analysis-wrapper ::deep .failure-item:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .failure-analysis-wrapper ::deep .failure-item {
+        transition-duration: 0.01ms;
+    }
 }
 
 .failure-analysis-wrapper ::deep .job-info {

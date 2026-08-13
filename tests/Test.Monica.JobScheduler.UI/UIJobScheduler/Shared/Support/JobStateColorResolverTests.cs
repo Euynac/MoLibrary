@@ -2,7 +2,6 @@ using AwesomeAssertions;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 using MudBlazor;
-using Monica.Testing.UI;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
@@ -15,7 +14,7 @@ public class JobStateColorResolverTests
     [InlineData(JobState.Processing, Color.Primary)]
     public void GetStateColor_WhenKnownStateIsProvided_ShouldReturnExpectedMudColor(JobState state, Color expectedColor)
     {
-        var resolver = new JobStateColorResolver(new TestThemeState());
+        var resolver = new JobStateColorResolver();
 
         var result = resolver.GetStateColor(state);
 
@@ -23,11 +22,9 @@ public class JobStateColorResolverTests
     }
 
     [Fact]
-    public void GetStateColorHex_WhenSkippedOrFailedStateIsProvided_ShouldReturnDeterministicHexValues()
+    public void GetStateColorToken_WhenSkippedOrFailedStateIsProvided_ShouldReturnSemanticThemeTokens()
     {
-        var resolver = new JobStateColorResolver(new TestThemeState());
-
-        resolver.GetStateColorHex(JobState.Skipped).Should().Be(Colors.Gray.Lighten1);
-        resolver.GetStateColorHex(JobState.Failed).Should().Be("#d32f2f");
+        JobStateColorResolver.GetStateColorToken(JobState.Skipped).Should().Be("var(--mud-palette-text-disabled)");
+        JobStateColorResolver.GetStateColorToken(JobState.Failed).Should().Be("var(--mud-palette-error)");
     }
 }

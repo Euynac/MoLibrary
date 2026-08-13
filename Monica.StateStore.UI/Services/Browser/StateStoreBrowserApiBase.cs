@@ -81,7 +81,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
 
         if (!await provider.ExistAsync(key, cancellationToken))
         {
-            throw new KeyNotFoundException($"未找到 Key: {key}");
+            throw new KeyNotFoundException($"State store key not found: {key}");
         }
 
         var rawValueTask = LoadRawValueAsync(provider, key, cancellationToken);

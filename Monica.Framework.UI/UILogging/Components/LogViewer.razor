@@ -5,17 +5,18 @@
 
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<LoggingResource> L
 
 @implements IAsyncDisposable
 
 <div class="log-viewer-wrapper">
     <div class="log-viewer-header">
-        <MudText Typo="Typo.subtitle1">实时日志</MudText>
+        <MudText Typo="Typo.subtitle1">@L["Page:Components:Viewer:Title"]</MudText>
         <MudChipSet T="string">
-            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">共 @_linesCount 行</MudChip>
+            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">@L["Page:Components:Viewer:LineCount", _linesCount]</MudChip>
             @if (Filter?.IsActive == true)
             {
-                <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small">筛选: @Filter.Keyword</MudChip>
+                <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small">@L["Page:Components:Viewer:ActiveFilter", Filter.Keyword ?? string.Empty]</MudChip>
             }
         </MudChipSet>
     </div>
@@ -26,7 +27,7 @@
         <div class="load-more-indicator">
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
             <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center" Class="mt-1">
-                正在加载更多日志...
+                @L["Page:Components:Viewer:LoadingMore"]
             </MudText>
         </div>
     }
@@ -39,7 +40,7 @@
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-1" />
-                        匹配: <strong>@(_currentMatchIndex + 1)</strong> / @_totalMatches
+                        @L["Page:Components:Viewer:MatchPosition", _currentMatchIndex + 1, _totalMatches]
                     </MudText>
                 </MudStack>
                 <MudStack Row="true" Spacing="1">
@@ -49,16 +50,16 @@
                                    Variant="Variant.Filled"
                                    OnClick="GoToPreviousMatch"
                                    Disabled="@(_totalMatches == 0)"
-                                   title="上一个匹配项"
-                                   aria-label="上一个匹配项" />
+                                   title="@L["Page:Components:Viewer:PreviousMatch"]"
+                                   aria-label="@L["Page:Components:Viewer:PreviousMatch"]" />
                     <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward"
                                    Size="Size.Small"
                                    Color="Color.Primary"
                                    Variant="Variant.Filled"
                                    OnClick="GoToNextMatch"
                                    Disabled="@(_totalMatches == 0)"
-                                   title="下一个匹配项"
-                                   aria-label="下一个匹配项" />
+                                   title="@L["Page:Components:Viewer:NextMatch"]"
+                                   aria-label="@L["Page:Components:Viewer:NextMatch"]" />
                 </MudStack>
             </MudStack>
         </div>
@@ -67,7 +68,7 @@
     <div class="log-viewer-scroll" @ref="_scrollContainer">
         @if (CurrentLines.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" Dense="true">暂无日志内容</MudAlert>
+            <MudAlert Severity="Severity.Info" Dense="true">@L["Page:Components:Viewer:Empty"]</MudAlert>
         }
         else
         {
@@ -83,6 +84,7 @@
                      class="log-entry @GetSeverityClass(line.Severity) @(line.IsContextTarget ? "context-target" : "") @(isCurrentMatch ? "current-match" : "") @(_selectedLineIndex == lineIndex ? "selected" : "")"
                      data-line-index="@lineIndex"
                      data-absolute-line-number="@line.AbsoluteLineNumber"
+                     tabindex="0"
                      @onclick="() => HandleEntryClick(line, lineIndex)"
                      @oncontextmenu="e => OnContextMenu(e, line)"
                      @oncontextmenu:preventDefault="true">
@@ -138,12 +140,16 @@
     [Parameter]
     public Func<int, Task<int>>? LoadMoreRequested { get; set; }
 
-    private const string JsModulePath = "./_content/Monica.Framework.UI/js/logging-ui.js";
+    private const string JS_MODULE_PATH = "./_content/Monica.Framework.UI/js/logging-ui.js";
+    private readonly SemaphoreSlim _interopGate = new(1, 1);
+    private readonly object _disposeSync = new();
     private ElementReference _scrollContainer;
     private bool _isRendered;
     private long _lastVersion;
     private int _linesCount;
     private IJSObjectReference? _jsModule;
+    private Task? _disposeTask;
+    private volatile bool _disposed;
     private bool _pendingScrollToBottom;
     private long? _pendingScrollAnchorLineNumber;
     private long _pendingPreserveAfterVersion;
@@ -239,11 +245,20 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (firstRender)
         {
             _isRendered = true;
             BuildContextMenu();
             await SetupScrollListenerAsync();
+            if (_disposed)
+            {
+                return;
+            }
 
             if (AutoScroll && CurrentLines.Count > 0)
             {
@@ -256,6 +271,10 @@
             var anchorLineNumber = _pendingScrollAnchorLineNumber.Value;
             _pendingScrollAnchorLineNumber = null;
             await PreserveScrollPositionAsync(anchorLineNumber);
+            if (_disposed)
+            {
+                return;
+            }
         }
 
         if (_pendingScrollToBottom)
@@ -267,28 +286,58 @@
 
     private async Task SetupScrollListenerAsync()
     {
+        await _interopGate.WaitAsync();
+        DotNetObjectReference<LogViewer>? callbackReference = null;
         try
         {
-            _dotNetRef?.Dispose();
-            _dotNetRef = DotNetObjectReference.Create(this);
+            if (_disposed)
+            {
+                return;
+            }
 
-            var jsModule = await GetJsModuleAsync();
+            callbackReference = DotNetObjectReference.Create(this);
+            var jsModule = await GetOrImportJsModuleAsync();
+            if (jsModule is null)
+            {
+                return;
+            }
+
             await jsModule.InvokeVoidAsync("addScrollTopListener",
                 _scrollContainer,
-                _dotNetRef,
+                callbackReference,
                 nameof(HandleScrollToTop),
                 50);
+
+            if (_disposed)
+            {
+                await TryStopScrollListenerAsync(jsModule);
+                return;
+            }
+
+            var previousReference = _dotNetRef;
+            _dotNetRef = callbackReference;
+            callbackReference = null;
+            previousReference?.Dispose();
         }
-        catch (Exception ex)
+        catch (JSDisconnectedException)
         {
-            Console.WriteLine($"Failed to setup scroll listener: {ex.Message}");
+            // The browser circuit disconnected while registering the listener.
+        }
+        catch (JSException)
+        {
+            // The browser context no longer accepts listener registration.
+        }
+        finally
+        {
+            callbackReference?.Dispose();
+            _interopGate.Release();
         }
     }
 
     [JSInvokable]
     public async Task<bool> HandleScrollToTop()
     {
-        if (_isLoadingMore || LoadMoreRequested is null)
+        if (_disposed || _isLoadingMore || LoadMoreRequested is null)
         {
             return false;
         }
@@ -303,6 +352,10 @@
                 ? lines[0].AbsoluteLineNumber
                 : null;
             var loadedCount = await LoadMoreRequested.Invoke(50);
+            if (_disposed)
+            {
+                return false;
+            }
 
             if (loadedCount > 0 && anchorLineNumber.HasValue)
             {
@@ -312,16 +365,18 @@
 
             return loadedCount > 0;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!_disposed)
         {
-            Console.WriteLine($"Error loading more lines: {ex.Message}");
-            Snackbar.Add($"加载更多日志失败: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Page:Components:Viewer:Messages:LoadMoreFailed", ex.Message], Severity.Error);
             return false;
         }
         finally
         {
-            _isLoadingMore = false;
-            await InvokeAsync(StateHasChanged);
+            if (!_disposed)
+            {
+                _isLoadingMore = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
@@ -348,19 +403,19 @@
     private void BuildContextMenu()
     {
         _contextMenuItems = ContextMenuBuilder<LogLineViewModel>.Create()
-            .AddItem("显示行位置信息", Icons.Material.Filled.Info, OnShowLineInfoAsync)
-            .AddItem("按此日志级别筛选", Icons.Material.Filled.Label, OnFilterBySeverityAsync)
-            .AddItem("查找选中的信息", Icons.Material.Filled.Search, OnFindSelectedTextAsync)
-            .AddItem("显示上下文", Icons.Material.Filled.Article, line => OnShowContextClickedAsync(line, _selectedLineIndex))
+            .AddItem(L["Page:Components:Viewer:ContextMenu:LineInfo"], Icons.Material.Filled.Info, OnShowLineInfoAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:FilterSeverity"], Icons.Material.Filled.Label, OnFilterBySeverityAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:FindSelection"], Icons.Material.Filled.Search, OnFindSelectedTextAsync)
+            .AddItem(L["Page:Components:Viewer:ContextMenu:ShowContext"], Icons.Material.Filled.Article, line => OnShowContextClickedAsync(line, _selectedLineIndex))
             .AddDivider()
-            .AddSubMenu("复制", Icons.Material.Filled.ContentCopy, builder => builder
-                .AddItem("复制原始日志", Icons.Material.Filled.ContentCopy, item => CopyToClipboardAsync(item, LogCopyFormat.Raw))
-                .AddItem("仅复制消息", Icons.Material.Filled.Subject, item => CopyToClipboardAsync(item, LogCopyFormat.MessageOnly))
-                .AddItem("带时间戳复制", Icons.Material.Filled.AccessTime, item => CopyToClipboardAsync(item, LogCopyFormat.WithTimestamp))
-                .AddItem("带行号复制", Icons.Material.Filled.Numbers, item => CopyToClipboardAsync(item, LogCopyFormat.WithLineNumber)))
-            .AddSubMenu("导航", Icons.Material.Filled.Navigation, builder => builder
-                .AddItem("跳转到顶部", Icons.Material.Filled.ArrowUpward, _ => ScrollToTopAsync())
-                .AddItem("跳转到底部", Icons.Material.Filled.ArrowDownward, _ => ScrollToBottomAsync()))
+            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Copy"], Icons.Material.Filled.ContentCopy, builder => builder
+                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyRaw"], Icons.Material.Filled.ContentCopy, item => CopyToClipboardAsync(item, LogCopyFormat.Raw))
+                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyMessage"], Icons.Material.Filled.Subject, item => CopyToClipboardAsync(item, LogCopyFormat.MessageOnly))
+                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyTimestamp"], Icons.Material.Filled.AccessTime, item => CopyToClipboardAsync(item, LogCopyFormat.WithTimestamp))
+                .AddItem(L["Page:Components:Viewer:ContextMenu:CopyLineNumber"], Icons.Material.Filled.Numbers, item => CopyToClipboardAsync(item, LogCopyFormat.WithLineNumber)))
+            .AddSubMenu(L["Page:Components:Viewer:ContextMenu:Navigate"], Icons.Material.Filled.Navigation, builder => builder
+                .AddItem(L["Page:Components:Viewer:ContextMenu:Top"], Icons.Material.Filled.ArrowUpward, _ => ScrollToTopAsync())
+                .AddItem(L["Page:Components:Viewer:ContextMenu:Bottom"], Icons.Material.Filled.ArrowDownward, _ => ScrollToBottomAsync()))
             .Build();
     }
 
@@ -368,7 +423,10 @@
     {
         _selectedLineIndex = lineIndex;
         await OnLineClicked.InvokeAsync(line);
-        StateHasChanged();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
     }
 
     private void OnContextMenu(MouseEventArgs e, LogLineViewModel line)
@@ -410,7 +468,7 @@
             FullWidth = true
         };
 
-        await DialogService.ShowAsync<LogLineInfoDialog>("日志行信息", parameters, options);
+        await DialogService.ShowAsync<LogLineInfoDialog>(L["Page:Components:LineInfo:DialogTitle"], parameters, options);
     }
 
     private async Task OnShowContextClickedAsync(LogLineViewModel? line, int? lineIndex)
@@ -429,12 +487,11 @@
         }
 
         var text = line.GetCopyText(format);
-        var jsModule = await GetJsModuleAsync();
-        var success = await jsModule.InvokeAsync<bool>("copyToClipboard", text);
+        var success = await InvokeJsAsync<bool>("copyToClipboard", text);
 
-        if (success)
+        if (success == true && !_disposed)
         {
-            Snackbar.Add($"已复制: {text[..Math.Min(50, text.Length)]}...");
+            Snackbar.Add(L["Page:Components:Viewer:Messages:Copied", text[..Math.Min(50, text.Length)]]);
         }
     }
 
@@ -456,21 +513,27 @@
 
         try
         {
-            var jsModule = await GetJsModuleAsync();
-            var selectedText = await jsModule.InvokeAsync<string>("getSelectedText");
+            var selectedText = await InvokeJsAsync<string>("getSelectedText");
+            if (_disposed)
+            {
+                return;
+            }
 
             if (string.IsNullOrWhiteSpace(selectedText))
             {
-                Snackbar.Add("请先选中要查找的文本", Severity.Warning);
+                Snackbar.Add(L["Page:Components:Viewer:Messages:SelectText"], Severity.Warning);
                 return;
             }
 
             await OnApplyFilter.InvokeAsync((line, selectedText));
-            Snackbar.Add($"已应用筛选条件：{selectedText}", Severity.Info);
+            if (!_disposed)
+            {
+                Snackbar.Add(L["Page:Components:Viewer:Messages:FilterApplied", selectedText], Severity.Info);
+            }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!_disposed)
         {
-            Snackbar.Add($"获取选中文本失败：{ex.Message}", Severity.Error);
+            Snackbar.Add(L["Page:Components:Viewer:Messages:SelectionFailed", ex.Message], Severity.Error);
         }
     }
 
@@ -478,8 +541,7 @@
     {
         try
         {
-            var jsModule = await GetJsModuleAsync();
-            await jsModule.InvokeVoidAsync("scrollToTop", _scrollContainer);
+            await InvokeJsVoidAsync("scrollToTop", _scrollContainer);
         }
         catch (JSException)
         {
@@ -490,8 +552,7 @@
     {
         try
         {
-            var jsModule = await GetJsModuleAsync();
-            await jsModule.InvokeVoidAsync("scrollToBottom", _scrollContainer);
+            await InvokeJsVoidAsync("scrollToBottom", _scrollContainer);
         }
         catch (JSException)
         {
@@ -508,7 +569,10 @@
         _currentMatchIndex = (_currentMatchIndex + 1) % _totalMatches;
 
         await ScrollToCurrentMatch();
-        StateHasChanged();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
     }
 
     private async Task GoToPreviousMatch()
@@ -521,7 +585,10 @@
         _currentMatchIndex = (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
 
         await ScrollToCurrentMatch();
-        StateHasChanged();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
     }
 
     private async Task ScrollToCurrentMatch()
@@ -535,8 +602,7 @@
 
         try
         {
-            var jsModule = await GetJsModuleAsync();
-            await jsModule.InvokeVoidAsync("scrollToLineIndex", _scrollContainer, lineIndex);
+            await InvokeJsVoidAsync("scrollToLineIndex", _scrollContainer, lineIndex);
         }
         catch (JSException)
         {
@@ -547,8 +613,7 @@
     {
         try
         {
-            var jsModule = await GetJsModuleAsync();
-            await jsModule.InvokeVoidAsync("scrollToLineIndex", _scrollContainer, lineIndex);
+            await InvokeJsVoidAsync("scrollToLineIndex", _scrollContainer, lineIndex);
         }
         catch (JSException)
         {
@@ -559,22 +624,78 @@
     {
         try
         {
-            var jsModule = await GetJsModuleAsync();
-            await jsModule.InvokeVoidAsync("preserveScrollPosition", _scrollContainer, absoluteLineNumber);
+            await InvokeJsVoidAsync("preserveScrollPosition", _scrollContainer, absoluteLineNumber);
         }
         catch (JSException)
         {
         }
     }
 
-    private async Task<IJSObjectReference> GetJsModuleAsync()
+    private async ValueTask<T?> InvokeJsAsync<T>(string identifier, params object?[] args)
     {
-        if (_jsModule is null)
+        await _interopGate.WaitAsync();
+        try
         {
-            _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", JsModulePath);
+            if (_disposed)
+            {
+                return default;
+            }
+
+            var module = await GetOrImportJsModuleAsync();
+            return module is null ? default : await module.InvokeAsync<T>(identifier, args);
+        }
+        finally
+        {
+            _interopGate.Release();
+        }
+    }
+
+    private async ValueTask InvokeJsVoidAsync(string identifier, params object?[] args)
+    {
+        await _interopGate.WaitAsync();
+        try
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            var module = await GetOrImportJsModuleAsync();
+            if (module is not null)
+            {
+                await module.InvokeVoidAsync(identifier, args);
+            }
+        }
+        finally
+        {
+            _interopGate.Release();
+        }
+    }
+
+    private async ValueTask<IJSObjectReference?> GetOrImportJsModuleAsync()
+    {
+        if (_jsModule is not null)
+        {
+            return _jsModule;
         }
 
-        return _jsModule;
+        IJSObjectReference? importedModule = null;
+        try
+        {
+            importedModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", JS_MODULE_PATH);
+            if (_disposed)
+            {
+                return null;
+            }
+
+            _jsModule = importedModule;
+            importedModule = null;
+            return _jsModule;
+        }
+        finally
+        {
+            await DisposeJsModuleAsync(importedModule);
+        }
     }
 
     private static string GetSeverityClass(LogSeverity severity) => severity switch
@@ -626,32 +747,74 @@
         return builder.ToString();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeSync)
+        {
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        _disposed = true;
+        await _interopGate.WaitAsync();
+        IJSObjectReference? module;
+        DotNetObjectReference<LogViewer>? callbackReference;
+        try
+        {
+            module = _jsModule;
+            callbackReference = _dotNetRef;
+            _jsModule = null;
+            _dotNetRef = null;
+            if (module is not null)
+            {
+                await TryStopScrollListenerAsync(module);
+            }
+        }
+        finally
+        {
+            _interopGate.Release();
+        }
+
+        callbackReference?.Dispose();
+        await DisposeJsModuleAsync(module);
+    }
+
+    private async ValueTask TryStopScrollListenerAsync(IJSObjectReference module)
     {
         try
         {
-            if (_jsModule is not null)
-            {
-                await _jsModule.InvokeVoidAsync("removeScrollListener", _scrollContainer);
-            }
+            await module.InvokeVoidAsync("removeScrollListener", _scrollContainer);
         }
         catch (JSDisconnectedException)
         {
+            // The disconnected browser circuit already stopped producing callbacks.
         }
-        catch (Exception)
+        catch (JSException)
         {
+            // The destroyed browser context can no longer produce callbacks.
+        }
+    }
+
+    private static async ValueTask DisposeJsModuleAsync(IJSObjectReference? module)
+    {
+        if (module is null)
+        {
+            return;
         }
 
-        _dotNetRef?.Dispose();
-        if (_jsModule is not null)
+        try
         {
-            try
-            {
-                await _jsModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The disconnected circuit already released the module reference.
+        }
+        catch (JSException)
+        {
+            // The destroyed browser context cannot retain a usable module reference.
         }
     }
 }

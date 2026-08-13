@@ -1,0 +1,118 @@
+.memory-analysis-page {
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    padding: clamp(16px, 2vw, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.memory-analysis-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 22px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+}
+
+.memory-analysis-header__identity,
+.memory-analysis-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.memory-analysis-header__icon {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: var(--mud-palette-info);
+    background: color-mix(in srgb, var(--mud-palette-info) 12%, var(--mud-palette-surface));
+}
+
+.memory-analysis-header__copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.memory-analysis-header__copy ::deep .mud-typography-body1 {
+    max-width: 68ch;
+}
+
+.memory-analysis-eyebrow {
+    color: var(--mud-palette-info);
+    letter-spacing: 0.09em;
+}
+
+.memory-analysis-workspace {
+    min-width: 0;
+}
+
+.memory-analysis-workspace ::deep .mud-tabs {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    overflow: hidden;
+}
+
+.memory-analysis-workspace ::deep .mud-tabs-tabbar {
+    background: var(--mud-palette-background-gray);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.memory-analysis-workspace ::deep .memory-analysis-tab-panel {
+    min-width: 0;
+    padding: 20px;
+}
+
+@media (max-width: 929px) {
+    .memory-analysis-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .memory-analysis-header__actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .memory-analysis-page {
+        padding: 14px 12px 20px;
+    }
+
+    .memory-analysis-header {
+        padding: 16px;
+    }
+
+    .memory-analysis-header__icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+    }
+
+    .memory-analysis-workspace ::deep .memory-analysis-tab-panel {
+        padding: 14px 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .memory-analysis-page *,
+    .memory-analysis-page *::before,
+    .memory-analysis-page *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

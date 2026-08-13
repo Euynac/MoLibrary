@@ -1,8 +1,7 @@
 .opentelemetry-page {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
+    gap: var(--mo-page-section-gap, 1rem);
     min-width: 0;
 }
 
@@ -20,10 +19,17 @@
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
     background-color: var(--mud-palette-surface);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .opentelemetry-page ::deep .dashboard-banner {
     overflow: hidden;
+}
+
+.opentelemetry-page ::deep .dashboard-banner:hover,
+.opentelemetry-page ::deep .filter-bar:hover {
+    border-color: var(--mud-palette-lines-inputs);
+    box-shadow: var(--mud-elevation-1);
 }
 
 .banner-title {
@@ -96,12 +102,26 @@
     margin-top: 1rem;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 929px) {
     .opentelemetry-page ::deep .filter-bar {
         grid-template-columns: 1fr;
     }
 
     .filter-actions {
         justify-content: flex-start;
+    }
+}
+
+@media (max-width: 390px) {
+    .filter-actions ::deep .mud-button-root {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opentelemetry-page ::deep .dashboard-banner,
+    .opentelemetry-page ::deep .filter-bar,
+    .opentelemetry-page ::deep .status-panel {
+        transition-duration: 0.01ms;
     }
 }

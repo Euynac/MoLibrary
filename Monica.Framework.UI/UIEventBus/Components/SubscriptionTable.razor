@@ -24,7 +24,7 @@
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                     <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" Color="Color.Default" />
                     <MudTooltip Text="@context.EventType">
-                        <MudText Typo="Typo.body2" Style="cursor: pointer;" @onclick="() => OnRowClick.InvokeAsync(context)">
+                        <MudText Typo="Typo.body2" Class="subscription-table__event-link" @onclick="() => OnRowClick.InvokeAsync(context)">
                             @context.EventTypeShortName
                         </MudText>
                     </MudTooltip>
@@ -48,25 +48,25 @@
                             </MudStack>
                         </ChildContent>
                         <TooltipContent>
-                            <MudStack Spacing="1" Class="pa-2" Style="max-width: 500px;">
+                            <MudStack Spacing="1" Class="subscription-table__tooltip pa-2">
                                 @if (!string.IsNullOrEmpty(context.ActionDeclaringType))
                                 {
-                                    <MudText Typo="Typo.caption" Style="font-weight: 500;">@L["SubscriptionTable:Labels:DeclaringType"]</MudText>
-                                    <MudText Typo="Typo.caption" Style="font-family: monospace; word-break: break-all;">@context.ActionDeclaringType</MudText>
+                                    <MudText Typo="Typo.caption" Class="subscription-table__tooltip-label">@L["SubscriptionTable:Labels:DeclaringType"]</MudText>
+                                    <MudText Typo="Typo.caption" Class="subscription-table__technical">@context.ActionDeclaringType</MudText>
                                 }
                                 @if (!string.IsNullOrEmpty(context.ActionMethodName))
                                 {
-                                    <MudText Typo="Typo.caption" Style="font-weight: 500; margin-top: 8px;">@L["SubscriptionTable:Labels:MethodName"]</MudText>
-                                    <MudText Typo="Typo.caption" Style="font-family: monospace;">@context.ActionMethodName</MudText>
+                                    <MudText Typo="Typo.caption" Class="subscription-table__tooltip-label">@L["SubscriptionTable:Labels:MethodName"]</MudText>
+                                    <MudText Typo="Typo.caption" Class="subscription-table__technical">@context.ActionMethodName</MudText>
                                 }
                                 @if (!string.IsNullOrEmpty(context.ActionMethodSignature))
                                 {
-                                    <MudText Typo="Typo.caption" Style="font-weight: 500; margin-top: 8px;">@L["SubscriptionTable:Labels:MethodSignature"]</MudText>
-                                    <MudText Typo="Typo.caption" Style="font-family: monospace; word-break: break-all;">@context.ActionMethodSignature</MudText>
+                                    <MudText Typo="Typo.caption" Class="subscription-table__tooltip-label">@L["SubscriptionTable:Labels:MethodSignature"]</MudText>
+                                    <MudText Typo="Typo.caption" Class="subscription-table__technical">@context.ActionMethodSignature</MudText>
                                 }
                                 @if (context.ActionIsStatic.HasValue)
                                 {
-                                    <MudText Typo="Typo.caption" Style="margin-top: 8px;">
+                                    <MudText Typo="Typo.caption" Class="subscription-table__tooltip-label">
                                         <MudChip T="string" Size="Size.Small" Color="@(context.ActionIsStatic.Value ? Color.Secondary : Color.Default)">
                                             @(context.ActionIsStatic.Value ? L["SubscriptionTable:Labels:StaticMethod"] : L["SubscriptionTable:Labels:InstanceMethod"])
                                         </MudChip>

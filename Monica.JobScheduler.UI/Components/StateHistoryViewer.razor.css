@@ -5,3 +5,9 @@
     margin-top: 4px;
     border-radius: 4px;
 }
+
+.normal-message-wrapper ::deep .normal-message__text {
+    white-space: pre-wrap;
+    font-family: var(--mo-font-mono);
+    font-size: 0.85rem;
+}

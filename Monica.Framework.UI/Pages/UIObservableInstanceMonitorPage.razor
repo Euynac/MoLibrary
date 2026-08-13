@@ -1,7 +1,8 @@
 @attribute [Route(PAGE_URL)]
+@implements IDisposable
 @using Monica.Framework.UI.UIObservableInstance.Models
 @using Monica.Framework.UI.UIObservableInstance.Components
-@using Monica.Core.Results;
+@using Monica.Core.Results
 @using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Support
 @inject ObservableInstanceMonitorService MonitorService
@@ -11,331 +12,167 @@
 
 <PageTitle>@L["Page:PageTitle"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <!-- Header -->
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Primary" />
-                <MudText Typo="Typo.h4">@L["Page:Header:Title"]</MudText>
-            </MudStack>
-            <MudStack Row="true" Spacing="2">
-                <MudButton StartIcon="@Icons.Material.Filled.Refresh"
-                          Color="Color.Primary"
-                          Variant="Variant.Outlined"
-                          OnClick="RefreshAsync"
-                          Size="Size.Medium">
-                    @L["Shared:Actions:Refresh"]
-                </MudButton>
-            </MudStack>
-        </MudStack>
-    </MudPaper>
+<div class="observable-page">
+    <MudContainer MaxWidth="MaxWidth.False" Class="observable-page__outer-container">
+        <div class="observable-page__container">
+            <header class="observable-page__header">
+                <div class="observable-page__eyebrow"><span aria-hidden="true"></span><span>@L["Page:Header:Eyebrow"]</span></div>
+                <div class="observable-page__heading-row">
+                    <div>
+                        <MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Header:Title"]</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="observable-page__description">@L["Page:Header:Description"]</MudText>
+                    </div>
+                    <MudButton StartIcon="@Icons.Material.Filled.Refresh" Color="Color.Primary" Variant="Variant.Filled" Disabled="@_loading" OnClick="RefreshAsync">@L["Shared:Actions:Refresh"]</MudButton>
+                </div>
+            </header>
 
-    @if (_loading && _allInstances.Count == 0)
-    {
-        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
-            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.h6" Color="Color.Primary">@L["Page:States:LoadingInstances"]</MudText>
-        </MudStack>
-    }
-    else
-    {
-        <!-- Tabs -->
-        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-4">
-            <!-- Overview Tab -->
-            <MudTabPanel Text="@L["Page:Tabs:Overview"]" Icon="@Icons.Material.Filled.Dashboard">
-                <ObservableInstanceStatisticsCard Statistics="_statistics" />
+            <section class="observable-page__pulse" aria-label="@L["Page:Summary:AriaLabel"]">
+                <article class="observable-pulse observable-pulse--primary"><MudIcon Icon="@Icons.Material.Filled.Inventory2" /><span><small>@L["Page:Summary:Tracked"]</small><strong>@(_statistics?.TotalInstances ?? _allInstances.Count)</strong></span></article>
+                <article class="observable-pulse observable-pulse--success"><MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" /><span><small>@L["Page:Summary:Healthy"]</small><strong>@(_statistics?.HealthyCount ?? 0)</strong></span></article>
+                <article class="observable-pulse observable-pulse--error"><MudIcon Icon="@Icons.Material.Filled.ReportProblem" /><span><small>@L["Page:Summary:Exceptions"]</small><strong>@(_statistics?.TotalExceptions ?? _exceptionsPreview.Sum(instance => instance.ExceptionCount))</strong></span></article>
+                <article class="observable-pulse observable-pulse--tertiary"><MudIcon Icon="@Icons.Material.Filled.AccountTree" /><span><small>@L["Page:Summary:Groups"]</small><strong>@_instancesByGroup.Count</strong></span></article>
+            </section>
 
-                @if (_exceptionsPreview.Any())
-                {
-                    <MudPaper Class="pa-4 mt-4" Elevation="2">
-                        <MudStack Spacing="2">
-                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
-                                    <MudText Typo="Typo.h6">@L["Page:RecentExceptions:Title"]</MudText>
-                                </MudStack>
-                                <MudChip T="string" Color="Color.Error" Size="Size.Small">
-                                    @L["Page:RecentExceptions:Count", _exceptionsPreview.Count]
-                                </MudChip>
-                            </MudStack>
-
-                            <div class="exception-preview-table">
-                                <MudTable T="ObservableInstanceViewModel"
-                                          Items="@_exceptionsPreview.Take(10)"
-                                          Dense="true"
-                                          Hover="true"
-                                          OnRowClick="HandleExceptionPreviewRowClickAsync">
-                                    <HeaderContent>
-                                        <MudTh Class="id-header">@L["Shared:Fields:InstanceId"]</MudTh>
-                                        <MudTh>@L["Shared:Fields:Name"]</MudTh>
-                                        <MudTh>@L["Shared:Fields:ExceptionCount"]</MudTh>
-                                        <MudTh>@L["Shared:Fields:LastUpdated"]</MudTh>
-                                    </HeaderContent>
-                                    <RowTemplate>
-                                        <MudTd DataLabel="@L["Shared:Fields:InstanceId"]" Class="id-cell">
-                                            <MudTooltip Text="@context.InstanceId" RootClass="id-tooltip">
-                                                <span class="id-text">@context.InstanceId</span>
-                                            </MudTooltip>
-                                        </MudTd>
-                                        <MudTd DataLabel="@L["Shared:Fields:Name"]">
-                                            <span class="cell-text">@context.InstanceName</span>
-                                        </MudTd>
-                                        <MudTd>
-                                            <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.ExceptionCount</MudChip>
-                                        </MudTd>
-                                        <MudTd DataLabel="@L["Shared:Fields:LastUpdated"]">
-                                            <span class="cell-text">@context.StateChangedAtDisplay</span>
-                                        </MudTd>
-                                    </RowTemplate>
-                                </MudTable>
-                            </div>
-                        </MudStack>
-                    </MudPaper>
-                }
-            </MudTabPanel>
-
-            <!-- All Instances Tab -->
-            <MudTabPanel Text="@L["Page:Tabs:AllInstances"]" Icon="@Icons.Material.Filled.List">
-                <ObservableInstanceFilterPanel Filter="_filter" OnFilterChanged="ApplyFilterAsync" />
-
-                <ObservableInstanceTable Instances="_displayedInstances"
-                                        Loading="_loading"
-                                        OnRowClick="ShowInstanceDetail"
-                                        OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
-            </MudTabPanel>
-
-            <!-- By Group Tab -->
-            <MudTabPanel Text="@L["Page:Tabs:ByGroup"]" Icon="@Icons.Material.Filled.Group">
-                @if (_instancesByGroup.Any())
-                {
-                    <MudStack Spacing="3">
-                        @foreach (var groupPair in _instancesByGroup)
-                        {
-                            <MudPaper Class="pa-3" Elevation="2">
-                                <MudStack Spacing="2">
-                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                            <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Tertiary" />
-                                            <MudText Typo="Typo.h6">@(string.IsNullOrEmpty(groupPair.Key) ? L["Shared:Labels:Ungrouped"] : groupPair.Key)</MudText>
-                                        </MudStack>
-                                        <MudChip T="string" Color="Color.Tertiary" Size="Size.Small">
-                                        @L["Page:Group:Count", groupPair.Value.Count]
-                                        </MudChip>
-                                    </MudStack>
-                                    <ObservableInstanceTable Instances="groupPair.Value"
-                                                            Compact="true"
-                                                            OnRowClick="ShowInstanceDetail"
-                                                            OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
-                                </MudStack>
-                            </MudPaper>
-                        }
-                    </MudStack>
-                }
-                else
-                {
-                    <MudAlert Severity="Severity.Info">@L["Page:Group:Empty"]</MudAlert>
-                }
-            </MudTabPanel>
-
-            <!-- Exceptions Only Tab -->
-            <MudTabPanel Text="@L["Page:Tabs:ExceptionsOnly"]" Icon="@Icons.Material.Filled.Error" BadgeData="@_exceptionsPreview.Count" BadgeColor="@(_exceptionsPreview.Any() ? Color.Error : Color.Default)">
-                <ObservableInstanceTable Instances="_exceptionsPreview"
-                                        Loading="_loading"
-                                        OnRowClick="ShowInstanceDetail"
-                                        OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
-            </MudTabPanel>
-        </MudTabs>
-    }
-</MudContainer>
+            @if (_loading && _allInstances.Count == 0)
+            {
+                <div class="observable-page__state" role="status"><MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" /><MudText Typo="Typo.h6">@L["Page:States:LoadingInstances"]</MudText></div>
+            }
+            else
+            {
+                <div class="observable-page__tabs">
+                    <MudTabs Elevation="0" Rounded="false" TabPanelsClass="observable-page__tab-panels">
+                        <MudTabPanel Text="@L["Page:Tabs:Overview"]" Icon="@Icons.Material.Filled.Dashboard">
+                            <ObservableInstanceStatisticsCard Statistics="_statistics" />
+                            @if (_exceptionsPreview.Any())
+                            {
+                                <MudPaper Class="observable-exceptions" Elevation="0" Outlined="true">
+                                    <div class="observable-section-heading"><span class="observable-section-heading__icon observable-section-heading__icon--error"><MudIcon Icon="@Icons.Material.Filled.Error" /></span><span><MudText Typo="Typo.h6">@L["Page:RecentExceptions:Title"]</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@L["Page:RecentExceptions:Count", _exceptionsPreview.Count]</MudText></span></div>
+                                    <div class="exception-preview-table">
+                                        <MudTable T="ObservableInstanceViewModel" Items="@_exceptionsPreview.Take(10)" Dense="true" Hover="true" Elevation="0" OnRowClick="HandleExceptionPreviewRowClickAsync">
+                                            <HeaderContent><MudTh Class="id-header">@L["Shared:Fields:InstanceId"]</MudTh><MudTh>@L["Shared:Fields:Name"]</MudTh><MudTh>@L["Shared:Fields:ExceptionCount"]</MudTh><MudTh>@L["Shared:Fields:LastUpdated"]</MudTh></HeaderContent>
+                                            <RowTemplate>
+                                                <MudTd DataLabel="@L["Shared:Fields:InstanceId"]" Class="id-cell"><MudTooltip Text="@context.InstanceId" RootClass="id-tooltip"><span class="id-text">@context.InstanceId</span></MudTooltip></MudTd>
+                                                <MudTd DataLabel="@L["Shared:Fields:Name"]"><span class="cell-text">@context.InstanceName</span></MudTd>
+                                                <MudTd DataLabel="@L["Shared:Fields:ExceptionCount"]"><MudChip T="string" Color="Color.Error" Size="Size.Small">@context.ExceptionCount</MudChip></MudTd>
+                                                <MudTd DataLabel="@L["Shared:Fields:LastUpdated"]"><span class="cell-text">@context.StateChangedAtDisplay</span></MudTd>
+                                            </RowTemplate>
+                                        </MudTable>
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MudTabPanel>
+                        <MudTabPanel Text="@L["Page:Tabs:AllInstances"]" Icon="@Icons.Material.Filled.List">
+                            <ObservableInstanceFilterPanel Filter="_filter" OnFilterChanged="ApplyFilterAsync" />
+                            <ObservableInstanceTable Instances="_displayedInstances" Loading="_loading" OnRowClick="ShowInstanceDetail" OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="@L["Page:Tabs:ByGroup"]" Icon="@Icons.Material.Filled.Group">
+                            @if (_instancesByGroup.Any())
+                            {
+                                <div class="observable-groups">
+                                    @foreach (var groupPair in _instancesByGroup)
+                                    {
+                                        <MudPaper Class="observable-group" Elevation="0" Outlined="true">
+                                            <div class="observable-section-heading"><span class="observable-section-heading__icon observable-section-heading__icon--tertiary"><MudIcon Icon="@Icons.Material.Filled.Group" /></span><span><MudText Typo="Typo.h6">@(string.IsNullOrEmpty(groupPair.Key) ? L["Shared:Labels:Ungrouped"] : groupPair.Key)</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@L["Page:Group:Count", groupPair.Value.Count]</MudText></span></div>
+                                            <ObservableInstanceTable Instances="groupPair.Value" Compact="true" OnRowClick="ShowInstanceDetail" OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
+                                        </MudPaper>
+                                    }
+                                </div>
+                            }
+                            else { <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Page:Group:Empty"]</MudAlert> }
+                        </MudTabPanel>
+                        <MudTabPanel Text="@L["Page:Tabs:ExceptionsOnly"]" Icon="@Icons.Material.Filled.Error" BadgeData="@_exceptionsPreview.Count" BadgeColor="@(_exceptionsPreview.Any() ? Color.Error : Color.Default)">
+                            <ObservableInstanceTable Instances="_exceptionsPreview" Loading="_loading" OnRowClick="ShowInstanceDetail" OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
+                        </MudTabPanel>
+                    </MudTabs>
+                </div>
+            }
+        </div>
+    </MudContainer>
+</div>
 
 @code {
     public const string PAGE_URL = "/observable-instance-monitor";
-
     private bool _loading = true;
-
-    // Data
+    private bool _disposed;
     private List<ObservableInstanceViewModel> _allInstances = new();
     private List<ObservableInstanceViewModel> _displayedInstances = new();
     private List<ObservableInstanceViewModel> _exceptionsPreview = new();
     private ObservableInstanceStatistics? _statistics;
-
-    // Grouping
     private Dictionary<string, List<ObservableInstanceViewModel>> _instancesByGroup = new();
-
-    // Filter
     private ObservableInstanceFilter _filter = new();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await LoadDataAsync();
-            StateHasChanged();
-        }
-    }
+    protected override Task OnAfterRenderAsync(bool firstRender) => firstRender ? LoadDataAsync() : Task.CompletedTask;
 
     private async Task LoadDataAsync()
     {
+        if (_disposed) return;
         _loading = true;
         StateHasChanged();
-
         try
         {
-            // Load instances
-            if ((await MonitorService.GetAllInstancesAsync()).IsFailed(out var error, out var instances))
-            {
-                Snackbar.Add(L["Page:Messages:LoadInstancesFailed", error], Severity.Error);
-            }
-            else
-            {
-                _allInstances = instances ?? new();
-                await ApplyFilterAsync();
-            }
+            var instancesResult = await MonitorService.GetAllInstancesAsync();
+            if (_disposed) return;
+            if (instancesResult.IsFailed(out var error, out var instances)) Snackbar.Add(L["Page:Messages:LoadInstancesFailed", error], Severity.Error);
+            else { _allInstances = instances ?? new(); await ApplyFilterAsync(); }
 
-            // Load statistics
-            if ((await MonitorService.GetStatisticsAsync()).IsFailed(out var statsError, out var stats))
-            {
-                Snackbar.Add(L["Page:Messages:LoadStatisticsFailed", statsError], Severity.Error);
-            }
-            else
-            {
-                _statistics = stats;
-            }
+            var statisticsResult = await MonitorService.GetStatisticsAsync();
+            if (_disposed) return;
+            if (statisticsResult.IsFailed(out var statsError, out var stats)) Snackbar.Add(L["Page:Messages:LoadStatisticsFailed", statsError], Severity.Error);
+            else _statistics = stats;
 
-            // Load exceptions preview
-            if ((await MonitorService.GetInstancesWithExceptionsAsync()).IsFailed(out var excError, out var exceptions))
-            {
-                Snackbar.Add(L["Page:Messages:LoadExceptionInstancesFailed", excError], Severity.Error);
-            }
-            else
-            {
-                _exceptionsPreview = exceptions ?? new();
-            }
-
-            // Group instances
+            var exceptionResult = await MonitorService.GetInstancesWithExceptionsAsync();
+            if (_disposed) return;
+            if (exceptionResult.IsFailed(out var exceptionError, out var exceptions)) Snackbar.Add(L["Page:Messages:LoadExceptionInstancesFailed", exceptionError], Severity.Error);
+            else _exceptionsPreview = exceptions ?? new();
             GroupInstances();
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add(L["Page:Messages:LoadDataException", ex.Message], Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { if (!_disposed) Snackbar.Add(L["Page:Messages:LoadDataException", ex.Message], Severity.Error); }
+        finally { _loading = false; if (!_disposed) StateHasChanged(); }
     }
 
-    private async Task RefreshAsync()
-    {
-        await LoadDataAsync();
-        Snackbar.Add(L["Page:Messages:RefreshSucceeded"], Severity.Success);
-    }
+    private async Task RefreshAsync() { await LoadDataAsync(); if (!_disposed) Snackbar.Add(L["Page:Messages:RefreshSucceeded"], Severity.Success); }
 
     private Task ApplyFilterAsync()
     {
-        if (_filter.HasAnyFilter)
+        _displayedInstances = !_filter.HasAnyFilter ? _allInstances : _allInstances.Where(instance =>
         {
-            _displayedInstances = _allInstances.Where(instance =>
+            if (!string.IsNullOrWhiteSpace(_filter.SearchText))
             {
-                if (!string.IsNullOrWhiteSpace(_filter.SearchText))
-                {
-                    var searchText = _filter.SearchText.ToLowerInvariant();
-                    if (!instance.InstanceId.ToLowerInvariant().Contains(searchText) &&
-                        !instance.InstanceName.ToLowerInvariant().Contains(searchText))
-                        return false;
-                }
-
-                if (!string.IsNullOrWhiteSpace(_filter.GroupId) && instance.GroupId != _filter.GroupId)
-                    return false;
-
-                // Health state filter
-                if (_filter.HealthStateFilter.HasValue && instance.HealthState != _filter.HealthStateFilter.Value)
-                    return false;
-
-                // Log level filter
-                if (_filter.LogLevels?.Any() == true && (!instance.CurrentLogLevel.HasValue || !_filter.LogLevels.Contains(instance.CurrentLogLevel.Value)))
-                    return false;
-
-                // Quick filter: Critical/Error only
-                if (_filter.ShowCriticalErrorOnly &&
-                    instance.CurrentLogLevel != Microsoft.Extensions.Logging.LogLevel.Critical &&
-                    instance.CurrentLogLevel != Microsoft.Extensions.Logging.LogLevel.Error)
-                    return false;
-
-                // Quick filter: Unhealthy only
-                if (_filter.ShowUnhealthyOnly && !instance.IsUnhealthy)
-                    return false;
-
-                return true;
-            }).ToList();
-        }
-        else
-        {
-            _displayedInstances = _allInstances;
-        }
-
-        StateHasChanged();
+                var searchText = _filter.SearchText.ToLowerInvariant();
+                if (!instance.InstanceId.ToLowerInvariant().Contains(searchText) && !instance.InstanceName.ToLowerInvariant().Contains(searchText)) return false;
+            }
+            if (!string.IsNullOrWhiteSpace(_filter.GroupId) && instance.GroupId != _filter.GroupId) return false;
+            if (_filter.HealthStateFilter.HasValue && instance.HealthState != _filter.HealthStateFilter.Value) return false;
+            if (_filter.LogLevels?.Any() == true && (!instance.CurrentLogLevel.HasValue || !_filter.LogLevels.Contains(instance.CurrentLogLevel.Value))) return false;
+            if (_filter.ShowCriticalErrorOnly && instance.CurrentLogLevel is not Microsoft.Extensions.Logging.LogLevel.Critical and not Microsoft.Extensions.Logging.LogLevel.Error) return false;
+            return !_filter.ShowUnhealthyOnly || instance.IsUnhealthy;
+        }).ToList();
+        if (!_disposed) StateHasChanged();
         return Task.CompletedTask;
     }
 
     private void GroupInstances()
     {
-        // Group by GroupId
-        _instancesByGroup = _allInstances
-            .Where(i => i.HasGroup)
-            .GroupBy(i => i.GroupId ?? string.Empty)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Add ungrouped instances as separate group
-        var ungrouped = _allInstances.Where(i => !i.HasGroup).ToList();
-        if (ungrouped.Any())
-        {
-            _instancesByGroup[string.Empty] = ungrouped;
-        }
+        _instancesByGroup = _allInstances.Where(instance => instance.HasGroup).GroupBy(instance => instance.GroupId ?? string.Empty).ToDictionary(group => group.Key, group => group.ToList());
+        var ungrouped = _allInstances.Where(instance => !instance.HasGroup).ToList();
+        if (ungrouped.Any()) _instancesByGroup[string.Empty] = ungrouped;
     }
 
-    private Task HandleExceptionPreviewRowClickAsync(TableRowClickEventArgs<ObservableInstanceViewModel> args)
-    {
-        return args.Item is null ? Task.CompletedTask : ShowInstanceDetail(args.Item);
-    }
-
+    private Task HandleExceptionPreviewRowClickAsync(TableRowClickEventArgs<ObservableInstanceViewModel> args) => args.Item is null ? Task.CompletedTask : ShowInstanceDetail(args.Item);
     private async Task ShowInstanceDetail(ObservableInstanceViewModel instance)
     {
-        var parameters = new DialogParameters
-        {
-            ["Instance"] = instance
-        };
-
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            Position = DialogPosition.Center,
-            MaxWidth = MaxWidth.Large,
-            FullWidth = true
-        };
-
+        var parameters = new DialogParameters { ["Instance"] = instance };
+        var options = new DialogOptions { CloseOnEscapeKey = true, Position = DialogPosition.Center, MaxWidth = MaxWidth.Large, FullWidth = true };
         await DialogService.ShowAsync<ObservableInstanceDetailDialog>(L["Page:Dialog:DetailTitle", instance.InstanceName], parameters, options);
     }
 
     private async Task ClearInstanceHistoryWithConfirmAsync(ObservableInstanceViewModel instance)
     {
-        bool? result = await DialogService.ShowMessageBoxAsync(
-            L["Page:Dialog:ConfirmTitle"],
-            L["Page:Dialog:ClearHistoryMessage", instance.InstanceName],
-            yesText: L["Page:Dialog:Confirm"], cancelText: L["Page:Dialog:Cancel"]);
-
-        if (result == true)
-        {
-            if ((await MonitorService.ClearInstanceHistoryAsync(instance.InstanceId)).IsFailed(out var error))
-            {
-                Snackbar.Add(L["Page:Messages:ClearHistoryFailed", error], Severity.Error);
-                return;
-            }
-
-            Snackbar.Add(L["Page:Messages:ClearHistorySucceeded"], Severity.Success);
-            await RefreshAsync();
-        }
+        var result = await DialogService.ShowMessageBoxAsync(L["Page:Dialog:ConfirmTitle"], L["Page:Dialog:ClearHistoryMessage", instance.InstanceName], yesText: L["Page:Dialog:Confirm"], cancelText: L["Page:Dialog:Cancel"]);
+        if (result != true || _disposed) return;
+        if ((await MonitorService.ClearInstanceHistoryAsync(instance.InstanceId)).IsFailed(out var error)) { if (!_disposed) Snackbar.Add(L["Page:Messages:ClearHistoryFailed", error], Severity.Error); return; }
+        if (!_disposed) { Snackbar.Add(L["Page:Messages:ClearHistorySucceeded"], Severity.Success); await RefreshAsync(); }
     }
+
+    public void Dispose() => _disposed = true;
 }

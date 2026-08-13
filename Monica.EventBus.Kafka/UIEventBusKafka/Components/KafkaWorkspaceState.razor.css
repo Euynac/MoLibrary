@@ -7,11 +7,8 @@
     gap: 14px;
     padding: 20px;
     border: 1px dashed color-mix(in srgb, var(--kafka-state-accent) 38%, var(--mud-palette-lines-default));
-    border-radius: var(--mud-default-borderradius);
-    background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--kafka-state-accent) 7%, var(--mud-palette-surface)),
-        var(--mud-palette-surface) 58%);
+    border-radius: 12px;
+    background-color: color-mix(in srgb, var(--kafka-state-accent) 5%, var(--mud-palette-surface));
 }
 
 .kafka-workspace-state--secondary {
@@ -36,7 +33,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 8px;
     color: var(--kafka-state-accent);
     background: color-mix(in srgb, var(--kafka-state-accent) 13%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--kafka-state-accent) 28%, var(--mud-palette-lines-default));

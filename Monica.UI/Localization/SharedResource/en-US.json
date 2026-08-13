@@ -101,6 +101,9 @@
       "NewValue": "New Value",
       "OldValue": "Old Value"
     },
+    "OriginalContent": "Original content",
+    "NewContent": "New content",
+    "NoDifferences": "The texts are identical.",
     "ComparisonFailed": "Comparison failed",
     "ComparisonError": "Comparison error"
   },
@@ -143,12 +146,16 @@
     "NotProvided": "Stack trace not provided"
   },
   "Error": {
-    "Title": "Error.",
-    "Message": "An error occurred while processing your request.",
-    "RequestId": "Request ID:",
-    "DevelopmentMode": "Development Mode",
-    "DevelopmentModeWarning": "Swapping to Development environment will display more detailed information about the error that occurred.",
-    "DevelopmentModeNote": "The Development environment shouldn't be enabled for deployed applications."
+    "PageTitle": "Request failed",
+    "Eyebrow": "MONICA / REQUEST STATE",
+    "Title": "Request failed",
+    "Message": "The application could not complete this request. No further action was taken.",
+    "RequestId": "Request ID",
+    "BackToOverview": "Back to overview",
+    "DevelopmentMode": "Local troubleshooting",
+    "DevelopmentModeWarning": "Development mode can provide more detailed error evidence during local debugging.",
+    "DevelopmentModeNote": "Do not enable Development mode on a deployed host because exception details can expose sensitive information.",
+    "DevelopmentModeInstruction": "For local debugging, set ASPNETCORE_ENVIRONMENT to Development and restart the application."
   },
   "PageNotFound": {
     "PageTitle": "Not found",

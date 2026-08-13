@@ -4,7 +4,7 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="ranking-wrapper">
-    <MudPaper Class="ranking-card" Elevation="0">
+    <MudPaper Class="ranking-card mo-self-painted" Elevation="0">
         <div class="card-header">
             <MudText Typo="Typo.h6">@Title</MudText>
             <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
@@ -17,7 +17,7 @@
             <div class="ranking-list">
                 @foreach (var item in Rankings)
                 {
-                    <div class="ranking-item" @onclick="() => ViewJob(item.JobKey)">
+                    <button type="button" class="ranking-item" @onclick="() => ViewJob(item.JobKey)">
                         <div class="rank-badge @GetRankClass(item.Rank)">@item.Rank</div>
                         <div class="job-info">
                             <span class="job-name" title="@item.JobKey">@item.JobName</span>
@@ -31,7 +31,7 @@
                             <span class="value">@(item.FormattedValue ?? item.Value.ToString("N0"))</span>
                             <span class="percent">@item.Percentage.ToString("F1")%</span>
                         </div>
-                    </div>
+                    </button>
                 }
             </div>
         }

@@ -5,7 +5,7 @@
 @inject IStringLocalizer<UtilitiesResource> L
 
 <div class="text-transform-panel">
-    <MudPaper Class="text-transform-panel__card pa-4" Elevation="0">
+    <MudPaper Class="text-transform-panel__card mo-self-painted pa-4" Elevation="0">
         <MudStack Spacing="3">
             <div>
                 <MudText Typo="Typo.h6">@L["TextJson:Title"]</MudText>
@@ -25,7 +25,7 @@
             else if (State.LastResult is not null)
             {
                 <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Dense="true">
-                    @State.LastResult.Summary
+                    @GetResultSummary(State.LastResult)
                 </MudAlert>
             }
 
@@ -141,6 +141,23 @@
             TextTransformOperation.FormatJson => L["TextJson:Operations:FormatJson"],
             TextTransformOperation.MinifyJson => L["TextJson:Operations:MinifyJson"],
             _ => operation.ToString()
+        };
+    }
+
+    private string GetResultSummary(TextTransformResult result)
+    {
+        return result.Operation switch
+        {
+            TextTransformOperation.DecodeEscapedText when result.DecodePasses > 0 =>
+                L["TextJson:Summary:Decoded", result.DecodePasses].Value,
+            TextTransformOperation.DecodeEscapedText => L["TextJson:Summary:DecodeUnchanged"].Value,
+            TextTransformOperation.FormatJson when result.JsonStringLayersRemoved > 0 =>
+                L["TextJson:Summary:FormattedWithLayers", result.JsonStringLayersRemoved].Value,
+            TextTransformOperation.FormatJson => L["TextJson:Summary:Formatted"].Value,
+            TextTransformOperation.MinifyJson when result.JsonStringLayersRemoved > 0 =>
+                L["TextJson:Summary:MinifiedWithLayers", result.JsonStringLayersRemoved].Value,
+            TextTransformOperation.MinifyJson => L["TextJson:Summary:Minified"].Value,
+            _ => L["Messages:TransformCompleted"].Value
         };
     }
 }

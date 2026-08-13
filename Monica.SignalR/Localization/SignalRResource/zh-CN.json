@@ -2,8 +2,23 @@
   "Pages": {
     "SignalRDebug": {
       "Title": "SignalR 调试",
-      "Heading": "SignalR 调试",
+      "Heading": "实时通道实验室",
+      "Eyebrow": "SIGNALR / 实时传输",
+      "Subtitle": "在同一工作区打开浏览器 Hub 会话、检查通道活动并验证已注册契约。",
+      "Summary": {
+        "AriaLabel": "SignalR 通道摘要",
+        "Hubs": "个 Hub",
+        "Users": "个用户",
+        "Received": "条接收"
+      },
+      "Sections": {
+        "Connection": "连接工作区",
+        "Telemetry": "通道遥测",
+        "Methods": "Hub 契约工具",
+        "Messages": "消息工具"
+      },
       "Settings": {
+        "Eyebrow": "客户端跟踪",
         "Title": "调试设置",
         "VerboseLogging": "启用详细调试日志",
         "VerboseLoggingHelper": "显示参数转换和方法调用的详细信息，用于排查参数类型相关问题。"
@@ -192,8 +207,7 @@
       "ConnectionFailed": "连接失败：{0}",
       "Disconnected": "已断开连接",
       "RegisteredListener": "已注册监听器：{0}",
-      "UnregisteredListener": "已取消监听器：{0}",
-      "AllListenersCleared": "已清除全部监听器"
+      "UnregisteredListener": "已取消监听器：{0}"
     },
     "DebugClient": {
       "ConnectedToHub": "已连接到 SignalR Hub：{0}",
@@ -209,10 +223,7 @@
       "RegisterListenerFailed": "注册监听器失败：{0}",
       "UnregisterListenerFailed": "取消监听器失败：{0}",
       "ListenerToggleFailed": "更新监听器状态失败：{0}",
-      "ConnectionStatusChanged": "连接状态已变更：{0}",
-      "JavaScriptLoadTimeout": "等待 SignalR 调试 JavaScript 加载时超时。",
-      "SetLocalizationFailed": "设置 JavaScript 本地化失败：{0}",
-      "SetCallbacksFailed": "设置 JavaScript 回调失败：{0}"
+      "ConnectionStatusChanged": "连接状态已变更：{0}"
     }
   }
 }

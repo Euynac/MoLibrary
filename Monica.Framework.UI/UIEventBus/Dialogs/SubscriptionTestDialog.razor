@@ -2,7 +2,7 @@
 @using Monica.EventBus.Models
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.Framework.UI.UIEventBus.State
-@implements IDisposable
+@implements IAsyncDisposable
 @inject EventBusTestService TestService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<EventBusResource> L
@@ -152,7 +152,8 @@
                     }
                     else
                     {
-                        <MudStack Spacing="2" Style="max-height: 420px; overflow-y: auto;">
+                        <div class="subscription-test-dialog__messages">
+                        <MudStack Spacing="2">
                             @foreach (var message in _listenerSnapshot.Messages.OrderByDescending(m => m.ReceivedAt))
                             {
                                 <MudPaper Class="pa-3" Elevation="0" Outlined="true">
@@ -166,13 +167,14 @@
                                                 @message.ReceivedAt.ToString("HH:mm:ss.fff")
                                             </MudChip>
                                         </MudStack>
-                                        <MudPaper Class="pa-2" Elevation="0" Style="background-color: var(--mud-palette-background-gray); border-radius: var(--mud-default-borderradius);">
-                                            <MudText Typo="Typo.body2" Style="white-space: pre-wrap; word-break: break-word;">@message.PayloadJson</MudText>
-                                        </MudPaper>
+                                        <div class="subscription-test-dialog__payload">
+                                            <MudText Typo="Typo.body2">@message.PayloadJson</MudText>
+                                        </div>
                                     </MudStack>
                                 </MudPaper>
                             }
                         </MudStack>
+                        </div>
                     }
                 }
             </MudStack>
@@ -184,14 +186,18 @@
 </MudDialog>
 
 @code {
-    private readonly PeriodicTimer _refreshTimer = new(TimeSpan.FromMilliseconds(500));
-    private CancellationTokenSource _refreshCts = new();
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly object _disposeSync = new();
+    private PeriodicTimer? _refreshTimer;
+    private Task? _refreshTask;
+    private Task? _disposeTask;
 
     private string _jsonPayload = "{}";
     private string? _validationMessage;
     private bool _hasValidationError;
     private bool _publishing;
     private bool _listenerBusy;
+    private bool _disposed;
     private RuntimeTestListenerSnapshot _listenerSnapshot = new();
 
     [CascadingParameter]
@@ -204,11 +210,17 @@
     {
         LoadSampleJson();
         RefreshListenerSnapshot();
-        _ = RefreshLoopAsync(_refreshCts.Token);
+        _refreshTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        _refreshTask = RefreshLoopAsync(_refreshTimer, _lifetimeCancellation.Token);
     }
 
     private void LoadSampleJson()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (Subscription is null)
         {
             _jsonPayload = "{}";
@@ -231,7 +243,7 @@
 
     private void ValidateJson()
     {
-        if (Subscription is null)
+        if (_disposed || Subscription is null)
         {
             return;
         }
@@ -252,7 +264,7 @@
 
     private async Task PublishAsync()
     {
-        if (Subscription is null)
+        if (_disposed || Subscription is null)
         {
             return;
         }
@@ -262,7 +274,16 @@
 
         try
         {
-            var result = await TestService.PublishRuntimePayloadAsync(GetSubscriptionId(), _jsonPayload);
+            var result = await TestService.PublishRuntimePayloadAsync(
+                GetSubscriptionId(),
+                _jsonPayload,
+                _lifetimeCancellation.Token);
+
+            if (_disposed)
+            {
+                return;
+            }
+
             if (result.IsFailed(out var error))
             {
                 _hasValidationError = true;
@@ -278,13 +299,13 @@
         finally
         {
             _publishing = false;
-            StateHasChanged();
+            RenderIfActive();
         }
     }
 
     private async Task StartListeningAsync()
     {
-        if (Subscription is null)
+        if (_disposed || Subscription is null)
         {
             return;
         }
@@ -295,6 +316,11 @@
         try
         {
             var result = await TestService.StartRuntimeListenerAsync(GetSubscriptionId());
+            if (_disposed)
+            {
+                return;
+            }
+
             if (result.IsFailed(out var error, out var snapshot))
             {
                 Snackbar.Add(error.Message ?? L["SubscriptionTestDialog:Messages:StartListeningFailed"], Severity.Error);
@@ -307,13 +333,13 @@
         finally
         {
             _listenerBusy = false;
-            StateHasChanged();
+            RenderIfActive();
         }
     }
 
     private async Task StopListeningAsync()
     {
-        if (Subscription is null)
+        if (_disposed || Subscription is null)
         {
             return;
         }
@@ -324,6 +350,11 @@
         try
         {
             var result = await TestService.StopRuntimeListenerAsync(GetSubscriptionId());
+            if (_disposed)
+            {
+                return;
+            }
+
             if (result.IsFailed(out var error))
             {
                 Snackbar.Add(error.Message ?? L["SubscriptionTestDialog:Messages:StopListeningFailed"], Severity.Error);
@@ -336,13 +367,13 @@
         finally
         {
             _listenerBusy = false;
-            StateHasChanged();
+            RenderIfActive();
         }
     }
 
     private void ClearMessages()
     {
-        if (Subscription is null)
+        if (_disposed || Subscription is null)
         {
             return;
         }
@@ -352,22 +383,27 @@
         Snackbar.Add(L["SubscriptionTestDialog:Messages:ClearSucceeded"], Severity.Info);
     }
 
-    private async Task RefreshLoopAsync(CancellationToken cancellationToken)
+    private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
     {
         try
         {
-            while (await _refreshTimer.WaitForNextTickAsync(cancellationToken))
+            while (await timer.WaitForNextTickAsync(cancellationToken))
             {
                 await InvokeAsync(() =>
                 {
+                    if (_disposed || cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     RefreshListenerSnapshot();
                     StateHasChanged();
                 });
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // Expected when the dialog closes.
+            // The dialog owns the refresh loop and cancels it when closing.
         }
     }
 
@@ -400,13 +436,44 @@
 
     private void Close()
     {
-        MudDialog.Close();
+        if (!_disposed)
+        {
+            MudDialog.Close();
+        }
     }
 
-    public void Dispose()
+    private void RenderIfActive()
     {
-        _refreshCts.Cancel();
-        _refreshCts.Dispose();
-        _refreshTimer.Dispose();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeSync)
+        {
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        _disposed = true;
+        _lifetimeCancellation.Cancel();
+
+        var refreshTimer = _refreshTimer;
+        var refreshTask = _refreshTask;
+        _refreshTimer = null;
+        _refreshTask = null;
+
+        refreshTimer?.Dispose();
+        if (refreshTask is not null)
+        {
+            await refreshTask;
+        }
+
+        _lifetimeCancellation.Dispose();
     }
 }

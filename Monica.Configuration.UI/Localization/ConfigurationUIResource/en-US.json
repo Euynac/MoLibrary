@@ -596,7 +596,12 @@
   "Debug": {
     "Subtitle": "View the current Microsoft configuration debug output.",
     "SearchPlaceholder": "Search debug view",
-    "Empty": "The debug view is empty."
+    "Empty": "The debug view is empty.",
+    "SensitiveNotice": "{0} credential-like value(s) are masked by default. Reveal a value only when the screen cannot be observed or recorded by others.",
+    "RevealSensitive": "Reveal sensitive value",
+    "HideSensitive": "Hide sensitive value",
+    "RevealSensitiveAria": "Reveal sensitive configuration value for {0}",
+    "HideSensitiveAria": "Hide sensitive configuration value for {0}"
   },
   "Storage": {
     "Subtitle": "Inspect the active configuration store bundle and its runtime state.",

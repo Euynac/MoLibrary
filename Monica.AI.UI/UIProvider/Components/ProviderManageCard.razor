@@ -4,7 +4,8 @@
 @using Monica.AI.UI.Localization
 @inject IStringLocalizer<AIResource> L
 
-<MudPaper Class="provider-card" Elevation="2">
+<div class="provider-card-shell">
+<MudPaper Class="provider-card mo-card-surface" Elevation="0">
     <div class="provider-card-inner">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
@@ -12,20 +13,23 @@
                 <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
                 @if (Provider.IsDefault)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">默认</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">@L["Provider:Default"]</MudChip>
                 }
             </MudStack>
             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                <MudIconButton Icon="@Icons.Material.Filled.Settings"
-                               Size="Size.Small"
-                               OnClick="HandleEditPrompt"
-                               Class="config-button" />
+                <MudTooltip Text="@L["ProviderManage:Card:Actions:EditSystemPrompt"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                                   Size="Size.Small"
+                                   OnClick="HandleEditPrompt"
+                                   Class="config-button"
+                                   aria-label="@L["ProviderManage:Card:Actions:EditSystemPrompt"]" />
+                </MudTooltip>
                 <MudButton Variant="Variant.Outlined" OnClick="HandleTest" Disabled="@(!CanRunConnectivityActions || IsTesting)">
                     @if (IsTesting)
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    测试
+                    @L["ProviderManage:Card:Actions:Test"]
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -91,11 +95,11 @@
 
         <MudGrid>
             <MudItem xs="12" sm="6">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">默认模型</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProviderManage:Card:DefaultModel"]</MudText>
                 <MudText Typo="Typo.body2">@FormatValue(Provider.DefaultModel)</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">模型数量</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProviderManage:Card:ModelCount"]</MudText>
                 <MudText Typo="Typo.body2">@Models.Count</MudText>
             </MudItem>
             @if (TryGetOpenAIApiMode(out var openAIApiMode))
@@ -108,7 +112,7 @@
         </MudGrid>
 
         <div class="prompt-block">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">默认系统提示词</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProviderManage:Card:DefaultSystemPrompt"]</MudText>
             @if (string.IsNullOrWhiteSpace(Provider.SystemPrompt))
             {
                 <MudText Typo="Typo.body2">—</MudText>
@@ -125,13 +129,13 @@
             <MudExpansionPanel Icon="@Icons.Material.Filled.Category">
                 <TitleContent>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudText Typo="Typo.body2">模型详情</MudText>
+                        <MudText Typo="Typo.body2">@L["ProviderManage:Card:ModelDetails"]</MudText>
                         @if (RemoteModels != null)
                         {
                             var unconfiguredCount = GetUnconfiguredRemoteModels().Count;
                             @if (unconfiguredCount > 0)
                             {
-                                <MudTooltip Text="@($"{unconfiguredCount} 个可用模型未配置")">
+                                <MudTooltip Text="@L["ProviderManage:Card:RemoteModels:UnconfiguredTooltip", unconfiguredCount]">
                                     <MudBadge Content="@unconfiguredCount" Color="Color.Info" Overlap="true">
                                         <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Info" />
                                     </MudBadge>
@@ -140,13 +144,13 @@
                         }
                         else if (!Provider.SupportsRemoteModelListing)
                         {
-                            <MudTooltip Text="此 Provider 不支持获取可用模型列表">
+                            <MudTooltip Text="@L["ProviderManage:Card:RemoteModels:Unsupported"]">
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
                             </MudTooltip>
                         }
                         else if (RemoteModelsFetchError != null)
                         {
-                            <MudTooltip Text="@($"获取模型列表失败: {RemoteModelsFetchError}")">
+                            <MudTooltip Text="@L["ProviderManage:Card:RemoteModels:FetchFailed", RemoteModelsFetchError]">
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
                             </MudTooltip>
                         }
@@ -166,7 +170,9 @@
                                     {
                                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
                                     }
-                                    @(RemoteModels != null ? "刷新远程模型" : "获取远程模型")
+                                    @(RemoteModels != null
+                                        ? L["ProviderManage:Card:RemoteModels:Refresh"]
+                                        : L["ProviderManage:Card:RemoteModels:Fetch"])
                                 </MudButton>
                             }
                         </MudStack>
@@ -187,7 +193,9 @@
                                 <MudStack Spacing="1">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                         <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Info" />
-                                        <MudText Typo="Typo.caption" Color="Color.Info">可用但未配置的模型 (@unconfigured.Count)</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Info">
+                                            @L["ProviderManage:Card:RemoteModels:Unconfigured", unconfigured.Count]
+                                        </MudText>
                                     </MudStack>
                                     <div class="unconfigured-models">
                                         @foreach (var rm in unconfigured)
@@ -204,7 +212,7 @@
                         else if (!Provider.SupportsRemoteModelListing)
                         {
                             <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-1">
-                                此 Provider 不支持获取可用模型列表，无法验证已配置模型的有效性。
+                                @L["ProviderManage:Card:RemoteModels:ValidationUnavailable"]
                             </MudAlert>
                         }
                     </MudStack>
@@ -213,6 +221,7 @@
         </MudExpansionPanels>
     </div>
 </MudPaper>
+</div>
 
 @code {
     [Parameter] public AIProviderInfo Provider { get; set; } = null!;

@@ -9,10 +9,12 @@
     "Header": {
       "Title": "Dependency Injection",
       "Description": "Inspect the finalized service collection and highlight descriptors created by Monica conventional registration.",
+      "Eyebrow": "Monica / Runtime composition",
       "Refresh": "Refresh",
       "GeneratedAt": "Snapshot captured at {0}"
     },
     "Summary": {
+      "AriaLabel": "Dependency injection registration summary",
       "Total": "Descriptors",
       "AutoRegistered": "Auto Registered",
       "Keyed": "Keyed",

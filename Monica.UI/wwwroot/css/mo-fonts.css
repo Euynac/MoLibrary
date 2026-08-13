@@ -35,3 +35,15 @@
     --mo-font-family-display: 'MoDefaultDisplay', 'Oxanium', 'MoDefaultBody', 'IBM Plex Sans', 'Noto Sans SC', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
     --mo-font-family-mono: 'MoDefaultMono', 'IBM Plex Mono', 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
 }
+
+:where(code, kbd, samp, pre, .mo-font-mono) {
+    font-family: var(--mo-font-family-mono);
+}
+
+.mo-font-body {
+    font-family: var(--mo-font-family-body);
+}
+
+.mo-font-display {
+    font-family: var(--mo-font-family-display);
+}

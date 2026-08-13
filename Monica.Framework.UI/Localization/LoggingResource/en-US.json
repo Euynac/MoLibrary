@@ -1,7 +1,90 @@
 {
-  "Pages": {
-    "LoggingMonitor": {
-      "Title": "Logging Monitor"
+  "Pages": { "LoggingMonitor": { "Title": "Logging Monitor" } },
+  "Page": {
+    "Title": "Logging Monitor",
+    "Eyebrow": "Monica / Runtime evidence",
+    "Heading": "Logging Monitor",
+    "Description": "Inspect the live stream, narrow operational evidence, and move between active log artifacts without losing context.",
+    "Tabs": { "Realtime": "Live stream", "Files": "Log files" },
+    "State": { "Running": "Following", "Paused": "Paused", "Loading": "Loading log evidence...", "NotDetected": "Not detected", "NotConfigured": "Not configured", "FileMissing": "Log file is unavailable: {0}" },
+    "Summary": { "AriaLabel": "Logging runtime summary", "File": "Active artifact", "Lines": "File lines", "Buffer": "Visible buffer", "LoadTime": "Initial load", "Milliseconds": "{0} ms" },
+    "Actions": { "SwitchFile": "Switch file", "Back": "Back", "Cancel": "Cancel", "Confirm": "Confirm" },
+    "Context": { "Viewing": "Viewing evidence around line #{0}" },
+    "FileDialog": { "Title": "Select log file", "Loading": "Loading log artifacts...", "Empty": "No log files were found." },
+    "Components": {
+      "Toolbar": {
+        "Start": "Start",
+        "Pause": "Pause",
+        "Refresh": "Refresh",
+        "Export": "Export temporary log",
+        "LineLimit": "Visible lines",
+        "AutoScroll": "Auto-scroll"
+      },
+      "Filter": {
+        "Placeholder": "Filter log evidence",
+        "OnlyMatches": "Capture matches only",
+        "Apply": "Apply filter",
+        "Clear": "Clear"
+      },
+      "Files": {
+        "Title": "Log artifacts",
+        "Refresh": "Refresh",
+        "Directory": "Current log directory: {0}",
+        "NotConfigured": "Not configured",
+        "RelativePath": "Relative path",
+        "Size": "Size",
+        "LastModified": "Last modified",
+        "Download": "Download",
+        "Empty": "No log artifacts are available in this directory."
+      },
+      "Viewer": {
+        "Title": "Live stream",
+        "LineCount": "{0} lines",
+        "ActiveFilter": "Filter: {0}",
+        "LoadingMore": "Loading earlier log evidence...",
+        "MatchPosition": "Match: {0} / {1}",
+        "PreviousMatch": "Previous match",
+        "NextMatch": "Next match",
+        "Empty": "No log evidence is available.",
+        "ContextMenu": {
+          "LineInfo": "Show line position",
+          "FilterSeverity": "Filter by this severity",
+          "FindSelection": "Find selected text",
+          "ShowContext": "Show context",
+          "Copy": "Copy",
+          "CopyRaw": "Copy raw log",
+          "CopyMessage": "Copy message only",
+          "CopyTimestamp": "Copy with timestamp",
+          "CopyLineNumber": "Copy with line number",
+          "Navigate": "Navigate",
+          "Top": "Jump to top",
+          "Bottom": "Jump to bottom"
+        },
+        "Messages": {
+          "LoadMoreFailed": "Failed to load earlier log evidence: {0}",
+          "Copied": "Copied: {0}",
+          "SelectText": "Select text to search for first.",
+          "FilterApplied": "Filter applied: {0}",
+          "SelectionFailed": "Failed to read the selected text: {0}"
+        }
+      },
+      "LineInfo": {
+        "DialogTitle": "Log line evidence",
+        "PositionTitle": "Position",
+        "AbsoluteLine": "Absolute line",
+        "BufferPosition": "Buffer position",
+        "FilteredPosition": "Filtered position",
+        "DetailsTitle": "Log details",
+        "Timestamp": "Timestamp",
+        "Severity": "Severity",
+        "Thread": "Thread",
+        "MessageTitle": "Message",
+        "NotAvailable": "N/A",
+        "Close": "Close"
+      }
+    },
+    "Messages": {
+      "InitializeFailed": "Initialization failed: {0}", "SnapshotInitializeFailed": "Failed to initialize the log snapshot.", "StartFailed": "Failed to start log following.", "Started": "Log following started.", "PauseFailed": "Failed to pause log following.", "Paused": "Log following paused.", "FilterFailed": "Failed to update the filter.", "FilesFailed": "Failed to retrieve log files.", "DownloadFailed": "Download failed: {0}", "ExportFailed": "Export failed: {0}", "ContextUnavailable": "Context is unavailable because this line has no file position.", "ContextReadFailed": "Failed to read log context.", "ContextLoaded": "Loaded context around line #{0}.", "ContextFailed": "Failed to show context: {0}", "ReturnedToRealtime": "Returned to the live stream.", "FileStartReached": "Reached the beginning of the log file.", "LoadMoreFailed": "Failed to load more log lines.", "LoadFailed": "Load failed: {0}", "SwitchFailed": "Failed to switch log files: {0}", "Switched": "Switched to {0}."
     }
   }
 }

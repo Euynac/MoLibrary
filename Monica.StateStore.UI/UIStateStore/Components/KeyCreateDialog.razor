@@ -4,6 +4,7 @@
 @inject StateStoreUIService StateStoreService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<StateStoreResource> L
+@implements IDisposable
 
 <MudDialog>
     <TitleContent>
@@ -17,7 +18,7 @@
                           Variant="Variant.Outlined"
                           Required="true"
                           RequiredError="@L["KeyCreate:Labels:KeyNameRequired"]"
-                          Style="font-family: monospace;"
+                          Class="key-dialog__diagnostic-input"
                           Placeholder="@L["KeyCreate:Placeholders:KeyNameExample"]" />
 
             @* TTL *@
@@ -33,7 +34,7 @@
                           Label="@L["KeyCreate:Labels:JsonValue"]"
                           Variant="Variant.Outlined"
                           Lines="10"
-                          Style="font-family: monospace;"
+                          Class="key-dialog__diagnostic-input"
                           HelperText="@L["KeyCreate:Labels:JsonHelperText"]"
                           Placeholder="@L["KeyCreate:Placeholders:JsonExample"]" />
 
@@ -84,6 +85,7 @@
     private string jsonValue = "{}";
     private int ttlSeconds = 0;
     private bool isSaving = false;
+    private bool isDisposed;
     private string? errorMessage;
 
     private void FormatJson()
@@ -140,6 +142,11 @@
 
             var result = await StateStoreService.CreateKeyAsync(ServiceKey, request);
 
+            if (isDisposed)
+            {
+                return;
+            }
+
             if (result.IsFailed(out var error))
             {
                 errorMessage = error.Message;
@@ -163,9 +170,14 @@
         finally
         {
             isSaving = false;
-            StateHasChanged();
+            if (!isDisposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
     private void Cancel() => MudDialog.Cancel();
+
+    public void Dispose() => isDisposed = true;
 }

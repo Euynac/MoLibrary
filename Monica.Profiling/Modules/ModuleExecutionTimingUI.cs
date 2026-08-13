@@ -35,8 +35,11 @@ public class ModuleExecutionTimingUI : MonicaModule<ModuleExecutionTimingUIOptio
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleExecutionTiming, ModuleExecutionTimingOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>(
-            static option => option.AddResource<ExecutionTimingResource>());
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(static option =>
+        {
+            option.AddResource<ProfilingResource>();
+            option.AddResource<ExecutionTimingResource>();
+        });
         module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
             option.ConfigureNavigation(static registry =>
                 registry.RegisterLocalizedPage<UIExecutionTimingPage, ExecutionTimingResource>(
@@ -50,7 +53,7 @@ public class ModuleExecutionTimingUI : MonicaModule<ModuleExecutionTimingUIOptio
 
     public override void ConfigureServices(ModuleContext<ModuleExecutionTimingUIOption> context)
     {
-        context.Services.AddScoped<ExecutionTimingPageState>();
+        context.Services.AddScoped<ExecutionTimingPageStateFactory>();
     }
 }
 

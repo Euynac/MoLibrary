@@ -77,6 +77,7 @@ class ProjectUnitGraph {
         this.containerId = containerId;
         this.isDarkMode = isDarkMode;
         this.dotNetRef = dotNetRef;
+        this.pendingCallbacks = new Set();
         this.currentLayout = LAYOUT_TYPES.FORCE;
         this.nodes = [];
         this.links = [];
@@ -656,9 +657,7 @@ class ProjectUnitGraph {
      * Handle node clicks
      */
     handleNodeClick(nodeData) {
-        if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnNodeClick', nodeData.id);
-        }
+        this.invokeDotNet('OnNodeClick', nodeData.id);
     }
     
     /**
@@ -670,7 +669,7 @@ class ProjectUnitGraph {
             const x = position.clientX !== undefined ? position.clientX : position.pageX;
             const y = position.clientY !== undefined ? position.clientY : position.pageY;
             
-            this.dotNetRef.invokeMethodAsync('OnNodeRightClick', nodeData.id, x, y);
+            this.invokeDotNet('OnNodeRightClick', nodeData.id, x, y);
         }
     }
     
@@ -690,71 +689,50 @@ class ProjectUnitGraph {
      */
     handleBackgroundClick() {
         // Close right-click menu
-        if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnSvgBackgroundClick');
+        this.invokeDotNet('OnSvgBackgroundClick');
+    }
+
+    invokeDotNet(methodName, ...args) {
+        const reference = this.dotNetRef;
+        if (!reference) {
+            return;
         }
+
+        const callback = reference.invokeMethodAsync(methodName, ...args)
+            .catch(error => {
+                if (this.dotNetRef) {
+                    console.error(`Project unit graph callback '${methodName}' failed.`, error);
+                }
+            })
+            .finally(() => this.pendingCallbacks.delete(callback));
+
+        this.pendingCallbacks.add(callback);
     }
     
     /**
      * destroy
      */
-    dispose() {
+    async dispose() {
+        this.dotNetRef = null;
+
         if (this.forceManager) {
             this.forceManager.dispose();
         }
         if (this.graphBase) {
             this.graphBase.dispose();
         }
+
+        await Promise.allSettled([...this.pendingCallbacks]);
+        this.pendingCallbacks.clear();
     }
 }
 
-// ==================== Exported functions ====================
+// ==================== Exported controller factory ====================
 
-let graphInstance = null;
-
-export function initializeGraph(containerId, isDarkMode, dotNetRef) {
-    graphInstance = new ProjectUnitGraph(containerId, isDarkMode, dotNetRef);
-}
-
-export function updateGraph(data) {
-    if (graphInstance) {
-        graphInstance.updateGraph(data);
-    }
-}
-
-export function setLayout(layoutType) {
-    if (graphInstance) {
-        graphInstance.setLayout(layoutType);
-    }
-}
-
-export function setForceDistance(distance) {
-    if (graphInstance) {
-        graphInstance.setForceDistance(distance);
-    }
-}
-
-export function setForceStrength(strength) {
-    if (graphInstance) {
-        graphInstance.setForceStrength(strength);
-    }
-}
-
-export function resetView() {
-    if (graphInstance) {
-        graphInstance.resetView();
-    }
-}
-
-export function focusOnNode(nodeId) {
-    if (graphInstance) {
-        graphInstance.focusOnNode(nodeId);
-    }
-}
-
-export function dispose() {
-    if (graphInstance) {
-        graphInstance.dispose();
-        graphInstance = null;
-    }
+/**
+ * Creates an independently owned graph controller for one component mount.
+ * The caller must invoke dispose() on the returned controller.
+ */
+export function createGraph(containerId, isDarkMode, dotNetRef) {
+    return new ProjectUnitGraph(containerId, isDarkMode, dotNetRef);
 }

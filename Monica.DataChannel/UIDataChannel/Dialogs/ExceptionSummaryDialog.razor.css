@@ -1,97 +1,132 @@
-/* Styles for the exception summary dialog */
-
-/* Titles for statistic cards */
-.stats-card-title {
-    font-weight: 500;
-}
-
-/* Titles for exception detail sections */
-.exception-details-title {
-    font-weight: 500;
-}
-
-/* Container for the data table */
-.exception-table-container {
-    max-height: 600px;
-    overflow-y: auto;
-}
-
-/* Styling for empty state text */
-.empty-state-text {
-    color: var(--mud-palette-text-secondary);
-}
-
-/* Styling for the progress indicator */
-.exception-progress {
-    height: 8px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .exception-table-container {
-        max-height: 400px;
-    }
-}
-
-@media (max-width: 576px) {
-    .exception-table-container {
-        max-height: 300px;
-    }
-}
-
-/* Custom MudBlazor overrides */
-::deep .exception-table-container .mud-table-container {
-    max-height: inherit;
-}
-
-::deep .exception-table-container .mud-data-grid {
-    max-height: inherit;
-}
-
-/* Layout tweaks for stats grid */
-::deep .stats-grid .mud-grid-item {
+.exception-dialog-title,
+.exception-directory__header,
+.exception-table__actions,
+.exception-usage {
     display: flex;
+    align-items: center;
 }
 
-::deep .stats-grid .mud-card {
-    width: 100%;
-    height: 100%;
+.exception-dialog-title {
+    gap: 12px;
 }
 
-/* Content padding inside the dialog */
-::deep .mud-dialog .mud-dialog-content {
-    padding: 0 24px 24px 24px;
+.exception-dialog-title__icon {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--mud-palette-error);
+    background-color: color-mix(in srgb, var(--mud-palette-error) 12%, var(--mud-palette-surface));
 }
 
-/* Hover style for table rows */
-::deep .exception-table-container .mud-table-row:hover {
-    background-color: var(--mud-palette-action-default-hover);
+.exception-summary-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
 }
 
-/* Progress bar transition */
-::deep .exception-progress .mud-progress-linear-bar {
-    transition: width 0.3s ease;
+.exception-summary-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background-color: var(--mud-palette-background-gray);
 }
 
-/* Extra padding for card content */
-::deep .stats-grid .mud-card-content {
-    padding: 16px;
+.exception-summary-strip article {
+    min-width: 0;
+    padding: 14px 16px;
+    border-inline-start: 1px solid var(--mud-palette-lines-default);
 }
 
-/* Scrollbar styling */
-.exception-table-container::-webkit-scrollbar {
-    width: 8px;
+.exception-summary-strip article:first-child {
+    border-inline-start: 0;
 }
 
-.exception-table-container::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-gray);
+.exception-summary-strip ::deep .mud-typography-h5 {
+    margin-top: 3px;
+    font-variant-numeric: tabular-nums;
 }
 
-.exception-table-container::-webkit-scrollbar-thumb {
-    background: var(--mud-palette-text-disabled);
-    border-radius: 4px;
+.exception-directory {
+    min-width: 0;
 }
 
-.exception-table-container::-webkit-scrollbar-thumb:hover {
-    background: var(--mud-palette-text-secondary);
+.exception-directory__header {
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.exception-table {
+    max-height: min(58vh, 620px);
+    min-width: 0;
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+}
+
+.exception-table ::deep .mud-data-grid {
+    min-width: 920px;
+}
+
+.exception-table__timestamp {
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.exception-table__actions {
+    gap: 2px;
+}
+
+.exception-usage {
+    gap: 8px;
+    min-width: 120px;
+}
+
+.exception-usage ::deep .mud-progress-linear {
+    flex: 1 1 auto;
+}
+
+.exception-usage span {
+    min-width: 42px;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+}
+
+@media (max-width: 720px) {
+    .exception-summary-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .exception-summary-strip article:nth-child(3) {
+        border-inline-start: 0;
+    }
+
+    .exception-summary-strip article:nth-child(n + 3) {
+        border-top: 1px solid var(--mud-palette-lines-default);
+    }
+}
+
+@media (max-width: 420px) {
+    .exception-summary-strip {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .exception-summary-strip article,
+    .exception-summary-strip article:nth-child(3) {
+        border-inline-start: 0;
+    }
+
+    .exception-summary-strip article:nth-child(n + 2) {
+        border-top: 1px solid var(--mud-palette-lines-default);
+    }
 }

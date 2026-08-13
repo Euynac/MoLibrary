@@ -10,15 +10,18 @@
 <div class="configuration-history-page">
 <MudContainer MaxWidth="MaxWidth.False">
     <MudStack Spacing="3">
-        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-            <MudStack Spacing="0">
-                <MudText Typo="Typo.h4">@L["Pages:ConfigurationHistory:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["History:Subtitle"]</MudText>
-            </MudStack>
-            <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="ReloadAsync" />
-            </MudTooltip>
-        </MudStack>
+        <ConfigurationPageHeader Title="@L["Pages:ConfigurationHistory:Title"]"
+                                 Subtitle="@L["History:Subtitle"]"
+                                 Icon="@Icons.Material.Filled.History">
+            <Actions>
+                <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Variant="Variant.Outlined"
+                                   OnClick="ReloadAsync"
+                                   aria-label="@L["Common:Actions:Refresh"]" />
+                </MudTooltip>
+            </Actions>
+        </ConfigurationPageHeader>
 
         @if (_metadataStoreDiagnostic is not null)
         {

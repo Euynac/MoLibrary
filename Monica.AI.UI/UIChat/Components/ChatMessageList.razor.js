@@ -15,6 +15,9 @@ export function initAutoScroll(element) {
     let shouldStickToBottom = true;
     let mutationDebounceTimeout = null;
     let resizeFrame = null;
+    let scrollFrame = null;
+    let disposed = false;
+    let shutdownPromise = null;
 
     const isNearBottom = () => {
         const { scrollTop, scrollHeight, clientHeight } = element;
@@ -22,6 +25,10 @@ export function initAutoScroll(element) {
     };
 
     const scrollToBottom = (behavior = 'auto') => {
+        if (disposed) {
+            return;
+        }
+
         shouldStickToBottom = true;
         element.scrollTo({
             top: element.scrollHeight,
@@ -34,7 +41,7 @@ export function initAutoScroll(element) {
     };
 
     const scheduleStickyScroll = () => {
-        if (!shouldStickToBottom) {
+        if (disposed || !shouldStickToBottom) {
             return;
         }
 
@@ -44,7 +51,10 @@ export function initAutoScroll(element) {
                 return;
             }
 
-            requestAnimationFrame(() => scrollToBottom('auto'));
+            scrollFrame = requestAnimationFrame(() => {
+                scrollFrame = null;
+                scrollToBottom('auto');
+            });
         }, 16);
     };
 
@@ -69,19 +79,46 @@ export function initAutoScroll(element) {
     });
     resizeObserver.observe(element);
 
+    const removalObserver = new MutationObserver(() => {
+        if (!element.isConnected) {
+            void shutdown();
+        }
+    });
+    const observerRoot = element.ownerDocument?.body;
+    if (observerRoot) {
+        removalObserver.observe(observerRoot, { childList: true, subtree: true });
+    }
+
+    const shutdown = () => {
+        if (shutdownPromise) {
+            return shutdownPromise;
+        }
+
+        disposed = true;
+        removalObserver.disconnect();
+        element.removeEventListener('scroll', handleScroll);
+        observer.disconnect();
+        resizeObserver.disconnect();
+        if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = null;
+        }
+        if (scrollFrame !== null) {
+            cancelAnimationFrame(scrollFrame);
+            scrollFrame = null;
+        }
+        clearTimeout(mutationDebounceTimeout);
+        mutationDebounceTimeout = null;
+        shutdownPromise = Promise.resolve();
+        return shutdownPromise;
+    };
+
     scrollToBottom();
 
     return {
         scrollToBottom: () => scrollToBottom('smooth'),
-        dispose: () => {
-            element.removeEventListener('scroll', handleScroll);
-            observer.disconnect();
-            resizeObserver.disconnect();
-            if (resizeFrame !== null) {
-                cancelAnimationFrame(resizeFrame);
-            }
-            clearTimeout(mutationDebounceTimeout);
-        }
+        dispose: shutdown,
+        shutdown
     };
 }
 

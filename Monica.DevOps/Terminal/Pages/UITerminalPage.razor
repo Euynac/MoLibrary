@@ -1,6 +1,7 @@
 @using Monica.DevOps.Localization
 @using Monica.DevOps.Terminal.Facades
 @using Monica.DevOps.Terminal.Models
+@using Monica.DevOps.Terminal.Support
 @using Monica.UI.Shell.Support
 @using Microsoft.JSInterop
 @attribute [Route(PAGE_URL)]
@@ -14,17 +15,15 @@
 <PageTitle>@L["Page:DocumentTitle"]</PageTitle>
 
 <div class="terminal-page">
-    <MudContainer MaxWidth="MaxWidth.False" Class="terminal-page__container pa-4">
+    <MudContainer MaxWidth="MaxWidth.False" Class="terminal-page__container">
         <div class="terminal-page__content">
-            <div class="page-banner">
-                <MudPaper Elevation="0">
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.overline" Class="page-eyebrow">@L["Page:Eyebrow"]</MudText>
-                        <MudText Typo="Typo.h4">@L["Page:Title"]</MudText>
-                        <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
-                    </MudStack>
-                </MudPaper>
-            </div>
+            <header class="terminal-header">
+                <div class="terminal-header__eyebrow"><span aria-hidden="true"></span><span>@L["Page:Eyebrow"]</span></div>
+                <div class="terminal-header__heading-row">
+                    <div><MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Title"]</MudText><MudText Typo="Typo.body1" Color="Color.Secondary" Class="terminal-header__description">@L["Page:Subtitle"]</MudText></div>
+                    <MudChip T="string" Color="@(_isRunning ? Color.Warning : Color.Success)" Variant="Variant.Outlined" Icon="@(_isRunning ? Icons.Material.Filled.Pending : Icons.Material.Filled.CheckCircle)">@(_isRunning ? L["States:Running"] : L["States:Ready"])</MudChip>
+                </div>
+            </header>
 
             @if (_isLoading)
             {
@@ -233,7 +232,8 @@
     private List<TerminalSession> _sessions = [];
     private ElementReference _terminalOutputRef;
     private MudTextField<string>? _commandInputField;
-    private IJSObjectReference? _jsModule;
+    private TerminalScrollInteropSession? _scrollInteropSession;
+    private bool _disposed;
     private bool _focusCommandAfterRender;
     private bool _scrollOutputAfterRender;
 
@@ -246,9 +246,14 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (firstRender)
         {
-            await EnsureJsModuleAsync();
+            _scrollInteropSession = new TerminalScrollInteropSession(JSRuntime);
             await InitializeAsync();
             return;
         }
@@ -268,14 +273,29 @@
 
     private async Task InitializeAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _isLoading = true;
         await InvokeAsync(StateHasChanged);
 
         try
         {
             await EnsureTerminalOwnerIdAsync();
+            if (_disposed)
+            {
+                return;
+            }
 
-            if ((await TerminalFacade.GetEnvironmentAsync()).IsFailed(out var environmentError, out var environment))
+            var environmentResponse = await TerminalFacade.GetEnvironmentAsync();
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (environmentResponse.IsFailed(out var environmentError, out var environment))
             {
                 Snackbar.Add(environmentError, Severity.Error);
                 return;
@@ -294,19 +314,28 @@
         }
         finally
         {
-            _isLoading = false;
-            await InvokeAsync(StateHasChanged);
+            if (!_disposed)
+            {
+                _isLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
     private async Task<bool> LoadSessionsAsync()
     {
-        if (_terminalOwnerId is null)
+        if (_disposed || _terminalOwnerId is null)
         {
             return false;
         }
 
-        if ((await TerminalFacade.GetSessionsAsync(_terminalOwnerId)).IsFailed(out var error, out var sessions))
+        var response = await TerminalFacade.GetSessionsAsync(_terminalOwnerId);
+        if (_disposed)
+        {
+            return false;
+        }
+
+        if (response.IsFailed(out var error, out var sessions))
         {
             Snackbar.Add(error, Severity.Error);
             return false;
@@ -329,10 +358,19 @@
         }
 
         var ownerId = await BrowserStorage.GetAsync<string?>(TERMINAL_OWNER_ID_STORAGE_KEY, null);
+        if (_disposed)
+        {
+            return;
+        }
+
         if (!IsValidOwnerId(ownerId))
         {
             ownerId = Guid.NewGuid().ToString("N");
             await BrowserStorage.SetAsync(TERMINAL_OWNER_ID_STORAGE_KEY, ownerId);
+            if (_disposed)
+            {
+                return;
+            }
         }
 
         _terminalOwnerId = ownerId;
@@ -340,7 +378,7 @@
 
     private async Task CreateSessionAsync()
     {
-        if (_terminalOwnerId is null)
+        if (_disposed || _terminalOwnerId is null)
         {
             return;
         }
@@ -349,6 +387,10 @@
         {
             WorkingDirectory = _activeSession?.WorkingDirectory
         });
+        if (_disposed)
+        {
+            return;
+        }
 
         if (response.IsFailed(out var error, out var session))
         {
@@ -363,7 +405,7 @@
 
     private async Task CloseSessionAsync()
     {
-        if (_activeSessionId is null)
+        if (_disposed || _activeSessionId is null)
         {
             return;
         }
@@ -373,7 +415,13 @@
             return;
         }
 
-        if ((await TerminalFacade.CloseSessionAsync(_terminalOwnerId, _activeSessionId)).IsFailed(out var error))
+        var response = await TerminalFacade.CloseSessionAsync(_terminalOwnerId, _activeSessionId);
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (response.IsFailed(out var error))
         {
             Snackbar.Add(error, Severity.Error);
             return;
@@ -392,6 +440,11 @@
 
     private Task SelectSessionAsync(string sessionId)
     {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
         _activeSessionId = sessionId;
         RequestCommandFocus();
         RequestOutputScroll();
@@ -400,7 +453,7 @@
 
     private async Task RunCommandAsync()
     {
-        if (!CanRunCommand || _activeSessionId is null || _terminalOwnerId is null)
+        if (_disposed || !CanRunCommand || _activeSessionId is null || _terminalOwnerId is null)
         {
             return;
         }
@@ -416,6 +469,10 @@
             {
                 Command = command
             }, AppendCommandOutputAsync);
+            if (_disposed)
+            {
+                return;
+            }
 
             if (response.IsFailed(out var error, out var result))
             {
@@ -435,21 +492,25 @@
         }
         finally
         {
-            _isRunning = false;
-            RequestCommandFocus();
-            RequestOutputScroll();
-            await InvokeAsync(StateHasChanged);
+            if (!_disposed)
+            {
+                _isRunning = false;
+                RequestCommandFocus();
+                RequestOutputScroll();
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
     private async Task CancelCommandAsync()
     {
-        if (_activeSessionId is null || _terminalOwnerId is null)
+        if (_disposed || _activeSessionId is null || _terminalOwnerId is null)
         {
             return;
         }
 
-        if ((await TerminalFacade.CancelCommandAsync(_terminalOwnerId, _activeSessionId)).IsFailed(out var error))
+        var response = await TerminalFacade.CancelCommandAsync(_terminalOwnerId, _activeSessionId);
+        if (!_disposed && response.IsFailed(out var error))
         {
             Snackbar.Add(error, Severity.Error);
         }
@@ -465,12 +526,18 @@
 
     private async Task ClearOutput()
     {
-        if (_activeSessionId is null || _terminalOwnerId is null)
+        if (_disposed || _activeSessionId is null || _terminalOwnerId is null)
         {
             return;
         }
 
-        if ((await TerminalFacade.ClearOutputAsync(_terminalOwnerId, _activeSessionId)).IsFailed(out var error))
+        var response = await TerminalFacade.ClearOutputAsync(_terminalOwnerId, _activeSessionId);
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (response.IsFailed(out var error))
         {
             Snackbar.Add(error, Severity.Error);
             return;
@@ -482,19 +549,29 @@
 
     private void UseHistoryCommand(string command)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _commandInput = command;
         RequestCommandFocus();
     }
 
     private ValueTask AppendCommandOutputAsync(TerminalOutputLine line, CancellationToken cancellationToken)
     {
-        if (cancellationToken.IsCancellationRequested)
+        if (_disposed || cancellationToken.IsCancellationRequested)
         {
             return ValueTask.CompletedTask;
         }
 
         return new ValueTask(InvokeAsync(() =>
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             RequestOutputScroll();
             StateHasChanged();
         }));
@@ -502,12 +579,18 @@
 
     private void RequestCommandFocus()
     {
-        _focusCommandAfterRender = true;
+        if (!_disposed)
+        {
+            _focusCommandAfterRender = true;
+        }
     }
 
     private void RequestOutputScroll()
     {
-        _scrollOutputAfterRender = true;
+        if (!_disposed)
+        {
+            _scrollOutputAfterRender = true;
+        }
     }
 
     private string? GetSessionDisplayName(string? sessionId)
@@ -522,7 +605,7 @@
 
     private async Task FocusCommandInputAsync()
     {
-        if (_commandInputField is null || _isRunning || _activeSession is null)
+        if (_disposed || _commandInputField is null || _isRunning || _activeSession is null)
         {
             return;
         }
@@ -541,61 +624,23 @@
 
     private async Task ScrollOutputToBottomAsync()
     {
-        await EnsureJsModuleAsync();
-        if (_jsModule is null)
+        var scrollInteropSession = _scrollInteropSession;
+        if (_disposed || scrollInteropSession is null)
         {
             return;
         }
 
-        try
-        {
-            await _jsModule.InvokeVoidAsync("scrollToBottom", _terminalOutputRef);
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (JSException)
-        {
-        }
-    }
-
-    private async Task EnsureJsModuleAsync()
-    {
-        if (_jsModule is not null)
-        {
-            return;
-        }
-
-        try
-        {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/Monica.DevOps/Terminal/Pages/UITerminalPage.razor.js");
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (JSException)
-        {
-        }
+        await scrollInteropSession.ScrollToBottomAsync(_terminalOutputRef);
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule is null)
+        _disposed = true;
+        var scrollInteropSession = _scrollInteropSession;
+        _scrollInteropSession = null;
+        if (scrollInteropSession is not null)
         {
-            return;
-        }
-
-        try
-        {
-            await _jsModule.DisposeAsync();
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (JSException)
-        {
+            await scrollInteropSession.DisposeAsync();
         }
     }
 

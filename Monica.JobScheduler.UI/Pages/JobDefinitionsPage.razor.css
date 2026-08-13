@@ -190,16 +190,17 @@
 
 .last-execution-wrapper ::deep .clickable-execution-time {
     cursor: pointer;
-    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    transition: background-color 150ms ease, box-shadow 150ms ease;
 }
 
 .last-execution-wrapper ::deep .clickable-execution-time:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background-color: var(--mud-palette-action-default-hover);
+    box-shadow: 0 0 0 1px var(--mud-palette-lines-inputs);
 }
 
-.last-execution-wrapper ::deep .clickable-execution-time:active {
-    transform: translateY(0);
+.last-execution-wrapper ::deep .clickable-execution-time:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 /* Batch operation toolbar animation */
@@ -231,4 +232,15 @@
         justify-content: flex-end;
         margin-left: 0;
     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .last-execution-wrapper ::deep .clickable-execution-time,
+    .batch-toolbar {
+        animation: none;
+        transition-duration: 0.01ms;
+    }
+}
+.scheduler-page-content {
+    min-width: 0;
 }

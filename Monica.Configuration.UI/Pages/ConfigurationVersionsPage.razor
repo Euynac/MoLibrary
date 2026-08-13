@@ -9,19 +9,19 @@
 <div class="configuration-versions-page">
     <MudContainer MaxWidth="MaxWidth.False">
         <MudStack Spacing="3">
-            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-                <MudStack Spacing="0">
-                    <MudText Typo="Typo.h4">@L["Pages:ConfigurationVersions:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Versions:Subtitle"]</MudText>
-                </MudStack>
-                <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Variant="Variant.Outlined"
-                                   Disabled="@State.Loading"
-                                   OnClick="State.LoadAsync"
-                                   aria-label="@L["Common:Actions:Refresh"]" />
-                </MudTooltip>
-            </MudStack>
+            <ConfigurationPageHeader Title="@L["Pages:ConfigurationVersions:Title"]"
+                                     Subtitle="@L["Versions:Subtitle"]"
+                                     Icon="@Icons.Material.Filled.HistoryToggleOff">
+                <Actions>
+                    <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                       Variant="Variant.Outlined"
+                                       Disabled="@State.Loading"
+                                       OnClick="State.LoadAsync"
+                                       aria-label="@L["Common:Actions:Refresh"]" />
+                    </MudTooltip>
+                </Actions>
+            </ConfigurationPageHeader>
 
             @if (State.Loading)
             {

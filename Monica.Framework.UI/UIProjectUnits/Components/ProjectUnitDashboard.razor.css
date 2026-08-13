@@ -112,6 +112,29 @@
 .project-unit-dashboard__service-heading {
     flex-wrap: wrap;
     gap: 0.625rem;
+    min-width: 0;
+}
+
+.project-unit-dashboard__service-heading ::deep .mud-typography,
+.project-unit-dashboard__gap-copy ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.project-unit-dashboard__service-version,
+.project-unit-dashboard__service-identities ::deep .mud-chip,
+.project-unit-dashboard__gap-badges ::deep .mud-chip {
+    height: auto;
+    max-width: 100%;
+    min-height: 1.5rem;
+    min-width: 0;
+}
+
+.project-unit-dashboard__service-heading ::deep .mud-chip-content,
+.project-unit-dashboard__service-identities ::deep .mud-chip-content,
+.project-unit-dashboard__gap-badges ::deep .mud-chip-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .project-unit-dashboard__service-identities {
@@ -454,6 +477,10 @@
     min-width: 0;
 }
 
+.project-unit-dashboard__gap-chevron {
+    flex: 0 0 auto;
+}
+
 .project-unit-dashboard__gap-key {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -522,6 +549,12 @@
         align-items: flex-start;
     }
 
+    .project-unit-dashboard__service-copy,
+    .project-unit-dashboard__service-heading,
+    .project-unit-dashboard__service-identities {
+        width: 100%;
+    }
+
     .project-unit-dashboard__service-icon {
         flex-basis: 3.25rem;
         height: 3.25rem;
@@ -547,6 +580,21 @@
 
     .project-unit-dashboard__section-heading {
         align-items: flex-start;
+    }
+
+    .project-unit-dashboard__gap {
+        align-items: flex-start;
+    }
+
+    .project-unit-dashboard__gap-key {
+        overflow: visible;
+        overflow-wrap: anywhere;
+        text-overflow: clip;
+        white-space: normal;
+    }
+
+    .project-unit-dashboard__gap-chevron {
+        display: none;
     }
 }
 

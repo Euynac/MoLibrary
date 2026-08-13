@@ -1,7 +1,38 @@
 {
-  "Pages": {
-    "MemoryAnalysis": {
-      "Title": "内存分析"
-    }
-  }
+  "Pages": { "MemoryAnalysis": { "Title": "内存分析" } },
+  "Page": {
+    "Eyebrow": "托管内存实验室", "Subtitle": "关联进程内存、GC 行为、分配压力与诊断操作。",
+    "Status": { "Live": "实时采样", "Paused": "采样已暂停" }, "Actions": { "AutoRefresh": "自动刷新", "Refresh": "刷新证据" },
+    "Messages": { "RefreshFailed": "刷新内存证据失败。", "GcFailed": "垃圾回收执行失败。", "GcCompleted": "{0} 回收已完成。", "DumpStarting": "正在创建 GC 转储…", "OperationFailed": "诊断操作失败。", "DumpCreated": "GC 转储已创建于 {0}。" }
+  },
+  "Tabs": { "Overview": "概览", "GcStatistics": "GC 证据", "Trend": "趋势", "Allocation": "分配", "Diagnostics": "诊断" },
+  "Overview": {
+    "MetricsAriaLabel": "内存快照摘要", "WorkingSet": "工作集", "ManagedHeap": "托管堆", "Committed": "已提交", "ManagedMemory": "托管内存",
+    "Collections": { "Eyebrow": "回收压力", "Title": "分代回收次数" }, "Configuration": { "Eyebrow": "运行时配置", "Title": "回收器模式", "GcType": "GC 类型", "ServerGc": "服务器 GC", "WorkstationGc": "工作站 GC", "LatencyMode": "延迟模式" },
+    "Snapshot": { "CapturedAt": "采集时间", "MaxGeneration": "最大代" }
+  },
+  "Gc": {
+    "LastCollection": { "Eyebrow": "最近回收", "Title": "回收证据", "Empty": "暂无回收详情。" }, "Heap": { "Eyebrow": "堆构成", "Title": "托管堆" }, "SystemMemory": { "Eyebrow": "系统压力", "Title": "内存负载", "Unavailable": "系统内存负载证据不可用。" },
+    "Generations": { "Eyebrow": "分代变化", "Title": "回收移动", "Empty": "未记录分代变化。", "Columns": { "Generation": "分代", "Before": "回收前", "After": "回收后", "Collected": "已回收" } },
+    "Labels": { "Index": "索引", "Generation": "分代", "Type": "类型", "PauseDuration": "暂停时长", "TimeShare": "GC 时间占比", "HeapSize": "堆大小", "Fragmentation": "碎片", "Committed": "已提交", "Promoted": "已提升", "PinnedObjects": "固定对象", "FinalizationPending": "待终结", "AvailableMemory": "可用内存", "MemoryLoad": "内存负载", "MemoryLoadShare": "负载占比", "HighMemoryThreshold": "高内存阈值" },
+    "Types": { "Concurrent": "并发", "Compacting": "压缩", "Blocking": "阻塞" }
+  },
+  "Trend": {
+    "SummaryAriaLabel": "内存趋势摘要", "Waiting": "等待更多样本以绘制趋势。", "Summary": { "AverageHeap": "平均堆", "MaximumHeap": "最大堆", "AverageAllocation": "平均分配", "Samples": "样本" },
+    "Heap": { "Eyebrow": "堆窗口", "Title": "托管堆趋势" }, "Allocation": { "Eyebrow": "分配压力", "Title": "分配速率趋势" }, "Generations": { "Eyebrow": "分代构成", "Title": "分代大小趋势" },
+    "Recent": { "Eyebrow": "采样证据", "Title": "最近内存观测", "Count": "{0} 个样本", "Empty": "尚未采集内存观测。", "Columns": { "Time": "采集时间", "Heap": "堆", "Allocation": "分配速率", "GcTime": "GC 时间", "Fragmentation": "碎片" } }, "Series": { "Size": "大小", "Heap": "托管堆", "Allocation": "分配速率" }
+  },
+  "Allocation": {
+    "Eyebrow": "类型分配采样器", "Title": "分配证据", "SamplingMode": "采样模式", "Collecting": "正在采集 · {0}", "SummaryAriaLabel": "分配样本摘要", "DroppedEvents": "本次采集丢弃了 {0} 个分配事件。",
+    "Modes": { "Low": "低开销", "High": "高保真", "LowWithRate": "低开销 · 1%", "HighWithRate": "高保真 · 10%" }, "Actions": { "Start": "开始采样", "Stop": "停止采样", "Snapshot": "堆快照", "Snapshotting": "采集中…", "Refresh": "刷新", "Reset": "重置证据", "ShowShortNames": "显示短类型名", "ShowFullNames": "显示完整类型名" },
+    "Summary": { "UniqueTypes": "唯一类型", "Allocations": "分配次数", "Bytes": "分配字节", "Duration": "采集时长" }, "Sources": { "HeapSnapshot": "堆快照采集于 {0}。", "Live": "实时分配样本采集于 {0}。" },
+    "Ranking": { "Eyebrow": "类型排行", "Title": "分配热点", "Limit": "行数", "Collecting": "分配采样正在运行，排行会随证据更新。", "Empty": "尚未采集分配证据。", "Columns": { "Type": "类型", "Instances": "实例", "TotalSize": "总大小", "AverageSize": "平均大小", "Share": "占比" } },
+    "Guidance": { "Title": "采样指南", "Live": { "Title": "实时采样", "Description": "使用实时证据识别持续分配压力。" }, "Low": { "Title": "低开销", "Description": "适合较长观测窗口，但精度较低。" }, "High": { "Title": "高保真", "Description": "需要更清晰的类型分布时短时使用。" }, "Snapshot": { "Title": "堆快照", "Description": "实时分配量不足时采集保留对象。" } },
+    "Messages": { "LoadFailed": "加载分配证据失败。", "RefreshFailed": "刷新分配证据失败。", "StartFailed": "启动分配采样失败。", "Started": "已用 {0} 模式启动分配采样。", "StopFailed": "停止分配采样失败。", "Stopped": "分配采样已停止。", "SnapshotStarting": "正在采集堆快照…", "SnapshotFailed": "堆快照采集失败。", "SnapshotCompleted": "堆快照已采集 {0} 个唯一类型。", "ResetFailed": "重置分配证据失败。", "Reset": "分配证据已重置。" }
+  },
+  "Diagnostics": {
+    "FullCollection": "完整 GC", "ManualGc": { "Eyebrow": "受控操作", "Title": "强制回收", "Description": "仅在验证内存压力假设时触发回收。", "Disabled": "主机策略已禁用手动回收。" }, "Dump": { "Eyebrow": "取证采集", "Title": "创建 GC 转储", "Description": "采集托管堆证据以供离线检查。", "Requirement": "创建转储可能暂停进程，并需要主机文件系统访问权限。", "Action": "创建转储", "Disabled": "主机策略已禁用 GC 转储。" },
+    "Guidance": { "Eyebrow": "诊断手册", "Title": "解释证据", "Signals": { "Title": "压力信号", "GrowingHeap": { "Title": "堆持续增长", "Description": "回收后堆仍增长可能表示存在保留引用。" }, "Gen2": { "Title": "频繁 Gen 2", "Description": "反复完整回收通常表示长期压力。" }, "Pinned": { "Title": "固定对象", "Description": "固定对象会阻碍压缩并增加碎片。" }, "Finalizers": { "Title": "终结队列", "Description": "队列增长可能表示清理工作延迟。" } }, "Causes": { "Title": "常见原因", "Events": { "Title": "事件订阅", "Description": "长生命周期发布者可能保留短生命周期订阅者。" }, "Statics": { "Title": "静态根", "Description": "静态集合可能无限期保留对象图。" }, "Caches": { "Title": "无限缓存", "Description": "缓存需要明确的容量或过期策略。" }, "Disposal": { "Title": "资源所有权", "Description": "缺少释放会保留原生与托管资源。" } }, "Tools": { "Title": "分析工具", "VisualStudio": "Visual Studio 分析器", "PerfView": "PerfView", "DotMemory": "dotMemory", "Dotnet": "dotnet-gcdump / dotnet-dump" } }
+  },
+  "Common": { "LoadingValue": "采集中…", "Milliseconds": "{0} 毫秒", "Unavailable": "—", "Unknown": "未知" }
 }

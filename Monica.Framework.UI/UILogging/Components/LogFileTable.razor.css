@@ -1,50 +1,59 @@
 .log-file-table {
-    height: 100%;
-    max-height: 100%;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
     overflow: hidden;
 }
 
 .table-header-section {
-    flex-shrink: 0;
-    padding-bottom: 0.5rem;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding-bottom: .75rem;
     border-bottom: 1px solid var(--mud-palette-divider);
 }
 
 .table-container {
-    flex: 1;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: auto;
+    scrollbar-color: var(--mud-palette-text-disabled) var(--mud-palette-background-gray);
+    scrollbar-width: thin;
 }
 
-/* Custom scrollbar styling */
-.table-container::-webkit-scrollbar {
-    width: 10px;
-}
-
-.table-container::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-gray);
-    border-radius: 4px;
-}
-
-.table-container::-webkit-scrollbar-thumb {
-    background: var(--mud-palette-text-disabled);
-    border-radius: 4px;
-    transition: background 0.2s ease;
-}
-
-.table-container::-webkit-scrollbar-thumb:hover {
-    background: var(--mud-palette-text-secondary);
-}
-
-/* Override MudTable default max-height */
-.table-container ::deep .mud-table {
+.table-container ::deep .mud-table,
+.table-container ::deep .mud-table-container {
+    width: 100%;
+    min-width: 0;
     max-height: none;
 }
 
 .table-container ::deep .mud-table-container {
-    max-height: none;
     overflow: visible;
+}
+
+.table-container ::deep .mud-table-row {
+    transition: background-color 140ms ease;
+}
+
+.table-container ::deep .mud-table-row:focus-within {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+@media (max-width: 600px) {
+    .table-header-section ::deep .mud-stack-row {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .table-container ::deep .mud-table-row {
+        transition: none;
+    }
 }
