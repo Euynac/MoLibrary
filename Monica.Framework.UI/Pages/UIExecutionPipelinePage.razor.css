@@ -15,10 +15,8 @@
 }
 
 .execution-pipeline-page__header ::deep .mud-paper {
-    background: linear-gradient(
-        120deg,
-        color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface)),
-        color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface)));
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-lines-default));
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
 }
 
 .execution-pipeline-page__catalog {

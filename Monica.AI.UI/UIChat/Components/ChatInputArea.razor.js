@@ -9,7 +9,8 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
             setPickerOpen: () => {},
             setDisabled: () => {},
             setValue: () => {},
-            dispose: () => {}
+            dispose: () => {},
+            shutdown: () => Promise.resolve()
         };
     }
 
@@ -17,15 +18,61 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
     let isComposing = false;
     let hasPendingLocalInput = false;
     let currentValue = initialValue ?? "";
+    let disposed = false;
+    let compositionTimeout = null;
+    const pendingCallbacks = new Set();
+
+    let shutdownPromise = null;
+    const shutdown = () => {
+        if (shutdownPromise) {
+            return shutdownPromise;
+        }
+
+        disposed = true;
+        removalObserver.disconnect();
+        editor.removeEventListener("input", handleInput);
+        editor.removeEventListener("keydown", handleKeyDown);
+        editor.removeEventListener("compositionstart", handleCompositionStart);
+        editor.removeEventListener("compositionend", handleCompositionEnd);
+        editor.removeEventListener("paste", handlePaste);
+        if (compositionTimeout !== null) {
+            clearTimeout(compositionTimeout);
+            compositionTimeout = null;
+        }
+
+        dotNetRef = null;
+        shutdownPromise = Promise.allSettled(Array.from(pendingCallbacks));
+        return shutdownPromise;
+    };
+
+    const removalObserver = new MutationObserver(() => {
+        if (!root?.isConnected) {
+            void shutdown();
+        }
+    });
+
+    const observerRoot = root?.ownerDocument?.body;
+    if (observerRoot) {
+        removalObserver.observe(observerRoot, { childList: true, subtree: true });
+    }
 
     editor.setAttribute("data-placeholder", placeholder ?? "");
     renderEditor(editor, currentValue, currentValue.length, referenceIcons);
 
     const notifyInput = () => {
+        if (disposed || !dotNetRef) {
+            return;
+        }
+
         currentValue = readEditorText(editor);
         hasPendingLocalInput = true;
         const caretIndex = getCaretIndex(editor);
-        dotNetRef.invokeMethodAsync("HandleComposerInput", currentValue, caretIndex);
+        const callback = dotNetRef.invokeMethodAsync("HandleComposerInput", currentValue, caretIndex);
+        pendingCallbacks.add(callback);
+        callback
+            .catch(() => {
+            })
+            .finally(() => pendingCallbacks.delete(callback));
     };
 
     const handleInput = event => {
@@ -70,8 +117,9 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
 
     const handleCompositionEnd = () => {
         isComposing = false;
-        setTimeout(() => {
-            if (!isComposing) {
+        compositionTimeout = setTimeout(() => {
+            compositionTimeout = null;
+            if (!disposed && !isComposing) {
                 notifyInput();
             }
         }, 0);
@@ -95,12 +143,24 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
 
     return {
         setPickerOpen: value => {
+            if (disposed) {
+                return;
+            }
+
             isPickerOpen = value === true;
         },
         setDisabled: value => {
+            if (disposed) {
+                return;
+            }
+
             editor.setAttribute("contenteditable", value === true ? "false" : "true");
         },
         setValue: (value, caretIndex, focus, force) => {
+            if (disposed) {
+                return;
+            }
+
             const nextValue = value ?? "";
             if (isComposing && force !== true) {
                 return;
@@ -125,13 +185,8 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder,
                 editor.focus();
             }
         },
-        dispose: () => {
-            editor.removeEventListener("input", handleInput);
-            editor.removeEventListener("keydown", handleKeyDown);
-            editor.removeEventListener("compositionstart", handleCompositionStart);
-            editor.removeEventListener("compositionend", handleCompositionEnd);
-            editor.removeEventListener("paste", handlePaste);
-        }
+        dispose: shutdown,
+        shutdown
     };
 }
 

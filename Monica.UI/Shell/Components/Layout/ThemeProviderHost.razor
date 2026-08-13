@@ -13,59 +13,124 @@
 </div>
 
 @code {
+    private const string THEME_MODULE_PATH = "./_content/Monica.UI/js/theme-helper.js";
+
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    private IJSObjectReference? _themeHelperModule;
-    private Task _themeChangeTask = Task.CompletedTask;
+    private readonly SemaphoreSlim _themeChangeGate = new(1, 1);
+    private readonly List<Task> _pendingThemeChanges = [];
+    private readonly object _disposeSync = new();
+    private JsModuleSession? _themeInterop;
+    private Task? _disposeTask;
+    private bool _acceptThemeChanges;
+    private bool _disposed;
 
     protected override void OnInitialized()
     {
+        _themeInterop = new JsModuleSession(JSRuntime, THEME_MODULE_PATH);
         ThemeService.OnThemeChanged += OnThemeChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender || _disposed || _themeInterop is not { } themeInterop)
         {
-            _themeHelperModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/Monica.UI/js/theme-helper.js");
+            return;
+        }
 
-            var themeData = await BrowserStorage.GetAsync<ThemeData?>("theme:data", null);
+        var themeData = await BrowserStorage.GetAsync<ThemeData?>("theme:data", null);
+        if (_disposed)
+        {
+            return;
+        }
 
-            await InvokeAsync(() =>
-            {
-                if (themeData != null)
-                {
-                    ThemeService.SetTheme(themeData.ThemeKind, themeData.IsDarkMode);
-                }
-            });
+        if (themeData is not null)
+        {
+            await InvokeAsync(() => ThemeService.SetTheme(themeData.ThemeKind, themeData.IsDarkMode));
+        }
+        else
+        {
+            await PersistCurrentThemeAsync();
+        }
 
-            if (themeData is null)
-            {
-                await PersistCurrentThemeAsync();
-            }
+        if (_disposed)
+        {
+            return;
+        }
 
-            await _themeHelperModule.InvokeVoidAsync(
-                "setDocumentTheme", ThemeService.GetThemeDataAttribute());
+        try
+        {
+            await themeInterop.InvokeVoidAsync(
+                "setDocumentTheme",
+                ThemeService.GetThemeDataAttribute());
+            _acceptThemeChanges = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser circuit ended while the initial document theme was being applied.
+        }
+        catch (ObjectDisposedException) when (_disposed)
+        {
+            // Component disposal won the race with first-render initialization.
         }
     }
 
     private void OnThemeChanged()
     {
-        _themeChangeTask = InvokeAsync(ApplyThemeChangeAsync);
+        lock (_disposeSync)
+        {
+            if (_disposed || !_acceptThemeChanges)
+            {
+                return;
+            }
+
+            _pendingThemeChanges.Add(InvokeAsync(ApplyThemeChangeAsync));
+        }
     }
 
     private async Task ApplyThemeChangeAsync()
     {
-        await PersistCurrentThemeAsync();
-
-        if (_themeHelperModule != null)
+        await _themeChangeGate.WaitAsync();
+        try
         {
-            await _themeHelperModule.InvokeVoidAsync(
-                "setDocumentTheme", ThemeService.GetThemeDataAttribute());
-        }
+            if (_disposed)
+            {
+                return;
+            }
 
-        await InvokeAsync(StateHasChanged);
+            await PersistCurrentThemeAsync();
+
+            if (_disposed || _themeInterop is not { } themeInterop)
+            {
+                return;
+            }
+
+            try
+            {
+                await themeInterop.InvokeVoidAsync(
+                    "setDocumentTheme",
+                    ThemeService.GetThemeDataAttribute());
+            }
+            catch (JSDisconnectedException)
+            {
+                // The browser circuit ended while a theme selection was being applied.
+                return;
+            }
+            catch (ObjectDisposedException) when (_disposed)
+            {
+                return;
+            }
+
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            _themeChangeGate.Release();
+        }
     }
 
     private Task PersistCurrentThemeAsync()
@@ -74,33 +139,47 @@
             ThemeService.CurrentThemeKind, ThemeService.IsDarkMode));
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        ThemeService.OnThemeChanged -= OnThemeChanged;
-        await AwaitPendingThemeChangeAsync();
-
-        if (_themeHelperModule != null)
+        lock (_disposeSync)
         {
-            try
-            {
-                await _themeHelperModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Circuit already disconnected
-            }
+            return new ValueTask(_disposeTask ??= BeginDispose());
         }
     }
 
-    private async Task AwaitPendingThemeChangeAsync()
+    private Task BeginDispose()
+    {
+        _disposed = true;
+        _acceptThemeChanges = false;
+        ThemeService.OnThemeChanged -= OnThemeChanged;
+        var pendingThemeChanges = _pendingThemeChanges.ToArray();
+        var themeInterop = _themeInterop;
+        _themeInterop = null;
+        return DisposeCoreAsync(pendingThemeChanges, themeInterop);
+    }
+
+    private static async Task DisposeCoreAsync(
+        IReadOnlyList<Task> pendingThemeChanges,
+        JsModuleSession? themeInterop)
     {
         try
         {
-            await _themeChangeTask;
+            await Task.WhenAll(pendingThemeChanges);
         }
         catch (JSDisconnectedException)
         {
             // Circuit already disconnected.
+        }
+        catch (ObjectDisposedException)
+        {
+            // A pending renderer callback observed component disposal.
+        }
+        finally
+        {
+            if (themeInterop is not null)
+            {
+                await themeInterop.DisposeAsync();
+            }
         }
     }
 

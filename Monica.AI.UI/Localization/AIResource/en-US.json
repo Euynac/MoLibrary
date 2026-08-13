@@ -24,6 +24,7 @@
   },
   "Session": {
     "NewChat": "New Chat",
+    "ToggleHistory": "Open conversation history",
     "RecentSessions": "Recent Sessions",
     "NoConversations": "No conversations",
     "Delete": "Delete conversation",
@@ -548,6 +549,7 @@
   },
   "ProviderManage": {
     "Title": "AI Provider Management",
+    "Subtitle": "Inspect configured providers, validate connectivity, and compare model capabilities.",
     "Refresh": "Refresh",
     "TestAll": "Test All",
     "NoProviders": "No configured AI providers found",
@@ -557,6 +559,7 @@
     "TestSuccess": "Connection successful",
     "TestSuccessMessage": "Provider test successful",
     "OnlyLLMSupported": "Only LLM model testing is currently supported",
+    "OnlyEmbeddingSupported": "Only embedding models support dimension detection",
     "ModelTestFailed": "Model test failed",
     "ModelTestSuccess": "Model test successful",
     "DimensionDetectFailed": "Dimension detection failed",
@@ -565,6 +568,23 @@
     "GetRemoteModelsFailed": "Failed to get remote model list",
     "FetchRemoteModelsSuccess": "Fetched {0} remote model(s).",
     "Card": {
+      "DefaultModel": "Default model",
+      "ModelCount": "Model count",
+      "DefaultSystemPrompt": "Default system prompt",
+      "ModelDetails": "Model details",
+      "Actions": {
+        "Test": "Test",
+        "EditSystemPrompt": "Edit system prompt"
+      },
+      "RemoteModels": {
+        "UnconfiguredTooltip": "{0} available model(s) are not configured",
+        "Unsupported": "This provider does not support listing available models",
+        "FetchFailed": "Failed to list available models: {0}",
+        "Refresh": "Refresh available models",
+        "Fetch": "Get available models",
+        "Unconfigured": "Available but unconfigured models ({0})",
+        "ValidationUnavailable": "This provider cannot list available models, so configured models cannot be validated against its catalog."
+      },
       "ConfigurationErrorTitle": "This provider is disabled because of configuration errors.",
       "InvalidModelsHint": "Model configuration is incomplete. Update the provider settings before using it.",
       "InvalidModelsLabel": "Missing models:",
@@ -583,6 +603,56 @@
         "NotTested": "Not Tested",
         "Invalid": "Invalid"
       }
+    },
+    "ModelTable": {
+      "Columns": {
+        "Model": "Model",
+        "Type": "Type",
+        "Capabilities": "Capabilities",
+        "Cost": "Cost",
+        "Metadata": "Metadata",
+        "Actions": "Actions"
+      },
+      "RemoteStatus": {
+        "Verified": "Verified in the provider's available-model catalog",
+        "Missing": "This model is not present in the provider's available-model catalog"
+      },
+      "Capabilities": {
+        "Image": "Image",
+        "Reasoning": "Reasoning",
+        "Editing": "Editing",
+        "Streaming": "Streaming"
+      },
+      "Cost": {
+        "Free": "Free",
+        "Input": "Input",
+        "Output": "Output",
+        "Cached": "Cached",
+        "PerMillion": "{0}: {1} / 1M tokens"
+      },
+      "Metadata": {
+        "Context": "Context: {0}",
+        "MaxOutput": "Max output: {0}",
+        "MaxSize": "Max size: {0}",
+        "Dimensions": "Dimensions: {0}",
+        "DimensionProbeHint": "Dimensions are not configured. Use dimension detection to identify them automatically.",
+        "Voices": "Voices: {0}",
+        "VoiceCount": "{0} voice(s)"
+      },
+      "Actions": {
+        "Test": "Test",
+        "Testing": "Testing",
+        "ProbeDimensions": "Detect dimensions",
+        "Probing": "Detecting"
+      },
+      "Types": {
+        "LLM": "LLM",
+        "Image": "Image",
+        "Embedding": "Embedding",
+        "TTS": "Text to speech"
+      },
+      "Unknown": "Unknown",
+      "Empty": "No models configured"
     }
   },
   "Capabilities": {

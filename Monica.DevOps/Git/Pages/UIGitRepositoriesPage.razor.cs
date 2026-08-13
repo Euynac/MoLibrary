@@ -40,6 +40,9 @@ public partial class UIGitRepositoriesPage : IAsyncDisposable
 
     private bool IsBusy => _isLoading || _isOperating;
 
+    private GitRepositoryStatus? OwnershipFailureRepository => _repositories.FirstOrDefault(repository =>
+        repository.State == GitRepositorySyncState.Failed && IsOwnershipFailure(repository.LastError));
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -558,5 +561,12 @@ public partial class UIGitRepositoriesPage : IAsyncDisposable
         return unitIndex == 0
             ? $"{bytes} {units[unitIndex]}"
             : $"{size:0.##} {units[unitIndex]}";
+    }
+
+    private static bool IsOwnershipFailure(string? error)
+    {
+        return error?.Contains("dubious ownership", StringComparison.OrdinalIgnoreCase) == true
+            || error?.Contains("safe.directory", StringComparison.OrdinalIgnoreCase) == true
+            || error?.Contains("repository ownership", StringComparison.OrdinalIgnoreCase) == true;
     }
 }

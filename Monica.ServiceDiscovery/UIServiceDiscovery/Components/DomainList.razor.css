@@ -1,16 +1,68 @@
-.domain-card {
-    background:
-        linear-gradient(
-            135deg,
-            var(--domain-card-color) 0%,
-            color-mix(in srgb, var(--domain-card-color) 72%, var(--mud-palette-surface)) 100%);
-    border: none;
-    transition: transform 0.2s, box-shadow 0.2s;
+.domain-list ::deep .domain-list__header,
+.domain-list ::deep .domain-list__state {
+    background: var(--mud-palette-surface);
+    border-color: var(--mud-palette-divider);
+    border-radius: 8px;
+    padding: 1rem;
 }
 
-.domain-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--mud-elevation-8) !important;
+.domain-card {
+    --domain-card-color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    height: 100%;
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.domain-card:hover,
+.domain-card:focus-visible {
+    border-color: color-mix(in srgb, var(--domain-card-color) 42%, var(--mud-palette-divider));
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent) !important;
+    transform: translateY(-1px);
+}
+
+.domain-card:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--domain-card-color) 72%, transparent);
+    outline-offset: 2px;
+}
+
+.domain-card__identity {
+    align-items: center;
+    display: flex;
+    gap: 0.625rem;
+    min-width: 0;
+}
+
+.domain-card__icon {
+    align-items: center;
+    background: color-mix(in srgb, var(--domain-card-color) 12%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--domain-card-color) 24%, var(--mud-palette-divider));
+    border-radius: 6px;
+    color: var(--domain-card-color);
+    display: flex;
+    flex: 0 0 2.25rem;
+    height: 2.25rem;
+    justify-content: center;
+}
+
+.domain-card ::deep .domain-card__title {
+    color: var(--mud-palette-text-primary);
+    font-weight: 750;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.domain-card ::deep .domain-card__description {
+    color: var(--mud-palette-text-primary);
+}
+
+.domain-card ::deep .domain-card__meta {
+    color: var(--mud-palette-text-secondary);
+}
+
+.domain-card ::deep .domain-card__meta--strong {
+    color: var(--mud-palette-text-primary);
 }
 
 .domain-card--primary { --domain-card-color: var(--mud-palette-primary); }
@@ -23,4 +75,15 @@
 
 .cursor-pointer {
     cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .domain-card {
+        transition: none;
+    }
+
+    .domain-card:hover,
+    .domain-card:focus-visible {
+        transform: none;
+    }
 }

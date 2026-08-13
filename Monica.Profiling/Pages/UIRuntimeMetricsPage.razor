@@ -1,80 +1,120 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Profiling.UIRuntimeMetrics.Components
-@inject RuntimeMetricsPageState PageState
+@inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
-@implements IDisposable
+@inject IStringLocalizer<RuntimeMetricsResource> L
+@inject IStringLocalizer<ProfilingResource> ProfilingL
+@implements IAsyncDisposable
 
-<PageTitle>运行时指标</PageTitle>
+<PageTitle>@(_pageState is null ? ProfilingL["Unavailable:RuntimeMetrics:PageTitle"] : L["Pages:RuntimeMetrics:Title"])</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <div class="d-flex justify-space-between align-center mb-4">
-        <div class="d-flex align-center gap-2">
-            <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Primary"/>
-            <MudText Typo="Typo.h4">运行时指标</MudText>
-        </div>
-        <div class="d-flex gap-2 align-center">
-            <MudChip T="string" Size="Size.Small" Color="@(PageState.AutoRefresh ? Color.Success : Color.Default)">
-                @(PageState.AutoRefresh ? "实时" : "已暂停")
-            </MudChip>
-            <MudSwitch T="bool"
-                       Value="@PageState.AutoRefresh"
-                       ValueChanged="SetAutoRefresh"
-                       Color="Color.Primary"
-                       Label="自动刷新"/>
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+<div class="runtime-metrics-page">
+    @if (_pageState is null)
+    {
+        <ProfilingModuleUnavailable HeadingId="runtime-metrics-unavailable-title"
+                                    Icon="@Icons.Material.Filled.Speed"
+                                    Eyebrow="@ProfilingL["Unavailable:Eyebrow"]"
+                                    Title="@ProfilingL["Unavailable:RuntimeMetrics:Title"]"
+                                    Description="@ProfilingL["Unavailable:RuntimeMetrics:Description"]" />
+    }
+    else
+    {
+        <header class="runtime-metrics-header">
+            <div class="runtime-metrics-header__identity">
+                <span class="runtime-metrics-header__icon" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Speed" />
+                </span>
+                <div class="runtime-metrics-header__copy">
+                    <MudText Typo="Typo.overline" Class="runtime-metrics-eyebrow">@L["Page:Eyebrow"]</MudText>
+                    <MudText Typo="Typo.h4">@L["Pages:RuntimeMetrics:Title"]</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+                </div>
+            </div>
+
+            <div class="runtime-metrics-header__actions">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(_pageState.AutoRefresh ? Color.Success : Color.Default)"
+                         Icon="@(_pageState.AutoRefresh ? Icons.Material.Filled.Sensors : Icons.Material.Filled.Pause)">
+                    @(_pageState.AutoRefresh ? L["Page:Status:Live"] : L["Page:Status:Paused"])
+                </MudChip>
+                <MudSwitch T="bool"
+                           Value="@_pageState.AutoRefresh"
+                           ValueChanged="SetAutoRefresh"
                            Color="Color.Primary"
-                           OnClick="RefreshDataAsync"
-                           Disabled="PageState.IsLoading"/>
-        </div>
-    </div>
+                           Label="@L["Page:Actions:AutoRefresh"]" />
+                <MudTooltip Text="@L["Page:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   Variant="Variant.Outlined"
+                                   OnClick="RefreshDataAsync"
+                                   Disabled="_pageState.IsLoading" />
+                </MudTooltip>
+            </div>
+        </header>
 
-    <div class="mb-4">
-        <QuickMonitorCard DataPoint="PageState.CurrentDataPoint"
-                          PreviousDataPoint="PageState.PreviousDataPoint"
-                          IsLoading="PageState.IsLoading"/>
-    </div>
+        <main class="runtime-metrics-content">
+            <QuickMonitorCard DataPoint="_pageState.CurrentDataPoint"
+                              PreviousDataPoint="_pageState.PreviousDataPoint"
+                              IsLoading="_pageState.IsLoading" />
 
-    <QuickMonitorTrendChart TrendData="PageState.TrendData" IsLoading="PageState.IsLoading"/>
-</MudContainer>
+            <QuickMonitorTrendChart TrendData="_pageState.TrendData" IsLoading="_pageState.IsLoading" />
+        </main>
+    }
+</div>
 
 @code {
     public const string PAGE_URL = "/runtime-metrics";
+    private RuntimeMetricsPageState? _pageState;
+    private bool _disposed;
+
+    protected override void OnInitialized()
+    {
+        _pageState = ServiceProvider.GetService<RuntimeMetricsPageStateFactory>()?.Create();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
+        if (!firstRender || _pageState is null)
         {
             return;
         }
 
-        PageState.StateChanged += HandleStateChanged;
-        var result = await PageState.InitializeAsync();
+        _pageState.StateChanged += HandleStateChanged;
+        var result = await _pageState.InitializeAsync();
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
+            Snackbar.Add(error.Message ?? L["Page:Messages:RefreshFailed"], Severity.Error);
         }
     }
 
     private async Task RefreshDataAsync()
     {
-        var result = await PageState.RefreshAsync();
+        if (_pageState is null)
+        {
+            return;
+        }
+
+        var result = await _pageState.RefreshAsync();
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
+            Snackbar.Add(error.Message ?? L["Page:Messages:RefreshFailed"], Severity.Error);
         }
     }
 
-    private Task SetAutoRefresh(bool value)
-    {
-        PageState.SetAutoRefresh(value);
-        return Task.CompletedTask;
-    }
+    private Task SetAutoRefresh(bool value) => _pageState?.SetAutoRefreshAsync(value) ?? Task.CompletedTask;
 
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+    private void HandleStateChanged() { if (!_disposed) _ = InvokeAsync(StateHasChanged); }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        PageState.StateChanged -= HandleStateChanged;
-        PageState.Dispose();
+        _disposed = true;
+        if (_pageState is null)
+        {
+            return;
+        }
+
+        _pageState.StateChanged -= HandleStateChanged;
+        await _pageState.DisposeAsync();
     }
 }

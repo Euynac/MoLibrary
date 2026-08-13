@@ -1,4 +1,5 @@
 @attribute [Route(DIFF_HIGHLIGHT_URL)]
+@implements IDisposable
 
 @using Monica.Core.Results;
 @using Microsoft.Extensions.Localization
@@ -14,7 +15,8 @@
 
 <PageTitle>@L["DiffHighlightPage:PageTitle"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+<div class="diff-highlight-page">
+<MudContainer MaxWidth="MaxWidth.False" Class="diff-highlight-page__container">
     <MudPaper Elevation="1" Class="pa-4 mb-4">
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
             <MudIcon Icon="@Icons.Material.Filled.Compare" Size="Size.Large" />
@@ -77,7 +79,8 @@
 
     <MudGrid>
         <MudItem xs="12" lg="6">
-            <MudPaper Elevation="2" Class="pa-4" Style="height: 500px;">
+            <div class="diff-highlight-page__editor">
+            <MudPaper Elevation="2" Class="pa-4">
                 <MudStack>
                     <MudText Typo="Typo.h6" Class="mb-2">
                         <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-2" />
@@ -93,9 +96,11 @@
                                  Immediate="true" />
                 </MudStack>
             </MudPaper>
+            </div>
         </MudItem>
         <MudItem xs="12" lg="6">
-            <MudPaper Elevation="2" Class="pa-4" Style="height: 500px;">
+            <div class="diff-highlight-page__editor">
+            <MudPaper Elevation="2" Class="pa-4">
                 <MudStack>
                     <MudText Typo="Typo.h6" Class="mb-2">
                         <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-2" />
@@ -111,6 +116,7 @@
                                  Immediate="true" />
                 </MudStack>
             </MudPaper>
+            </div>
         </MudItem>
     </MudGrid>
 
@@ -158,13 +164,13 @@
                     @if (_state.Options.OutputFormat == EDiffOutputFormat.Markdown)
                     {
                         <MudPaper Elevation="1" Class="pa-3 markdown-viewer">
-                            <pre style="white-space: pre-wrap; font-family: 'Cascadia Code', monospace;">@_state.DiffResult.HighlightedContent</pre>
+                            <pre class="diff-highlight-page__output">@_state.DiffResult.HighlightedContent</pre>
                         </MudPaper>
                     }
                     else if (_state.Options.OutputFormat == EDiffOutputFormat.PlainText)
                     {
                         <MudPaper Elevation="1" Class="pa-3 plaintext-viewer">
-                            <pre style="white-space: pre-wrap; font-family: 'Cascadia Code', monospace;">@_state.DiffResult.HighlightedContent</pre>
+                            <pre class="diff-highlight-page__output">@_state.DiffResult.HighlightedContent</pre>
                         </MudPaper>
                     }
                 }
@@ -180,22 +186,24 @@
         }
     </MudPaper>
 </MudContainer>
+</div>
 
 @code {
     public const string DIFF_HIGHLIGHT_URL = "/diff-highlight-debug";
 
     private readonly DiffHighlightPageState _state = new();
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
     private DiffViewer? DiffViewerRef { get; set; }
+    private CancellationTokenSource? _debounceTokenSource;
+    private bool _disposed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !_disposed)
         {
             await LoadSampleDataAsync();
         }
     }
-
-    private CancellationTokenSource? _debounceTokenSource;
 
     private async Task OnOriginTextChanged(string value)
     {
@@ -211,11 +219,14 @@
 
     private async Task OnTextChanged()
     {
-        if (!_state.AutoRefresh) return;
+        if (!_state.AutoRefresh || _disposed) return;
         
         // Cancel the previous debounce task.
-        _debounceTokenSource?.Cancel();
-        _debounceTokenSource = new CancellationTokenSource();
+        var previousDebounce = _debounceTokenSource;
+        previousDebounce?.Cancel();
+        previousDebounce?.Dispose();
+        var debounceTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+        _debounceTokenSource = debounceTokenSource;
         
         try
         {
@@ -224,20 +235,36 @@
             // Delay for 300ms only if it exceeds 100,000 characters, otherwise no delay
             if (totalChars > 100000)
             {
-                await Task.Delay(300, _debounceTokenSource.Token);
+                await Task.Delay(300, debounceTokenSource.Token);
             }
-            
-            // Trigger automatic refresh
-            await RefreshDiffAsync();
+
+            if (!_disposed && ReferenceEquals(debounceTokenSource, _debounceTokenSource))
+            {
+                await RefreshDiffAsync();
+            }
         }
         catch (OperationCanceledException)
         {
             // Debounce cancellation is expected and can be ignored.
         }
+        finally
+        {
+            if (ReferenceEquals(debounceTokenSource, _debounceTokenSource))
+            {
+                _debounceTokenSource = null;
+            }
+
+            debounceTokenSource.Dispose();
+        }
     }
 
     private async Task RefreshDiffAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _state.BeginRefresh();
         StateHasChanged();
 
@@ -253,6 +280,11 @@
                     _state.OriginText,
                     _state.NewText,
                     _state.Options);
+
+                if (_disposed)
+                {
+                    return;
+                }
 
                 if (result.IsFailed(out var error, out var data))
                 {
@@ -272,7 +304,10 @@
                 _state.CompleteRefresh(_state.DiffResult);
             }
 
-            StateHasChanged();
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
@@ -300,11 +335,40 @@
 
     private async Task LoadSampleDataAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _state.LoadSampleData();
 
         StateHasChanged();
-        await Task.Delay(100);
-        
-        await RefreshDiffAsync();
+        try
+        {
+            await Task.Delay(100, _lifetimeCancellation.Token);
+            if (!_disposed)
+            {
+                await RefreshDiffAsync();
+            }
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            // Component disposal cancels the initial sample refresh.
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _lifetimeCancellation.Cancel();
+        _debounceTokenSource?.Cancel();
+        _debounceTokenSource?.Dispose();
+        _debounceTokenSource = null;
+        _lifetimeCancellation.Dispose();
     }
 }

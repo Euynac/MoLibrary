@@ -62,6 +62,10 @@
     background: var(--mud-palette-background-gray);
 }
 
+.execution-pipeline-plan-list__chevron {
+    display: flex;
+}
+
 .execution-pipeline-plan-list__content {
     display: flex;
     flex-direction: column;
@@ -101,4 +105,23 @@
     min-height: 16rem;
     padding: 1.5rem;
     text-align: center;
+}
+
+@media (max-width: 560px) {
+    .execution-pipeline-plan-list__plan {
+        grid-template-columns: 2rem minmax(0, 1fr);
+        padding-inline: 0.75rem;
+    }
+
+    .execution-pipeline-plan-list__chevron {
+        display: none;
+    }
+
+    .execution-pipeline-plan-list__content ::deep .mud-tooltip-root,
+    .execution-pipeline-plan-list__content ::deep strong {
+        overflow: visible;
+        overflow-wrap: anywhere;
+        text-overflow: clip;
+        white-space: normal;
+    }
 }

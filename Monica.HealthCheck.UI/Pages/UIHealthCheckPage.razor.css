@@ -9,7 +9,7 @@
     width: 100%;
     min-width: 0;
     min-height: 100%;
-    padding: clamp(.75rem, 2vw, 2rem);
+    padding: 0;
     background: var(--mud-palette-background);
 }
 
@@ -61,10 +61,6 @@
 }
 
 @media (max-width: 700px) {
-    .health-page ::deep .health-drawer-container {
-        padding: .75rem;
-    }
-
     .health-page-header {
         align-items: flex-start;
         flex-direction: column;

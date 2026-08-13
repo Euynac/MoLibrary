@@ -139,6 +139,19 @@
     flex-wrap: wrap;
 }
 
+.detail-heading,
+.detail-title-row {
+    min-width: 0;
+}
+
+.detail-heading {
+    flex: 1 1 24rem;
+}
+
+.detail-heading ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
 .detail-chips,
 .parameter-list,
 .resource-list {
@@ -216,6 +229,26 @@
     min-width: 0;
 }
 
+.skill-source-header > :first-child {
+    min-width: 0;
+}
+
+.skill-source-panels,
+.skill-source-panels ::deep .mud-expand-panel,
+.skill-source-panels ::deep .mud-expand-panel-header,
+.skill-source-panels ::deep .mud-expand-panel-text {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.skill-source-panel-title {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
 .skill-source-panels ::deep .mud-expand-panel-content {
     padding: 8px 16px 16px;
 }
@@ -239,15 +272,32 @@
     display: flex;
     align-items: flex-start;
     gap: 8px;
+    flex: 1 1 auto;
+    max-width: 100%;
     min-width: 0;
 }
 
 .skill-path-text {
+    flex: 1 1 auto;
+    max-width: 100%;
     min-width: 0;
 }
 
 .skill-path-text ::deep .mud-typography {
     overflow-wrap: anywhere;
+}
+
+.skill-name-list ::deep .mud-chip {
+    height: auto;
+    max-width: 100%;
+    min-height: 1.5rem;
+    min-width: 0;
+}
+
+.skill-name-list ::deep .mud-chip-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .skill-source-issues {
@@ -316,5 +366,46 @@
     .skill-path-row {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .skill-source-header ::deep .mud-chip,
+    .skill-path-row ::deep .mud-chip {
+        align-self: flex-start;
+    }
+}
+
+@media (max-width: 599.98px) {
+    .capability-page {
+        padding: 12px !important;
+    }
+
+    .page-header,
+    .catalog-toolbar,
+    .detail-header,
+    .entry-button {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .page-header ::deep .mud-stack-row,
+    .catalog-toolbar ::deep .mud-button-root,
+    .search-box {
+        width: 100%;
+    }
+
+    .entry-meta {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .detail-title-row {
+        align-items: flex-start !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .entry-button {
+        transition: none;
     }
 }

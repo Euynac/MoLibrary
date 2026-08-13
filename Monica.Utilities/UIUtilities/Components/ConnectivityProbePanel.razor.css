@@ -14,10 +14,16 @@
     flex: 1 1 auto;
     height: 100%;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 1rem;
+    border-radius: 12px;
     background: var(--mud-palette-surface);
     display: flex;
     flex-direction: column;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.connectivity-panel ::deep .connectivity-panel__card:hover {
+    border-color: var(--mud-palette-lines-inputs);
+    box-shadow: var(--mud-elevation-1);
 }
 
 .connectivity-panel ::deep .connectivity-panel__card--form {
@@ -50,7 +56,7 @@
     gap: 0.35rem;
     padding: 0.9rem 1rem;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 0.75rem;
+    border-radius: 8px;
     background: var(--mud-palette-background-gray);
 }
 
@@ -93,8 +99,14 @@
     }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 929px) {
     .connectivity-panel__kv {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .connectivity-panel ::deep .connectivity-panel__card {
+        transition-duration: 0.01ms;
     }
 }

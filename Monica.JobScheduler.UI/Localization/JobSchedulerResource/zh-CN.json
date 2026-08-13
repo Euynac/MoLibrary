@@ -16,6 +16,45 @@
       "Title": "统计分析"
     }
   },
+  "Workspace": {
+    "Eyebrow": "MONICA / 调度运行中心",
+    "ControlPlaneLabel": "调度控制面",
+    "ControlPlaneValue": "计划 · 派发 · 证据",
+    "NavigationLabel": "调度功能区",
+    "Navigation": {
+      "Dashboard": "调度总览",
+      "Monitor": "实时监控",
+      "Definitions": "作业定义",
+      "Instances": "执行账本",
+      "Statistics": "统计分析"
+    },
+    "Pages": {
+      "Dashboard": {
+        "Title": "调度控制台",
+        "Description": "在同一运行视图中协调作业定义、活动任务、执行健康度与最近结果。"
+      },
+      "Monitor": {
+        "Title": "实时执行",
+        "Description": "持续观察执行中的作业、队列压力与调度器的并发占用变化。"
+      },
+      "Definitions": {
+        "Title": "调度定义库",
+        "Description": "检查周期与触发型作业定义、下次派发时间及当前控制状态。"
+      },
+      "DefinitionDetail": {
+        "Title": "定义档案",
+        "Description": "查看单个调度定义的身份、运行健康度、活动实例与执行策略。"
+      },
+      "Instances": {
+        "Title": "执行账本",
+        "Description": "按状态、时间窗口、作业键或实例标识检索完整运行记录。"
+      },
+      "Statistics": {
+        "Title": "效能证据",
+        "Description": "在选定时间窗口内比较执行量、耗时、失败集中度与调度效率。"
+      }
+    }
+  },
   "Common": {
     "Actions": {
       "Search": "搜索",
@@ -520,7 +559,6 @@
       "ExpressionFormatError": "表达式格式错误: {0}",
       "CountRange": "计算次数必须在 1-100 之间",
       "CalculateOccurrencesFailed": "计算执行时间失败: {0}",
-      "JsModuleNotLoaded": "JavaScript 模块未加载",
       "ParseFailed": "解析失败",
       "JsInvokeFailed": "JavaScript 调用失败: {0}",
       "ParseFailedWithMessage": "解析失败: {0}",

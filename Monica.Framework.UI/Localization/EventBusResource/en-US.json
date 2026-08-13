@@ -8,7 +8,16 @@
     "PageTitle": "Event Bus Monitor",
     "Header": {
       "Title": "Event Bus Monitor",
+      "Eyebrow": "Monica / Event circulation",
+      "Description": "Observe subscriptions, providers, topology changes, and runtime test listeners across the host event bus.",
       "Refresh": "Refresh"
+    },
+    "Summary": {
+      "AriaLabel": "Event bus runtime summary",
+      "Subscriptions": "Subscriptions",
+      "Active": "Active routes",
+      "Providers": "Providers",
+      "RecentChanges": "Recent changes"
     },
     "Tabs": {
       "Overview": "Overview",
@@ -94,19 +103,11 @@
     }
   },
   "Statistics": {
-    "Cards": {
-      "TotalSubscriptions": "Total Subscriptions",
-      "ActiveRate": "Active rate: {0}",
-      "ActiveSubscriptions": "Active Subscriptions",
-      "PendingInactive": "Pending: {0} | Inactive: {1}",
-      "LocalSubscriptions": "Local Subscriptions",
-      "DistributedCount": "Distributed: {0}",
-      "AutoDiscovered": "Auto Discovered",
-      "AutoDiscoveredRate": "Auto-discovery rate: {0}"
-    },
     "Sections": {
       "TopEventTypes": "Top Event Types",
-      "TopTopics": "Top Topics"
+      "TopEventTypesDescription": "Routes with the broadest subscription reach.",
+      "TopTopics": "Top Topics",
+      "TopTopicsDescription": "Channels carrying the most registered handlers."
     },
     "States": {
       "Empty": "No data.",

@@ -1,0 +1,35 @@
+.service-list {
+    min-width: 0;
+}
+
+.service-list ::deep .service-list__grid {
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.service-list ::deep .service-list__grid .mud-table-head {
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
+}
+
+.service-list ::deep .service-list__grid .mud-table-row {
+    transition: background-color 150ms ease;
+}
+
+.service-list ::deep .service-list__instance-status {
+    position: relative;
+}
+
+.service-list ::deep .service-list__leader-badge {
+    font-size: 0.75rem;
+    position: absolute;
+    right: -0.25rem;
+    top: -0.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .service-list ::deep .service-list__grid .mud-table-row {
+        transition: none;
+    }
+}

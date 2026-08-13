@@ -12,10 +12,24 @@
 .domain-avatar--default { --domain-avatar-color: var(--mud-palette-text-secondary); }
 
 ::deep .service-card {
-    transition: transform 0.1s, box-shadow 0.1s;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    box-shadow: none;
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
 ::deep .service-card:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 32%, var(--mud-palette-divider));
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::deep .service-card {
+        transition: none;
+    }
+
+    ::deep .service-card:hover {
+        transform: none;
+    }
 }

@@ -1,0 +1,10 @@
+.provider-card ::deep .provider-card__active-count {
+    color: var(--mud-palette-success);
+    font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .provider-card ::deep .mud-card {
+        transition: none !important;
+    }
+}

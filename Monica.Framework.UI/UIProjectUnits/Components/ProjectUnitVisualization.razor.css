@@ -15,7 +15,7 @@
     width: 100%;
 }
 
-.visualization-shell ::deep #project-unit-graph {
+.visualization-shell ::deep .project-unit-graph {
     background: var(--mud-palette-surface);
     border-radius: 7px;
     display: block;

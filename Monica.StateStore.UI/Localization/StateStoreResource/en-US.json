@@ -243,5 +243,25 @@
     "Labels": {
       "Empty": "(Empty)"
     }
+  },
+  "Service": {
+    "Labels": { "DefaultProvider": "default" },
+    "Errors": {
+      "ProviderList": "Failed to load registered providers",
+      "ProviderNotFound": "Provider not found: {0}",
+      "ProviderLoad": "Failed to load provider",
+      "KeySearch": "Failed to search keys",
+      "KeyNotFound": "Key not found: {0}",
+      "KeyLoad": "Failed to load key",
+      "KeyCheck": "Failed to check key",
+      "ETagMismatch": "The ETag no longer matches because another process modified this key.",
+      "KeySave": "Failed to save key",
+      "KeyExists": "This key already exists. Choose another name or edit the existing key.",
+      "KeyCreate": "Failed to create key",
+      "KeyDelete": "Failed to delete key",
+      "KeysDelete": "Failed to delete selected keys",
+      "OperationDetail": "{0}: {1}"
+    },
+    "Success": { "KeySaved": "Key saved successfully", "KeyDeleted": "Key deleted successfully", "KeysDeleted": "Deleted {0} keys" }
   }
 }

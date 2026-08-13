@@ -1,7 +1,14 @@
 {
-  "Pages": {
-    "RuntimeMetrics": {
-      "Title": "Runtime Metrics"
-    }
-  }
+  "Pages": { "RuntimeMetrics": { "Title": "Runtime Metrics" } },
+  "Page": {
+    "Eyebrow": "RUNTIME INSTRUMENTATION",
+    "Subtitle": "Follow process pressure and managed runtime evidence from one continuously sampled view.",
+    "Status": { "Live": "Live sampling", "Paused": "Sampling paused" },
+    "Actions": { "AutoRefresh": "Auto refresh", "Refresh": "Refresh evidence" },
+    "Messages": { "RefreshFailed": "Failed to refresh runtime metrics." }
+  },
+  "Vitals": { "AriaLabel": "Current runtime vitals", "Cpu": "CPU", "WorkingSet": "Working set", "Threads": "Threads", "GcTime": "GC time", "AllocationRate": "Allocation rate", "GcHeap": "GC heap", "Delta": "{0} from previous" },
+  "Trend": { "Eyebrow": "LIVE WINDOW", "Title": "Runtime pressure trend", "ChartAriaLabel": "CPU and working-set trend", "Waiting": "Waiting for enough samples to draw the trend.", "Metrics": { "Cpu": "CPU now", "Memory": "Working set now" }, "Series": { "Cpu": "CPU", "WorkingSet": "Working set" } },
+  "Recent": { "Eyebrow": "SAMPLE EVIDENCE", "Title": "Recent observations", "Count": "{0} samples", "Empty": "No runtime observations have been captured.", "Columns": { "Time": "Captured", "Cpu": "CPU", "WorkingSet": "Working set", "GcHeap": "GC heap", "Threads": "Threads", "GcTime": "GC time", "AllocationRate": "Allocation rate" } },
+  "Common": { "LoadingValue": "Collecting…" }
 }

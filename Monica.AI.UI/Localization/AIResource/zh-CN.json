@@ -24,6 +24,7 @@
   },
   "Session": {
     "NewChat": "新对话",
+    "ToggleHistory": "打开对话历史",
     "RecentSessions": "最近会话",
     "NoConversations": "暂无对话",
     "Delete": "删除会话",
@@ -548,6 +549,7 @@
   },
   "ProviderManage": {
     "Title": "AI Provider 管理",
+    "Subtitle": "检查已配置 Provider、验证连接，并比较模型能力。",
     "Refresh": "刷新",
     "TestAll": "测试全部",
     "NoProviders": "未发现已配置的 AI Provider",
@@ -557,6 +559,7 @@
     "TestSuccess": "连接成功",
     "TestSuccessMessage": "Provider 测试成功",
     "OnlyLLMSupported": "当前仅支持测试 LLM 模型",
+    "OnlyEmbeddingSupported": "仅嵌入模型支持维度探测",
     "ModelTestFailed": "模型测试失败",
     "ModelTestSuccess": "模型测试成功",
     "DimensionDetectFailed": "维度探测失败",
@@ -565,6 +568,23 @@
     "GetRemoteModelsFailed": "获取远程模型列表失败",
     "FetchRemoteModelsSuccess": "已获取 {0} 个远程模型。",
     "Card": {
+      "DefaultModel": "默认模型",
+      "ModelCount": "模型数量",
+      "DefaultSystemPrompt": "默认系统提示词",
+      "ModelDetails": "模型详情",
+      "Actions": {
+        "Test": "测试",
+        "EditSystemPrompt": "编辑系统提示词"
+      },
+      "RemoteModels": {
+        "UnconfiguredTooltip": "有 {0} 个可用模型尚未配置",
+        "Unsupported": "此 Provider 不支持获取可用模型列表",
+        "FetchFailed": "获取可用模型列表失败：{0}",
+        "Refresh": "刷新可用模型",
+        "Fetch": "获取可用模型",
+        "Unconfigured": "可用但未配置的模型（{0}）",
+        "ValidationUnavailable": "此 Provider 无法列出可用模型，因此无法根据其目录验证已配置模型。"
+      },
       "ConfigurationErrorTitle": "该 Provider 因配置错误已被禁用。",
       "InvalidModelsHint": "模型配置不完整，请在使用前补全 Provider 配置。",
       "InvalidModelsLabel": "缺失模型:",
@@ -583,6 +603,56 @@
         "NotTested": "未测试",
         "Invalid": "无效"
       }
+    },
+    "ModelTable": {
+      "Columns": {
+        "Model": "模型",
+        "Type": "类型",
+        "Capabilities": "能力",
+        "Cost": "费用",
+        "Metadata": "附加信息",
+        "Actions": "操作"
+      },
+      "RemoteStatus": {
+        "Verified": "已在 Provider 可用模型目录中验证",
+        "Missing": "此模型不在 Provider 的可用模型目录中"
+      },
+      "Capabilities": {
+        "Image": "图像",
+        "Reasoning": "推理",
+        "Editing": "编辑",
+        "Streaming": "流式"
+      },
+      "Cost": {
+        "Free": "免费",
+        "Input": "输入",
+        "Output": "输出",
+        "Cached": "缓存",
+        "PerMillion": "{0}：{1} / 百万 tokens"
+      },
+      "Metadata": {
+        "Context": "上下文：{0}",
+        "MaxOutput": "最大输出：{0}",
+        "MaxSize": "最大尺寸：{0}",
+        "Dimensions": "维度：{0}",
+        "DimensionProbeHint": "尚未配置维度，可使用维度探测自动识别。",
+        "Voices": "音色：{0}",
+        "VoiceCount": "{0} 种"
+      },
+      "Actions": {
+        "Test": "测试",
+        "Testing": "测试中",
+        "ProbeDimensions": "探测维度",
+        "Probing": "探测中"
+      },
+      "Types": {
+        "LLM": "LLM",
+        "Image": "图像",
+        "Embedding": "嵌入",
+        "TTS": "文本转语音"
+      },
+      "Unknown": "未知",
+      "Empty": "未配置模型"
     }
   },
   "Capabilities": {

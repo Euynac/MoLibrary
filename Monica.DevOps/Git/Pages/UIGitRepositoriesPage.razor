@@ -3,188 +3,97 @@
 
 <PageTitle>@L["GitDashboard:PageTitle"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-        <MudText Typo="Typo.h4">@L["GitDashboard:Title"]</MudText>
-        <MudStack Row="true" Spacing="2">
-            <MudButton Variant="Variant.Outlined"
-                       StartIcon="@Icons.Material.Filled.Refresh"
-                       OnClick="RefreshAsync"
-                       Disabled="@_isLoading">
-                @L["GitDashboard:Actions:Refresh"]
-            </MudButton>
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Sync"
-                       OnClick="SyncAllAsync"
-                       Disabled="@(IsBusy || _repositories.Count == 0)">
-                @L["GitDashboard:Actions:SyncAll"]
-            </MudButton>
-        </MudStack>
-    </MudStack>
+<div class="git-page">
+    <MudContainer MaxWidth="MaxWidth.False" Class="git-page__container">
+        <div class="git-page__content">
+            <header class="git-header">
+                <div class="git-header__eyebrow"><span aria-hidden="true"></span><span>@L["GitDashboard:Eyebrow"]</span></div>
+                <div class="git-header__heading-row">
+                    <div>
+                        <MudText Typo="Typo.h3" HtmlTag="h1">@L["GitDashboard:Title"]</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="git-header__description">@L["GitDashboard:Description"]</MudText>
+                    </div>
+                    <div class="git-header__actions">
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshAsync" Disabled="@_isLoading">@L["GitDashboard:Actions:Refresh"]</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Sync" OnClick="SyncAllAsync" Disabled="@(IsBusy || _repositories.Count == 0)">@L["GitDashboard:Actions:SyncAll"]</MudButton>
+                    </div>
+                </div>
+            </header>
 
-    <MudGrid Spacing="3">
-        <MudItem xs="12" lg="8">
-            <MudPaper Class="pa-4">
-                <MudText Typo="Typo.h6" Class="mb-3">@L["GitDashboard:Sections:Repositories"]</MudText>
+            <section class="git-pulse" aria-label="@L["GitDashboard:Summary:AriaLabel"]">
+                <article class="git-pulse__item git-pulse__item--primary"><MudIcon Icon="@Icons.Material.Filled.AccountTree" /><span><small>@L["GitDashboard:Summary:Repositories"]</small><strong>@_repositories.Count</strong></span></article>
+                <article class="git-pulse__item git-pulse__item--success"><MudIcon Icon="@Icons.Material.Filled.CheckCircle" /><span><small>@L["GitDashboard:Summary:Ready"]</small><strong>@_repositories.Count(repository => repository.State == GitRepositorySyncState.Ready)</strong></span></article>
+                <article class="git-pulse__item git-pulse__item--warning"><MudIcon Icon="@Icons.Material.Filled.EditNote" /><span><small>@L["GitDashboard:Summary:Dirty"]</small><strong>@_repositories.Count(repository => repository.IsDirty)</strong></span></article>
+                <article class="git-pulse__item git-pulse__item--info"><MudIcon Icon="@Icons.Material.Filled.Key" /><span><small>@L["GitDashboard:Summary:Credentials"]</small><strong>@_credentials.Count</strong></span></article>
+            </section>
 
-                <MudTable T="GitRepositoryStatus" Items="@_repositories" Dense="true" Hover="true" Loading="@IsBusy">
-                    <HeaderContent>
-                        <MudTh>@L["GitDashboard:Columns:Id"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Provider"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Branch"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:State"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Commit"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Size"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Updated"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Actions"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Id"])">@context.Id</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Provider"])">@GetDisplay(context.Provider)</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Branch"])">@GetDisplay(context.ResolvedBranch ?? context.ConfiguredBranch)</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:State"])">
-                            <MudStack Spacing="1">
-                                <MudChip T="string" Color="@GetStateColor(context.State)" Variant="Variant.Outlined" Label="true">
-                                    @GetStateText(context.State)
-                                </MudChip>
+            @if (OwnershipFailureRepository is { } ownershipFailure)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="git-ownership-alert">
+                    <MudText Typo="Typo.subtitle2">@L["GitDashboard:Ownership:Title", ownershipFailure.Id]</MudText>
+                    <MudText Typo="Typo.body2">@L["GitDashboard:Ownership:Description", ownershipFailure.ResolvedLocalPath]</MudText>
+                    <MudText Typo="Typo.caption">@ownershipFailure.LastError</MudText>
+                </MudAlert>
+            }
 
-                                @if (context.State == GitRepositorySyncState.Syncing)
-                                {
-                                    <MudProgressLinear Color="Color.Info"
-                                                       Indeterminate="@IsProgressIndeterminate(context)"
-                                                       Value="@GetProgressValue(context)" />
-                                    <MudText Typo="Typo.caption">@GetProgressText(context)</MudText>
-                                }
-                            </MudStack>
-                        </MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Commit"])">@ShortSha(context.CurrentCommit)</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Size"])">@FormatBytes(context.WorkingDirectorySizeBytes)</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Updated"])">@FormatDate(context.LastSyncAtUtc)</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Actions"])">
-                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => SelectRepository(context.Id))">
-                                @L["GitDashboard:Actions:Select"]
-                            </MudButton>
-                        </MudTd>
-                    </RowTemplate>
-                    <NoRecordsContent>
-                        <MudText Typo="Typo.body2">@L["GitDashboard:Messages:NoRepositories"]</MudText>
-                    </NoRecordsContent>
-                </MudTable>
-            </MudPaper>
-        </MudItem>
+            <div class="git-primary-layout">
+                <section class="git-surface git-surface--repositories">
+                    <MudPaper Elevation="0" Outlined="true">
+                        <div class="git-section-heading"><span class="git-section-heading__icon git-section-heading__icon--primary"><MudIcon Icon="@Icons.Material.Filled.Source" /></span><span><MudText Typo="Typo.h6">@L["GitDashboard:Sections:Repositories"]</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@L["GitDashboard:Sections:RepositoriesDescription"]</MudText></span></div>
+                        <div class="git-table">
+                            <MudTable T="GitRepositoryStatus" Items="@_repositories" Dense="true" Hover="true" Loading="@IsBusy" Elevation="0">
+                                <HeaderContent>
+                                    <MudTh>@L["GitDashboard:Columns:Id"]</MudTh><MudTh>@L["GitDashboard:Columns:Provider"]</MudTh><MudTh>@L["GitDashboard:Columns:Branch"]</MudTh><MudTh>@L["GitDashboard:Columns:State"]</MudTh><MudTh>@L["GitDashboard:Columns:Commit"]</MudTh><MudTh>@L["GitDashboard:Columns:Size"]</MudTh><MudTh>@L["GitDashboard:Columns:Updated"]</MudTh><MudTh>@L["GitDashboard:Columns:Actions"]</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="@(L["GitDashboard:Columns:Id"])"><strong>@context.Id</strong></MudTd>
+                                    <MudTd DataLabel="@(L["GitDashboard:Columns:Provider"])">@GetDisplay(context.Provider)</MudTd>
+                                    <MudTd DataLabel="@(L["GitDashboard:Columns:Branch"])">@GetDisplay(context.ResolvedBranch ?? context.ConfiguredBranch)</MudTd>
+                                    <MudTd DataLabel="@(L["GitDashboard:Columns:State"])">
+                                        <MudChip T="string" Color="@GetStateColor(context.State)" Variant="Variant.Outlined" Size="Size.Small">@GetStateText(context.State)</MudChip>
+                                        @if (context.State == GitRepositorySyncState.Syncing) { <MudProgressLinear Color="Color.Info" Indeterminate="@IsProgressIndeterminate(context)" Value="@GetProgressValue(context)" /><MudText Typo="Typo.caption">@GetProgressText(context)</MudText> }
+                                    </MudTd>
+                                    <MudTd DataLabel="@(L["GitDashboard:Columns:Commit"])"><code>@ShortSha(context.CurrentCommit)</code></MudTd>
+                                    <MudTd DataLabel="@(L["GitDashboard:Columns:Size"])">@FormatBytes(context.WorkingDirectorySizeBytes)</MudTd>
+                                    <MudTd DataLabel="@(L["GitDashboard:Columns:Updated"])">@FormatDate(context.LastSyncAtUtc)</MudTd>
+                                    <MudTd DataLabel="@(L["GitDashboard:Columns:Actions"])"><MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => SelectRepository(context.Id))">@L["GitDashboard:Actions:Select"]</MudButton></MudTd>
+                                </RowTemplate>
+                                <NoRecordsContent><MudText Typo="Typo.body2">@L["GitDashboard:Messages:NoRepositories"]</MudText></NoRecordsContent>
+                            </MudTable>
+                        </div>
+                    </MudPaper>
+                </section>
 
-        <MudItem xs="12" lg="4">
-            <MudPaper Class="pa-4">
-                <MudText Typo="Typo.h6" Class="mb-3">@L["GitDashboard:Sections:Details"]</MudText>
-
-                @if (_selectedRepository is not { } selectedRepository)
-                {
-                    <MudAlert Severity="Severity.Info">@L["GitDashboard:Messages:NoSelection"]</MudAlert>
-                }
-                else
-                {
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Spacing="1">
-                            <MudButton Variant="Variant.Outlined"
-                                       StartIcon="@Icons.Material.Filled.Sync"
-                                       OnClick="@(() => SyncRepositoryAsync(selectedRepository.Id))"
-                                       Disabled="@IsBusy">
-                                @L["GitDashboard:Actions:Sync"]
-                            </MudButton>
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Error"
-                                       StartIcon="@Icons.Material.Filled.Delete"
-                                       OnClick="@(() => DeleteRepositoryAsync(selectedRepository.Id))"
-                                       Disabled="@IsBusy">
-                                @L["GitDashboard:Actions:DeleteLocal"]
-                            </MudButton>
-                        </MudStack>
-
-                        <MudText><strong>@L["GitDashboard:Labels:RemoteUrl"]:</strong> @selectedRepository.RemoteUrl</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:LocalPath"]:</strong> @selectedRepository.LocalPath</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:ResolvedLocalPath"]:</strong> @selectedRepository.ResolvedLocalPath</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:ConfiguredBranch"]:</strong> @GetDisplay(selectedRepository.ConfiguredBranch)</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:ResolvedBranch"]:</strong> @GetDisplay(selectedRepository.ResolvedBranch)</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:Credential"]:</strong> @GetDisplay(selectedRepository.CredentialId)</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:Available"]:</strong> @BoolText(selectedRepository.IsAvailable)</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:Dirty"]:</strong> @BoolText(selectedRepository.IsDirty)</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:CurrentCommit"]:</strong> @GetDisplay(selectedRepository.CurrentCommit)</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:WorkingDirectorySize"]:</strong> @FormatBytes(selectedRepository.WorkingDirectorySizeBytes)</MudText>
-                        <MudText><strong>@L["GitDashboard:Labels:LastSync"]:</strong> @FormatDate(selectedRepository.LastSyncAtUtc)</MudText>
-
-                        @if (selectedRepository.State == GitRepositorySyncState.Syncing)
+                <aside class="git-surface git-surface--details">
+                    <MudPaper Elevation="0" Outlined="true">
+                        <div class="git-section-heading"><span class="git-section-heading__icon git-section-heading__icon--info"><MudIcon Icon="@Icons.Material.Filled.FactCheck" /></span><span><MudText Typo="Typo.h6">@L["GitDashboard:Sections:Details"]</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@L["GitDashboard:Sections:DetailsDescription"]</MudText></span></div>
+                        @if (_selectedRepository is not { } selectedRepository)
+                        { <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["GitDashboard:Messages:NoSelection"]</MudAlert> }
+                        else
                         {
-                            <MudStack Spacing="1">
-                                <MudText><strong>@L["GitDashboard:Labels:Progress"]:</strong> @GetProgressText(selectedRepository)</MudText>
-                                <MudProgressLinear Color="Color.Info"
-                                                   Indeterminate="@IsProgressIndeterminate(selectedRepository)"
-                                                   Value="@GetProgressValue(selectedRepository)" />
-                            </MudStack>
+                            <div class="git-detail-actions"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Sync" OnClick="@(() => SyncRepositoryAsync(selectedRepository.Id))" Disabled="@IsBusy">@L["GitDashboard:Actions:Sync"]</MudButton><MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteRepositoryAsync(selectedRepository.Id))" Disabled="@IsBusy">@L["GitDashboard:Actions:DeleteLocal"]</MudButton></div>
+                            <dl class="git-detail-list">
+                                <div><dt>@L["GitDashboard:Labels:RemoteUrl"]</dt><dd>@selectedRepository.RemoteUrl</dd></div>
+                                <div><dt>@L["GitDashboard:Labels:ResolvedLocalPath"]</dt><dd>@selectedRepository.ResolvedLocalPath</dd></div>
+                                <div><dt>@L["GitDashboard:Labels:ResolvedBranch"]</dt><dd>@GetDisplay(selectedRepository.ResolvedBranch)</dd></div>
+                                <div><dt>@L["GitDashboard:Labels:Credential"]</dt><dd>@GetDisplay(selectedRepository.CredentialId)</dd></div>
+                                <div><dt>@L["GitDashboard:Labels:Available"]</dt><dd>@BoolText(selectedRepository.IsAvailable)</dd></div>
+                                <div><dt>@L["GitDashboard:Labels:Dirty"]</dt><dd>@BoolText(selectedRepository.IsDirty)</dd></div>
+                                <div><dt>@L["GitDashboard:Labels:CurrentCommit"]</dt><dd><code>@GetDisplay(selectedRepository.CurrentCommit)</code></dd></div>
+                                <div><dt>@L["GitDashboard:Labels:LastSync"]</dt><dd>@FormatDate(selectedRepository.LastSyncAtUtc)</dd></div>
+                            </dl>
+                            @if (selectedRepository.State == GitRepositorySyncState.Syncing) { <MudProgressLinear Color="Color.Info" Indeterminate="@IsProgressIndeterminate(selectedRepository)" Value="@GetProgressValue(selectedRepository)" /><MudText Typo="Typo.caption">@GetProgressText(selectedRepository)</MudText> }
+                            @if (!string.IsNullOrWhiteSpace(selectedRepository.LastSyncMessage)) { <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">@selectedRepository.LastSyncMessage</MudAlert> }
+                            @if (!string.IsNullOrWhiteSpace(selectedRepository.LastError)) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">@selectedRepository.LastError</MudAlert> }
                         }
+                    </MudPaper>
+                </aside>
+            </div>
 
-                        @if (!string.IsNullOrWhiteSpace(selectedRepository.LastSyncMessage))
-                        {
-                            <MudAlert Severity="Severity.Info">
-                                <strong>@L["GitDashboard:Labels:LastMessage"]:</strong> @selectedRepository.LastSyncMessage
-                            </MudAlert>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(selectedRepository.LastError))
-                        {
-                            <MudAlert Severity="Severity.Error">
-                                <strong>@L["GitDashboard:Labels:LastError"]:</strong> @selectedRepository.LastError
-                            </MudAlert>
-                        }
-                    </MudStack>
-                }
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <MudPaper Class="pa-4">
-                <MudText Typo="Typo.h6" Class="mb-3">@L["GitDashboard:Sections:Credentials"]</MudText>
-
-                <MudTable T="GitCredentialInfo" Items="@_credentials" Dense="true" Hover="true">
-                    <HeaderContent>
-                        <MudTh>@L["GitDashboard:Columns:CredentialId"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Type"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:UserName"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:HasSecret"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:CredentialId"])">@context.Id</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Type"])">@context.AuthenticationType</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:UserName"])">@GetDisplay(context.UserName)</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:HasSecret"])">@BoolText(context.HasSecret)</MudTd>
-                    </RowTemplate>
-                    <NoRecordsContent>
-                        <MudText Typo="Typo.body2">@L["GitDashboard:Messages:NoCredentials"]</MudText>
-                    </NoRecordsContent>
-                </MudTable>
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <MudPaper Class="pa-4">
-                <MudText Typo="Typo.h6" Class="mb-3">@L["GitDashboard:Sections:Resolvers"]</MudText>
-
-                <MudTable T="GitCredentialResolverInfo" Items="@_resolvers" Dense="true" Hover="true">
-                    <HeaderContent>
-                        <MudTh>@L["GitDashboard:Columns:Resolver"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Type"]</MudTh>
-                        <MudTh>@L["GitDashboard:Columns:Order"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Resolver"])">@context.DisplayName</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Type"])">@context.ImplementationType</MudTd>
-                        <MudTd DataLabel="@(L["GitDashboard:Columns:Order"])">@context.Order</MudTd>
-                    </RowTemplate>
-                    <NoRecordsContent>
-                        <MudText Typo="Typo.body2">@L["GitDashboard:Messages:NoResolvers"]</MudText>
-                    </NoRecordsContent>
-                </MudTable>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
-</MudContainer>
+            <div class="git-secondary-layout">
+                <section class="git-surface"><MudPaper Elevation="0" Outlined="true"><div class="git-section-heading"><span class="git-section-heading__icon git-section-heading__icon--warning"><MudIcon Icon="@Icons.Material.Filled.Key" /></span><span><MudText Typo="Typo.h6">@L["GitDashboard:Sections:Credentials"]</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@L["GitDashboard:Sections:CredentialsDescription"]</MudText></span></div><div class="git-table"><MudTable T="GitCredentialInfo" Items="@_credentials" Dense="true" Hover="true" Elevation="0"><HeaderContent><MudTh>@L["GitDashboard:Columns:CredentialId"]</MudTh><MudTh>@L["GitDashboard:Columns:Type"]</MudTh><MudTh>@L["GitDashboard:Columns:UserName"]</MudTh><MudTh>@L["GitDashboard:Columns:HasSecret"]</MudTh></HeaderContent><RowTemplate><MudTd DataLabel="@(L["GitDashboard:Columns:CredentialId"])">@context.Id</MudTd><MudTd DataLabel="@(L["GitDashboard:Columns:Type"])">@context.AuthenticationType</MudTd><MudTd DataLabel="@(L["GitDashboard:Columns:UserName"])">@GetDisplay(context.UserName)</MudTd><MudTd DataLabel="@(L["GitDashboard:Columns:HasSecret"])">@BoolText(context.HasSecret)</MudTd></RowTemplate><NoRecordsContent><MudText Typo="Typo.body2">@L["GitDashboard:Messages:NoCredentials"]</MudText></NoRecordsContent></MudTable></div></MudPaper></section>
+                <section class="git-surface"><MudPaper Elevation="0" Outlined="true"><div class="git-section-heading"><span class="git-section-heading__icon git-section-heading__icon--tertiary"><MudIcon Icon="@Icons.Material.Filled.Extension" /></span><span><MudText Typo="Typo.h6">@L["GitDashboard:Sections:Resolvers"]</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@L["GitDashboard:Sections:ResolversDescription"]</MudText></span></div><div class="git-table"><MudTable T="GitCredentialResolverInfo" Items="@_resolvers" Dense="true" Hover="true" Elevation="0"><HeaderContent><MudTh>@L["GitDashboard:Columns:Resolver"]</MudTh><MudTh>@L["GitDashboard:Columns:Type"]</MudTh><MudTh>@L["GitDashboard:Columns:Order"]</MudTh></HeaderContent><RowTemplate><MudTd DataLabel="@(L["GitDashboard:Columns:Resolver"])">@context.DisplayName</MudTd><MudTd DataLabel="@(L["GitDashboard:Columns:Type"])">@context.ImplementationType</MudTd><MudTd DataLabel="@(L["GitDashboard:Columns:Order"])">@context.Order</MudTd></RowTemplate><NoRecordsContent><MudText Typo="Typo.body2">@L["GitDashboard:Messages:NoResolvers"]</MudText></NoRecordsContent></MudTable></div></MudPaper></section>
+            </div>
+        </div>
+    </MudContainer>
+</div>

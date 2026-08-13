@@ -11,6 +11,14 @@
     margin-bottom: 16px;
 }
 
+.page-heading {
+    min-width: 0;
+}
+
+.page-heading ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
 .provider-grid {
     margin-top: 8px;
 }

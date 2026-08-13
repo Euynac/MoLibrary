@@ -1,215 +1,172 @@
 @using Monica.DataChannel.UIDataChannel.Models
+@inject IStringLocalizer<DataChannelResource> L
+
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-3" />
-            异常统计详情
-        </MudText>
+        <div class="exception-dialog-title">
+            <span class="exception-dialog-title__icon" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" />
+            </span>
+            <div>
+                <MudText Typo="Typo.h6">@L["Exceptions:Summary:Title"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Exceptions:Summary:Subtitle"]</MudText>
+            </div>
+        </div>
     </TitleContent>
     <DialogContent>
-        @if (ExceptionSummary != null)
+        @if (ExceptionSummary is not null)
         {
-            <MudStack Spacing="4">
-                <!-- Overall statistic cards -->
-                <MudGrid Spacing="3" Class="stats-grid">
-                    <MudItem xs="12" md="6" lg="3">
-                        <MudCard Elevation="2" Class="pa-3">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large" />
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.subtitle2" Class="stats-card-title">总Channel数</MudText>
-                                    <MudText Typo="Typo.h5" Color="Color.Primary">@ExceptionSummary.TotalChannels</MudText>
-                                </MudStack>
-                            </MudStack>
-                        </MudCard>
-                    </MudItem>
-                    <MudItem xs="12" md="6" lg="3">
-                        <MudCard Elevation="2" Class="pa-3">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.subtitle2" Class="stats-card-title">异常Channel数</MudText>
-                                    <MudText Typo="Typo.h5" Color="Color.Error">@ExceptionSummary.ChannelsWithExceptions</MudText>
-                                </MudStack>
-                            </MudStack>
-                        </MudCard>
-                    </MudItem>
-                    <MudItem xs="12" md="6" lg="3">
-                        <MudCard Elevation="2" Class="pa-3">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.subtitle2" Class="stats-card-title">当前异常总数</MudText>
-                                    <MudText Typo="Typo.h5" Color="Color.Warning">@ExceptionSummary.TotalCurrentExceptions</MudText>
-                                </MudStack>
-                            </MudStack>
-                        </MudCard>
-                    </MudItem>
-                    <MudItem xs="12" md="6" lg="3">
-                        <MudCard Elevation="2" Class="pa-3">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Info" Size="Size.Large" />
-                                <MudStack Spacing="1">
-                                    <MudText Typo="Typo.subtitle2" Class="stats-card-title">历史异常总数</MudText>
-                                    <MudText Typo="Typo.h5" Color="Color.Info">@ExceptionSummary.TotalHistoricalExceptions</MudText>
-                                </MudStack>
-                            </MudStack>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+            <div class="exception-summary-dialog">
+                <section class="exception-summary-strip" aria-label="@L["Exceptions:Summary:AriaLabel"]">
+                    <article>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Console:Summary:TotalChannels"]</MudText>
+                        <MudText Typo="Typo.h5">@ExceptionSummary.TotalChannels</MudText>
+                    </article>
+                    <article>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Console:Summary:ChannelsWithExceptions"]</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Error">@ExceptionSummary.ChannelsWithExceptions</MudText>
+                    </article>
+                    <article>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Exceptions:Summary:ActiveExceptions"]</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Warning">@ExceptionSummary.TotalCurrentExceptions</MudText>
+                    </article>
+                    <article>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Console:Summary:ExceptionHistory"]</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Info">@ExceptionSummary.TotalHistoricalExceptions</MudText>
+                    </article>
+                </section>
 
-                <!-- Detailed per-channel table -->
-                @if (ExceptionSummary.ChannelSummaries.Any())
+                @if (ExceptionSummary.ChannelSummaries.Count > 0)
                 {
-                    <MudCard Elevation="2" Class="pa-3">
-                        <MudStack Spacing="3">
-                            <MudText Typo="Typo.h6" Class="exception-details-title">
-                                <MudIcon Icon="@Icons.Material.Filled.TableChart" Class="mr-2" />
-                                Channel异常详细统计
-                            </MudText>
-                            
+                    <section class="exception-directory" aria-labelledby="exception-directory-title">
+                        <header class="exception-directory__header">
+                            <div>
+                                <MudText Typo="Typo.overline" Color="Color.Error">@L["Exceptions:Summary:DirectoryEyebrow"]</MudText>
+                                <MudText Typo="Typo.h6" id="exception-directory-title">@L["Exceptions:Summary:DirectoryTitle"]</MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error">
+                                @L["Exceptions:Summary:DirectoryCount", ExceptionSummary.ChannelSummaries.Count]
+                            </MudChip>
+                        </header>
+
+                        <div class="exception-table">
                             <MudDataGrid Items="ExceptionSummary.ChannelSummaries"
-                                       Filterable="true"
-                                       SortMode="SortMode.Multiple"
-                                       Hover="true"
-                                       Dense="true"
-                                       Class="exception-table-container"
-                                       ReadOnly="true">
+                                         Filterable="true"
+                                         SortMode="SortMode.Multiple"
+                                         Hover="true"
+                                         Dense="true"
+                                         ReadOnly="true">
                                 <Columns>
-                                    <PropertyColumn Property="x => x.ChannelId" Title="Channel ID" />
-                                    <PropertyColumn Property="x => x.PipelineId" Title="Pipeline ID" />
-                                    <TemplateColumn Title="状态">
+                                    <PropertyColumn Property="item => item.ChannelId" Title="@L["Exceptions:Columns:ChannelId"]" />
+                                    <PropertyColumn Property="item => item.PipelineId" Title="@L["Exceptions:Columns:PipelineId"]" />
+                                    <TemplateColumn Title="@L["Exceptions:Columns:Status"]">
                                         <CellTemplate>
-                                            @if (context.Item.HasExceptions)
-                                            {
-                                                <MudChip Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Error">
-                                                    有异常
-                                                </MudChip>
-                                            }
-                                            else
-                                            {
-                                                <MudChip Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">
-                                                    正常
-                                                </MudChip>
-                                            }
+                                            <MudChip T="string"
+                                                     Color="@(context.Item.HasExceptions ? Color.Error : Color.Success)"
+                                                     Size="Size.Small"
+                                                     Variant="Variant.Outlined"
+                                                     Icon="@(context.Item.HasExceptions ? Icons.Material.Filled.Error : Icons.Material.Filled.CheckCircle)">
+                                                @(context.Item.HasExceptions ? L["Exceptions:States:Active"] : L["Exceptions:States:Healthy"])
+                                            </MudChip>
                                         </CellTemplate>
                                     </TemplateColumn>
-                                    <PropertyColumn Property="x => x.CurrentExceptionCount" Title="当前异常数" />
-                                    <PropertyColumn Property="x => x.TotalExceptionCount" Title="总异常数" />
-                                    <PropertyColumn Property="x => x.MaxPoolSize" Title="异常池大小" />
-                                    <TemplateColumn Title="最新异常时间">
+                                    <PropertyColumn Property="item => item.CurrentExceptionCount" Title="@L["Exceptions:Columns:CurrentCount"]" />
+                                    <PropertyColumn Property="item => item.TotalExceptionCount" Title="@L["Exceptions:Columns:HistoricalCount"]" />
+                                    <PropertyColumn Property="item => item.MaxPoolSize" Title="@L["Exceptions:Columns:PoolSize"]" />
+                                    <TemplateColumn Title="@L["Exceptions:Columns:Latest"]">
                                         <CellTemplate>
-                                            @if (context.Item.LatestException.HasValue)
-                                            {
-                                                <MudText>@context.Item.LatestException.Value.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                                            }
-                                            else
-                                            {
-                                                <MudText Class="empty-state-text">无</MudText>
-                                            }
+                                            <span class="exception-table__timestamp">
+                                                @(context.Item.LatestException?.ToString("yyyy-MM-dd HH:mm:ss") ?? L["Common:Values:None"])
+                                            </span>
                                         </CellTemplate>
                                     </TemplateColumn>
-                                    <TemplateColumn Title="异常率">
+                                    <TemplateColumn Title="@L["Exceptions:Columns:PoolUsage"]">
                                         <CellTemplate>
-                                            @{
-                                                var rate = context.Item.MaxPoolSize > 0 
-                                                    ? (double)context.Item.CurrentExceptionCount / context.Item.MaxPoolSize * 100 
-                                                    : 0;
-                                                var color = rate switch
-                                                {
-                                                    >= 80 => Color.Error,
-                                                    >= 50 => Color.Warning,
-                                                    > 0 => Color.Info,
-                                                    _ => Color.Success
-                                                };
-                                            }
-                                            <MudProgressLinear Color="@color" 
-                                                             Value="@rate" 
-                                                             Class="exception-progress mt-1" />
-                                            <MudText Typo="Typo.caption" Class="mt-1">
-                                                @($"{rate:F1}%")
-                                            </MudText>
+                                            @{ var usage = GetPoolUsage(context.Item); }
+                                            <div class="exception-usage">
+                                                <MudProgressLinear Color="@GetUsageColor(usage)" Value="@usage" />
+                                                <span>@usage.ToString("F1")%</span>
+                                            </div>
                                         </CellTemplate>
                                     </TemplateColumn>
-                                    <TemplateColumn Title="操作">
+                                    <TemplateColumn Title="@L["Common:Columns:Actions"]">
                                         <CellTemplate>
-                                            <MudStack Row="true" Spacing="1">
-                                                <MudButton Size="Size.Small" 
-                                                         Color="Color.Info" 
-                                                         OnClick="@(() => OnViewChannelExceptions?.Invoke(context.Item.ChannelId))"
-                                                         StartIcon="@Icons.Material.Filled.ErrorOutline">
-                                                    查看异常
-                                                </MudButton>
+                                            <div class="exception-table__actions">
+                                                <MudTooltip Text="@L["Channel:Actions:ViewExceptions"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                                   Color="Color.Info"
+                                                                   Size="Size.Small"
+                                                                   OnClick="@(() => ViewChannelAsync(context.Item.ChannelId))"
+                                                                   aria-label="@L["Channel:Actions:ViewExceptions"]" />
+                                                </MudTooltip>
                                                 @if (context.Item.HasExceptions)
                                                 {
-                                                    <MudButton Size="Size.Small" 
-                                                             Color="Color.Warning" 
-                                                             OnClick="@(async () => await HandleClearChannelExceptions(context.Item.ChannelId))"
-                                                             StartIcon="@Icons.Material.Filled.Clear">
-                                                        清空
-                                                    </MudButton>
+                                                    <MudTooltip Text="@L["Channel:Actions:ClearExceptions"]">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.ClearAll"
+                                                                       Color="Color.Error"
+                                                                       Size="Size.Small"
+                                                                       OnClick="@(() => ClearChannelAsync(context.Item.ChannelId))"
+                                                                       aria-label="@L["Channel:Actions:ClearExceptions"]" />
+                                                    </MudTooltip>
                                                 }
-                                            </MudStack>
+                                            </div>
                                         </CellTemplate>
                                     </TemplateColumn>
                                 </Columns>
                             </MudDataGrid>
-                        </MudStack>
-                    </MudCard>
+                        </div>
+                    </section>
                 }
                 else
                 {
-                    <MudAlert Severity="Severity.Info">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Info" />
-                            <MudText>暂无Channel数据</MudText>
-                        </MudStack>
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                        @L["Exceptions:Summary:NoChannels"]
                     </MudAlert>
                 }
-            </MudStack>
+            </div>
         }
     </DialogContent>
 </MudDialog>
 
 @code {
-    [CascadingParameter] IDialogReference? MudDialog { get; set; }
+    [Parameter, EditorRequired]
+    public DataChannelExceptionSummaryInfo ExceptionSummary { get; set; } = null!;
 
-    /// <summary>
-    /// Gets or sets the exception summary information.
-    /// </summary>
-    [Parameter] public DataChannelExceptionSummaryInfo ExceptionSummary { get; set; } = null!;
+    [Parameter]
+    public Func<string, Task>? OnViewChannelExceptions { get; set; }
 
-    /// <summary>
-    /// Gets or sets the callback used to view channel exceptions.
-    /// </summary>
-    [Parameter] public Action<string>? OnViewChannelExceptions { get; set; }
+    [Parameter]
+    public Func<string, Task>? OnClearChannelExceptions { get; set; }
 
-    /// <summary>
-    /// Gets or sets the callback used to clear channel exceptions.
-    /// </summary>
-    [Parameter] public Func<string, Task>? OnClearChannelExceptions { get; set; }
+    [Parameter]
+    public Func<Task<DataChannelExceptionSummaryInfo?>>? OnGetRefreshData { get; set; }
 
-    /// <summary>
-    /// Gets or sets the callback used to refresh exception summary data.
-    /// </summary>
-    [Parameter] public Func<Task<DataChannelExceptionSummaryInfo?>>? OnGetRefreshData { get; set; }
+    private Task ViewChannelAsync(string channelId) =>
+        OnViewChannelExceptions?.Invoke(channelId) ?? Task.CompletedTask;
 
-    private async Task HandleClearChannelExceptions(string channelId)
+    private async Task ClearChannelAsync(string channelId)
     {
-        if (OnClearChannelExceptions != null)
+        if (OnClearChannelExceptions is null)
         {
-            await OnClearChannelExceptions(channelId);
-            
-            // Refresh the dialog data.
-            if (OnGetRefreshData != null)
-            {
-                var refreshedData = await OnGetRefreshData();
-                if (refreshedData != null)
-                {
-                    ExceptionSummary = refreshedData;
-                    StateHasChanged();
-                }
-            }
+            return;
+        }
+
+        await OnClearChannelExceptions(channelId);
+        if (OnGetRefreshData is not null && await OnGetRefreshData() is { } refreshedData)
+        {
+            ExceptionSummary = refreshedData;
         }
     }
+
+    private static double GetPoolUsage(DataChannelExceptionSummaryItem item) => item.MaxPoolSize > 0
+        ? Math.Clamp((double)item.CurrentExceptionCount / item.MaxPoolSize * 100, 0, 100)
+        : 0;
+
+    private static Color GetUsageColor(double usage) => usage switch
+    {
+        >= 80 => Color.Error,
+        >= 50 => Color.Warning,
+        > 0 => Color.Info,
+        _ => Color.Success
+    };
 }

@@ -14,200 +14,84 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<UILoggingMonitorPage> Logger
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<LoggingResource> L
 
 @implements IAsyncDisposable
 
-<PageTitle>日志监控</PageTitle>
+<PageTitle>@L["Page:Title"]</PageTitle>
 
-<div class="page-container">
-    @if (_isInitializing)
-    {
-        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="page-loading-state">
-            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
-            <MudText Typo="Typo.h6" Class="mt-4">正在加载日志数据...</MudText>
-        </MudStack>
-    }
-    else
-    {
-        <div class="page-content">
-            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="tab-content">
-                <MudTabPanel Text="实时日志" Icon="@Icons.Material.Filled.Timeline">
-                    <div class="realtime-log-panel">
-                        @if (!_logFileExists)
-                        {
-                            <MudAlert Severity="Severity.Warning" Class="mb-2" Dense="true">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width: 100%">
-                                    <MudText Typo="Typo.body2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
-                                        日志文件不存在：<strong>@(_currentLogFilePath ?? "未配置")</strong>
-                                    </MudText>
-                                    <MudButton Variant="Variant.Outlined"
-                                               Color="Color.Warning"
-                                               Size="Size.Small"
-                                               StartIcon="@Icons.Material.Filled.SwapHoriz"
-                                               OnClick="OpenFileSwitchDialog">
-                                        切换日志文件
-                                    </MudButton>
-                                </MudStack>
-                            </MudAlert>
-                        }
+<div class="logging-page">
+    <MudContainer MaxWidth="MaxWidth.False" Class="logging-page__outer-container">
+        <div class="logging-page__container">
+            <header class="logging-page__header">
+                <div class="logging-page__eyebrow"><span aria-hidden="true"></span><span>@L["Page:Eyebrow"]</span></div>
+                <div class="logging-page__heading-row">
+                    <div><MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Heading"]</MudText><MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Description"]</MudText></div>
+                    <MudChip T="string" Icon="@(_isRunning ? Icons.Material.Filled.PlayArrow : Icons.Material.Filled.Pause)" Color="@(_isRunning ? Color.Success : Color.Warning)" Variant="Variant.Outlined">@L[_isRunning ? "Page:State:Running" : "Page:State:Paused"]</MudChip>
+                </div>
+            </header>
 
-                        <div class="file-info">
-                            <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
-                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        当前监听日志文件：<strong>@(_currentLogFilePath ?? "未检测到")</strong>
-                                    </MudText>
-                                    <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
-                                                   Size="Size.Small"
-                                                   Color="Color.Primary"
-                                                   OnClick="OpenFileSwitchDialog"
-                                                   title="切换日志文件"
-                                                   aria-label="切换日志文件" />
-                                </MudStack>
-                                <MudDivider Vertical="true" FlexItem="true" />
-                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.FormatListNumbered" Size="Size.Small" />
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        文件总行数：<strong>@_totalFileLineCount.ToString("N0")</strong>
-                                    </MudText>
-                                </MudStack>
-                                <MudDivider Vertical="true" FlexItem="true" />
-                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" />
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        初始加载耗时：<strong>@_initLoadTimeMs ms</strong>
-                                    </MudText>
-                                </MudStack>
-                            </MudStack>
-                        </div>
+            <section class="logging-page__pulse" aria-label="@L["Page:Summary:AriaLabel"]">
+                <article class="logging-pulse logging-pulse--primary"><MudIcon Icon="@Icons.Material.Filled.Description" /><span><small>@L["Page:Summary:File"]</small><strong title="@_currentLogFilePath">@(_currentLogFilePath is null ? L["Page:State:NotDetected"] : Path.GetFileName(_currentLogFilePath))</strong></span></article>
+                <article class="logging-pulse logging-pulse--info"><MudIcon Icon="@Icons.Material.Filled.FormatListNumbered" /><span><small>@L["Page:Summary:Lines"]</small><strong>@_totalFileLineCount.ToString("N0")</strong></span></article>
+                <article class="logging-pulse logging-pulse--tertiary"><MudIcon Icon="@Icons.Material.Filled.Memory" /><span><small>@L["Page:Summary:Buffer"]</small><strong>@_currentLines.Count.ToString("N0")</strong></span></article>
+                <article class="logging-pulse logging-pulse--success"><MudIcon Icon="@Icons.Material.Filled.Speed" /><span><small>@L["Page:Summary:LoadTime"]</small><strong>@L["Page:Summary:Milliseconds", _initLoadTimeMs]</strong></span></article>
+            </section>
 
-                        <div class="toolbar-section">
-                            <LoggingToolbar IsRunning="@_isRunning"
-                                            AutoScroll="@_autoScroll"
-                                            AutoScrollChanged="OnAutoScrollChanged"
-                                            SelectedLineLimit="@_selectedLineLimit"
-                                            PresetLineCounts="@LoggingService.UIOption.PresetLineCounts"
-                                            LineLimitChanged="OnLineLimitChanged"
-                                            StartRequested="StartTailAsync"
-                                            PauseRequested="PauseTailAsync"
-                                            RefreshRequested="ReloadSnapshotAsync"
-                                            ExportRequested="ExportBuffer" />
-                        </div>
-
-                        <div class="filter-section">
-                            <LogFilterPanel Keyword="@_filterKeyword"
-                                            OnlyCapture="@_onlyCapture"
-                                            IsApplying="@_isApplyingFilter"
-                                            KeywordChanged="OnKeywordChanged"
-                                            OnlyCaptureChanged="OnOnlyCaptureChanged"
-                                            ApplyRequested="ApplyFilterAsync"
-                                            ClearRequested="ClearFilterAsync" />
-                        </div>
-
-                        <div class="viewer-section">
-                            @if (_isContextMode)
-                            {
-                                <MudAlert Severity="Severity.Info" Elevation="1" Class="mb-2" NoIcon="true">
-                                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                                        <div style="display: flex; align-items: center;">
-                                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
-                                            <span>正在查看行号 <strong>#@_contextTargetLine</strong> 附近的上下文</span>
-                                        </div>
-                                        <MudButton OnClick="ExitContextMode"
-                                                   Variant="Variant.Text"
-                                                   Color="Color.Primary"
-                                                   StartIcon="@Icons.Material.Filled.ArrowBack">
-                                            返回
-                                        </MudButton>
-                                    </div>
-                                </MudAlert>
-                            }
-
-                            <LogViewer @ref="_logViewerRef"
-                                       Lines="@_currentLines"
-                                       Version="@_currentVersion"
-                                       AutoScroll="@_autoScroll"
-                                       Filter="@_snapshot?.Filter"
-                                       OnLineClicked="HandleLineClick"
-                                       OnShowContext="HandleShowContext"
-                                       OnApplyFilter="HandleApplyFilter"
-                                       LoadMoreRequested="HandleLoadMoreAsync" />
-                        </div>
-                    </div>
-                </MudTabPanel>
-
-                <MudTabPanel Text="日志文件" Icon="@Icons.Material.Filled.Folder">
-                    <div class="file-table-panel">
-                        <LogFileTable Files="@_logFiles"
-                                      IsLoading="@_filesLoading"
-                                      CurrentDirectory="@_logDirectory"
-                                      RefreshRequested="RefreshFilesAsync"
-                                      DownloadRequested="DownloadFileAsync" />
-                    </div>
-                </MudTabPanel>
-            </MudTabs>
+            @if (_isInitializing)
+            {
+                <div class="logging-page__loading" role="status"><MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" /><MudText Typo="Typo.h6">@L["Page:State:Loading"]</MudText></div>
+            }
+            else
+            {
+                <div class="logging-page__workspace">
+                    <MudTabs Elevation="0" Rounded="false" TabPanelsClass="logging-page__tab-content">
+                        <MudTabPanel Text="@L["Page:Tabs:Realtime"]" Icon="@Icons.Material.Filled.Timeline">
+                            <div class="realtime-log-panel">
+                                @if (!_logFileExists)
+                                {
+                                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                        <div class="logging-alert-row"><span>@L["Page:State:FileMissing", _currentLogFilePath ?? L["Page:State:NotConfigured"]]</span><MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" StartIcon="@Icons.Material.Filled.SwapHoriz" OnClick="OpenFileSwitchDialog">@L["Page:Actions:SwitchFile"]</MudButton></div>
+                                    </MudAlert>
+                                }
+                                <div class="logging-command-row">
+                                    <LoggingToolbar IsRunning="@_isRunning" AutoScroll="@_autoScroll" AutoScrollChanged="OnAutoScrollChanged" SelectedLineLimit="@_selectedLineLimit" PresetLineCounts="@LoggingService.UIOption.PresetLineCounts" LineLimitChanged="OnLineLimitChanged" StartRequested="StartTailAsync" PauseRequested="PauseTailAsync" RefreshRequested="ReloadSnapshotAsync" ExportRequested="ExportBuffer" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz" Color="Color.Primary" OnClick="OpenFileSwitchDialog" title="@L["Page:Actions:SwitchFile"]" aria-label="@L["Page:Actions:SwitchFile"]" />
+                                </div>
+                                <LogFilterPanel Keyword="@_filterKeyword" OnlyCapture="@_onlyCapture" IsApplying="@_isApplyingFilter" KeywordChanged="OnKeywordChanged" OnlyCaptureChanged="OnOnlyCaptureChanged" ApplyRequested="ApplyFilterAsync" ClearRequested="ClearFilterAsync" />
+                                <div class="viewer-section">
+                                    @if (_isContextMode && _contextTargetLine is { } contextTargetLine)
+                                    {
+                                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true"><div class="logging-alert-row"><span>@L["Page:Context:Viewing", contextTargetLine]</span><MudButton OnClick="ExitContextMode" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack">@L["Page:Actions:Back"]</MudButton></div></MudAlert>
+                                    }
+                                    <LogViewer @ref="_logViewerRef" Lines="@_currentLines" Version="@_currentVersion" AutoScroll="@_autoScroll" Filter="@_snapshot?.Filter" OnLineClicked="HandleLineClick" OnShowContext="HandleShowContext" OnApplyFilter="HandleApplyFilter" LoadMoreRequested="HandleLoadMoreAsync" />
+                                </div>
+                            </div>
+                        </MudTabPanel>
+                        <MudTabPanel Text="@L["Page:Tabs:Files"]" Icon="@Icons.Material.Filled.Folder"><div class="file-table-panel"><LogFileTable Files="@_logFiles" IsLoading="@_filesLoading" CurrentDirectory="@_logDirectory" RefreshRequested="RefreshFilesAsync" DownloadRequested="DownloadFileAsync" /></div></MudTabPanel>
+                    </MudTabs>
+                </div>
+            }
         </div>
-    }
+    </MudContainer>
 </div>
 
-@* File Switch Dialog *@
 <MudDialog @bind-Visible="_fileSwitchDialogVisible">
-    <TitleContent>
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" />
-            <MudText>选择日志文件</MudText>
-        </MudStack>
-    </TitleContent>
+    <TitleContent><MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2"><MudIcon Icon="@Icons.Material.Filled.SwapHoriz" /><MudText>@L["Page:FileDialog:Title"]</MudText></MudStack></TitleContent>
     <DialogContent>
-        @if (_filesLoading)
-        {
-            <MudStack AlignItems="AlignItems.Center" Class="pa-4">
-                <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">正在加载文件列表...</MudText>
-            </MudStack>
-        }
-        else if (_logFiles.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info" Dense="true">
-                未找到任何日志文件
-            </MudAlert>
-        }
+        @if (_filesLoading) { <div class="logging-dialog-state"><MudProgressCircular Indeterminate="true" Size="Size.Medium" /><MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:FileDialog:Loading"]</MudText></div> }
+        else if (_logFiles.Count == 0) { <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">@L["Page:FileDialog:Empty"]</MudAlert> }
         else
         {
             <MudList T="LogFileDescriptor" @bind-SelectedValue="_selectedSwitchFile" Dense="true" Class="file-list">
                 @foreach (var file in _logFiles)
                 {
-                    <MudListItem T="LogFileDescriptor" Value="file" Class="@(file == _selectedSwitchFile ? "selected-file" : "")">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width: 100%">
-                            <MudStack Spacing="0">
-                                <MudText Typo="Typo.body2">@file.FileName</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@file.RelativePath</MudText>
-                            </MudStack>
-                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
-                                    @FormatFileSize(file.Size)
-                                </MudChip>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @file.LastModified.ToString("MM-dd HH:mm")
-                                </MudText>
-                            </MudStack>
-                        </MudStack>
-                    </MudListItem>
+                    <MudListItem T="LogFileDescriptor" Value="file" Class="@(file == _selectedSwitchFile ? "selected-file" : "")"><div class="logging-file-row"><span><MudText Typo="Typo.body2">@file.FileName</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">@file.RelativePath</MudText></span><span><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@FormatFileSize(file.Size)</MudChip><MudText Typo="Typo.caption" Color="Color.Secondary">@file.LastModified.ToString("MM-dd HH:mm")</MudText></span></div></MudListItem>
                 }
             </MudList>
         }
     </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CloseFileSwitchDialog">取消</MudButton>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="SwitchToSelectedFile"
-                   Disabled="@(_selectedSwitchFile == null)">
-            确定
-        </MudButton>
-    </DialogActions>
+    <DialogActions><MudButton OnClick="CloseFileSwitchDialog">@L["Page:Actions:Cancel"]</MudButton><MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SwitchToSelectedFile" Disabled="@(_selectedSwitchFile == null)">@L["Page:Actions:Confirm"]</MudButton></DialogActions>
 </MudDialog>
 
 @code {
@@ -233,6 +117,7 @@
 
     private LoggingSubscription? _subscription;
     private CancellationTokenSource? _subscriptionCts;
+    private Task? _subscriptionTask;
 
     // Context mode state
     private bool _isContextMode;
@@ -247,7 +132,9 @@
     private long _initLoadTimeMs;
 
     private IJSObjectReference? _jsModule;
+    private readonly SemaphoreSlim _jsModuleGate = new(1, 1);
     private LogViewer? _logViewerRef;
+    private bool _disposed;
 
     private IReadOnlyList<LogLineViewModel> _currentLines => _snapshot?.Lines ?? Array.Empty<LogLineViewModel>();
 
@@ -266,20 +153,27 @@
 
             _subscription = LoggingService.Subscribe();
             _subscriptionCts = new CancellationTokenSource();
-            _ = Task.Run(() => ListenUpdatesAsync(_subscription.Reader, _subscriptionCts.Token));
+            _subscriptionTask = ListenUpdatesAsync(_subscription.Reader, _subscriptionCts.Token);
 
             await InitializeSnapshotAsync();
             await RefreshFilesAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "初始化日志页面失败");
-            Snackbar.Add($"初始化失败: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Failed to initialize the logging monitor page.");
+            if (!_disposed)
+            {
+                Snackbar.Add(L["Page:Messages:InitializeFailed", ex.Message], Severity.Error);
+            }
 
             // Clean up the subscription created during initialization.
             if (_subscriptionCts != null)
             {
                 await _subscriptionCts.CancelAsync();
+                if (_subscriptionTask is not null)
+                {
+                    try { await _subscriptionTask; } catch (OperationCanceledException) { }
+                }
                 _subscriptionCts.Dispose();
                 _subscriptionCts = null;
             }
@@ -292,6 +186,10 @@
         finally
         {
             _isInitializing = false;
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
@@ -306,9 +204,11 @@
 
         if (result.IsFailed(out var error, out var snapshot))
         {
-            Snackbar.Add(error.Message ?? "初始化日志失败", Severity.Error);
+            if (!_disposed) Snackbar.Add(error.Message ?? L["Page:Messages:SnapshotInitializeFailed"].Value, Severity.Error);
             return;
         }
+
+        if (_disposed) return;
 
         _snapshot = snapshot;
         _isRunning = LoggingService.IsRunning;
@@ -323,6 +223,7 @@
         {
             await foreach (var snapshot in reader.ReadAllAsync(token))
             {
+                if (_disposed) return;
                 _snapshot = snapshot;
                 await InvokeAsync(StateHasChanged);
             }
@@ -367,12 +268,13 @@
         var res = await LoggingService.StartAsync();
         if (res.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? "启动日志监听失败", Severity.Error);
+            if (!_disposed) Snackbar.Add(error.Message ?? L["Page:Messages:StartFailed"].Value, Severity.Error);
             return;
         }
 
+        if (_disposed) return;
         _isRunning = true;
-        Snackbar.Add("日志监听已启动", Severity.Success);
+        Snackbar.Add(L["Page:Messages:Started"], Severity.Success);
     }
 
     private async Task PauseTailAsync()
@@ -380,12 +282,13 @@
         var res = await LoggingService.PauseAsync();
         if (res.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? "暂停日志监听失败", Severity.Error);
+            if (!_disposed) Snackbar.Add(error.Message ?? L["Page:Messages:PauseFailed"].Value, Severity.Error);
             return;
         }
 
+        if (_disposed) return;
         _isRunning = false;
-        Snackbar.Add("日志监听已暂停", Severity.Info);
+        Snackbar.Add(L["Page:Messages:Paused"], Severity.Info);
     }
 
     private async Task ReloadSnapshotAsync()
@@ -399,7 +302,7 @@
         finally
         {
             _isInitializing = false;
-            StateHasChanged();
+            if (!_disposed) StateHasChanged();
         }
     }
 
@@ -409,7 +312,7 @@
         var res = await LoggingService.UpdateFilterAsync(_filterKeyword, _onlyCapture);
         if (res.IsFailed(out var error, out var snapshot))
         {
-            Snackbar.Add(error.Message ?? "更新筛选器失败", Severity.Error);
+            if (!_disposed) Snackbar.Add(error.Message ?? L["Page:Messages:FilterFailed"].Value, Severity.Error);
         }
         else
         {
@@ -417,7 +320,7 @@
         }
 
         _isApplyingFilter = false;
-        StateHasChanged();
+        if (!_disposed) StateHasChanged();
     }
 
     private async Task ClearFilterAsync()
@@ -428,7 +331,7 @@
 
     private Task HandleLineClick(LogLineViewModel line)
     {
-        Logger.LogDebug("用户查看日志行: {Header}", line.Header);
+        Logger.LogDebug("User inspected log line: {Header}", line.Header);
         return Task.CompletedTask;
     }
 
@@ -440,7 +343,7 @@
         var res = await LoggingService.ListFilesAsync();
         if (res.IsFailed(out var error, out var files))
         {
-            Snackbar.Add(error.Message ?? "获取日志文件失败", Severity.Error);
+            if (!_disposed) Snackbar.Add(error.Message ?? L["Page:Messages:FilesFailed"].Value, Severity.Error);
         }
         else
         {
@@ -448,7 +351,7 @@
         }
 
         _filesLoading = false;
-        StateHasChanged();
+        if (!_disposed) StateHasChanged();
     }
 
     private async Task DownloadFileAsync(string relativePath)
@@ -459,8 +362,8 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "下载日志文件失败: {RelativePath}", relativePath);
-            Snackbar.Add($"下载失败: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Failed to download log file: {RelativePath}", relativePath);
+            if (!_disposed) Snackbar.Add(L["Page:Messages:DownloadFailed", ex.Message], Severity.Error);
         }
     }
 
@@ -472,8 +375,8 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "导出临时日志失败");
-            Snackbar.Add($"导出失败: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Failed to export the current log buffer.");
+            if (!_disposed) Snackbar.Add(L["Page:Messages:ExportFailed", ex.Message], Severity.Error);
         }
     }
 
@@ -483,7 +386,7 @@
 
         if (!line.AbsoluteLineNumber.HasValue)
         {
-            Snackbar.Add("无法显示上下文：行号信息不可用", Severity.Warning);
+            Snackbar.Add(L["Page:Messages:ContextUnavailable"], Severity.Warning);
             return;
         }
 
@@ -512,9 +415,11 @@
 
             if (contextResult.IsFailed(out var error, out var context))
             {
-                Snackbar.Add(error.Message ?? "读取上下文失败", Severity.Error);
+                if (!_disposed) Snackbar.Add(error.Message ?? L["Page:Messages:ContextReadFailed"].Value, Severity.Error);
                 return;
             }
+
+            if (_disposed) return;
 
             // Build a temporary snapshot for the context view.
             _snapshot = new ScreenLogSnapshot
@@ -529,17 +434,20 @@
             _isContextMode = true;
             _contextTargetLine = line.AbsoluteLineNumber.Value;
 
-            Snackbar.Add($"已加载行号 #{line.AbsoluteLineNumber.Value} 附近的上下文", Severity.Info);
+            Snackbar.Add(L["Page:Messages:ContextLoaded", line.AbsoluteLineNumber.Value], Severity.Info);
             StateHasChanged();
 
             // Wait for the UI to render before centering the target line.
-            await Task.Delay(100);
+            await Task.Delay(100, _subscriptionCts?.Token ?? CancellationToken.None);
             await ScrollToTargetLineAsync();
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "显示上下文失败");
-            Snackbar.Add($"显示上下文失败: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Failed to show log context.");
+            if (!_disposed) Snackbar.Add(L["Page:Messages:ContextFailed", ex.Message], Severity.Error);
         }
     }
 
@@ -583,13 +491,13 @@
         _contextTargetLine = null;
         _savedSnapshot = null;
 
-        Snackbar.Add("已返回实时日志视图", Severity.Info);
+        Snackbar.Add(L["Page:Messages:ReturnedToRealtime"], Severity.Info);
         StateHasChanged();
 
         // Restore the previous line position after the realtime view is rendered again.
         if (_savedLineIndex.HasValue)
         {
-            await Task.Delay(100); // Wait for the realtime view to render.
+            await Task.Delay(100, _subscriptionCts?.Token ?? CancellationToken.None);
             if (_logViewerRef != null)
             {
                 await _logViewerRef.ScrollToLineAsync(_savedLineIndex.Value);
@@ -619,51 +527,67 @@
             {
                 if (loadedCount == 0)
                 {
-                    Snackbar.Add("已到达日志文件开头", Severity.Info);
+                    Snackbar.Add(L["Page:Messages:FileStartReached"], Severity.Info);
                 }
                 else
                 {
-                    Snackbar.Add(error.Message ?? "加载更多日志失败", Severity.Warning);
+                    Snackbar.Add(error.Message ?? L["Page:Messages:LoadMoreFailed"].Value, Severity.Warning);
                 }
                 return 0;
             }
 
             if (loadedCount == 0)
             {
-                Snackbar.Add("已到达日志文件开头", Severity.Info);
+                Snackbar.Add(L["Page:Messages:FileStartReached"], Severity.Info);
             }
             else
             {
-                Logger.LogDebug("已加载 {Count} 行历史日志", loadedCount);
+                Logger.LogDebug("Loaded {Count} historical log lines.", loadedCount);
             }
 
             return loadedCount;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "加载更多日志时发生异常");
-            Snackbar.Add($"加载失败: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Failed while loading additional log lines.");
+            if (!_disposed) Snackbar.Add(L["Page:Messages:LoadFailed", ex.Message], Severity.Error);
             return 0;
         }
     }
 
     private async Task TriggerBrowserDownloadAsync(string relativeUrl)
     {
-        var jsModule = await GetJsModuleAsync();
-        var downloadUrl = NavigationManager.ToAbsoluteUri(relativeUrl).ToString();
-        await jsModule.InvokeVoidAsync("downloadFile", downloadUrl);
-    }
-
-    private async Task<IJSObjectReference> GetJsModuleAsync()
-    {
-        if (_jsModule is null)
+        var token = _subscriptionCts?.Token ?? CancellationToken.None;
+        await _jsModuleGate.WaitAsync(token);
+        IJSObjectReference? importedModule = null;
+        try
         {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/Monica.Framework.UI/js/logging-ui.js");
-        }
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
-        return _jsModule;
+            if (_jsModule is null)
+            {
+                importedModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import",
+                    "./_content/Monica.Framework.UI/js/logging-ui.js");
+
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _jsModule = importedModule;
+                importedModule = null;
+            }
+
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var downloadUrl = NavigationManager.ToAbsoluteUri(relativeUrl).ToString();
+            await _jsModule.InvokeVoidAsync("downloadFile", token, downloadUrl);
+        }
+        finally
+        {
+            await DisposeJsModuleAsync(importedModule);
+            _jsModuleGate.Release();
+        }
     }
 
     private static string BuildFileDownloadUrl(string relativePath)
@@ -706,9 +630,11 @@
             var result = await LoggingService.SwitchToFileAsync(selectedFile.RelativePath, _selectedLineLimit);
             if (result.IsFailed(out var error, out var snapshot))
             {
-                Snackbar.Add(error.Message ?? "切换日志文件失败", Severity.Error);
+                if (!_disposed) Snackbar.Add(error.Message ?? L["Page:Messages:SwitchFailed"].Value, Severity.Error);
                 return;
             }
+
+            if (_disposed) return;
 
             _snapshot = snapshot;
             _currentLogFilePath = LoggingService.CurrentLogFilePath;
@@ -716,18 +642,18 @@
             _totalFileLineCount = LoggingService.TotalFileLineCount;
             _isRunning = false;
 
-            Snackbar.Add($"已切换到: {selectedFile.FileName}", Severity.Success);
+            Snackbar.Add(L["Page:Messages:Switched", selectedFile.FileName], Severity.Success);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "切换日志文件失败");
-            Snackbar.Add($"切换失败: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Failed to switch the active log file.");
+            if (!_disposed) Snackbar.Add(L["Page:Messages:SwitchFailed", ex.Message], Severity.Error);
         }
         finally
         {
             _isInitializing = false;
             _selectedSwitchFile = null;
-            StateHasChanged();
+            if (!_disposed) StateHasChanged();
         }
     }
 
@@ -746,10 +672,17 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         if (_subscriptionCts != null)
         {
-            _subscriptionCts.Cancel();
-            _subscriptionCts.Dispose();
+            await _subscriptionCts.CancelAsync();
+        }
+
+        if (_subscriptionTask is not null)
+        {
+            try { await _subscriptionTask; } catch (OperationCanceledException) { }
         }
 
         if (_subscription is not null)
@@ -757,15 +690,38 @@
             await _subscription.DisposeAsync();
         }
 
-        if (_jsModule is not null)
+        await _jsModuleGate.WaitAsync();
+        try
         {
-            try
-            {
-                await _jsModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
+            var module = Interlocked.Exchange(ref _jsModule, null);
+            await DisposeJsModuleAsync(module);
+        }
+        finally { _jsModuleGate.Release(); }
+
+        _subscriptionCts?.Dispose();
+        _subscriptionCts = null;
+        _jsModuleGate.Dispose();
+    }
+
+    private static async ValueTask DisposeJsModuleAsync(IJSObjectReference? module)
+    {
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
         }
     }
 }

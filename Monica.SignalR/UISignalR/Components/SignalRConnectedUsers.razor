@@ -1,10 +1,9 @@
 @using Monica.SignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<!-- Connected user -->
-<MudPaper Class="pa-4 mb-4" Elevation="2">
-    <div class="d-flex justify-space-between align-center mb-3">
-        <MudText Typo="Typo.h5">@L["UISignalR:ConnectedUsers:Title", ConnectedUsers.Count]</MudText>
+<MudPaper Class="signalr-connected-users" Elevation="0">
+    <div class="signalr-component-header">
+        <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.Group" Color="Color.Info" /><MudText Typo="Typo.h6">@L["UISignalR:ConnectedUsers:Title", ConnectedUsers.Count]</MudText></div>
         <MudButton OnClick="OnRefreshClicked"
                    StartIcon="@Icons.Material.Filled.Refresh"
                    Color="Color.Primary"
@@ -35,7 +34,7 @@
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="@L["UISignalR:ConnectedUsers:Columns:ConnectionId"]">
-                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                    <MudText Typo="Typo.body2" Class="diagnostic-value">
                         @context.ConnectionId.Substring(0, Math.Min(8, context.ConnectionId.Length))...
                     </MudText>
                 </MudTd>
@@ -45,7 +44,7 @@
                     </MudText>
                 </MudTd>
                 <MudTd DataLabel="@L["UISignalR:ConnectedUsers:Columns:UserId"]">
-                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                    <MudText Typo="Typo.body2" Class="diagnostic-value">
                         @(string.IsNullOrEmpty(context.UserId) ? L["UISignalR:Common:None"].Value : context.UserId)
                     </MudText>
                 </MudTd>
@@ -91,7 +90,7 @@
                         <tbody>
                             <tr>
                                 <td><strong>@L["UISignalR:ConnectedUsers:Columns:ConnectionId"]</strong></td>
-                                <td style="font-family: monospace;">@_selectedUser.ConnectionId</td>
+                                <td class="diagnostic-value">@_selectedUser.ConnectionId</td>
                             </tr>
                             <tr>
                                 <td><strong>@L["UISignalR:ConnectedUsers:Columns:UserName"]</strong></td>
@@ -99,7 +98,7 @@
                             </tr>
                             <tr>
                                 <td><strong>@L["UISignalR:ConnectedUsers:Columns:UserId"]</strong></td>
-                                <td style="font-family: monospace;">@(string.IsNullOrEmpty(_selectedUser.UserId) ? L["UISignalR:Common:None"].Value : _selectedUser.UserId)</td>
+                                <td class="diagnostic-value">@(string.IsNullOrEmpty(_selectedUser.UserId) ? L["UISignalR:Common:None"].Value : _selectedUser.UserId)</td>
                             </tr>
                             <tr>
                                 <td><strong>@L["UISignalR:ConnectedUsers:Columns:AuthenticationStatus"]</strong></td>
@@ -129,7 +128,8 @@
                     }
                     else
                     {
-                        <MudSimpleTable Dense="true" Hover="true" Style="max-height: 400px; overflow-y: auto;">
+                        <div class="claims-table-scroll">
+                        <MudSimpleTable Dense="true" Hover="true">
                             <thead>
                                 <tr>
                                     <th>@L["UISignalR:ConnectedUsers:ClaimType"]</th>
@@ -140,12 +140,13 @@
                                 @foreach (var claim in _selectedUser.Claims)
                                 {
                                     <tr>
-                                        <td style="font-family: monospace; word-break: break-all;">@claim.Key</td>
-                                        <td style="word-break: break-all;">@claim.Value</td>
+                                        <td class="diagnostic-value break-value">@claim.Key</td>
+                                        <td class="break-value">@claim.Value</td>
                                     </tr>
                                 }
                             </tbody>
                         </MudSimpleTable>
+                        </div>
                     }
                 </MudItem>
             </MudGrid>

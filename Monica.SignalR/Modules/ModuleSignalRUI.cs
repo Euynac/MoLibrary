@@ -50,8 +50,7 @@ public class ModuleSignalRUI : MonicaModule<ModuleSignalRUIOption>, IUIModule
     public override void ConfigureServices(ModuleContext<ModuleSignalRUIOption> context)
     {
         var services = context.Services;
-        services.AddScoped<SignalRDebugPageState>();
-        services.AddScoped<SignalRDebugJsClient>();
+        services.AddScoped<SignalRDebugPageStateFactory>();
         services.AddScoped<SignalRInvocationArgumentParser>();
     }
 

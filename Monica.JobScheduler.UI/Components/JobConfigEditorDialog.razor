@@ -5,6 +5,7 @@
 
 <MudDialog>
     <DialogContent>
+        <div class="job-config-editor">
         @if (_isLoading)
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
@@ -60,7 +61,7 @@
                                          Label="@L["Dialogs:JobConfigEditor:TimeoutHours"]"
                                          Variant="Variant.Outlined"
                                          Min="0"
-                                         Style="flex: 1;"
+                                         Class="job-config-editor__timeout-field"
                                          Required="true"
                                          RequiredError="@L["Dialogs:JobConfigEditor:TimeoutRequired"]" />
                         <MudNumericField @bind-Value="@_timeoutMinutes"
@@ -69,7 +70,7 @@
                                          Variant="Variant.Outlined"
                                          Min="0"
                                          Max="59"
-                                         Style="flex: 1;" />
+                                         Class="job-config-editor__timeout-field" />
                     </MudStack>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                         @L["Dialogs:JobConfigEditor:CurrentTimeout", _timeoutHours, _timeoutMinutes]
@@ -82,7 +83,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.Info"
                                      Size="Size.Small"
                                      Color="Color.Info"
-                                     Style="font-size: 16px;" />
+                                     Class="job-config-editor__info-icon" />
                         </MudTooltip>
                     </MudStack>
 
@@ -135,6 +136,7 @@
                 </MudStack>
             </MudForm>
         }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>

@@ -23,6 +23,7 @@ public static class ModuleExecutionTimingUIBuilderExtensions
         {
             var registration = builder.AddModule<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption>(action);
             registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<ProfilingResource>()
                 .AddResource<ExecutionTimingResource>();
             registration.Require<ModuleShellUI, ModuleShellUIOption>()
                 .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIExecutionTimingPage, ExecutionTimingResource>(
@@ -50,7 +51,7 @@ public class ModuleExecutionTimingUI : MonicaModule<ModuleExecutionTimingUIOptio
 
     public override void ConfigureServices(ModuleContext<ModuleExecutionTimingUIOption> context)
     {
-        context.Services.AddScoped<ExecutionTimingPageState>();
+        context.Services.AddScoped<ExecutionTimingPageStateFactory>();
     }
 }
 

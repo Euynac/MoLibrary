@@ -1,7 +1,14 @@
 {
-  "Pages": {
-    "RuntimeMetrics": {
-      "Title": "运行时指标"
-    }
-  }
+  "Pages": { "RuntimeMetrics": { "Title": "运行时指标" } },
+  "Page": {
+    "Eyebrow": "运行时插桩",
+    "Subtitle": "在持续采样视图中跟踪进程压力与托管运行时证据。",
+    "Status": { "Live": "实时采样", "Paused": "采样已暂停" },
+    "Actions": { "AutoRefresh": "自动刷新", "Refresh": "刷新证据" },
+    "Messages": { "RefreshFailed": "刷新运行时指标失败。" }
+  },
+  "Vitals": { "AriaLabel": "当前运行时关键指标", "Cpu": "CPU", "WorkingSet": "工作集", "Threads": "线程", "GcTime": "GC 时间", "AllocationRate": "分配速率", "GcHeap": "GC 堆", "Delta": "较上次 {0}" },
+  "Trend": { "Eyebrow": "实时窗口", "Title": "运行时压力趋势", "ChartAriaLabel": "CPU 与工作集趋势", "Waiting": "等待更多样本以绘制趋势。", "Metrics": { "Cpu": "当前 CPU", "Memory": "当前工作集" }, "Series": { "Cpu": "CPU", "WorkingSet": "工作集" } },
+  "Recent": { "Eyebrow": "采样证据", "Title": "最近观测", "Count": "{0} 个样本", "Empty": "尚未采集运行时观测。", "Columns": { "Time": "采集时间", "Cpu": "CPU", "WorkingSet": "工作集", "GcHeap": "GC 堆", "Threads": "线程", "GcTime": "GC 时间", "AllocationRate": "分配速率" } },
+  "Common": { "LoadingValue": "采集中…" }
 }

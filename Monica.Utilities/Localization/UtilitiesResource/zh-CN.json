@@ -64,6 +64,16 @@
       "Tcp": "TCP 端口",
       "Http": "HTTP",
       "Https": "HTTPS"
+    },
+    "Summary": {
+      "PingSucceeded": "对 {0} 的 Ping 已由 {1} 响应，耗时 {2} 毫秒。",
+      "PingFailed": "对 {0} 的 Ping 失败：{1}。",
+      "TcpSucceeded": "已成功连接 TCP 端点 {0}，耗时 {1} 毫秒。",
+      "TcpFailed": "连接 TCP 端点 {0} 失败：{1}。",
+      "HttpSucceeded": "对 {0} 的 HTTP 探测返回 {1}，耗时 {2} 毫秒。",
+      "HttpFailed": "对 {0} 的 HTTP 探测失败：{1}。",
+      "HttpResponse": "响应",
+      "UnknownError": "未知错误"
     }
   },
   "TextJson": {
@@ -91,6 +101,14 @@
       "DecodeEscapedText": "解码转义文本",
       "FormatJson": "格式化 JSON",
       "MinifyJson": "压缩 JSON"
+    },
+    "Summary": {
+      "Decoded": "已解码 {0} 层转义内容。",
+      "DecodeUnchanged": "未发现可解码的 JSON 风格转义序列，输出保持不变。",
+      "Formatted": "已将 JSON 格式化为可读的 Unicode 内容。",
+      "FormattedWithLayers": "移除 {0} 层 JSON 字符串包装后，已将内容格式化为可读的 Unicode JSON。",
+      "Minified": "已将 JSON 压缩为可读的 Unicode 内容。",
+      "MinifiedWithLayers": "移除 {0} 层 JSON 字符串包装后，已将内容压缩为可读的 Unicode JSON。"
     }
   },
   "Messages": {

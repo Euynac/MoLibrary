@@ -20,13 +20,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private IJSObjectReference? _module;
-    private bool _disposed;
-
-    private async ValueTask<IJSObjectReference> GetModuleAsync()
-    {
-        return _module ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", MODULE_PATH);
-    }
+    private readonly JsModuleSession _module = new(jsRuntime, MODULE_PATH);
 
     private static string PrefixKey(string key) => $"{KEY_PREFIX}{key}";
 
@@ -34,8 +28,10 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
     {
         try
         {
-            var module = await GetModuleAsync();
-            var json = await module.InvokeAsync<string?>("getItem", GetStorageTypeName(storageType), PrefixKey(key));
+            var json = await _module.InvokeAsync<string?>(
+                "getItem",
+                GetStorageTypeName(storageType),
+                PrefixKey(key));
 
             if (string.IsNullOrEmpty(json))
                 return defaultValue;
@@ -77,8 +73,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
 
         try
         {
-            var module = await GetModuleAsync();
-            var failureCode = await module.InvokeAsync<string?>(
+            var failureCode = await _module.InvokeAsync<string?>(
                 "trySetItem",
                 GetStorageTypeName(storageType),
                 PrefixKey(key),
@@ -110,8 +105,10 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
     {
         try
         {
-            var module = await GetModuleAsync();
-            await module.InvokeVoidAsync("removeItem", GetStorageTypeName(storageType), PrefixKey(key));
+            await _module.InvokeVoidAsync(
+                "removeItem",
+                GetStorageTypeName(storageType),
+                PrefixKey(key));
         }
         catch (JSDisconnectedException)
         {
@@ -127,9 +124,11 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
     {
         try
         {
-            var module = await GetModuleAsync();
             var prefix = $"{KEY_PREFIX}{category}:";
-            var keys = await module.InvokeAsync<string[]>("getKeys", GetStorageTypeName(storageType), prefix);
+            var keys = await _module.InvokeAsync<string[]>(
+                "getKeys",
+                GetStorageTypeName(storageType),
+                prefix);
             return keys;
         }
         catch (JSDisconnectedException)
@@ -147,9 +146,11 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
     {
         try
         {
-            var module = await GetModuleAsync();
             var prefix = $"{KEY_PREFIX}{category}:";
-            return await module.InvokeAsync<int>("clearByPrefix", GetStorageTypeName(storageType), prefix);
+            return await _module.InvokeAsync<int>(
+                "clearByPrefix",
+                GetStorageTypeName(storageType),
+                prefix);
         }
         catch (JSDisconnectedException)
         {
@@ -175,21 +176,7 @@ public class BrowserStorage(IJSRuntime jsRuntime, ILogger<BrowserStorage> logger
 
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
-        _disposed = true;
-
-        if (_module != null)
-        {
-            try
-            {
-                await _module.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Circuit already disconnected
-            }
-        }
-
+        await _module.DisposeAsync();
         GC.SuppressFinalize(this);
     }
 }

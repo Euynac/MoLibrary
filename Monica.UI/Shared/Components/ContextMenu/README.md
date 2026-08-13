@@ -437,8 +437,6 @@ MudDataGrid 提供了内置的 `RowContextMenuClick` 参数，这是集成右键
 | `Visible` | `bool` | `false` | 是否显示菜单 |
 | `InitialX` | `double` | `0` | 初始X坐标 |
 | `InitialY` | `double` | `0` | 初始Y坐标 |
-| `ZIndex` | `int` | `1300` | CSS z-index值 |
-| `IsRootMenu` | `bool` | `true` | 是否为根菜单 |
 | `ContextItem` | `TItem?` | `default` | 上下文对象 |
 | `OnItemClick` | `EventCallback<ContextMenuItem<TItem>>` | - | 菜单项点击事件 |
 | `OnClose` | `EventCallback` | - | 菜单关闭事件 |
@@ -464,7 +462,7 @@ MudDataGrid 提供了内置的 `RowContextMenuClick` 参数，这是集成右键
 
 ```css
 /* 自定义菜单容器样式 */
-.my-custom-context-menu .mo-context-menu {
+.my-custom-context-menu .mo-context-menu-popover {
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }

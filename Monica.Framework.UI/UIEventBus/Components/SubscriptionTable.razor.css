@@ -1,0 +1,52 @@
+.subscription-table-wrapper {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.subscription-table-wrapper ::deep .mud-table {
+    width: 100%;
+    min-width: 0;
+}
+
+.subscription-table-wrapper ::deep .mud-table-row {
+    transition: background-color 140ms ease;
+}
+
+.subscription-table-wrapper ::deep .mud-table-row:focus-within {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+.subscription-table-wrapper ::deep .subscription-table__event-link {
+    color: var(--mud-palette-primary);
+    cursor: pointer;
+}
+
+.subscription-table-wrapper ::deep .subscription-table__tooltip {
+    width: min(31rem, 80vw);
+    min-width: 0;
+}
+
+.subscription-table-wrapper ::deep .subscription-table__tooltip-label {
+    margin-top: .5rem;
+    font-weight: 600;
+}
+
+.subscription-table-wrapper ::deep .subscription-table__technical {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--mo-font-family-mono);
+}
+
+@media (max-width: 600px) {
+    .subscription-table-wrapper ::deep .subscription-table__tooltip {
+        width: min(19rem, 80vw);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .subscription-table-wrapper ::deep .mud-table-row {
+        transition: none;
+    }
+}

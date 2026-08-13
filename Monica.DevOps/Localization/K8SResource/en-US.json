@@ -7,7 +7,16 @@
   "Page": {
     "DocumentTitle": "K8S Operations",
     "Title": "K8S Operations",
+    "Eyebrow": "Monica / Cluster control",
     "Subtitle": "SSH + remote kubectl provider with runtime-only configuration and guarded restart workflows.",
+    "Summary": {
+      "AriaLabel": "Kubernetes cluster runtime summary",
+      "ExecutionNode": "Execution node",
+      "Namespaces": "Namespaces",
+      "Resources": "Loaded resources",
+      "Restrictions": "Guard keywords",
+      "NotConfigured": "Not configured"
+    },
     "SearchHelper": "Searches all currently loaded resource information.",
     "LoadingResources": "Loading {0} from {1}...",
     "SelectNamespace": "Select a namespace to browse resources.",
@@ -47,18 +56,6 @@
     "Replicas": "Ready / Desired",
     "LastRestart": "Last Restart",
     "Actions": "Actions"
-  },
-  "Chips": {
-    "ExecutionNodeMissing": "Execution node: not configured",
-    "ExecutionNode": "Execution node: {0}",
-    "NamespaceScopeAll": "Namespace scope: all namespaces",
-    "NamespaceScopeCount": "Namespace scope: {0} item(s)",
-    "SensitiveRestrictionsNone": "Sensitive restrictions: none",
-    "SensitiveRestrictionsCount": "Sensitive restrictions: {0}",
-    "CurrentListRefreshing": "Current list: refreshing",
-    "CurrentListNotLoaded": "Current list: not loaded",
-    "CurrentListAt": "Current list: {0}",
-    "SelectedCount": "Selected: {0}"
   },
   "ResourceTypes": {
     "Services": "Services",

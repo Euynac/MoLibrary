@@ -64,6 +64,16 @@
       "Tcp": "TCP port",
       "Http": "HTTP",
       "Https": "HTTPS"
+    },
+    "Summary": {
+      "PingSucceeded": "Ping to {0} replied from {1} in {2} ms.",
+      "PingFailed": "Ping to {0} failed: {1}.",
+      "TcpSucceeded": "TCP connection to {0} succeeded in {1} ms.",
+      "TcpFailed": "TCP connection to {0} failed: {1}.",
+      "HttpSucceeded": "HTTP probe to {0} returned {1} in {2} ms.",
+      "HttpFailed": "HTTP probe to {0} failed: {1}.",
+      "HttpResponse": "a response",
+      "UnknownError": "Unknown error"
     }
   },
   "TextJson": {
@@ -91,6 +101,14 @@
       "DecodeEscapedText": "Decode escaped text",
       "FormatJson": "Format JSON",
       "MinifyJson": "Minify JSON"
+    },
+    "Summary": {
+      "Decoded": "Decoded {0} escape layer(s).",
+      "DecodeUnchanged": "No JSON-style escape sequences were decoded. Output was left unchanged.",
+      "Formatted": "Formatted JSON with readable Unicode output.",
+      "FormattedWithLayers": "Formatted JSON with readable Unicode output after removing {0} JSON string layer(s).",
+      "Minified": "Minified JSON with readable Unicode output.",
+      "MinifiedWithLayers": "Minified JSON with readable Unicode output after removing {0} JSON string layer(s)."
     }
   },
   "Messages": {

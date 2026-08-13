@@ -1,132 +1,90 @@
 @using Monica.Profiling.RuntimeMetrics.Models
-@* Quick monitoring indicator card - displays 6 key indicators *@
-<MudGrid Spacing="3">
-    @* CPU usage *@
-    <MudItem xs="12" sm="6" md="4">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">CPU 使用率</MudText>
-                    <MudText Typo="Typo.h5" Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)">
-                        @(IsLoading ? "..." : $"{DataPoint?.CpuUsagePercent ?? 0:F1}%")
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)" Size="Size.Large"/>
-            </div>
+@inject IStringLocalizer<RuntimeMetricsResource> L
+
+<section class="runtime-vitals" aria-label="@L["Vitals:AriaLabel"]">
+    <article class="runtime-vital runtime-vital--cpu">
+        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Speed" /></span>
+        <div class="runtime-vital__copy">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:Cpu"]</MudText>
+            <MudText Typo="Typo.h5" Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)">
+                @LoadingOr($"{DataPoint?.CpuUsagePercent ?? 0:F1}%")
+            </MudText>
+        </div>
+        <div class="runtime-vital__progress">
             <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)"
-                               Value="@(DataPoint?.CpuUsagePercent ?? 0)"
-                               Class="mt-2"
-                               Rounded="true"/>
-        </MudPaper>
-    </MudItem>
+                               Value="@(DataPoint?.CpuUsagePercent ?? 0)" />
+        </div>
+    </article>
 
-    @* working set *@
-    <MudItem xs="12" sm="6" md="4">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">工作集</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Primary">
-                        @(IsLoading ? "..." : $"{DataPoint?.WorkingSetMB ?? 0:F1} MB")
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large"/>
-            </div>
-            @if (PreviousDataPoint != null && DataPoint != null)
-            {
-                var delta = DataPoint.WorkingSetMB - PreviousDataPoint.WorkingSetMB;
-                <div class="d-flex align-center mt-2">
-                    <MudIcon Icon="@(delta >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
-                             Color="@(delta >= 0 ? Color.Warning : Color.Success)"
-                             Size="Size.Small"/>
-                    <MudText Typo="Typo.caption" Color="@(delta >= 0 ? Color.Warning : Color.Success)" Class="ml-1">
-                        @(delta >= 0 ? "+" : "")@delta.ToString("F1") MB
-                    </MudText>
-                </div>
-            }
-        </MudPaper>
-    </MudItem>
+    <article class="runtime-vital runtime-vital--primary">
+        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Storage" /></span>
+        <div class="runtime-vital__copy">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:WorkingSet"]</MudText>
+            <MudText Typo="Typo.h5" Color="Color.Primary">@LoadingOr($"{DataPoint?.WorkingSetMB ?? 0:F1} MB")</MudText>
+        </div>
+        @if (PreviousDataPoint is not null && DataPoint is not null)
+        {
+            var delta = DataPoint.WorkingSetMB - PreviousDataPoint.WorkingSetMB;
+            <span class="runtime-vital__delta @(delta >= 0 ? "is-rising" : "is-falling")">
+                <MudIcon Icon="@(delta >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)" Size="Size.Small" />
+                @L["Vitals:Delta", delta >= 0 ? "+" : string.Empty, delta.ToString("F1"), "MB"]
+            </span>
+        }
+    </article>
 
-    @* Number of threads *@
-    <MudItem xs="12" sm="6" md="4">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">线程数</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Info">
-                        @(IsLoading ? "..." : (DataPoint?.ThreadCount ?? 0).ToString())
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Info" Size="Size.Large"/>
-            </div>
-        </MudPaper>
-    </MudItem>
+    <article class="runtime-vital runtime-vital--info">
+        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.AccountTree" /></span>
+        <div class="runtime-vital__copy">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:Threads"]</MudText>
+            <MudText Typo="Typo.h5" Color="Color.Info">@LoadingOr((DataPoint?.ThreadCount ?? 0).ToString())</MudText>
+        </div>
+    </article>
 
-    @* GC time proportion *@
-    <MudItem xs="12" sm="6" md="4">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">GC 时间 %</MudText>
-                    <MudText Typo="Typo.h5" Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)">
-                        @(IsLoading ? "..." : $"{DataPoint?.TimeInGcPercent ?? 0:F1}%")
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.CleaningServices" Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)" Size="Size.Large"/>
-            </div>
+    <article class="runtime-vital runtime-vital--gc">
+        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.CleaningServices" /></span>
+        <div class="runtime-vital__copy">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:GcTime"]</MudText>
+            <MudText Typo="Typo.h5" Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)">
+                @LoadingOr($"{DataPoint?.TimeInGcPercent ?? 0:F1}%")
+            </MudText>
+        </div>
+        <div class="runtime-vital__progress">
             <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)"
-                               Value="@Math.Min(DataPoint?.TimeInGcPercent ?? 0, 100)"
-                               Class="mt-2"
-                               Rounded="true"/>
-        </MudPaper>
-    </MudItem>
+                               Value="@Math.Min(DataPoint?.TimeInGcPercent ?? 0, 100)" />
+        </div>
+    </article>
 
-    @* allocation rate *@
-    <MudItem xs="12" sm="6" md="4">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">分配速率</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Warning">
-                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytesPerSecond(DataPoint?.AllocationRateBps ?? 0))
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Warning" Size="Size.Large"/>
-            </div>
-        </MudPaper>
-    </MudItem>
+    <article class="runtime-vital runtime-vital--warning">
+        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DataUsage" /></span>
+        <div class="runtime-vital__copy">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:AllocationRate"]</MudText>
+            <MudText Typo="Typo.h5" Color="Color.Warning">
+                @LoadingOr(ProfilingDisplayFormatter.FormatBytesPerSecond(DataPoint?.AllocationRateBps ?? 0))
+            </MudText>
+        </div>
+    </article>
 
-    @* GC heap size *@
-    <MudItem xs="12" sm="6" md="4">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">GC 堆</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Success">
-                        @(IsLoading ? "..." : $"{DataPoint?.GcHeapSizeMB ?? 0:F1} MB")
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Success" Size="Size.Large"/>
-            </div>
-            @if (PreviousDataPoint != null && DataPoint != null)
-            {
-                var delta = DataPoint.GcHeapSizeMB - PreviousDataPoint.GcHeapSizeMB;
-                <div class="d-flex align-center mt-2">
-                    <MudIcon Icon="@(delta >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
-                             Color="@(delta >= 0 ? Color.Warning : Color.Success)"
-                             Size="Size.Small"/>
-                    <MudText Typo="Typo.caption" Color="@(delta >= 0 ? Color.Warning : Color.Success)" Class="ml-1">
-                        @(delta >= 0 ? "+" : "")@delta.ToString("F1") MB
-                    </MudText>
-                </div>
-            }
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+    <article class="runtime-vital runtime-vital--success">
+        <span class="runtime-vital__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Memory" /></span>
+        <div class="runtime-vital__copy">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Vitals:GcHeap"]</MudText>
+            <MudText Typo="Typo.h5" Color="Color.Success">@LoadingOr($"{DataPoint?.GcHeapSizeMB ?? 0:F1} MB")</MudText>
+        </div>
+        @if (PreviousDataPoint is not null && DataPoint is not null)
+        {
+            var delta = DataPoint.GcHeapSizeMB - PreviousDataPoint.GcHeapSizeMB;
+            <span class="runtime-vital__delta @(delta >= 0 ? "is-rising" : "is-falling")">
+                <MudIcon Icon="@(delta >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)" Size="Size.Small" />
+                @L["Vitals:Delta", delta >= 0 ? "+" : string.Empty, delta.ToString("F1"), "MB"]
+            </span>
+        }
+    </article>
+</section>
 
 @code {
     [Parameter] public RuntimeMetricsPoint? DataPoint { get; set; }
     [Parameter] public RuntimeMetricsPoint? PreviousDataPoint { get; set; }
     [Parameter] public bool IsLoading { get; set; }
 
+    private string LoadingOr(string value) => IsLoading ? L["Common:LoadingValue"] : value;
 }

@@ -1,0 +1,68 @@
+@typeparam TItem
+
+@foreach (var item in Items)
+{
+    if (item.IsDivider)
+    {
+        <MudDivider Class="mo-context-menu-divider" />
+    }
+    else if (item.HasSubMenu)
+    {
+        <MudMenu Label="@item.Text"
+                 AriaLabel="@item.Text"
+                 StartIcon="@item.Icon"
+                 Disabled="@item.Disabled"
+                 Dense="true"
+                 DropShadow="false"
+                 PopoverClass="mo-context-menu-popover"
+                 ListClass="mo-context-menu-list">
+            <MoContextMenuItems TItem="TItem"
+                                Items="@GetSubItems(item)"
+                                ContextItem="ContextItem"
+                                OnItemSelected="OnItemSelected" />
+        </MudMenu>
+    }
+    else
+    {
+        <MudMenuItem Icon="@item.Icon"
+                     Disabled="@item.Disabled"
+                     AutoClose="false"
+                     Class="mo-context-menu-item"
+                     OnClick="@(() => SelectAsync(item))">
+            <span class="mo-context-menu-label">@item.Text</span>
+            @if (!string.IsNullOrWhiteSpace(item.ShortcutText))
+            {
+                <kbd class="mo-context-menu-shortcut">@item.ShortcutText</kbd>
+            }
+        </MudMenuItem>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ContextMenuItem<TItem>> Items { get; set; } = [];
+
+    [Parameter]
+    public TItem? ContextItem { get; set; }
+
+    [Parameter]
+    public EventCallback<ContextMenuItem<TItem>> OnItemSelected { get; set; }
+
+    private static IReadOnlyList<ContextMenuItem<TItem>> GetSubItems(ContextMenuItem<TItem> item)
+        => item.SubItems ?? [];
+
+    private async Task SelectAsync(ContextMenuItem<TItem> item)
+    {
+        if (item.Disabled)
+        {
+            return;
+        }
+
+        if (item.OnClick is not null)
+        {
+            await item.OnClick(ContextItem);
+        }
+
+        await OnItemSelected.InvokeAsync(item);
+    }
+}

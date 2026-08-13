@@ -1,6 +1,8 @@
 .health-table-section {
     min-width: 0;
+    overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
     background: var(--mud-palette-surface);
 }
 

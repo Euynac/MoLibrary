@@ -50,7 +50,7 @@
 
 .kb-selection-actions ::deep .mud-button-root {
     min-height: 30px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid var(--mud-palette-lines-default);
     background-color: var(--mud-palette-surface);
     padding: 0 12px;
@@ -67,7 +67,7 @@
 }
 
 .kb-item {
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid var(--mud-palette-lines-default);
     background-color: var(--mud-palette-surface);
     transition: border-color 0.2s ease, background-color 0.2s ease;
@@ -201,7 +201,7 @@
     text-align: center;
     padding: 24px 16px;
     border: 1px dashed var(--mud-palette-lines-default);
-    border-radius: 10px;
+    border-radius: 8px;
     background-color: var(--mud-palette-surface);
 }
 

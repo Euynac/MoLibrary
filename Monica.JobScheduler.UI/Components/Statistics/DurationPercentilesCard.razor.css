@@ -120,12 +120,23 @@
     padding: 8px 12px;
     border-radius: 6px;
     background: var(--mud-palette-background);
+    border: 0;
+    color: inherit;
     cursor: pointer;
+    font: inherit;
+    text-align: start;
+    width: 100%;
     transition: background-color 0.15s ease;
 }
 
-.percentiles-wrapper ::deep .slowest-item:hover {
+.percentiles-wrapper ::deep .slowest-item:hover,
+.percentiles-wrapper ::deep .slowest-item:focus-visible {
     background: rgba(var(--mud-palette-primary-rgb), 0.08);
+}
+
+.percentiles-wrapper ::deep .slowest-item:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
 }
 
 .percentiles-wrapper ::deep .slowest-job-name {
@@ -153,5 +164,11 @@
         flex-direction: column;
         gap: 12px;
         align-items: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .percentiles-wrapper ::deep .slowest-item {
+        transition-duration: 0.01ms;
     }
 }

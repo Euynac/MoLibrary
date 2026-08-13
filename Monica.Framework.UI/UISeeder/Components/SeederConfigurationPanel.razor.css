@@ -3,6 +3,19 @@
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 12px;
     background: var(--mud-palette-surface);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.seeder-configuration:hover,
+.seeder-configuration:focus-within {
+    border-color: color-mix(in srgb, var(--mud-palette-info) 30%, var(--mud-palette-lines-default));
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .seeder-configuration {
+        transition: none;
+    }
 }
 
 .seeder-configuration-heading {

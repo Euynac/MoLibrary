@@ -7,7 +7,7 @@ internal static class ExecutionTimingDisplayFormatter
 {
     public static string FormatDateTime(DateTimeOffset? timestamp)
     {
-        return timestamp?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "无";
+        return timestamp?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "—";
     }
 
     public static string FormatDuration(double milliseconds)
@@ -17,7 +17,7 @@ internal static class ExecutionTimingDisplayFormatter
 
     public static string FormatMemory(long? bytes)
     {
-        return bytes.HasValue ? bytes.Value.FormatByteSize() : "无";
+        return bytes.HasValue ? bytes.Value.FormatByteSize() : "—";
     }
 
     public static string FormatRatePerMinute(ExecutionTimingStatistics statistics)

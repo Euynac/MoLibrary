@@ -8,15 +8,18 @@
 <div class="configuration-debug-page">
 <MudContainer MaxWidth="MaxWidth.False">
     <MudStack Spacing="3">
-        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-            <MudStack Spacing="0">
-                <MudText Typo="Typo.h4">@L["Pages:ConfigurationDebug:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Debug:Subtitle"]</MudText>
-            </MudStack>
-            <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
-            </MudTooltip>
-        </MudStack>
+        <ConfigurationPageHeader Title="@L["Pages:ConfigurationDebug:Title"]"
+                                 Subtitle="@L["Debug:Subtitle"]"
+                                 Icon="@Icons.Material.Filled.BugReport">
+            <Actions>
+                <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Variant="Variant.Outlined"
+                                   OnClick="LoadAsync"
+                                   aria-label="@L["Common:Actions:Refresh"]" />
+                </MudTooltip>
+            </Actions>
+        </ConfigurationPageHeader>
 
         <MudPaper Outlined="true" Class="pa-3">
             <MudTextField T="string"
@@ -28,6 +31,13 @@
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Search" />
         </MudPaper>
+
+        @if (SensitiveLineCount > 0)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                @L["Debug:SensitiveNotice", SensitiveLineCount]
+            </MudAlert>
+        }
 
         @if (_loading)
         {
@@ -45,7 +55,22 @@
             <MudPaper Outlined="true" Class="configuration-debug-view">
                 @foreach (var line in FilteredLines)
                 {
-                    <div class="debug-line @(IsMatch(line) ? "debug-line-match" : null)">@line</div>
+                    var isRevealed = _revealedLines.Contains(line.Index);
+                    <div class="debug-line @(IsMatch(line) ? "debug-line-match" : null) @(line.IsSensitive ? "debug-line-sensitive" : null)">
+                        <code class="debug-line-content">@line.GetDisplayText(isRevealed)</code>
+                        @if (line.IsSensitive)
+                        {
+                            <MudTooltip Text="@(isRevealed ? L["Debug:HideSensitive"] : L["Debug:RevealSensitive"])">
+                                <MudIconButton Icon="@(isRevealed ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                               Size="Size.Small"
+                                               Color="Color.Warning"
+                                               aria-label="@(isRevealed
+                                                   ? L["Debug:HideSensitiveAria", line.Key]
+                                                   : L["Debug:RevealSensitiveAria", line.Key])"
+                                               OnClick="@(() => ToggleSensitiveLine(line.Index))" />
+                            </MudTooltip>
+                        }
+                    </div>
                 }
             </MudPaper>
         }
@@ -56,14 +81,17 @@
 @code {
     public const string PAGE_URL = ConfigurationUiRoutes.DEBUG_ROUTE;
 
-    private readonly List<string> _lines = [];
+    private readonly List<ConfigurationDebugLine> _lines = [];
+    private readonly HashSet<int> _revealedLines = [];
     private string _searchText = string.Empty;
     private bool _loading = true;
 
-    private IEnumerable<string> FilteredLines =>
+    private IEnumerable<ConfigurationDebugLine> FilteredLines =>
         string.IsNullOrWhiteSpace(_searchText)
             ? _lines
             : _lines.Where(IsMatch);
+
+    private int SensitiveLineCount => _lines.Count(static line => line.IsSensitive);
 
     protected override async Task OnInitializedAsync()
     {
@@ -83,13 +111,22 @@
         }
 
         _lines.Clear();
-        _lines.AddRange((debugView ?? string.Empty).Split(Environment.NewLine));
+        _revealedLines.Clear();
+        _lines.AddRange(ConfigurationDebugValueRedactor.Parse(debugView));
         _loading = false;
     }
 
-    private bool IsMatch(string line)
+    private bool IsMatch(ConfigurationDebugLine line)
     {
         return string.IsNullOrWhiteSpace(_searchText)
-               || line.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+               || line.SearchText.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ToggleSensitiveLine(int lineIndex)
+    {
+        if (!_revealedLines.Add(lineIndex))
+        {
+            _revealedLines.Remove(lineIndex);
+        }
     }
 }

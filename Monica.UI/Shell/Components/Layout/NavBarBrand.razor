@@ -1,9 +1,8 @@
 @using Microsoft.Extensions.Options
 @using Monica.Modules
 @inject IOptions<ModuleShellUIOption> Options
-@inject NavigationManager NavigationManager
 
-<div class="navbar-brand" @onclick="NavigateToHome">
+<a class="navbar-brand" href="/system-info" aria-label="@Options.Value.GetAppName()">
     <div class="brand-logo">
         <img class="brand-logo-image"
              src="/_content/Monica.UI/favicon.ico"
@@ -21,11 +20,4 @@
             <span class="brand-version">@Options.Value.GetAppVersion()</span>
         </div>
     </div>
-</div>
-
-@code {
-    private void NavigateToHome()
-    {
-        NavigationManager.NavigateTo("/system-info");
-    }
-}
+</a>

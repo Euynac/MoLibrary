@@ -318,9 +318,41 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     public int MaxVisibleCategories { get; set; } = 10;
 
     /// <summary>
-    /// Whether to enable the navigation bar search function
+    /// Whether to show the navigation bar search action when <see cref="NavBarSearchAction"/> is configured.
     /// </summary>
     public bool EnableNavBarSearch { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the host-owned action invoked by the navigation bar search control.
+    /// </summary>
+    /// <remarks>
+    /// The search control is not rendered when this delegate is <see langword="null"/>, so the shell never presents
+    /// an interaction that has no behavior. The host owns dialog, routing, and cancellation concerns.
+    /// </remarks>
+    public Func<Task>? NavBarSearchAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the host-owned action invoked by the navigation bar notifications control.
+    /// </summary>
+    /// <remarks>
+    /// The notifications control is rendered only when this delegate is configured.
+    /// </remarks>
+    public Func<Task>? NavBarNotificationsAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the host-owned action invoked by the profile menu item.
+    /// </summary>
+    public Func<Task>? UserProfileAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the host-owned action invoked by the user settings menu item.
+    /// </summary>
+    public Func<Task>? UserSettingsAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the host-owned action invoked by the sign-out menu item.
+    /// </summary>
+    public Func<Task>? UserLogoutAction { get; set; }
 
     /// <summary>
     /// A collection of routing redirection rules, where the key is the source path and the value is the target path.

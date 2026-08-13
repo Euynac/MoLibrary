@@ -7,7 +7,16 @@
   "Page": {
     "PageTitle": "Observable Instance Monitor",
     "Header": {
-      "Title": "Observable Instance Monitor"
+      "Title": "Observable Instance Monitor",
+      "Eyebrow": "Monica / Runtime state",
+      "Description": "Trace registered instances, health transitions, exception pressure, and group ownership from one operational ledger."
+    },
+    "Summary": {
+      "AriaLabel": "Observable runtime summary",
+      "Tracked": "Tracked instances",
+      "Healthy": "Healthy",
+      "Exceptions": "Exceptions",
+      "Groups": "Groups"
     },
     "Tabs": {
       "Overview": "Overview",

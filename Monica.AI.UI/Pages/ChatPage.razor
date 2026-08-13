@@ -2,28 +2,45 @@
 @rendermode InteractiveServer
 @implements IDisposable
 
+<PageTitle>@L["Pages:AIChat:Title"]</PageTitle>
+
 <HeadContent>
     <link href="_content/Monica.AI.UI/css/ai-chat-page.css" rel="stylesheet" />
 </HeadContent>
 
 <div class="ai-chat-shell">
-    @if (PageState.ShowSessionList)
-    {
-        <aside class="ai-sidebar">
-            <SessionList
-                Sessions="@PageState.Sessions"
-                CurrentSessionId="@PageState.CurrentSessionId"
-                IsLoading="@PageState.IsHistoryLoading"
-                OnNewSession="@PageState.CreateNewSessionAsync"
-                OnSelectSession="@PageState.SelectSessionAsync"
-                OnDeleteSession="@PageState.DeleteSessionAsync"
-                OnClearSessions="@PageState.ClearSessionsAsync" />
-        </aside>
-    }
+    <MudLayout Class="ai-chat-layout">
+        @if (PageState.ShowSessionList)
+        {
+            <MudDrawer @bind-Open="_sessionDrawerOpen"
+                       Variant="DrawerVariant.Responsive"
+                       Breakpoint="Breakpoint.Sm"
+                       Width="300px"
+                       Elevation="0"
+                       Class="ai-session-drawer">
+                <SessionList
+                    Sessions="@PageState.Sessions"
+                    CurrentSessionId="@PageState.CurrentSessionId"
+                    IsLoading="@PageState.IsHistoryLoading"
+                    OnNewSession="@PageState.CreateNewSessionAsync"
+                    OnSelectSession="@PageState.SelectSessionAsync"
+                    OnDeleteSession="@PageState.DeleteSessionAsync"
+                    OnClearSessions="@PageState.ClearSessionsAsync" />
+            </MudDrawer>
+        }
 
-    <main class="ai-main">
+        <MudMainContent Class="ai-main">
         <header class="ai-topbar">
             <div class="topbar-left">
+                @if (PageState.ShowSessionList)
+                {
+                    <MudTooltip Text="@L["Session:ToggleHistory"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.History"
+                                       Class="session-drawer-button"
+                                       aria-label="@L["Session:ToggleHistory"]"
+                                       OnClick="ToggleSessionDrawer" />
+                    </MudTooltip>
+                }
                 @if (PageState.ShowProviderSelector)
                 {
                     <ProviderSelector
@@ -56,5 +73,6 @@
         {
             <ChatContainer Parameters="@PageState.BuildChatContainerParameters()" />
         }
-    </main>
+        </MudMainContent>
+    </MudLayout>
 </div>

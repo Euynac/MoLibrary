@@ -1,0 +1,37 @@
+.subscription-changes-feed {
+    width: 100%;
+    min-width: 0;
+}
+
+.subscription-changes-feed ::deep .mud-paper {
+    min-width: 0;
+    border-radius: 12px;
+}
+
+.subscription-changes-feed ::deep .subscription-changes-feed__list {
+    max-height: 25rem;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.subscription-changes-feed ::deep .change-feed-item {
+    transition: background-color 140ms ease;
+}
+
+.subscription-changes-feed ::deep .change-feed-item:focus-within {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+@media (max-width: 600px) {
+    .subscription-changes-feed ::deep .change-feed-item .mud-stack-row {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .subscription-changes-feed ::deep .change-feed-item {
+        transition: none;
+    }
+}

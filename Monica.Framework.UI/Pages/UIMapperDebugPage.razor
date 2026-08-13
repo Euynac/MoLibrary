@@ -1,127 +1,141 @@
+@attribute [Route(PAGE_URL)]
 @using Monica.Core.ObjectMapping.Models
 @using Monica.Core.ObjectMapping.Facades
-@using Monica.Modules
-@using Monica.Core.Results;
+@using Monica.Core.Results
 @using Monica.UI.Shared.Components.Markdown
 @inject ObjectMappingFacade StatusService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<MapperResource> L
 
-@attribute [Route(PAGE_URL)]
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
 
-<PageTitle>Mapper调试</PageTitle>
-
-<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
-    <MudStack>
-        <MudCard>
-            <MudCardHeader>
-                <CardHeaderContent>
-                    <div style="display: flex; align-items: center;">
-                        <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-3" />
-                        <MudText Typo="Typo.h5">Mapper映射调试</MudText>
+<div class="mapper-page">
+    <MudContainer MaxWidth="MaxWidth.False" Class="mapper-page__outer-container">
+        <div class="mapper-page__container">
+            <header class="mapper-page__header">
+                <div class="mapper-page__eyebrow">
+                    <span class="mapper-page__eyebrow-line" aria-hidden="true"></span>
+                    <span>@L["Page:Header:Eyebrow"]</span>
+                </div>
+                <div class="mapper-page__heading-row">
+                    <div>
+                        <MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Header:Title"]</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mapper-page__description">
+                            @L["Page:Header:Description"]
+                        </MudText>
                     </div>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudText Typo="Typo.body1" Class="mb-4">
-                    查看和调试所有已注册的Mapper映射表达式
-                </MudText>
-                
-                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
-                    <MudButton Variant="Variant.Filled" 
-                              Color="Color.Primary" 
-                              StartIcon="@Icons.Material.Filled.Refresh"
-                              OnClick="LoadDataAsync"
-                              Disabled="@_loading">
-                        @if (_loading)
-                        {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
-                            <MudText Class="ms-2">加载中...</MudText>
-                        }
-                        else
-                        {
-                            <MudText>刷新数据</MudText>
-                        }
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadDataAsync"
+                               Disabled="@_loading">
+                        @(_loading ? L["Page:Actions:Loading"] : L["Page:Actions:Refresh"])
                     </MudButton>
-                    
-                    @if (_mapperData is not null)
-                    {
-                        <MudChip T="string" Color="Color.Info" Size="Size.Small">
-                            总计: @_mapperData.Count 个映射
-                        </MudChip>
-                    }
-                </MudStack>
-            </MudCardContent>
-        </MudCard>
+                </div>
+            </header>
 
-        @if (_mapperData?.Mappings is not null && _mapperData.Mappings.Any())
-        {
-            <MudCard>
-                <MudCardContent>
+            <section class="mapper-page__pulse" aria-label="@L["Page:Summary:AriaLabel"]">
+                <div class="mapper-page__pulse-icon" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.CompareArrows" />
+                </div>
+                <div>
+                    <span>@L["Page:Summary:RegisteredMappings"]</span>
+                    <strong>@(_mapperData?.Count ?? 0)</strong>
+                </div>
+                <MudChip T="string" Size="Size.Small" Color="@(_loading ? Color.Info : Color.Success)" Variant="Variant.Outlined">
+                    @(_loading ? L["Page:Summary:Scanning"] : L["Page:Summary:Ready"])
+                </MudChip>
+            </section>
+
+            @if (_loading && _mapperData is null)
+            {
+                <div class="mapper-page__state" role="status">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">@L["Page:States:Loading"]</MudText>
+                </div>
+            }
+            else if (_mapperData?.Mappings is { Count: > 0 } mappings)
+            {
+                <section class="mapper-registry">
+                    <header class="mapper-registry__header">
+                        <div class="mapper-registry__identity">
+                            <span class="mapper-registry__icon" aria-hidden="true">
+                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+                            </span>
+                            <div>
+                                <MudText Typo="Typo.h6">@L["Page:Registry:Title"]</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Page:Registry:Description"]</MudText>
+                            </div>
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                            @L["Page:Registry:Count", mappings.Count]
+                        </MudChip>
+                    </header>
+
                     <div class="mapper-table-wrapper">
-                        <MudTable T="ObjectMapperInfo" Items="@_mapperData.Mappings" Hover="true" Striped="true" Dense="true">
+                        <MudTable T="ObjectMapperInfo" Items="@mappings" Hover="true" Dense="true" Elevation="0">
                             <HeaderContent>
-                                <MudTh>源类型</MudTh>
-                                <MudTh>目标类型</MudTh>
-                                <MudTh Style="width: 150px;">操作</MudTh>
+                                <MudTh>@L["Page:Registry:Columns:SourceType"]</MudTh>
+                                <MudTh>@L["Page:Registry:Columns:DestinationType"]</MudTh>
+                                <MudTh Class="mapper-table__action-column">@L["Page:Registry:Columns:Actions"]</MudTh>
                             </HeaderContent>
                             <RowTemplate>
-                                <MudTd DataLabel="源类型">
-                                    <MudText Typo="Typo.body2" Class="font-monospace">@context.SourceType</MudText>
+                                <MudTd DataLabel="@L["Page:Registry:Columns:SourceType"]">
+                                    <code class="mapper-type">@context.SourceType</code>
                                 </MudTd>
-                                <MudTd DataLabel="目标类型">
-                                    <MudText Typo="Typo.body2" Class="font-monospace">@context.DestinationType</MudText>
+                                <MudTd DataLabel="@L["Page:Registry:Columns:DestinationType"]">
+                                    <code class="mapper-type mapper-type--destination">@context.DestinationType</code>
                                 </MudTd>
-                                <MudTd DataLabel="操作">
+                                <MudTd DataLabel="@L["Page:Registry:Columns:Actions"]">
                                     <MudButton Variant="Variant.Text"
-                                              Color="Color.Primary"
-                                              Size="Size.Small"
-                                              StartIcon="@Icons.Material.Filled.Code"
-                                              OnClick="@(() => ShowMapperCode(context))">
-                                        查看代码
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Code"
+                                               OnClick="@(() => ShowMapperCode(context))">
+                                        @L["Page:Actions:InspectExpression"]
                                     </MudButton>
                                 </MudTd>
                             </RowTemplate>
                         </MudTable>
                     </div>
-                </MudCardContent>
-            </MudCard>
-        }
-        else if (!_loading && _mapperData is not null)
-        {
-            <MudAlert Severity="Severity.Info" Class="mt-4">
-                <MudText>没有找到任何Mapper映射配置</MudText>
-            </MudAlert>
-        }
-    </MudStack>
-</MudContainer>
+                </section>
+            }
+            else if (!_loading && _mapperData is not null)
+            {
+                <div class="mapper-page__state">
+                    <MudIcon Icon="@Icons.Material.Filled.DataObject" Color="Color.Secondary" Size="Size.Large" />
+                    <MudText Typo="Typo.h6">@L["Page:States:EmptyTitle"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:States:EmptyDescription"]</MudText>
+                </div>
+            }
+        </div>
+    </MudContainer>
+</div>
 
-<MudDialog @bind-Visible="@_showCodeDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+<MudDialog @bind-Visible="_showCodeDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true })">
     <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-2" />
-            映射表达式代码
-        </MudText>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@L["Page:Dialog:Title"]</MudText>
+        </MudStack>
     </TitleContent>
     <DialogContent>
-   
         <MarkdownThemeSync />
         @if (_selectedMapper is not null)
         {
-            <MudStack Spacing="3">
-                <MudPaper Class="pa-3" Elevation="1">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">源类型:</MudText>
-                    <MudText Typo="Typo.body2" Class="font-monospace">@_selectedMapper.SourceType</MudText>
-                </MudPaper>
-                
-                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Style="align-self: center;" />
-                
-                <MudPaper Class="pa-3" Elevation="1">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">目标类型:</MudText>
-                    <MudText Typo="Typo.body2" Class="font-monospace">@_selectedMapper.DestinationType</MudText>
-                </MudPaper>
-                
-                <MudDivider />
-                
+            <div class="mapper-expression">
+                <div class="mapper-expression__route">
+                    <div class="mapper-expression__type mapper-expression__type--source">
+                        <span>@L["Page:Dialog:SourceType"]</span>
+                        <code>@_selectedMapper.SourceType</code>
+                    </div>
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="mapper-expression__arrow" />
+                    <div class="mapper-expression__type mapper-expression__type--destination">
+                        <span>@L["Page:Dialog:DestinationType"]</span>
+                        <code>@_selectedMapper.DestinationType</code>
+                    </div>
+                </div>
+
                 <div class="mapper-markdown-wrapper">
                     @if (!string.IsNullOrEmpty(_selectedMapper.MapExpression))
                     {
@@ -129,35 +143,33 @@
                     }
                     else
                     {
-                        <MudAlert Severity="Severity.Warning">无映射表达式</MudAlert>
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                            @L["Page:Dialog:NoExpression"]
+                        </MudAlert>
                     }
                 </div>
-            </MudStack>
+            </div>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showCodeDialog = false)">关闭</MudButton>
+        <MudButton OnClick="@(() => _showCodeDialog = false)">@L["Page:Actions:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 
-
 @code {
     public const string PAGE_URL = "/mapper-debug";
-    
-    private bool _loading = false;
+
+    private bool _loading;
     private ObjectMapperStatusResponse? _mapperData;
-    private bool _showCodeDialog = false;
+    private bool _showCodeDialog;
     private ObjectMapperInfo? _selectedMapper;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await LoadDataAsync();
-        }
-    }
-    
-    private async Task LoadDataAsync()
+    protected override Task OnAfterRenderAsync(bool firstRender)
+        => firstRender ? LoadDataAsync(showSuccessMessage: false) : Task.CompletedTask;
+
+    private Task LoadDataAsync() => LoadDataAsync(showSuccessMessage: true);
+
+    private async Task LoadDataAsync(bool showSuccessMessage)
     {
         _loading = true;
         StateHasChanged();
@@ -166,16 +178,19 @@
         {
             if ((await StatusService.GetStatusAsync()).IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"加载Mapper数据失败: {error}", Severity.Error);
+                Snackbar.Add(L["Page:Messages:LoadFailed", error], Severity.Error);
                 return;
             }
 
             _mapperData = data;
-            Snackbar.Add($"成功加载 {data.Count} 个映射配置", Severity.Success);
+            if (showSuccessMessage)
+            {
+                Snackbar.Add(L["Page:Messages:LoadSucceeded", data.Count], Severity.Success);
+            }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载数据时发生异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Page:Messages:LoadException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -183,7 +198,7 @@
             StateHasChanged();
         }
     }
-    
+
     private void ShowMapperCode(ObjectMapperInfo mapper)
     {
         _selectedMapper = mapper;

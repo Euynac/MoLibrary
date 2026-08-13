@@ -32,6 +32,35 @@ public sealed class ExecutionPipelineCatalogPageTests
     }
 
     [Fact]
+    public async Task Page_disposal_is_idempotent_after_state_notifications()
+    {
+        await using var context = new ExecutionPipelineUiTestContext(
+            ExecutionPipelineUiTestContext.CreateSnapshot());
+        var cut = context.Render<UIExecutionPipelinePage>();
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='execution-pipeline-summary']").Should().NotBeNull());
+
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+    }
+
+    [Fact]
+    public async Task Plan_list_exposes_operation_name_and_optional_mobile_chevron_separately()
+    {
+        var plan = ExecutionPipelineUiTestContext.CreatePlan("OperationWithALongReadableName");
+        await using var context = new ExecutionPipelineUiTestContext(
+            ExecutionPipelineUiTestContext.CreateSnapshot(plans: [plan]));
+
+        var cut = context.Render<ExecutionPipelinePlanList>(parameters => parameters
+            .Add(component => component.Plans, [plan]));
+
+        cut.Find(".execution-pipeline-plan-list__content strong").TextContent.Should()
+            .Be("Example.Component.OperationWithALongReadableName");
+        cut.Find(".execution-pipeline-plan-list__chevron").GetAttribute("aria-hidden").Should().Be("true");
+    }
+
+    [Fact]
     public async Task Ready_plan_renders_applied_behaviors_in_outer_to_inner_order()
     {
         var plan = ExecutionPipelineUiTestContext.CreatePlan(

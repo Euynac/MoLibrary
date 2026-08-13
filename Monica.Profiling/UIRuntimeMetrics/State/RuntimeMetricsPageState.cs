@@ -9,10 +9,12 @@ namespace Monica.Profiling.UIRuntimeMetrics.State;
 public sealed class RuntimeMetricsPageState(
     RuntimeMetricsFacade runtimeMetricsFacade,
     IOptions<ModuleRuntimeMetricsUIOption> options)
-    : IDisposable
+    : IAsyncDisposable
 {
     private readonly ModuleRuntimeMetricsUIOption _option = options.Value;
-    private Timer? _refreshTimer;
+    private CancellationTokenSource? _refreshCancellation;
+    private Task _refreshLoop = Task.CompletedTask;
+    private bool _disposed;
 
     public event Action? StateChanged;
 
@@ -29,11 +31,11 @@ public sealed class RuntimeMetricsPageState(
     public async Task<Res> InitializeAsync()
     {
         var result = await RefreshAsync();
-        UpdateAutoRefresh();
+        await UpdateAutoRefreshAsync();
         return result;
     }
 
-    public void SetAutoRefresh(bool value)
+    public async Task SetAutoRefreshAsync(bool value)
     {
         if (AutoRefresh == value)
         {
@@ -41,7 +43,7 @@ public sealed class RuntimeMetricsPageState(
         }
 
         AutoRefresh = value;
-        UpdateAutoRefresh();
+        await UpdateAutoRefreshAsync();
         NotifyStateChanged();
     }
 
@@ -75,27 +77,71 @@ public sealed class RuntimeMetricsPageState(
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _refreshTimer?.Dispose();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        await StopRefreshLoopAsync();
+        StateChanged = null;
     }
 
-    private void UpdateAutoRefresh()
+    private async Task UpdateAutoRefreshAsync()
     {
-        _refreshTimer?.Dispose();
-        _refreshTimer = null;
+        await StopRefreshLoopAsync();
 
         if (!AutoRefresh || _option.AutoRefreshIntervalMs <= 0)
         {
             return;
         }
 
-        _refreshTimer = new Timer(
-            async _ => await RefreshAsync(),
-            null,
-            _option.AutoRefreshIntervalMs,
-            _option.AutoRefreshIntervalMs);
+        _refreshCancellation = new CancellationTokenSource();
+        _refreshLoop = RunRefreshLoopAsync(_refreshCancellation.Token);
     }
 
-    private void NotifyStateChanged() => StateChanged?.Invoke();
+    private async Task RunRefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(_option.AutoRefreshIntervalMs));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await RefreshAsync();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task StopRefreshLoopAsync()
+    {
+        var cancellation = _refreshCancellation;
+        _refreshCancellation = null;
+        cancellation?.Cancel();
+
+        try
+        {
+            await _refreshLoop;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            cancellation?.Dispose();
+            _refreshLoop = Task.CompletedTask;
+        }
+    }
+
+    private void NotifyStateChanged()
+    {
+        if (!_disposed)
+        {
+            StateChanged?.Invoke();
+        }
+    }
 }

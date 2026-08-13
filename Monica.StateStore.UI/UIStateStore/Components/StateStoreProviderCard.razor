@@ -2,7 +2,7 @@
 @using Monica.StateStore.UI.Models
 @inject IStringLocalizer<StateStoreResource> L
 
-<MudCard Elevation="2">
+<MudCard Class="provider-row" Elevation="0">
     <MudCardHeader>
         <CardHeaderAvatar>
             <MudAvatar Color="@GetProviderColor()" Size="Size.Large">
@@ -20,7 +20,7 @@
         </CardHeaderActions>
     </MudCardHeader>
 
-    <MudCardContent>
+    <MudCardContent Class="provider-row__capabilities">
         <MudStack Spacing="2">
             @* Capability label *@
             <div class="d-flex flex-wrap gap-1">
@@ -67,7 +67,7 @@
         </MudStack>
     </MudCardContent>
 
-    <MudCardActions>
+    <MudCardActions Class="provider-row__actions">
         <MudButton Variant="Variant.Text"
                    Color="Color.Primary"
                    EndIcon="@Icons.Material.Filled.OpenInNew"

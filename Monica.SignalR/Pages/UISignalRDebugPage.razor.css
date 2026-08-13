@@ -1,0 +1,227 @@
+.signalr-debug-page {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 24px;
+    color: var(--mud-palette-text-primary);
+}
+
+.signalr-lab-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 24px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+}
+
+.signalr-lab-header__identity,
+.signalr-lab-header__evidence,
+.signalr-settings__identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.signalr-lab-header__identity,
+.signalr-lab-header__copy {
+    min-width: 0;
+}
+
+.signalr-lab-header__icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 8px;
+    color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary-hover);
+}
+
+.signalr-eyebrow {
+    color: var(--mud-palette-primary);
+    letter-spacing: .08em;
+}
+
+.signalr-lab-header__evidence {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.signalr-lab-header__evidence > span {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+.signalr-lab-header__evidence strong {
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 1.1rem;
+}
+
+.signalr-lab-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    margin-top: 16px;
+}
+
+.signalr-connection-deck {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(280px, .85fr);
+    gap: 16px;
+    min-width: 0;
+}
+
+.signalr-status-rail {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 16px;
+    min-width: 0;
+}
+
+.signalr-grid {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.signalr-grid--telemetry { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.35fr); }
+.signalr-grid--methods { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.signalr-grid--messages { grid-template-columns: minmax(300px, .72fr) minmax(0, 1.28fr); }
+.signalr-panel { min-width: 0; }
+
+.signalr-panel ::deep > .mud-paper,
+.signalr-status-rail ::deep .signalr-settings {
+    box-sizing: border-box;
+    height: 100%;
+    margin: 0 !important;
+    padding: 20px !important;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    box-shadow: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.signalr-panel ::deep > .mud-paper:hover,
+.signalr-status-rail ::deep .signalr-settings:hover {
+    border-color: var(--mud-palette-lines-inputs);
+    box-shadow: var(--mud-elevation-2);
+}
+
+.signalr-status-rail ::deep .signalr-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.signalr-panel ::deep .mud-table-container {
+    overflow-x: auto;
+}
+
+.signalr-panel ::deep .mud-table-head .mud-table-cell {
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-background-gray);
+}
+
+.signalr-panel ::deep .mud-table-row:hover .mud-table-cell {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.signalr-panel--connection ::deep > .mud-paper {
+    border-color: var(--mud-palette-primary-hover);
+}
+
+.signalr-panel ::deep .signalr-component-header,
+.signalr-panel ::deep .signalr-component-heading,
+.signalr-panel ::deep .signalr-connection-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.signalr-panel ::deep .signalr-component-header {
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.signalr-panel ::deep .signalr-component-heading {
+    margin-bottom: 16px;
+}
+
+.signalr-panel ::deep .signalr-component-header .signalr-component-heading {
+    margin-bottom: 0;
+}
+
+.signalr-panel ::deep .signalr-connection-actions {
+    flex-wrap: wrap;
+}
+
+.signalr-panel ::deep .signalr-listener-list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.signalr-panel ::deep .signalr-listener-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 16px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+    transition: background-color 140ms ease;
+}
+
+.signalr-panel ::deep .signalr-listener-row:last-child { border-bottom: 0; }
+.signalr-panel ::deep .signalr-listener-row:hover { background: var(--mud-palette-action-default-hover); }
+
+.signalr-panel ::deep .signalr-message-stream {
+    min-height: 180px;
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-background-gray);
+}
+
+@media (max-width: 1100px) {
+    .signalr-debug-page { padding: 18px; }
+    .signalr-lab-header { align-items: flex-start; padding: 20px; }
+    .signalr-lab-header__evidence { max-width: 48%; }
+    .signalr-connection-deck,
+    .signalr-grid--telemetry,
+    .signalr-grid--methods,
+    .signalr-grid--messages { grid-template-columns: minmax(0, 1fr); }
+    .signalr-status-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; }
+}
+
+@media (max-width: 600px) {
+    .signalr-debug-page { padding: 12px; }
+    .signalr-lab-header { flex-direction: column; gap: 16px; padding: 16px; }
+    .signalr-lab-header__icon { width: 40px; height: 40px; flex-basis: 40px; }
+    .signalr-lab-header__evidence { width: 100%; max-width: none; justify-content: flex-start; }
+    .signalr-lab-header__evidence > span { width: calc(50% - 6px); }
+    .signalr-status-rail { grid-template-columns: minmax(0, 1fr); }
+    .signalr-panel ::deep > .mud-paper,
+    .signalr-status-rail ::deep .signalr-settings { padding: 16px !important; }
+    .signalr-panel ::deep .signalr-component-header { align-items: flex-start; }
+    .signalr-panel ::deep .signalr-connection-actions .mud-button-root { width: 100%; margin-left: 0 !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .signalr-panel ::deep > .mud-paper,
+    .signalr-status-rail ::deep .signalr-settings,
+    .signalr-panel ::deep .signalr-listener-row { transition: none; }
+}

@@ -41,6 +41,9 @@
     private DotNetObjectReference<ModuleDependencyGraphCanvas>? _callbackReference;
     private GraphRenderState _renderState = GraphRenderState.Loading;
     private string? _failedRenderIdentity;
+    private readonly SemaphoreSlim _interopOwnershipGate = new(1, 1);
+    private readonly object _disposeSync = new();
+    private Task? _disposeTask;
     private bool _disposed;
 
     [Parameter, EditorRequired] public ModuleSystemWorkbenchSession Session { get; set; } = default!;
@@ -142,13 +145,26 @@
             return;
         }
 
-        var interop = _interop;
-        _interop = null;
-        _failedRenderIdentity = null;
-        _renderState = GraphRenderState.Loading;
-        if (interop is not null)
+        await _interopOwnershipGate.WaitAsync();
+        try
         {
-            await interop.DisposeAsync();
+            if (_disposed)
+            {
+                return;
+            }
+
+            var interop = _interop;
+            _interop = null;
+            _failedRenderIdentity = null;
+            _renderState = GraphRenderState.Loading;
+            if (interop is not null)
+            {
+                await interop.DisposeAsync();
+            }
+        }
+        finally
+        {
+            _interopOwnershipGate.Release();
         }
 
         if (!_disposed)
@@ -202,23 +218,38 @@
         return $"{Session.SelectedModule?.ModuleKey.Id}:{Layout}:{SearchText}:{Session.ShowFullDependencyGraph}:{moduleIds}:{edges}";
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        lock (_disposeSync)
         {
-            return;
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
         }
+    }
 
+    private async Task DisposeCoreAsync()
+    {
         _disposed = true;
-        var interop = _interop;
-        _interop = null;
-        if (interop is not null)
+        await _interopOwnershipGate.WaitAsync();
+        try
         {
-            await interop.DisposeAsync();
+            var interop = _interop;
+            _interop = null;
+            if (interop is not null)
+            {
+                await interop.DisposeAsync();
+            }
+
+            _callbackReference?.Dispose();
+            _callbackReference = null;
+        }
+        finally
+        {
+            _interopOwnershipGate.Release();
         }
 
-        _callbackReference?.Dispose();
-        _callbackReference = null;
+        // A retry may have observed the pre-disposal state immediately before teardown began and still be
+        // approaching the ownership gate. Keep the gate alive so that closed admission settles without an
+        // ObjectDisposedException after the callback reference has been released.
     }
 
     private enum GraphRenderState

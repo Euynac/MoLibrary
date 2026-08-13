@@ -37,7 +37,7 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
     private string _newEntryKey = string.Empty;
     private string? _newEntryError;
     private string? _pendingScrollEntryKey;
-    private IJSObjectReference? _jsModule;
+    private ConfigurationScrollInteropSession? _scrollInteropSession;
     private long? _valueVersion;
     private bool _startedWithScopedPendingChanges;
 
@@ -115,8 +115,8 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
         try
         {
-            var module = await GetJsModuleAsync();
-            await module.InvokeVoidAsync("scrollElementIntoView", EntryElementId(entryKey));
+            _scrollInteropSession ??= new ConfigurationScrollInteropSession(JSRuntime);
+            await _scrollInteropSession.ScrollIntoViewAsync(EntryElementId(entryKey));
         }
         catch (JSDisconnectedException)
         {
@@ -129,14 +129,6 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
     private void SetMode(EditorMode mode)
     {
         _mode = mode;
-    }
-
-    private async Task<IJSObjectReference> GetJsModuleAsync()
-    {
-        _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import",
-            "./_content/Monica.Configuration.UI/js/configuration-ui.js");
-        return _jsModule;
     }
 
     private Variant ModeVariant(EditorMode mode)
@@ -724,9 +716,10 @@ public partial class ComplexValueEditorDialog : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule is not null)
+        var scrollInteropSession = Interlocked.Exchange(ref _scrollInteropSession, null);
+        if (scrollInteropSession is not null)
         {
-            await _jsModule.DisposeAsync();
+            await scrollInteropSession.DisposeAsync();
         }
     }
 

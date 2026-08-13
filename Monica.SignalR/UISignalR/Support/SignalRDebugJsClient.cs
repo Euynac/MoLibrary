@@ -17,12 +17,18 @@ public sealed class SignalRDebugJsClient(
     : IAsyncDisposable
 {
     private const int MaxMessageCount = 1000;
+    private static readonly TimeSpan SHUTDOWN_DRAIN_TIMEOUT = TimeSpan.FromSeconds(5);
 
     private readonly List<SignalRMessage> _messages = [];
     private readonly List<HubMethodInfo> _hubMethods = [];
     private readonly SignalRConnectionState _connectionState = new();
+    private readonly SemaphoreSlim _sessionGate = new(1, 1);
+    private readonly object _disposeSync = new();
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _session;
     private DotNetObjectReference<SignalRDebugJsClient>? _dotNetRef;
-    private bool _disposed;
+    private Task? _disposeTask;
+    private volatile bool _disposed;
 
     /// <summary>
     /// Gets or sets a value indicating whether verbose argument conversion logs are emitted.
@@ -49,16 +55,60 @@ public sealed class SignalRDebugJsClient(
     /// </summary>
     public async Task InitializeAsync()
     {
-        if (_dotNetRef is not null)
+        if (_session is not null)
         {
             return;
         }
 
-        _dotNetRef = DotNetObjectReference.Create(this);
+        await _sessionGate.WaitAsync();
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_session is not null)
+            {
+                return;
+            }
 
-        await WaitForJavaScriptAsync();
-        await SetupJavaScriptLocalizationAsync();
-        await SetupJavaScriptCallbacksAsync();
+            var module = await jsRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Monica.SignalR/UISignalR/signalr-debug.js");
+            if (_disposed)
+            {
+                await DisposeInteropReferenceAsync(module);
+                return;
+            }
+
+            var dotNetRef = DotNetObjectReference.Create(this);
+            IJSObjectReference session;
+
+            try
+            {
+                session = await module.InvokeAsync<IJSObjectReference>(
+                    "createSession",
+                    dotNetRef,
+                    BuildJavaScriptLocalization());
+            }
+            catch
+            {
+                dotNetRef.Dispose();
+                await DisposeInteropReferenceAsync(module);
+                throw;
+            }
+
+            if (_disposed)
+            {
+                await DisposeOwnedSessionAsync(session, dotNetRef, module);
+                return;
+            }
+
+            _module = module;
+            _dotNetRef = dotNetRef;
+            _session = session;
+        }
+        finally
+        {
+            _sessionGate.Release();
+        }
     }
 
     /// <summary>
@@ -66,6 +116,11 @@ public sealed class SignalRDebugJsClient(
     /// </summary>
     public void SetHubMetadata(IReadOnlyList<SignalRHubInfo> hubInfos)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _hubMethods.Clear();
 
         foreach (var hubInfo in hubInfos)
@@ -93,30 +148,47 @@ public sealed class SignalRDebugJsClient(
     /// </summary>
     public async Task<bool> ConnectAsync(string hubUrl, string accessToken)
     {
+        if (_disposed)
+        {
+            return false;
+        }
+
         try
         {
             _connectionState.IsConnecting = true;
             RaiseConnectionStateChanged();
 
-            var result = await jsRuntime.InvokeAsync<JsonElement>("signalRDebug.connect", hubUrl, accessToken);
-            if (result.GetProperty("success").GetBoolean())
+            var result = await InvokeSessionAsync("connect", hubUrl, accessToken);
+            if (result is null)
+            {
+                return false;
+            }
+
+            if (result.Value.GetProperty("success").GetBoolean())
             {
                 AddMessage("System", T("UISignalR:DebugClient:ConnectedToHub", hubUrl), MessageType.Success);
                 return true;
             }
 
-            AddMessage("System", T("UISignalR:DebugClient:ConnectionFailed", result.GetProperty("error").GetString() ?? string.Empty), MessageType.Error);
+            AddMessage("System", T("UISignalR:DebugClient:ConnectionFailed", result.Value.GetProperty("error").GetString() ?? string.Empty), MessageType.Error);
             return false;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ObjectDisposedException)
         {
-            AddMessage("System", T("UISignalR:DebugClient:ConnectionFailed", ex.Message), MessageType.Error);
+            if (!_disposed)
+            {
+                AddMessage("System", T("UISignalR:DebugClient:ConnectionFailed", ex.Message), MessageType.Error);
+            }
+
             return false;
         }
         finally
         {
             _connectionState.IsConnecting = false;
-            RaiseConnectionStateChanged();
+            if (!_disposed)
+            {
+                RaiseConnectionStateChanged();
+            }
         }
     }
 
@@ -127,19 +199,28 @@ public sealed class SignalRDebugJsClient(
     {
         try
         {
-            var result = await jsRuntime.InvokeAsync<JsonElement>("signalRDebug.disconnect");
-            if (result.GetProperty("success").GetBoolean())
+            var result = await InvokeSessionAsync("disconnect");
+            if (result is null)
+            {
+                return false;
+            }
+
+            if (result.Value.GetProperty("success").GetBoolean())
             {
                 AddMessage("System", T("UISignalR:DebugClient:Disconnected"), MessageType.Info);
                 return true;
             }
 
-            AddMessage("System", T("UISignalR:DebugClient:DisconnectFailed", result.GetProperty("error").GetString() ?? string.Empty), MessageType.Error);
+            AddMessage("System", T("UISignalR:DebugClient:DisconnectFailed", result.Value.GetProperty("error").GetString() ?? string.Empty), MessageType.Error);
             return false;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ObjectDisposedException)
         {
-            AddMessage("System", T("UISignalR:DebugClient:DisconnectFailed", ex.Message), MessageType.Error);
+            if (!_disposed)
+            {
+                AddMessage("System", T("UISignalR:DebugClient:DisconnectFailed", ex.Message), MessageType.Error);
+            }
+
             return false;
         }
     }
@@ -151,18 +232,27 @@ public sealed class SignalRDebugJsClient(
     {
         try
         {
-            var result = await jsRuntime.InvokeAsync<JsonElement>("signalRDebug.sendMessage", userName, message);
-            if (result.GetProperty("success").GetBoolean())
+            var result = await InvokeSessionAsync("sendMessage", userName, message);
+            if (result is null)
+            {
+                return false;
+            }
+
+            if (result.Value.GetProperty("success").GetBoolean())
             {
                 return true;
             }
 
-            AddMessage("Error", T("UISignalR:DebugClient:SendFailed", result.GetProperty("error").GetString() ?? string.Empty), MessageType.Error);
+            AddMessage("Error", T("UISignalR:DebugClient:SendFailed", result.Value.GetProperty("error").GetString() ?? string.Empty), MessageType.Error);
             return false;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ObjectDisposedException)
         {
-            AddMessage("Error", T("UISignalR:DebugClient:SendFailed", ex.Message), MessageType.Error);
+            if (!_disposed)
+            {
+                AddMessage("Error", T("UISignalR:DebugClient:SendFailed", ex.Message), MessageType.Error);
+            }
+
             return false;
         }
     }
@@ -172,6 +262,11 @@ public sealed class SignalRDebugJsClient(
     /// </summary>
     public async Task<bool> InvokeMethodAsync(string methodName, IReadOnlyList<MethodCallParameter> parameters)
     {
+        if (_disposed)
+        {
+            return false;
+        }
+
         var method = _hubMethods.FirstOrDefault(candidate => candidate.Name == methodName);
         if (method is null)
         {
@@ -214,22 +309,30 @@ public sealed class SignalRDebugJsClient(
                 }
             }
 
-            var result = await jsRuntime.InvokeAsync<JsonElement>(
-                "signalRDebug.invokeMethod",
+            var result = await InvokeSessionAsync(
+                "invokeMethod",
                 methodName,
                 arguments.ToArray());
+            if (result is null)
+            {
+                return false;
+            }
 
-            if (result.GetProperty("success").GetBoolean())
+            if (result.Value.GetProperty("success").GetBoolean())
             {
                 return true;
             }
 
-            AddMessage("Error", T("UISignalR:DebugClient:MethodInvocationFailed", result.GetProperty("error").GetString() ?? string.Empty), MessageType.Error);
+            AddMessage("Error", T("UISignalR:DebugClient:MethodInvocationFailed", result.Value.GetProperty("error").GetString() ?? string.Empty), MessageType.Error);
             return false;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ObjectDisposedException)
         {
-            AddMessage("Error", T("UISignalR:DebugClient:MethodInvocationFailed", ex.Message), MessageType.Error);
+            if (!_disposed)
+            {
+                AddMessage("Error", T("UISignalR:DebugClient:MethodInvocationFailed", ex.Message), MessageType.Error);
+            }
+
             return false;
         }
     }
@@ -239,6 +342,11 @@ public sealed class SignalRDebugJsClient(
     /// </summary>
     public async Task<bool> ToggleMethodListenerAsync(string methodName, bool isListening)
     {
+        if (_disposed)
+        {
+            return false;
+        }
+
         var method = _hubMethods.FirstOrDefault(candidate => candidate.Name == methodName);
         if (method is null)
         {
@@ -247,17 +355,22 @@ public sealed class SignalRDebugJsClient(
 
         try
         {
-            var result = isListening
-                ? await jsRuntime.InvokeAsync<JsonElement>("signalRDebug.registerListener", method.Name, method.DisplayName)
-                : await jsRuntime.InvokeAsync<JsonElement>("signalRDebug.unregisterListener", method.Name, method.DisplayName);
+            var result = await InvokeSessionAsync(
+                isListening ? "registerListener" : "unregisterListener",
+                method.Name,
+                method.DisplayName);
+            if (result is null)
+            {
+                return false;
+            }
 
-            if (!result.GetProperty("success").GetBoolean())
+            if (!result.Value.GetProperty("success").GetBoolean())
             {
                 AddMessage(
                     "Error",
                     isListening
-                        ? T("UISignalR:DebugClient:RegisterListenerFailed", result.GetProperty("error").GetString() ?? string.Empty)
-                        : T("UISignalR:DebugClient:UnregisterListenerFailed", result.GetProperty("error").GetString() ?? string.Empty),
+                        ? T("UISignalR:DebugClient:RegisterListenerFailed", result.Value.GetProperty("error").GetString() ?? string.Empty)
+                        : T("UISignalR:DebugClient:UnregisterListenerFailed", result.Value.GetProperty("error").GetString() ?? string.Empty),
                     MessageType.Error);
                 return false;
             }
@@ -266,9 +379,13 @@ public sealed class SignalRDebugJsClient(
             MethodListenerChanged?.Invoke(method);
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ObjectDisposedException)
         {
-            AddMessage("Error", T("UISignalR:DebugClient:ListenerToggleFailed", ex.Message), MessageType.Error);
+            if (!_disposed)
+            {
+                AddMessage("Error", T("UISignalR:DebugClient:ListenerToggleFailed", ex.Message), MessageType.Error);
+            }
+
             return false;
         }
     }
@@ -314,6 +431,11 @@ public sealed class SignalRDebugJsClient(
     /// </summary>
     public void ClearMessages()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _messages.Clear();
         _connectionState.TotalReceivedMessages = 0;
         RaiseConnectionStateChanged();
@@ -414,85 +536,205 @@ public sealed class SignalRDebugJsClient(
     }
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeSync)
+        {
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        _disposed = true;
+        await _sessionGate.WaitAsync();
+
+        try
+        {
+            var session = _session;
+            var dotNetRef = _dotNetRef;
+            var module = _module;
+
+            _session = null;
+            _dotNetRef = null;
+            _module = null;
+
+            if (session is not null && dotNetRef is not null && module is not null)
+            {
+                await DisposeOwnedSessionAsync(session, dotNetRef, module);
+                return;
+            }
+
+            dotNetRef?.Dispose();
+            if (session is not null)
+            {
+                await DisposeInteropReferenceAsync(session);
+            }
+
+            if (module is not null)
+            {
+                await DisposeInteropReferenceAsync(module);
+            }
+        }
+        finally
+        {
+            _sessionGate.Release();
+        }
+    }
+
+    private async Task<JsonElement?> InvokeSessionAsync(string identifier, params object?[] arguments)
     {
         if (_disposed)
         {
-            return;
+            return null;
         }
 
-        _disposed = true;
-
+        await _sessionGate.WaitAsync();
         try
         {
-            await jsRuntime.InvokeVoidAsync("signalRDebug.disconnect");
-        }
-        catch
-        {
-            // Ignore cleanup failures caused by browser refresh or circuit teardown.
-        }
+            if (_disposed)
+            {
+                return null;
+            }
 
-        _dotNetRef?.Dispose();
+            var session = _session
+                ?? throw new InvalidOperationException("The SignalR browser session has not been initialized.");
+            var result = await session.InvokeAsync<JsonElement>(identifier, arguments);
+            return _disposed ? null : result;
+        }
+        finally
+        {
+            _sessionGate.Release();
+        }
     }
 
-    private async Task WaitForJavaScriptAsync()
+    private Dictionary<string, string> BuildJavaScriptLocalization() => new()
     {
-        var retryDelayMs = 100;
+        ["NoArguments"] = T("UISignalR:JavaScript:NoArguments"),
+        ["NotConnected"] = T("UISignalR:JavaScript:NotConnected"),
+        ["ConnectionClosedWithError"] = T("UISignalR:JavaScript:ConnectionClosedWithError"),
+        ["ConnectionClosed"] = T("UISignalR:JavaScript:ConnectionClosed"),
+        ["Reconnecting"] = T("UISignalR:JavaScript:Reconnecting"),
+        ["ReconnectedSuccessfully"] = T("UISignalR:JavaScript:ReconnectedSuccessfully"),
+        ["ConnectedSuccessfully"] = T("UISignalR:JavaScript:ConnectedSuccessfully"),
+        ["ConnectionFailed"] = T("UISignalR:JavaScript:ConnectionFailed"),
+        ["Disconnected"] = T("UISignalR:JavaScript:Disconnected"),
+        ["RegisteredListener"] = T("UISignalR:JavaScript:RegisteredListener"),
+        ["UnregisteredListener"] = T("UISignalR:JavaScript:UnregisteredListener")
+    };
 
-        for (var attempt = 0; attempt < 10; attempt++)
+    private static async ValueTask DisposeInteropReferenceAsync(IJSObjectReference reference)
+    {
+        try
+        {
+            await reference.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    private static async Task DisposeOwnedSessionAsync(
+        IJSObjectReference session,
+        DotNetObjectReference<SignalRDebugJsClient> dotNetRef,
+        IJSObjectReference module)
+    {
+        await DisposeOwnedSessionAsync(
+            session,
+            dotNetRef.Dispose,
+            module,
+            SHUTDOWN_DRAIN_TIMEOUT);
+    }
+
+    internal static async Task DisposeOwnedSessionAsync(
+        IJSObjectReference session,
+        Action releaseCallbackReference,
+        IJSObjectReference module,
+        TimeSpan drainTimeout)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(releaseCallbackReference);
+        ArgumentNullException.ThrowIfNull(module);
+        ArgumentOutOfRangeException.ThrowIfLessThan(drainTimeout, TimeSpan.Zero);
+
+        var callbackReleaseTask = DrainAndReleaseCallbackAsync(session, releaseCallbackReference);
+
+        try
         {
             try
             {
-                await jsRuntime.InvokeAsync<object>("signalRDebug.getHubsData");
+                await callbackReleaseTask.WaitAsync(drainTimeout);
+            }
+            catch (TimeoutException)
+            {
+                // Keep the callback reference owned by the drain continuation. The public disposal path
+                // remains bounded while a late acknowledgement can still release the callback safely.
+                _ = ObserveDeferredCallbackReleaseAsync(callbackReleaseTask);
+            }
+        }
+        finally
+        {
+            // These handles no longer admit operations once disposal owns the session. Releasing them here
+            // prevents an active-circuit handle leak even when callback acknowledgement is delayed.
+            await DisposeInteropReferenceAsync(session);
+            await DisposeInteropReferenceAsync(module);
+        }
+    }
+
+    private static async Task DrainAndReleaseCallbackAsync(
+        IJSObjectReference session,
+        Action releaseCallbackReference)
+    {
+        try
+        {
+            // Supplying CancellationToken.None bypasses JSRuntime.DefaultAsyncTimeout. A caller-side bounded
+            // wait must never cancel the underlying acknowledgement because JavaScript may still be draining
+            // callbacks after that wait expires.
+            var shutdownResult = await session.InvokeAsync<JsonElement>(
+                "shutdown",
+                CancellationToken.None);
+            if (shutdownResult.ValueKind is not JsonValueKind.Object
+                || !shutdownResult.TryGetProperty("drained", out var drained)
+                || drained.ValueKind is not JsonValueKind.True)
+            {
                 return;
             }
-            catch
-            {
-                await Task.Delay(retryDelayMs);
-                retryDelayMs = Math.Min(retryDelayMs * 2, 1000);
-            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // A disconnected circuit cannot dispatch another callback through this reference.
+        }
+        catch (TaskCanceledException)
+        {
+            // Cancellation is not proof that JavaScript drained its callbacks. Retain the reference rather
+            // than turning an ambiguous cancellation into a use-after-dispose race.
+            return;
+        }
+        catch (OperationCanceledException)
+        {
+            // Preserve the same ownership rule for non-task cancellation implementations.
+            return;
         }
 
-        AddMessage("System", T("UISignalR:DebugClient:JavaScriptLoadTimeout"), MessageType.Error);
+        releaseCallbackReference();
     }
 
-    private async Task SetupJavaScriptLocalizationAsync()
+    private static async Task ObserveDeferredCallbackReleaseAsync(Task callbackReleaseTask)
     {
         try
         {
-            await jsRuntime.InvokeVoidAsync("signalRDebug.setLocalization", new Dictionary<string, string>
-            {
-                ["NoArguments"] = T("UISignalR:JavaScript:NoArguments"),
-                ["NotConnected"] = T("UISignalR:JavaScript:NotConnected"),
-                ["ConnectionClosedWithError"] = T("UISignalR:JavaScript:ConnectionClosedWithError"),
-                ["ConnectionClosed"] = T("UISignalR:JavaScript:ConnectionClosed"),
-                ["Reconnecting"] = T("UISignalR:JavaScript:Reconnecting"),
-                ["ReconnectedSuccessfully"] = T("UISignalR:JavaScript:ReconnectedSuccessfully"),
-                ["ConnectedSuccessfully"] = T("UISignalR:JavaScript:ConnectedSuccessfully"),
-                ["ConnectionFailed"] = T("UISignalR:JavaScript:ConnectionFailed"),
-                ["Disconnected"] = T("UISignalR:JavaScript:Disconnected"),
-                ["RegisteredListener"] = T("UISignalR:JavaScript:RegisteredListener"),
-                ["UnregisteredListener"] = T("UISignalR:JavaScript:UnregisteredListener"),
-                ["AllListenersCleared"] = T("UISignalR:JavaScript:AllListenersCleared")
-            });
+            await callbackReleaseTask;
         }
-        catch (Exception ex)
+        catch (JSException)
         {
-            AddMessage("System", T("UISignalR:DebugClient:SetLocalizationFailed", ex.Message), MessageType.Error);
+            // A failed acknowledgement is not sufficient evidence to release the callback reference.
         }
-    }
-
-    private async Task SetupJavaScriptCallbacksAsync()
-    {
-        try
+        catch (OperationCanceledException)
         {
-            await jsRuntime.InvokeVoidAsync("signalRDebug.setMessageCallback", _dotNetRef);
-            await jsRuntime.InvokeVoidAsync("signalRDebug.setConnectionStatusCallback", _dotNetRef);
-            await jsRuntime.InvokeVoidAsync("signalRDebug.setConnectionIdCallback", _dotNetRef);
-        }
-        catch (Exception ex)
-        {
-            AddMessage("System", T("UISignalR:DebugClient:SetCallbacksFailed", ex.Message), MessageType.Error);
+            // Cancellation is likewise unconfirmed; the callback reference remains retained for safety.
         }
     }
 

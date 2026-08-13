@@ -82,6 +82,39 @@ export function calculateRadialDependencyLayout(nodes, requestedWidth, requested
     return { width, height, positions };
 }
 
+export function createDotNetCallbackGate(initialReference) {
+    let reference = initialReference;
+    let acceptingCallbacks = true;
+    let disposePromise;
+    const pendingCallbacks = new Set();
+
+    const invoke = (methodName, ...args) => {
+        const admittedReference = acceptingCallbacks ? reference : null;
+        if (!admittedReference) return undefined;
+
+        let callback;
+        try {
+            callback = Promise.resolve(admittedReference.invokeMethodAsync(methodName, ...args));
+        } catch (error) {
+            callback = Promise.reject(error);
+        }
+
+        pendingCallbacks.add(callback);
+        const removeCallback = () => pendingCallbacks.delete(callback);
+        callback.then(removeCallback, removeCallback);
+        return callback;
+    };
+
+    const dispose = () => disposePromise ??= disposeCore();
+    const disposeCore = async () => {
+        acceptingCallbacks = false;
+        await Promise.allSettled([...pendingCallbacks]);
+        reference = null;
+    };
+
+    return { invoke, dispose };
+}
+
 export function createGraph(element, initialModel, dotNetReference) {
     if (!globalThis.d3) throw new Error("D3.js is required to render the module dependency graph.");
 
@@ -96,6 +129,9 @@ export function createGraph(element, initialModel, dotNetReference) {
     let renderFrame = 0;
     let fitFrame = 0;
     let hasInitialFit = false;
+    let disposePromise;
+    const callbacks = createDotNetCallbackGate(dotNetReference);
+    dotNetReference = null;
     const instanceToken = globalThis.crypto?.randomUUID?.()
         ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
     const markerId = `module-dependency-arrow-${instanceToken}`;
@@ -125,9 +161,8 @@ export function createGraph(element, initialModel, dotNetReference) {
             try {
                 render();
             } catch {
-                cleanup();
-                const failure = dotNetReference?.invokeMethodAsync("OnGraphRenderFailed");
-                failure?.catch(() => {});
+                callbacks.invoke("OnGraphRenderFailed");
+                void cleanup();
             }
         });
     };
@@ -162,8 +197,7 @@ export function createGraph(element, initialModel, dotNetReference) {
             .style("cursor", "pointer")
             .on("click.graph", (event, node) => {
                 event.stopPropagation();
-                const selection = dotNetReference?.invokeMethodAsync("OnNodeSelected", node.id);
-                selection?.catch(() => {});
+                callbacks.invoke("OnNodeSelected", node.id);
             })
             .on("mouseenter.graph", (_, node) => showNodeEvidence(node))
             .on("mouseleave.graph", clearNodeEvidence);
@@ -366,9 +400,11 @@ export function createGraph(element, initialModel, dotNetReference) {
             d3.zoomIdentity.translate(width / 2, height / 2).scale(1.65).translate(-node.x, -node.y));
     };
 
-    const cleanup = () => {
-        if (disposed) return;
+    const cleanup = () => disposePromise ??= cleanupCore();
+
+    const cleanupCore = async () => {
         disposed = true;
+        const callbackDrain = callbacks.dispose();
         cancelAnimationFrame(renderFrame);
         cancelAnimationFrame(fitFrame);
         simulation?.stop();
@@ -382,18 +418,19 @@ export function createGraph(element, initialModel, dotNetReference) {
         svg.on(".zoom", null);
         nodeSelection?.on(".graph", null);
         // DOM removal remains renderer/MutationObserver-owned. Disposal only stops callback producers.
+        await callbackDrain;
     };
 
     const resizeObserver = new ResizeObserver(scheduleRender);
     resizeObserver.observe(element);
     const removalObserver = new MutationObserver(() => {
-        if (!element.isConnected) cleanup();
+        if (!element.isConnected) void cleanup();
     });
     removalObserver.observe(document.body, { childList: true, subtree: true });
     try {
         render();
     } catch (error) {
-        cleanup();
+        void cleanup();
         throw error;
     }
 

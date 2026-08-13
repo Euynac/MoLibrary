@@ -58,13 +58,30 @@
     padding: 10px 12px;
     border-radius: 8px;
     background-color: var(--mud-palette-background);
+    border: 0;
+    color: inherit;
     cursor: pointer;
-    transition: all 0.2s ease;
+    font: inherit;
+    text-align: start;
+    width: 100%;
+    transition: background-color 180ms ease, box-shadow 180ms ease;
 }
 
-.problem-jobs-wrapper ::deep .problem-item:hover {
+.problem-jobs-wrapper ::deep .problem-item:hover,
+.problem-jobs-wrapper ::deep .problem-item:focus-visible {
     background-color: var(--mud-palette-action-default-hover);
-    transform: translateX(4px);
+    box-shadow: inset 3px 0 0 var(--mud-palette-warning);
+}
+
+.problem-jobs-wrapper ::deep .problem-item:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .problem-jobs-wrapper ::deep .problem-item {
+        transition-duration: 0.01ms;
+    }
 }
 
 .problem-jobs-wrapper ::deep .problem-info {

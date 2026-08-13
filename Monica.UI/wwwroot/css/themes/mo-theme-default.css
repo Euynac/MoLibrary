@@ -48,6 +48,16 @@
         border-color var(--mo-default-motion-fast),
         color var(--mo-default-motion-fast);
 
+    --mo-navbar-brand-gap: 10px;
+    --mo-navbar-brand-padding: 4px 6px 4px 4px;
+    --mo-navbar-brand-radius: var(--mo-default-radius-control);
+    --mo-navbar-brand-hover-background: var(--mud-palette-action-default-hover);
+    --mo-navbar-brand-hover-opacity: 1;
+    --mo-navbar-brand-logo-size: 32px;
+    --mo-navbar-brand-name-size: 1rem;
+    --mo-navbar-brand-name-weight: 600;
+    --mo-navbar-control-radius: var(--mo-default-radius-control);
+
     --mo-color-page-hero-background: #151b2b;
     --mo-color-page-hero-text: #f4f6fb;
     --mo-color-page-hero-action: #f4f6fb;
@@ -106,23 +116,21 @@
 
 .mo-theme-default-light .navbar-brand,
 .mo-theme-default-dark .navbar-brand {
-    gap: 10px;
-    padding: 4px 6px 4px 4px;
-    border-radius: var(--mo-default-radius-control);
+    border-radius: var(--mo-navbar-brand-radius);
     opacity: 1;
     transition: background-color var(--mo-default-motion-fast);
 }
 
 .mo-theme-default-light .navbar-brand:hover,
 .mo-theme-default-dark .navbar-brand:hover {
-    background: var(--mud-palette-action-default-hover);
-    opacity: 1;
+    background: var(--mo-navbar-brand-hover-background);
+    opacity: var(--mo-navbar-brand-hover-opacity);
 }
 
 .mo-theme-default-light :is(.brand-logo, .brand-logo-image),
 .mo-theme-default-dark :is(.brand-logo, .brand-logo-image) {
-    width: 32px;
-    height: 32px;
+    width: var(--mo-navbar-brand-logo-size);
+    height: var(--mo-navbar-brand-logo-size);
 }
 
 .mo-theme-default-light .brand-text,
@@ -133,8 +141,8 @@
 
 .mo-theme-default-light .brand-name,
 .mo-theme-default-dark .brand-name {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: var(--mo-navbar-brand-name-size);
+    font-weight: var(--mo-navbar-brand-name-weight);
     letter-spacing: -0.012em;
 }
 

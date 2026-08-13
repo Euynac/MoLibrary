@@ -1,7 +1,90 @@
 {
-  "Pages": {
-    "LoggingMonitor": {
-      "Title": "日志监控"
+  "Pages": { "LoggingMonitor": { "Title": "日志监控" } },
+  "Page": {
+    "Title": "日志监控",
+    "Eyebrow": "Monica / 运行证据",
+    "Heading": "日志监控",
+    "Description": "检查实时日志流、收敛运行证据，并在不同日志制品间切换而不丢失上下文。",
+    "Tabs": { "Realtime": "实时日志", "Files": "日志文件" },
+    "State": { "Running": "跟随中", "Paused": "已暂停", "Loading": "正在加载日志证据...", "NotDetected": "未检测到", "NotConfigured": "未配置", "FileMissing": "日志文件不可用：{0}" },
+    "Summary": { "AriaLabel": "日志运行摘要", "File": "当前制品", "Lines": "文件行数", "Buffer": "可见缓冲区", "LoadTime": "初始加载", "Milliseconds": "{0} ms" },
+    "Actions": { "SwitchFile": "切换文件", "Back": "返回", "Cancel": "取消", "Confirm": "确定" },
+    "Context": { "Viewing": "正在查看行号 #{0} 附近的证据" },
+    "FileDialog": { "Title": "选择日志文件", "Loading": "正在加载日志制品...", "Empty": "未找到日志文件。" },
+    "Components": {
+      "Toolbar": {
+        "Start": "开始",
+        "Pause": "暂停",
+        "Refresh": "刷新",
+        "Export": "导出临时日志",
+        "LineLimit": "显示行数",
+        "AutoScroll": "自动滚动"
+      },
+      "Filter": {
+        "Placeholder": "筛选日志证据",
+        "OnlyMatches": "仅捕获匹配项",
+        "Apply": "应用筛选",
+        "Clear": "清除"
+      },
+      "Files": {
+        "Title": "日志制品",
+        "Refresh": "刷新",
+        "Directory": "当前日志目录：{0}",
+        "NotConfigured": "未配置",
+        "RelativePath": "相对路径",
+        "Size": "大小",
+        "LastModified": "最后修改时间",
+        "Download": "下载",
+        "Empty": "当前目录没有可用的日志制品。"
+      },
+      "Viewer": {
+        "Title": "实时日志流",
+        "LineCount": "共 {0} 行",
+        "ActiveFilter": "筛选：{0}",
+        "LoadingMore": "正在加载更早的日志证据...",
+        "MatchPosition": "匹配：{0} / {1}",
+        "PreviousMatch": "上一个匹配项",
+        "NextMatch": "下一个匹配项",
+        "Empty": "暂无日志证据。",
+        "ContextMenu": {
+          "LineInfo": "显示行位置信息",
+          "FilterSeverity": "按此日志级别筛选",
+          "FindSelection": "查找选中的文本",
+          "ShowContext": "显示上下文",
+          "Copy": "复制",
+          "CopyRaw": "复制原始日志",
+          "CopyMessage": "仅复制消息",
+          "CopyTimestamp": "带时间戳复制",
+          "CopyLineNumber": "带行号复制",
+          "Navigate": "导航",
+          "Top": "跳转到顶部",
+          "Bottom": "跳转到底部"
+        },
+        "Messages": {
+          "LoadMoreFailed": "加载更早的日志证据失败：{0}",
+          "Copied": "已复制：{0}",
+          "SelectText": "请先选中要查找的文本。",
+          "FilterApplied": "已应用筛选条件：{0}",
+          "SelectionFailed": "读取选中文本失败：{0}"
+        }
+      },
+      "LineInfo": {
+        "DialogTitle": "日志行证据",
+        "PositionTitle": "位置信息",
+        "AbsoluteLine": "绝对行号",
+        "BufferPosition": "缓冲区位置",
+        "FilteredPosition": "筛选位置",
+        "DetailsTitle": "日志详情",
+        "Timestamp": "时间戳",
+        "Severity": "日志级别",
+        "Thread": "线程",
+        "MessageTitle": "消息内容",
+        "NotAvailable": "不可用",
+        "Close": "关闭"
+      }
+    },
+    "Messages": {
+      "InitializeFailed": "初始化失败：{0}", "SnapshotInitializeFailed": "初始化日志快照失败。", "StartFailed": "启动日志跟随失败。", "Started": "日志跟随已启动。", "PauseFailed": "暂停日志跟随失败。", "Paused": "日志跟随已暂停。", "FilterFailed": "更新筛选器失败。", "FilesFailed": "获取日志文件失败。", "DownloadFailed": "下载失败：{0}", "ExportFailed": "导出失败：{0}", "ContextUnavailable": "该日志行没有文件位置，无法显示上下文。", "ContextReadFailed": "读取日志上下文失败。", "ContextLoaded": "已加载行号 #{0} 附近的上下文。", "ContextFailed": "显示上下文失败：{0}", "ReturnedToRealtime": "已返回实时日志流。", "FileStartReached": "已到达日志文件开头。", "LoadMoreFailed": "加载更多日志失败。", "LoadFailed": "加载失败：{0}", "SwitchFailed": "切换日志文件失败：{0}", "Switched": "已切换到 {0}。"
     }
   }
 }

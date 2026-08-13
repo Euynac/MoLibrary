@@ -4,81 +4,95 @@
 @using Monica.SignalR.UISignalR.State
 @inject ISnackbar SnackBar
 @inject NavigationManager NavigationManager
-@inject SignalRDebugPageState PageState
+@inject SignalRDebugPageStateFactory PageStateFactory
 @inject IStringLocalizer<SignalRResource> L
 @implements IAsyncDisposable
 
 <PageTitle>@L["Pages:SignalRDebug:Title"]</PageTitle>
 
-<script src="_content/Monica.SignalR/UISignalR/signalr.js"></script>
-<script src="_content/Monica.SignalR/UISignalR/signalr-debug.js"></script>
+<div class="signalr-debug-page">
+    <header class="signalr-lab-header">
+        <div class="signalr-lab-header__identity">
+            <span class="signalr-lab-header__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Hub" /></span>
+            <div class="signalr-lab-header__copy">
+                <MudText Typo="Typo.overline" Class="signalr-eyebrow">@L["Pages:SignalRDebug:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h4">@L["Pages:SignalRDebug:Heading"]</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Pages:SignalRDebug:Subtitle"]</MudText>
+            </div>
+        </div>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
-    <MudText Typo="Typo.h3" Class="mb-4">
-        <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
-        @L["Pages:SignalRDebug:Heading"]
-    </MudText>
+        <div class="signalr-lab-header__evidence" aria-label="@L["Pages:SignalRDebug:Summary:AriaLabel"]">
+            <MudChip T="string" Size="Size.Small" Color="@GetConnectionStatusColor()" Icon="@GetConnectionStatusIcon()">@GetConnectionStatusText()</MudChip>
+            <span><strong>@PageState.AvailableHubs.Count</strong>@L["Pages:SignalRDebug:Summary:Hubs"]</span>
+            <span><strong>@PageState.ConnectedUsers.Count</strong>@L["Pages:SignalRDebug:Summary:Users"]</span>
+            <span><strong>@PageState.ConnectionState.TotalReceivedMessages</strong>@L["Pages:SignalRDebug:Summary:Received"]</span>
+        </div>
+    </header>
 
-    <SignalRConnectionConfig AccessToken="@PageState.AccessToken"
-                             AccessTokenChanged="@((string value) => PageState.AccessToken = value)"
-                             SelectedHubRoute="@PageState.SelectedHubRoute"
-                             SelectedHubRouteChanged="@((string value) => PageState.SelectedHubRoute = value)"
-                             AvailableHubs="@PageState.AvailableHubs"
-                             IsConnecting="@PageState.ConnectionState.IsConnecting"
-                             IsConnected="@PageState.ConnectionState.IsConnected"
-                             OnConnect="ConnectAsync"
-                             OnDisconnect="DisconnectAsync"
-                             OnRefreshHubs="LoadHubsAsync" />
+    <main class="signalr-lab-workspace">
+        <section class="signalr-connection-deck" aria-label="@L["Pages:SignalRDebug:Sections:Connection"]">
+            <div class="signalr-panel signalr-panel--connection">
+                <SignalRConnectionConfig AccessToken="@PageState.AccessToken"
+                                         AccessTokenChanged="@((string value) => PageState.AccessToken = value)"
+                                         SelectedHubRoute="@PageState.SelectedHubRoute"
+                                         SelectedHubRouteChanged="@((string value) => PageState.SelectedHubRoute = value)"
+                                         AvailableHubs="@PageState.AvailableHubs"
+                                         IsConnecting="@PageState.ConnectionState.IsConnecting"
+                                         IsConnected="@PageState.ConnectionState.IsConnected"
+                                         OnConnect="ConnectAsync"
+                                         OnDisconnect="DisconnectAsync"
+                                         OnRefreshHubs="LoadHubsAsync" />
+            </div>
 
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="mb-2">@L["Pages:SignalRDebug:Settings:Title"]</MudText>
-        <MudSwitch T="bool"
-                   @bind-Value="PageState.VerboseLogging"
-                   Label="@L["Pages:SignalRDebug:Settings:VerboseLogging"]"
-                   Color="Color.Primary" />
-        <MudText Typo="Typo.caption" Class="mt-1 mud-text-secondary">
-            @L["Pages:SignalRDebug:Settings:VerboseLoggingHelper"]
-        </MudText>
-    </MudPaper>
+            <aside class="signalr-status-rail">
+                <div class="signalr-panel signalr-panel--status">
+                    <SignalRConnectionStatus ConnectionState="@PageState.ConnectionState" SelectedHubRoute="@PageState.SelectedHubRoute" />
+                </div>
 
-    <SignalRConnectionStatus ConnectionState="@PageState.ConnectionState"
-                             SelectedHubRoute="@PageState.SelectedHubRoute" />
+                <MudPaper Class="signalr-settings" Elevation="0">
+                    <div class="signalr-settings__identity">
+                        <MudIcon Icon="@Icons.Material.Outlined.Tune" Color="Color.Primary" />
+                        <div><MudText Typo="Typo.overline" Class="signalr-eyebrow">@L["Pages:SignalRDebug:Settings:Eyebrow"]</MudText><MudText Typo="Typo.subtitle1">@L["Pages:SignalRDebug:Settings:Title"]</MudText></div>
+                    </div>
+                    <MudSwitch T="bool" @bind-Value="PageState.VerboseLogging" Label="@L["Pages:SignalRDebug:Settings:VerboseLogging"]" Color="Color.Primary" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Pages:SignalRDebug:Settings:VerboseLoggingHelper"]</MudText>
+                </MudPaper>
+            </aside>
+        </section>
 
-    <SignalRConnectedUsers ConnectedUsers="@PageState.ConnectedUsers"
-                           OnRefreshClicked="LoadConnectedUsersAsync" />
+        <section class="signalr-grid signalr-grid--telemetry" aria-label="@L["Pages:SignalRDebug:Sections:Telemetry"]">
+            <div class="signalr-panel"><SignalRConnectedUsers ConnectedUsers="@PageState.ConnectedUsers" OnRefreshClicked="LoadConnectedUsersAsync" /></div>
+            <div class="signalr-panel"><SignalRSendDiagnostics Snapshot="@PageState.SendDiagnostics" OnRefreshClicked="LoadSendDiagnosticsAsync" /></div>
+        </section>
 
-    <SignalRSendDiagnostics Snapshot="@PageState.SendDiagnostics"
-                            OnRefreshClicked="LoadSendDiagnosticsAsync" />
+        <section class="signalr-grid signalr-grid--methods" aria-label="@L["Pages:SignalRDebug:Sections:Methods"]">
+            <div class="signalr-panel">
+                <SignalRMethodListener HubMethods="@PageState.HubMethods" IsConnected="@PageState.ConnectionState.IsConnected" OnToggleMethodListener="ToggleMethodListenerAsync" OnEnableAllListeners="EnableAllListenersAsync" OnDisableAllListeners="DisableAllListenersAsync" />
+            </div>
+            <div class="signalr-panel">
+                <SignalRMethodInvoker HubMethods="@PageState.HubMethods" IsConnected="@PageState.ConnectionState.IsConnected" SelectedMethodName="@PageState.SelectedMethodName" SelectedMethodNameChanged="PageState.SelectMethod" MethodParameters="@PageState.MethodParameters" OnInvokeMethod="InvokeMethodAsync" />
+            </div>
+        </section>
 
-    <SignalRMethodListener HubMethods="@PageState.HubMethods"
-                           IsConnected="@PageState.ConnectionState.IsConnected"
-                           OnToggleMethodListener="ToggleMethodListenerAsync"
-                           OnEnableAllListeners="EnableAllListenersAsync"
-                           OnDisableAllListeners="DisableAllListenersAsync" />
-
-    <SignalRMethodInvoker HubMethods="@PageState.HubMethods"
-                          IsConnected="@PageState.ConnectionState.IsConnected"
-                          SelectedMethodName="@PageState.SelectedMethodName"
-                          SelectedMethodNameChanged="PageState.SelectMethod"
-                          MethodParameters="@PageState.MethodParameters"
-                          OnInvokeMethod="InvokeMethodAsync" />
-
-    <SignalRMessageSender UserName="@PageState.UserName"
-                          UserNameChanged="@((string value) => PageState.UserName = value)"
-                          Message="@PageState.Message"
-                          MessageChanged="@((string value) => PageState.Message = value)"
-                          IsConnected="@PageState.ConnectionState.IsConnected"
-                          OnSendMessage="SendMessageAsync" />
-
-    <SignalRMessageLog Messages="@PageState.Messages"
-                       OnClearMessages="ClearMessages" />
-</MudContainer>
+        <section class="signalr-grid signalr-grid--messages" aria-label="@L["Pages:SignalRDebug:Sections:Messages"]">
+            <div class="signalr-panel">
+                <SignalRMessageSender UserName="@PageState.UserName" UserNameChanged="@((string value) => PageState.UserName = value)" Message="@PageState.Message" MessageChanged="@((string value) => PageState.Message = value)" IsConnected="@PageState.ConnectionState.IsConnected" OnSendMessage="SendMessageAsync" />
+            </div>
+            <div class="signalr-panel"><SignalRMessageLog Messages="@PageState.Messages" OnClearMessages="ClearMessages" /></div>
+        </section>
+    </main>
+</div>
 
 @code {
     /// <summary>
     /// The route used by the SignalR debug page.
     /// </summary>
     public const string PAGE_URL = "/signalr-debug";
+    private SignalRDebugPageState PageState { get; set; } = null!;
+    private bool _disposed;
+
+    /// <inheritdoc />
+    protected override void OnInitialized() => PageState = PageStateFactory.Create();
 
     /// <summary>
     /// Initializes the page state after the first render.
@@ -222,12 +236,40 @@
         PageState.ClearMessages();
     }
 
+    private Color GetConnectionStatusColor() => PageState.ConnectionState.Status switch
+    {
+        "Connected" => Color.Success,
+        "Connecting" or "Reconnecting" => Color.Warning,
+        "Disconnected" => Color.Default,
+        _ => Color.Error
+    };
+
+    private string GetConnectionStatusIcon() => PageState.ConnectionState.Status switch
+    {
+        "Connected" => Icons.Material.Filled.Wifi,
+        "Connecting" or "Reconnecting" => Icons.Material.Filled.Sync,
+        _ => Icons.Material.Filled.WifiOff
+    };
+
+    private string GetConnectionStatusText() => PageState.ConnectionState.Status switch
+    {
+        "Connected" => L["UISignalR:Common:Status:Connected"],
+        "Connecting" => L["UISignalR:Common:Status:Connecting"],
+        "Reconnecting" => L["UISignalR:Common:Status:Reconnecting"],
+        "Disconnecting" => L["UISignalR:Common:Status:Disconnecting"],
+        "Disconnected" => L["UISignalR:Common:Status:Disconnected"],
+        _ => L["UISignalR:Common:Status:Unknown"]
+    };
+
     /// <summary>
     /// Re-renders the page when the state object changes.
     /// </summary>
     private void OnStateChanged()
     {
-        _ = InvokeAsync(StateHasChanged);
+        if (!_disposed)
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
     }
 
     /// <summary>
@@ -235,6 +277,7 @@
     /// </summary>
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         PageState.StateChanged -= OnStateChanged;
         await PageState.DisposeAsync();
     }

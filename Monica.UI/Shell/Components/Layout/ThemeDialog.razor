@@ -1,10 +1,11 @@
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
 @using Monica.UI.Shell.State
+@using Monica.UI.Shell.Support
 @using Monica.UI.Theming
 @inject ThemeState ThemeService
 @inject IStringLocalizer<SharedResource> L
-@implements IDisposable
+@implements IAsyncDisposable
 
 <MudDialog>
     <DialogContent>
@@ -62,6 +63,7 @@
 </MudDialog>
 
 @code {
+    private readonly ComponentRenderTracker _renderTracker = new();
     private IReadOnlyList<(MonicaThemeKind Kind, string DisplayName, string Description)> _themeOptions = [];
 
     [CascadingParameter]
@@ -73,14 +75,15 @@
         ThemeService.OnThemeChanged += HandleThemeChanged;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         ThemeService.OnThemeChanged -= HandleThemeChanged;
+        await _renderTracker.CompleteAsync();
     }
 
     private void HandleThemeChanged()
     {
-        InvokeAsync(StateHasChanged);
+        _renderTracker.Queue(() => InvokeAsync(StateHasChanged));
     }
 
     private void Close()

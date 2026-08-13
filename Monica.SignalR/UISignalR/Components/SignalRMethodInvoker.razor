@@ -1,9 +1,8 @@
 @using Monica.SignalR.UISignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<!-- method call -->
-<MudPaper Class="pa-4 mb-4" Elevation="2">
-    <MudText Typo="Typo.h5" Class="mb-3">@L["UISignalR:MethodInvoker:Title"]</MudText>
+<MudPaper Class="signalr-method-invoker" Elevation="0">
+    <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.Terminal" Color="Color.Primary" /><MudText Typo="Typo.h6">@L["UISignalR:MethodInvoker:Title"]</MudText></div>
     <MudGrid>
         <MudItem xs="12" sm="6">
             <MudSelect Value="@SelectedMethodName"

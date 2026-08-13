@@ -1,0 +1,12 @@
+.service-filter-panel {
+    background: color-mix(in srgb, var(--mud-palette-primary) 2%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-divider);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+@media (max-width: 599.98px) {
+    .service-filter-panel {
+        padding: 0.875rem;
+    }
+}

@@ -1,6 +1,6 @@
 @using Monica.Configuration.Utils
 @attribute [Route(PAGE_URL)]
-@implements IDisposable
+@implements IAsyncDisposable
 @inject ConfigurationFacade Facade
 @inject ConfigurationStateStore StateStore
 @inject ConfigurationParameterPackageService PackageService
@@ -15,10 +15,11 @@
     <MudContainer MaxWidth="MaxWidth.False" Class="configuration-state-container">
         <MudStack Spacing="3" Class="configuration-state-layout">
             <div class="configuration-state-header-shell">
-                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2" Class="configuration-state-header">
-                    <MudStack Spacing="0">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="configuration-state-title-row">
-                            <MudText Typo="Typo.h4">@L["Pages:ConfigurationState:Title"]</MudText>
+                <ConfigurationPageHeader Title="@L["Pages:ConfigurationState:Title"]"
+                                         Subtitle="@L["State:Subtitle"]"
+                                         Icon="@Icons.Material.Filled.Tune">
+                    <TitleAccessory>
+                        <div class="configuration-state-title-row">
                             @if (!_loadingDefinitions)
                             {
                                 <span class="configuration-runtime-validation-anchor">
@@ -33,10 +34,9 @@
                             }
                             <ConfigurationReloadStatusButton @ref="_reloadStatusButton"
                                                              Reloaded="OnRuntimeConfigurationReloadedAsync" />
-                        </MudStack>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["State:Subtitle"]</MudText>
-                    </MudStack>
-                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Spacing="1">
+                        </div>
+                    </TitleAccessory>
+                    <Actions>
                         <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
                             <MudButton Variant="Variant.Outlined"
                                        StartIcon="@Icons.Material.Filled.UploadFile"
@@ -56,10 +56,11 @@
                         <MudTooltip Text="@L["Common:Actions:Refresh"]">
                             <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                            Variant="Variant.Outlined"
-                                           OnClick="LoadDefinitionsAsync" />
+                                           OnClick="LoadDefinitionsAsync"
+                                           aria-label="@L["Common:Actions:Refresh"]" />
                         </MudTooltip>
-                    </MudStack>
-                </MudStack>
+                    </Actions>
+                </ConfigurationPageHeader>
                 @if (!_loadingDefinitions)
                 {
                     <div class="configuration-runtime-validation-popover-anchor">
@@ -342,11 +343,14 @@
                                                         @foreach (var sectionItem in SectionItems)
                                                         {
                                                             var isSelectedSection = IsSelectedNode(sectionItem.Node);
-                                                            <MudButton Variant="@(isSelectedSection ? Variant.Filled : Variant.Text)"
+                                                            <MudButton Variant="Variant.Text"
                                                                        Color="@(isSelectedSection ? Color.Primary : Color.Default)"
                                                                        StartIcon="@sectionItem.Icon"
                                                                        FullWidth="true"
-                                                                       Class="configuration-section-button"
+                                                                       Class="@(isSelectedSection
+                                                                           ? "configuration-section-button configuration-section-button-selected"
+                                                                           : "configuration-section-button")"
+                                                                       aria-pressed="@isSelectedSection"
                                                                        OnClick="() => OnSelectedNodeChanged(sectionItem.Node)">
                                                                 <MudStack Spacing="1" AlignItems="AlignItems.Start" Class="configuration-section-content">
                                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1" Class="configuration-section-title-row">
@@ -355,10 +359,10 @@
                                                                         </MudText>
                                                                         <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">@sectionItem.ScalarCount</MudChip>
                                                                     </MudStack>
-                                                                    <MudText Typo="Typo.caption" Color="@(isSelectedSection ? Color.Inherit : Color.Secondary)">@sectionItem.PathLabel</MudText>
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@sectionItem.PathLabel</MudText>
                                                                     @if (!string.IsNullOrWhiteSpace(sectionItem.Description))
                                                                     {
-                                                                        <MudText Typo="Typo.caption" Color="@(isSelectedSection ? Color.Inherit : Color.Secondary)">@sectionItem.Description</MudText>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@sectionItem.Description</MudText>
                                                                     }
                                                                 </MudStack>
                                                             </MudButton>
@@ -418,6 +422,8 @@
     private ConfigurationReloadStatusButton? _reloadStatusButton;
     private ConfigurationMetadataStoreDiagnostic? _metadataStoreDiagnostic;
     private bool _definitionCatalogHealthy;
+    private bool _disposed;
+    private Task _pendingStateRender = Task.CompletedTask;
 
     private bool CanInspectSelectedDefinitionSources =>
         _selectedDefinition?.Origin == ConfigurationDefinitionOrigin.LocalScan;
@@ -554,9 +560,11 @@
         await LoadDefinitionsAsync();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         StateStore.Changed -= OnStateStoreChanged;
+        await _pendingStateRender;
     }
 
     private async Task LoadDefinitionsAsync()
@@ -565,6 +573,11 @@
         _definitionCatalogHealthy = false;
         var previouslySelectedKey = _selectedSummary?.DefinitionKey;
         var result = await Facade.GetDefinitionCatalogAsync();
+        if (_disposed)
+        {
+            return;
+        }
+
         if (result.IsFailed(out var error, out var catalog))
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
@@ -1599,9 +1612,20 @@
 
     private void OnStateStoreChanged()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _pendingCount = StateStore.GetPending().Count;
         _validationIssueCount = StateStore.GetValidationIssues().Count;
-        _ = InvokeAsync(StateHasChanged);
+        _pendingStateRender = InvokeAsync(() =>
+        {
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
+        });
     }
 
     private Task JumpToPendingChangeAsync(PendingChange change)

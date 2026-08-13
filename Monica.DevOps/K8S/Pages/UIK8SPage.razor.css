@@ -1,36 +1,27 @@
-.page-root {
-    min-height: 100%;
-}
-
-.namespace-select {
-    min-width: 260px;
-}
-
-.filter-action-slot {
-    height: 100%;
-    display: flex;
-    align-items: flex-start;
-    padding-top: 8px;
-}
-
-.filter-action-button {
-    min-height: 40px;
-}
-
-.actions-cell {
-    white-space: nowrap;
-}
-
-.page-root ::deep .resource-grid .mud-table-container {
-    max-height: 62vh;
-}
-
-.page-root ::deep .resource-grid .mud-table-cell {
-    vertical-align: top;
-}
-
-@media (max-width: 960px) {
-    .filter-action-slot {
-        padding-top: 0;
-    }
-}
+.k8s-page { width: 100%; min-width: 0; min-height: 100%; background: var(--mud-palette-background); }
+.k8s-page ::deep .page-root { width: 100%; max-width: none; padding: clamp(1rem, 2.2vw, 2rem); }
+.k8s-page__content { display: grid; gap: 1rem; width: 100%; min-width: 0; }
+.k8s-header { display: grid; gap: .5rem; }
+.k8s-header__eyebrow { display: flex; align-items: center; gap: .625rem; color: var(--mud-palette-info); font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.k8s-header__eyebrow > span:first-child { display: block; width: 1.5rem; height: 2px; background: var(--mud-palette-info); }
+.k8s-header__heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.k8s-header__description { max-width: 64rem; margin-top: .35rem; }
+.k8s-header__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
+.k8s-pulse { display: grid; grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr)); gap: .75rem; }
+.k8s-pulse__item { display: flex; align-items: center; gap: .75rem; min-width: 0; padding: .75rem .875rem; border: 1px solid var(--mud-palette-lines-default); border-radius: 12px; background: var(--mud-palette-surface); transition: border-color 150ms ease, box-shadow 150ms ease; }
+.k8s-pulse__item:hover { border-color: color-mix(in srgb, currentColor 28%, var(--mud-palette-lines-default)); box-shadow: 0 8px 20px color-mix(in srgb, currentColor 7%, transparent); }
+.k8s-pulse__item > span { display: grid; min-width: 0; } .k8s-pulse__item small { color: var(--mud-palette-text-secondary); } .k8s-pulse__item strong { overflow: hidden; color: var(--mud-palette-text-primary); text-overflow: ellipsis; white-space: nowrap; font-size: 1.05rem; }
+.k8s-pulse__item--primary { color: var(--mud-palette-primary); } .k8s-pulse__item--info { color: var(--mud-palette-info); } .k8s-pulse__item--success { color: var(--mud-palette-success); } .k8s-pulse__item--warning { color: var(--mud-palette-warning); }
+.k8s-filter-surface, .k8s-grid-surface { min-width: 0; }
+.k8s-filter-surface ::deep .mud-paper, .k8s-grid-surface ::deep .mud-paper { min-width: 0; overflow: hidden; border-radius: 12px; background: var(--mud-palette-surface); transition: border-color 150ms ease, box-shadow 150ms ease; }
+.k8s-filter-surface:hover ::deep .mud-paper, .k8s-grid-surface:hover ::deep .mud-paper { border-color: color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-lines-default)); box-shadow: 0 8px 22px color-mix(in srgb, var(--mud-palette-primary) 6%, transparent); }
+.namespace-select { min-width: 0; }
+.filter-action-slot { display: flex; align-items: flex-start; height: 100%; padding-top: 8px; }
+.filter-action-button { min-height: 40px; }
+.actions-cell { white-space: nowrap; }
+.k8s-grid-surface ::deep .resource-grid .mud-table-container { max-height: 62vh; overflow: auto; }
+.k8s-grid-surface ::deep .resource-grid .mud-table-cell { vertical-align: top; }
+.k8s-grid-surface ::deep .resource-grid .mud-table-row:focus-within { outline: 2px solid var(--mud-palette-primary); outline-offset: -2px; }
+@media (max-width: 929px) { .k8s-header__heading-row { align-items: flex-start; flex-direction: column; } .k8s-header__actions { justify-content: flex-start; } .k8s-pulse { grid-template-columns: repeat(2, minmax(0, 1fr)); } .filter-action-slot { padding-top: 0; } }
+@media (max-width: 600px) { .k8s-page ::deep .page-root { padding: .75rem; } .k8s-header__actions, .k8s-header__actions ::deep .mud-button-root, .k8s-header__actions ::deep .mud-menu { width: 100%; } .k8s-pulse { grid-template-columns: minmax(0, 1fr); } .k8s-filter-surface ::deep .mud-paper { padding: .75rem !important; } .actions-cell { white-space: normal; } }
+@media (prefers-reduced-motion: reduce) { .k8s-pulse__item, .k8s-filter-surface ::deep .mud-paper, .k8s-grid-surface ::deep .mud-paper { transition: none; } }

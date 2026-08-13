@@ -1,3 +1,7 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
 <div class="model-table">
     <MudTable T="AIModelInfo"
               Items="@Models"
@@ -5,15 +9,15 @@
               Hover="true"
               Breakpoint="Breakpoint.Sm">
         <HeaderContent>
-            <MudTh>模型</MudTh>
-            <MudTh>类型</MudTh>
-            <MudTh>能力</MudTh>
-            <MudTh>费用</MudTh>
-            <MudTh>附加</MudTh>
-            <MudTh Class="col-action">操作</MudTh>
+            <MudTh>@L["ProviderManage:ModelTable:Columns:Model"]</MudTh>
+            <MudTh>@L["ProviderManage:ModelTable:Columns:Type"]</MudTh>
+            <MudTh>@L["ProviderManage:ModelTable:Columns:Capabilities"]</MudTh>
+            <MudTh>@L["ProviderManage:ModelTable:Columns:Cost"]</MudTh>
+            <MudTh>@L["ProviderManage:ModelTable:Columns:Metadata"]</MudTh>
+            <MudTh Class="col-action">@L["ProviderManage:ModelTable:Columns:Actions"]</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="模型">
+            <MudTd DataLabel="@L["ProviderManage:ModelTable:Columns:Model"]">
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                     <MudStack Spacing="0">
                         <MudText Typo="Typo.body2">@context.ModelName</MudText>
@@ -26,23 +30,23 @@
                     {
                         @if (IsModelInRemoteList(context.ModelName))
                         {
-                            <MudTooltip Text="已验证：此模型在 Provider 支持列表中">
+                            <MudTooltip Text="@L["ProviderManage:ModelTable:RemoteStatus:Verified"]">
                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
                             </MudTooltip>
                         }
                         else
                         {
-                            <MudTooltip Text="此模型不在 Provider 支持的模型列表中">
+                            <MudTooltip Text="@L["ProviderManage:ModelTable:RemoteStatus:Missing"]">
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
                             </MudTooltip>
                         }
                     }
                 </MudStack>
             </MudTd>
-            <MudTd DataLabel="类型">
+            <MudTd DataLabel="@L["ProviderManage:ModelTable:Columns:Type"]">
                 <MudText Typo="Typo.body2">@GetModelType(context)</MudText>
             </MudTd>
-            <MudTd DataLabel="能力">
+            <MudTd DataLabel="@L["ProviderManage:ModelTable:Columns:Capabilities"]">
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                     @switch (context)
                     {
@@ -50,11 +54,11 @@
                         {
                             if (llm.SupportsImage)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Image">图像</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Image">@L["ProviderManage:ModelTable:Capabilities:Image"]</MudChip>
                             }
                             if (llm.SupportsReasoning)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Psychology">推理</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Psychology">@L["ProviderManage:ModelTable:Capabilities:Reasoning"]</MudChip>
                             }
 
                             break;
@@ -63,7 +67,7 @@
                         {
                             if (image.SupportsEditing)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Edit">编辑</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Edit">@L["ProviderManage:ModelTable:Capabilities:Editing"]</MudChip>
                             }
 
                             break;
@@ -72,7 +76,7 @@
                         {
                             if (tts.SupportsStreaming)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Stream">流式</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Stream">@L["ProviderManage:ModelTable:Capabilities:Streaming"]</MudChip>
                             }
 
                             break;
@@ -80,7 +84,7 @@
                     }
                 </MudStack>
             </MudTd>
-            <MudTd DataLabel="费用">
+            <MudTd DataLabel="@L["ProviderManage:ModelTable:Columns:Cost"]">
                 @if (context is LLMModelInfo llmCost)
                 {
                     var isFree = llmCost.InputCostPerMillionTokens <= 0
@@ -89,14 +93,14 @@
 
                     if (isFree)
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Success">免费</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Success">@L["ProviderManage:ModelTable:Cost:Free"]</MudText>
                     }
                     else
                     {
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.caption">@FormatCostLine("输入", llmCost.InputCostPerMillionTokens)</MudText>
-                            <MudText Typo="Typo.caption">@FormatCostLine("输出", llmCost.OutputCostPerMillionTokens)</MudText>
-                            <MudText Typo="Typo.caption">@FormatCostLine("缓存", llmCost.CachedInputCostPerMillionTokens)</MudText>
+                            <MudText Typo="Typo.caption">@FormatCostLine(L["ProviderManage:ModelTable:Cost:Input"], llmCost.InputCostPerMillionTokens)</MudText>
+                            <MudText Typo="Typo.caption">@FormatCostLine(L["ProviderManage:ModelTable:Cost:Output"], llmCost.OutputCostPerMillionTokens)</MudText>
+                            <MudText Typo="Typo.caption">@FormatCostLine(L["ProviderManage:ModelTable:Cost:Cached"], llmCost.CachedInputCostPerMillionTokens)</MudText>
                         </MudStack>
                     }
                 }
@@ -105,25 +109,25 @@
                     <MudText Typo="Typo.caption">—</MudText>
                 }
             </MudTd>
-            <MudTd DataLabel="附加">
+            <MudTd DataLabel="@L["ProviderManage:ModelTable:Columns:Metadata"]">
                 @if (context is LLMModelInfo llmMeta)
                 {
                     <MudStack Spacing="0">
-                        <MudText Typo="Typo.caption">上下文: @FormatOptional(llmMeta.ContextWindow)</MudText>
-                        <MudText Typo="Typo.caption">最大输出: @FormatOptional(llmMeta.MaxOutputTokens)</MudText>
+                        <MudText Typo="Typo.caption">@L["ProviderManage:ModelTable:Metadata:Context", FormatOptional(llmMeta.ContextWindow)]</MudText>
+                        <MudText Typo="Typo.caption">@L["ProviderManage:ModelTable:Metadata:MaxOutput", FormatOptional(llmMeta.MaxOutputTokens)]</MudText>
                     </MudStack>
                 }
                 else if (context is ImageModelInfo imageMeta)
                 {
-                    <MudText Typo="Typo.caption">最大尺寸: @FormatOptional(imageMeta.MaxImageSize)</MudText>
+                    <MudText Typo="Typo.caption">@L["ProviderManage:ModelTable:Metadata:MaxSize", FormatOptional(imageMeta.MaxImageSize)]</MudText>
                 }
                 else if (context is EmbeddingModelInfo embedding)
                 {
                     <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.caption">维度: @(embedding.Dimensions?.ToString() ?? "未知")</MudText>
+                        <MudText Typo="Typo.caption">@L["ProviderManage:ModelTable:Metadata:Dimensions", embedding.Dimensions?.ToString() ?? L["ProviderManage:ModelTable:Unknown"].Value]</MudText>
                         @if (embedding.Dimensions == null)
                         {
-                            <MudTooltip Text="维度未配置，可使用探测功能自动检测">
+                            <MudTooltip Text="@L["ProviderManage:ModelTable:Metadata:DimensionProbeHint"]">
                                 <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" Color="Color.Warning" />
                             </MudTooltip>
                         }
@@ -132,11 +136,11 @@
                 else if (context is TextToSpeechModelInfo ttsMeta)
                 {
                     <MudStack Spacing="0">
-                        <MudText Typo="Typo.caption">音色: @FormatVoiceSummary(ttsMeta.Voices)</MudText>
+                        <MudText Typo="Typo.caption">@L["ProviderManage:ModelTable:Metadata:Voices", FormatVoiceSummary(ttsMeta.Voices)]</MudText>
                     </MudStack>
                 }
             </MudTd>
-            <MudTd DataLabel="操作" Class="col-action">
+            <MudTd DataLabel="@L["ProviderManage:ModelTable:Columns:Actions"]" Class="col-action">
                 @if (context is LLMModelInfo)
                 {
                     var isTesting = IsModelTesting?.Invoke(context) ?? false;
@@ -145,7 +149,7 @@
                                StartIcon="@Icons.Material.Filled.PlayCircle"
                                Disabled="@(isTesting || DisableActions)"
                                OnClick="() => OnTestModel.InvokeAsync(context)">
-                        @(isTesting ? "测试中" : "测试")
+                        @(isTesting ? L["ProviderManage:ModelTable:Actions:Testing"] : L["ProviderManage:ModelTable:Actions:Test"])
                     </MudButton>
                 }
                 else if (context is EmbeddingModelInfo)
@@ -156,7 +160,7 @@
                                StartIcon="@Icons.Material.Filled.Radar"
                                Disabled="@(isProbing || DisableActions)"
                                OnClick="() => OnProbeEmbedding.InvokeAsync(context)">
-                        @(isProbing ? "探测中" : "探测维度")
+                        @(isProbing ? L["ProviderManage:ModelTable:Actions:Probing"] : L["ProviderManage:ModelTable:Actions:ProbeDimensions"])
                     </MudButton>
                 }
                 else
@@ -168,7 +172,7 @@
         <NoRecordsContent>
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
                 <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Medium" Color="Color.Secondary" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">未配置模型</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ProviderManage:ModelTable:Empty"]</MudText>
             </MudStack>
         </NoRecordsContent>
     </MudTable>
@@ -197,21 +201,21 @@
         return _remoteModelIds.Contains(modelName);
     }
 
-    private static string GetModelType(AIModelInfo model)
+    private string GetModelType(AIModelInfo model)
     {
         return model switch
         {
-            LLMModelInfo => "LLM",
-            ImageModelInfo => "Image",
-            EmbeddingModelInfo => "Embedding",
-            TextToSpeechModelInfo => "TTS",
-            _ => "Unknown"
+            LLMModelInfo => L["ProviderManage:ModelTable:Types:LLM"],
+            ImageModelInfo => L["ProviderManage:ModelTable:Types:Image"],
+            EmbeddingModelInfo => L["ProviderManage:ModelTable:Types:Embedding"],
+            TextToSpeechModelInfo => L["ProviderManage:ModelTable:Types:TTS"],
+            _ => L["ProviderManage:ModelTable:Unknown"]
         };
     }
 
-    private static string FormatCostLine(string label, decimal value)
+    private string FormatCostLine(string label, decimal value)
     {
-        return $"{label}: {FormatCostValue(value)} / 1M tokens";
+        return L["ProviderManage:ModelTable:Cost:PerMillion", label, FormatCostValue(value)];
     }
 
     private static string FormatCostValue(decimal value)
@@ -224,13 +228,13 @@
         return value?.ToString() ?? "—";
     }
 
-    private static string FormatVoiceSummary(IReadOnlyList<string>? voices)
+    private string FormatVoiceSummary(IReadOnlyList<string>? voices)
     {
         if (voices == null || voices.Count == 0)
         {
             return "—";
         }
 
-        return $"{voices.Count} 种";
+        return L["ProviderManage:ModelTable:Metadata:VoiceCount", voices.Count];
     }
 }

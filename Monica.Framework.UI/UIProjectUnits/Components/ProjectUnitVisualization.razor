@@ -87,7 +87,7 @@
                         <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
                     </MudOverlay>
                 }
-                <div id="project-unit-graph" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
+                <div id="@_graphContainerId" class="project-unit-graph" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
             </MudPaper>
         </div>
 
@@ -125,7 +125,14 @@
                OnClose="@CloseContextMenu" />
 
 @code {
-    private IJSObjectReference? _jsModule;
+    private const string JS_MODULE_PATH = "./_content/Monica.Framework.UI/UIProjectUnits/projectUnitGraph.js";
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SemaphoreSlim _interopGate = new(1, 1);
+    private readonly object _disposeSync = new();
+    private readonly string _graphContainerId = $"project-unit-graph-{Guid.NewGuid():N}";
+    private IJSObjectReference? _graphController;
+    private DotNetObjectReference<ProjectUnitVisualization>? _dotNetReference;
+    private Task? _disposeTask;
     private List<ProjectUnitSummary> _allProjectUnits = [];
     private List<ProjectUnitSummary> _filteredUnits = [];
     private bool _loading;
@@ -147,6 +154,7 @@
     private int _forceDistance = 500;
     private int _forceStrength = -300;
     private List<ContextMenuItem<ProjectUnitSummary>> _contextMenuItems = [];
+    private volatile bool _disposed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -155,36 +163,79 @@
             return;
         }
 
-        _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import",
-            "./_content/Monica.Framework.UI/UIProjectUnits/projectUnitGraph.js");
-
-        await InitializeGraph();
-        await LoadProjectUnitsAsync();
+        try
+        {
+            await InitializeGraphAsync();
+            if (!_disposed)
+            {
+                await LoadProjectUnitsAsync();
+            }
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
+        }
     }
 
-    private async Task InitializeGraph()
+    private async Task InitializeGraphAsync()
     {
-        if (_jsModule is null)
+        await _interopGate.WaitAsync(_lifetimeCancellation.Token);
+
+        IJSObjectReference? module = null;
+        IJSObjectReference? graphController = null;
+        DotNetObjectReference<ProjectUnitVisualization>? dotNetReference = null;
+        try
         {
-            return;
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                JS_MODULE_PATH);
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            var isDarkMode = await JSRuntime.InvokeAsync<bool>(
+                "eval",
+                _lifetimeCancellation.Token,
+                "document.documentElement.classList.contains('dark')");
+
+            dotNetReference = DotNetObjectReference.Create(this);
+            graphController = await module.InvokeAsync<IJSObjectReference>(
+                "createGraph",
+                _graphContainerId,
+                isDarkMode,
+                dotNetReference);
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            _graphController = graphController;
+            _dotNetReference = dotNetReference;
+            graphController = null;
+            dotNetReference = null;
         }
+        finally
+        {
+            await DisposeGraphControllerAsync(graphController);
+            dotNetReference?.Dispose();
+            await ReleaseModuleReferenceAsync(module);
 
-        var isDarkMode = await JSRuntime.InvokeAsync<bool>(
-            "eval",
-            "document.documentElement.classList.contains('dark')");
-
-        await _jsModule.InvokeVoidAsync(
-            "initializeGraph",
-            "project-unit-graph",
-            isDarkMode,
-            DotNetObjectReference.Create(this));
+            _interopGate.Release();
+        }
     }
 
     private async Task LoadProjectUnitsAsync()
     {
         _loading = true;
-        StateHasChanged();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
 
         try
         {
@@ -218,24 +269,22 @@
         finally
         {
             _loading = false;
-            StateHasChanged();
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
     private async Task UpdateGraph()
     {
-        if (_jsModule is null)
-        {
-            return;
-        }
-
-        await _jsModule.InvokeVoidAsync("updateGraph", PrepareGraphData());
+        await InvokeGraphAsync("updateGraph", PrepareGraphData());
         await SetLayout(_currentLayout);
 
         if (_currentLayout == LayoutType.Force)
         {
-            await _jsModule.InvokeVoidAsync("setForceDistance", _forceDistance);
-            await _jsModule.InvokeVoidAsync("setForceStrength", _forceStrength);
+            await InvokeGraphAsync("setForceDistance", _forceDistance);
+            await InvokeGraphAsync("setForceStrength", _forceStrength);
         }
     }
 
@@ -304,11 +353,6 @@
     private async Task SetLayout(LayoutType layoutType)
     {
         _currentLayout = layoutType;
-        if (_jsModule is null)
-        {
-            return;
-        }
-
         var layoutName = layoutType switch
         {
             LayoutType.Force => "force",
@@ -318,25 +362,19 @@
             _ => "force"
         };
 
-        await _jsModule.InvokeVoidAsync("setLayout", layoutName);
+        await InvokeGraphAsync("setLayout", layoutName);
     }
 
     private async Task OnForceDistanceChanged(int value)
     {
         _forceDistance = value;
-        if (_jsModule is not null)
-        {
-            await _jsModule.InvokeVoidAsync("setForceDistance", value);
-        }
+        await InvokeGraphAsync("setForceDistance", value);
     }
 
     private async Task OnForceStrengthChanged(int value)
     {
         _forceStrength = value;
-        if (_jsModule is not null)
-        {
-            await _jsModule.InvokeVoidAsync("setForceStrength", value);
-        }
+        await InvokeGraphAsync("setForceStrength", value);
     }
 
     private async Task ApplyFilters()
@@ -367,15 +405,17 @@
 
     private async Task ResetView()
     {
-        if (_jsModule is not null)
-        {
-            await _jsModule.InvokeVoidAsync("resetView");
-        }
+        await InvokeGraphAsync("resetView");
     }
 
     [JSInvokable]
     public void OnNodeClick(string nodeId)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _selectedUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == nodeId);
         if (_selectedUnit is null)
         {
@@ -389,6 +429,11 @@
     [JSInvokable]
     public void OnNodeRightClick(string nodeId, double x, double y)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _contextMenuUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == nodeId);
         if (_contextMenuUnit is null)
         {
@@ -416,6 +461,11 @@
     [JSInvokable]
     public void OnSvgBackgroundClick()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (!_contextMenuOpen)
         {
             return;
@@ -478,9 +528,9 @@
     private async Task FocusOnNodeAsync(ProjectUnitSummary? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
-        if (_jsModule is not null && targetUnit is not null)
+        if (targetUnit is not null)
         {
-            await _jsModule.InvokeVoidAsync("focusOnNode", targetUnit.Key);
+            await InvokeGraphAsync("focusOnNode", targetUnit.Key);
         }
     }
 
@@ -554,7 +604,26 @@
             return;
         }
 
-        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", targetUnit.Key);
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync(
+                "navigator.clipboard.writeText",
+                _lifetimeCancellation.Token,
+                targetUnit.Key);
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            return;
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
+            return;
+        }
         Snackbar.Add(L["ProjectUnitVisualization:Messages:CopiedToClipboard"], Severity.Success);
     }
 
@@ -599,18 +668,117 @@
 
     private async Task HandleNodeFocusFromDialog(string nodeKey)
     {
-        if (_jsModule is not null)
+        await InvokeGraphAsync("focusOnNode", nodeKey);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeSync)
         {
-            await _jsModule.InvokeVoidAsync("focusOnNode", nodeKey);
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task DisposeCoreAsync()
     {
-        if (_jsModule is not null)
+        _disposed = true;
+        await _lifetimeCancellation.CancelAsync();
+
+        await _interopGate.WaitAsync();
+        try
         {
-            await _jsModule.InvokeVoidAsync("dispose");
-            await _jsModule.DisposeAsync();
+            var graphController = Interlocked.Exchange(ref _graphController, null);
+            var dotNetReference = Interlocked.Exchange(ref _dotNetReference, null);
+
+            await DisposeGraphControllerAsync(graphController);
+            dotNetReference?.Dispose();
+        }
+        finally
+        {
+            _interopGate.Release();
+        }
+
+        // A caller may have observed the pre-disposal state immediately before teardown began and still be
+        // approaching the gate. Keep these lightweight primitives alive so cancellation settles that admission
+        // race without turning an expected lifetime transition into ObjectDisposedException.
+    }
+
+    private async Task InvokeGraphAsync(string identifier, params object?[] arguments)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await _interopGate.WaitAsync(_lifetimeCancellation.Token);
+            try
+            {
+                if (!_disposed && _graphController is not null)
+                {
+                    await _graphController.InvokeVoidAsync(identifier, _lifetimeCancellation.Token, arguments);
+                }
+            }
+            finally
+            {
+                _interopGate.Release();
+            }
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
+        }
+    }
+
+    private static async ValueTask DisposeGraphControllerAsync(IJSObjectReference? graphController)
+    {
+        if (graphController is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await graphController.InvokeVoidAsync("dispose");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+
+        try
+        {
+            await graphController.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private static async ValueTask ReleaseModuleReferenceAsync(IJSObjectReference? module)
+    {
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
         }
     }
 }

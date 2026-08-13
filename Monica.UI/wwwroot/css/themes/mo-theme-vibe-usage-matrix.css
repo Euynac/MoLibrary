@@ -556,8 +556,8 @@
     overflow: visible;
 }
 
-.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover),
-.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover) {
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .theme-card:hover),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .theme-card:hover) {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 58%, var(--mo-vibe-ghost));
     box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.10), 0 0 26px rgba(0, 255, 65, 0.12);
 }

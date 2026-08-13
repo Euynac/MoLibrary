@@ -26,6 +26,7 @@ public static class ModuleMemoryAnalysisUIBuilderExtensions
         {
             var registration = builder.AddModule<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption>(action);
             registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<ProfilingResource>()
                 .AddResource<MemoryAnalysisResource>();
             registration.Require<ModuleShellUI, ModuleShellUIOption>()
                 .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
@@ -68,8 +69,11 @@ public class ModuleMemoryAnalysisUI : MonicaModule<ModuleMemoryAnalysisUIOption>
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleMemoryAnalysisUIOption> context)
     {
-        context.Services.AddScoped<MemoryAnalysisPageState>();
-        context.Services.AddScoped<TypeAllocationPanelState>();
+        context.Services.AddScoped<MemoryAnalysisPageStateFactory>();
+        if (Option.EnableTypeAllocationTab)
+        {
+            context.Services.AddScoped<TypeAllocationPanelStateFactory>();
+        }
     }
 }
 

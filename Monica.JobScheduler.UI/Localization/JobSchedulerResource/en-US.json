@@ -16,6 +16,45 @@
       "Title": "Statistics"
     }
   },
+  "Workspace": {
+    "Eyebrow": "MONICA / SCHEDULING OPERATIONS",
+    "ControlPlaneLabel": "Scheduler control plane",
+    "ControlPlaneValue": "Plan · dispatch · evidence",
+    "NavigationLabel": "Scheduler sections",
+    "Navigation": {
+      "Dashboard": "Control plane",
+      "Monitor": "Live monitor",
+      "Definitions": "Definitions",
+      "Instances": "Execution ledger",
+      "Statistics": "Statistics"
+    },
+    "Pages": {
+      "Dashboard": {
+        "Title": "Scheduling control plane",
+        "Description": "Coordinate definitions, active work, execution health, and recent outcomes from one operational view."
+      },
+      "Monitor": {
+        "Title": "Live execution",
+        "Description": "Watch in-flight jobs, queue pressure, and concurrency ownership as the scheduler changes."
+      },
+      "Definitions": {
+        "Title": "Schedule registry",
+        "Description": "Inspect recurring and triggered definitions, their next dispatch, and their current control state."
+      },
+      "DefinitionDetail": {
+        "Title": "Definition dossier",
+        "Description": "Review one schedule's identity, runtime health, active instances, and execution policy."
+      },
+      "Instances": {
+        "Title": "Execution ledger",
+        "Description": "Search the complete run record by state, time window, job key, or instance identity."
+      },
+      "Statistics": {
+        "Title": "Throughput evidence",
+        "Description": "Compare volume, duration, failure concentration, and scheduler efficiency across a selected window."
+      }
+    }
+  },
   "Common": {
     "Actions": {
       "Search": "Search",
@@ -520,7 +559,6 @@
       "ExpressionFormatError": "Expression format error: {0}",
       "CountRange": "Count must be between 1 and 100",
       "CalculateOccurrencesFailed": "Failed to calculate execution times: {0}",
-      "JsModuleNotLoaded": "JavaScript module not loaded",
       "ParseFailed": "Parse failed",
       "JsInvokeFailed": "JavaScript invocation failed: {0}",
       "ParseFailedWithMessage": "Parse failed: {0}",

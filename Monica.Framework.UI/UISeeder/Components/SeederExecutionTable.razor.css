@@ -4,6 +4,20 @@
     border-radius: 12px;
     overflow: hidden;
     background: var(--mud-palette-surface);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.seeder-table-section:hover,
+.seeder-table-section:focus-within {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 30%, var(--mud-palette-lines-default));
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .seeder-table-section,
+    .seeder-table-scroll ::deep .mud-table-row {
+        transition: none !important;
+    }
 }
 
 .seeder-table-heading {

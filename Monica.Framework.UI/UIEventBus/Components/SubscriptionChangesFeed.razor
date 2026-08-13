@@ -1,7 +1,8 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @inject IStringLocalizer<EventBusResource> L
 
-<MudPaper Class="pa-4" Elevation="2">
+<div class="subscription-changes-feed">
+<MudPaper Class="pa-4" Elevation="0" Outlined="true">
     <MudStack Spacing="2">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -18,7 +19,7 @@
 
         @if (Changes.Any())
         {
-            <MudList T="string" ReadOnly="true" Dense="true" Style="@($"max-height: {MaxHeight}px; overflow-y: auto;")">
+            <MudList T="string" ReadOnly="true" Dense="true" Class="subscription-changes-feed__list">
                 @foreach (var change in Changes.Take(MaxItems))
                 {
                     <MudListItem T="string" Class="change-feed-item">
@@ -72,6 +73,7 @@
         }
     </MudStack>
 </MudPaper>
+</div>
 
 @code {
     [Parameter]
@@ -82,9 +84,6 @@
 
     [Parameter]
     public int MaxItems { get; set; } = 20;
-
-    [Parameter]
-    public int MaxHeight { get; set; } = 400;
 
     private string ResolvedTitle => string.IsNullOrWhiteSpace(Title)
         ? L["ChangesFeed:DefaultTitle"].Value

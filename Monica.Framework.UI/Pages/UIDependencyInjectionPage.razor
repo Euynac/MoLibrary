@@ -9,164 +9,177 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<DependencyInjectionResource> L
+@implements IDisposable
 
 <PageTitle>@L["Page:PageTitle"]</PageTitle>
 
 <div class="di-page">
-    <MudPaper Class="pa-4 di-header" Outlined="true">
-        <MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Spacing="3">
-            <MudStack Spacing="1">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">@L["Page:Header:Title"]</MudText>
-                </MudStack>
-                <MudText Typo="Typo.body1" Color="Color.Secondary">
-                    @L["Page:Header:Description"]
-                </MudText>
+    <MudContainer MaxWidth="MaxWidth.False" Class="di-page__outer-container">
+        <div class="di-page__container">
+            <header class="di-header">
+                <div class="di-header__eyebrow">
+                    <span class="di-header__eyebrow-line" aria-hidden="true"></span>
+                    <span>@L["Page:Header:Eyebrow"]</span>
+                </div>
+                <div class="di-header__heading-row">
+                    <div>
+                        <MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Header:Title"]</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="di-header__description">
+                            @L["Page:Header:Description"]
+                        </MudText>
+                    </div>
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="RefreshAsync"
+                               Disabled="@_state.IsLoading">
+                        @L["Page:Header:Refresh"]
+                    </MudButton>
+                </div>
                 @if (_state.Snapshot != null)
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @L["Page:Header:GeneratedAt", _state.Snapshot.CapturedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")]
-                    </MudText>
+                    <div class="di-header__capture">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Page:Header:GeneratedAt", _state.Snapshot.CapturedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")]
+                        </MudText>
+                    </div>
                 }
-            </MudStack>
+            </header>
 
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Refresh"
-                       OnClick="RefreshAsync">
-                @L["Page:Header:Refresh"]
-            </MudButton>
-        </MudStack>
-    </MudPaper>
+            @if (_state.Snapshot != null)
+            {
+                <section class="di-summary-grid" aria-label="@L["Page:Summary:AriaLabel"]">
+                    <article class="di-summary-card di-summary-card--primary">
+                        <span>@L["Page:Summary:Total"]</span>
+                        <strong>@_state.Snapshot.TotalDescriptorCount</strong>
+                    </article>
+                    <article class="di-summary-card di-summary-card--success">
+                        <span>@L["Page:Summary:AutoRegistered"]</span>
+                        <strong>@_state.Snapshot.AutoRegisteredDescriptorCount</strong>
+                    </article>
+                    <article class="di-summary-card di-summary-card--info">
+                        <span>@L["Page:Summary:Keyed"]</span>
+                        <strong>@_state.Snapshot.KeyedDescriptorCount</strong>
+                    </article>
+                    <article class="di-summary-card di-summary-card--tertiary">
+                        <span>@L["Page:Summary:Factories"]</span>
+                        <strong>@_state.Snapshot.FactoryDescriptorCount</strong>
+                    </article>
+                    <article class="di-summary-card di-summary-card--warning">
+                        <span>@L["Page:Summary:Warnings"]</span>
+                        <strong>@_state.Snapshot.AutoRegistrationWarningCount</strong>
+                    </article>
+                    <article class="di-summary-card di-summary-card--error">
+                        <span>@L["Page:Summary:Errors"]</span>
+                        <strong>@_state.Snapshot.AutoRegistrationErrorCount</strong>
+                    </article>
+                </section>
+            }
 
-    @if (_state.Snapshot != null)
-    {
-        <div class="di-summary-grid">
-            <MudPaper Class="pa-3 di-summary-card" Outlined="true">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Total"]</MudText>
-                <MudText Typo="Typo.h5">@_state.Snapshot.TotalDescriptorCount</MudText>
-            </MudPaper>
+            @if (_state.Snapshot is { AutoRegistrationIssues.Count: > 0 } snapshot)
+            {
+                <MudPaper Class="pa-4 di-issues-card" Elevation="0" Outlined="true">
+                    <MudStack Spacing="2">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h6">@L["Page:Issues:Title"]</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Issues:Description"]</MudText>
+                        </MudStack>
+                        <DependencyInjectionAutoRegistrationIssueList Items="snapshot.AutoRegistrationIssues" />
+                    </MudStack>
+                </MudPaper>
+            }
 
-            <MudPaper Class="pa-3 di-summary-card" Outlined="true">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:AutoRegistered"]</MudText>
-                <MudText Typo="Typo.h5">@_state.Snapshot.AutoRegisteredDescriptorCount</MudText>
-            </MudPaper>
+            <DependencyInjectionDescriptorFilterBar State="_state"
+                                                    FilteredCount="@_state.FilteredDescriptors.Count"
+                                                    FiltersChanged="HandleFiltersChangedAsync" />
 
-            <MudPaper Class="pa-3 di-summary-card" Outlined="true">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Keyed"]</MudText>
-                <MudText Typo="Typo.h5">@_state.Snapshot.KeyedDescriptorCount</MudText>
-            </MudPaper>
+            @if (!string.IsNullOrWhiteSpace(_state.LoadError))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @L["Page:Messages:RefreshFailed", _state.LoadError]
+                </MudAlert>
+            }
 
-            <MudPaper Class="pa-3 di-summary-card" Outlined="true">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Factories"]</MudText>
-                <MudText Typo="Typo.h5">@_state.Snapshot.FactoryDescriptorCount</MudText>
-            </MudPaper>
-
-            <MudPaper Class="pa-3 di-summary-card" Outlined="true">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Warnings"]</MudText>
-                <MudText Typo="Typo.h5">@_state.Snapshot.AutoRegistrationWarningCount</MudText>
-            </MudPaper>
-
-            <MudPaper Class="pa-3 di-summary-card" Outlined="true">
-                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Errors"]</MudText>
-                <MudText Typo="Typo.h5">@_state.Snapshot.AutoRegistrationErrorCount</MudText>
-            </MudPaper>
+            @if (_state.IsLoading)
+            {
+                <div class="di-state-shell" role="status">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">@L["Page:States:Loading"]</MudText>
+                    </MudStack>
+                </div>
+            }
+            else if (_state.Snapshot == null)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@L["Page:States:LoadFailed"]</MudAlert>
+            }
+            else if (_state.FilteredDescriptors.Count == 0)
+            {
+                <div class="di-state-shell">
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Page:States:Empty"]</MudAlert>
+                </div>
+            }
+            else
+            {
+                <MudPaper Class="di-grid-shell pa-0" Elevation="0" Outlined="true">
+                    <DependencyInjectionDescriptorGrid Items="_state.FilteredDescriptors"
+                                                       OnViewDetails="ShowDetailsAsync" />
+                </MudPaper>
+            }
         </div>
-    }
-
-    @if (_state.Snapshot is { AutoRegistrationIssues.Count: > 0 } snapshot)
-    {
-        <MudPaper Class="pa-4 di-issues-card" Outlined="true">
-            <MudStack Spacing="2">
-                <MudStack Spacing="0">
-                    <MudText Typo="Typo.h6">@L["Page:Issues:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @L["Page:Issues:Description"]
-                    </MudText>
-                </MudStack>
-
-                <DependencyInjectionAutoRegistrationIssueList Items="snapshot.AutoRegistrationIssues" />
-            </MudStack>
-        </MudPaper>
-    }
-
-    <DependencyInjectionDescriptorFilterBar State="_state"
-                                            FilteredCount="@_state.FilteredDescriptors.Count"
-                                            FiltersChanged="HandleFiltersChangedAsync" />
-
-    @if (!string.IsNullOrWhiteSpace(_state.LoadError))
-    {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-            @L["Page:Messages:RefreshFailed", _state.LoadError]
-        </MudAlert>
-    }
-
-    @if (_state.IsLoading)
-    {
-        <div class="di-state-shell">
-            <MudStack AlignItems="AlignItems.Center" Spacing="3">
-                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                <MudText Typo="Typo.h6">@L["Page:States:Loading"]</MudText>
-            </MudStack>
-        </div>
-    }
-    else if (_state.Snapshot == null)
-    {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-            @L["Page:States:LoadFailed"]
-        </MudAlert>
-    }
-    else if (_state.FilteredDescriptors.Count == 0)
-    {
-        <div class="di-state-shell">
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                @L["Page:States:Empty"]
-            </MudAlert>
-        </div>
-    }
-    else
-    {
-        <MudPaper Class="di-grid-shell pa-0" Outlined="true">
-            <DependencyInjectionDescriptorGrid Items="_state.FilteredDescriptors"
-                                               OnViewDetails="ShowDetailsAsync" />
-        </MudPaper>
-    }
+    </MudContainer>
 </div>
 
 @code {
     public const string PAGE_URL = "/dependency-injection";
 
     private readonly DependencyInjectionPageState _state = new();
+    private bool _disposed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            await LoadAsync(showSuccessMessage: false);
+            return;
+        }
+
+        await LoadAsync(showSuccessMessage: false);
+        if (!_disposed)
+        {
             StateHasChanged();
         }
     }
 
-    private async Task RefreshAsync()
-    {
-        await LoadAsync(showSuccessMessage: true);
-    }
+    private Task RefreshAsync() => LoadAsync(showSuccessMessage: true);
 
     private async Task LoadAsync(bool showSuccessMessage)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _state.BeginLoad();
         StateHasChanged();
 
         if ((await DiagnosticsFacade.GetSnapshotAsync()).IsFailed(out var error, out var snapshot))
         {
-            _state.FailLoad(error);
-            Snackbar.Add(L["Page:Messages:RefreshFailed", error], Severity.Error);
+            if (!_disposed)
+            {
+                _state.FailLoad(error);
+                Snackbar.Add(L["Page:Messages:RefreshFailed", error], Severity.Error);
+            }
+            return;
+        }
+
+        if (_disposed)
+        {
             return;
         }
 
         _state.ApplySnapshot(snapshot);
-
         if (showSuccessMessage)
         {
             Snackbar.Add(L["Page:Messages:RefreshSucceeded"], Severity.Success);
@@ -175,7 +188,10 @@
 
     private Task HandleFiltersChangedAsync()
     {
-        StateHasChanged();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
         return Task.CompletedTask;
     }
 
@@ -203,4 +219,6 @@
             Snackbar.Add(L["Page:Messages:DialogOpenFailed", ex.Message], Severity.Error);
         }
     }
+
+    public void Dispose() => _disposed = true;
 }

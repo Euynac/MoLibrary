@@ -4,7 +4,7 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="problem-jobs-wrapper">
-    <MudPaper Class="problem-card" Elevation="0">
+    <MudPaper Class="problem-card mo-self-painted" Elevation="0">
         <div class="card-header">
             <div class="header-title">
                 <MudIcon Icon="@Icons.Material.Filled.ReportProblem"
@@ -33,7 +33,7 @@
                         </div>
                         @foreach (var job in Problems.ConsecutiveFailures.Take(3))
                         {
-                            <div class="problem-item" @onclick="() => ViewJob(job.JobKey)">
+                            <button type="button" class="problem-item" @onclick="() => ViewJob(job.JobKey)">
                                 <div class="problem-info">
                                     <span class="job-name" title="@job.JobKey">@job.JobName</span>
                                     <span class="problem-detail">@L["Dashboard:ProblemJobs:ConsecutiveFailuresDetail", job.ConsecutiveFailureCount]</span>
@@ -41,7 +41,7 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
                                                Size="Size.Small"
                                                Color="Color.Default" />
-                            </div>
+                            </button>
                         }
                     </div>
                 }
@@ -56,7 +56,7 @@
                         </div>
                         @foreach (var job in Problems.LongRunning.Take(3))
                         {
-                            <div class="problem-item" @onclick="() => ViewInstance(job.InstanceId)">
+                            <button type="button" class="problem-item" @onclick="() => ViewInstance(job.InstanceId)">
                                 <div class="problem-info">
                                     <span class="job-name" title="@job.JobKey">@job.JobName</span>
                                     <span class="problem-detail">
@@ -68,7 +68,7 @@
                                                    Max="100"
                                                    Size="Size.Small"
                                                    Style="width: 60px;" />
-                            </div>
+                            </button>
                         }
                     </div>
                 }
@@ -83,7 +83,7 @@
                         </div>
                         @foreach (var job in Problems.HighSkipRate.Take(3))
                         {
-                            <div class="problem-item" @onclick="() => ViewJob(job.JobKey)">
+                            <button type="button" class="problem-item" @onclick="() => ViewJob(job.JobKey)">
                                 <div class="problem-info">
                                     <span class="job-name" title="@job.JobKey">@job.JobName</span>
                                     <span class="problem-detail">
@@ -93,7 +93,7 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
                                                Size="Size.Small"
                                                Color="Color.Default" />
-                            </div>
+                            </button>
                         }
                     </div>
                 }

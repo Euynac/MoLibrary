@@ -22,8 +22,10 @@
                 }
             </div>
             <div class="score-bar-track">
-                <div class="score-bar-fill score-bar-fill--@GetScoreLevel()"
-                     style="width: @GetScoreBarWidth()"></div>
+                <MudProgressLinear Value="@GetVisualScorePercentage()"
+                                   Color="@GetScoreColor()"
+                                   Size="Size.Small"
+                                   Rounded="true" />
             </div>
         </div>
 
@@ -96,7 +98,14 @@
            && Result.Score is not null
            && Result.SimilarityScore is not null;
 
-    private string GetScoreBarWidth() => $"{GetVisualScore() * 100:F2}%";
+    private double GetVisualScorePercentage() => GetVisualScore() * 100;
+
+    private Color GetScoreColor() => GetVisualScore() switch
+    {
+        >= 0.8f => Color.Success,
+        >= 0.5f => Color.Warning,
+        _ => Color.Default
+    };
 
     private string GetScoreLevel() => GetVisualScore() switch
     {

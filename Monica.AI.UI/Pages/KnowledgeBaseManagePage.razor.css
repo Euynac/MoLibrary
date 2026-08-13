@@ -35,7 +35,7 @@
     min-height: 0;
     padding: 24px;
     border: 1px dashed rgba(var(--mud-palette-primary-rgb), 0.35);
-    border-radius: 14px;
+    border-radius: 12px;
     background-color: var(--mud-palette-surface);
 }
 

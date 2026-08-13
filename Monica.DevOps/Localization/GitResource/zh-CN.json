@@ -7,11 +7,28 @@
   "GitDashboard": {
     "PageTitle": "Git 仓库",
     "Title": "Git 仓库",
+    "Eyebrow": "Monica / 源代码控制",
+    "Description": "在同一个宿主控制面中协调工作副本、同步状态、凭据与解析器归属。",
+    "Summary": {
+      "AriaLabel": "Git 仓库运行摘要",
+      "Repositories": "仓库",
+      "Ready": "就绪",
+      "Dirty": "脏工作区",
+      "Credentials": "凭据"
+    },
+    "Ownership": {
+      "Title": "宿主所有权阻止仓库 {0}",
+      "Description": "宿主进程无法安全操作位于 {0} 的工作副本。请修正文件系统所有权，或仅为该可信路径显式配置 Git safe-directory 策略。"
+    },
     "Sections": {
       "Repositories": "仓库列表",
+      "RepositoriesDescription": "已配置工作副本及其当前同步证据。",
       "Details": "仓库详情",
+      "DetailsDescription": "所选仓库的解析身份与运行状态。",
       "Credentials": "凭据列表",
-      "Resolvers": "凭据解析器"
+      "CredentialsDescription": "已注册的凭据引用，不暴露密钥内容。",
+      "Resolvers": "凭据解析器",
+      "ResolversDescription": "宿主用于远端认证的解析顺序。"
     },
     "Columns": {
       "Id": "标识",
@@ -31,19 +48,13 @@
     },
     "Labels": {
       "RemoteUrl": "远端地址",
-      "LocalPath": "本地路径",
       "ResolvedLocalPath": "解析后路径",
-      "ConfiguredBranch": "配置分支",
       "ResolvedBranch": "实际分支",
-      "LastError": "最近错误",
-      "LastMessage": "最近消息",
       "Available": "可用",
       "Dirty": "脏工作区",
       "Credential": "凭据",
       "CurrentCommit": "当前提交",
-      "LastSync": "最近同步",
-      "WorkingDirectorySize": "工作区大小",
-      "Progress": "进度"
+      "LastSync": "最近同步"
     },
     "Actions": {
       "Refresh": "刷新",

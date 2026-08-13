@@ -15,6 +15,7 @@
     min-height: 0;
     overflow: hidden;
     box-sizing: border-box;
+    padding: clamp(1rem, 2.2vw, 2rem);
 }
 
 .terminal-page__content {
@@ -31,7 +32,6 @@
     margin: 0 auto;
 }
 
-.page-banner ::deep .mud-paper,
 .terminal-panel ::deep .mud-paper,
 .terminal-side ::deep .mud-paper,
 .terminal-state ::deep .mud-paper {
@@ -41,15 +41,22 @@
     box-shadow: none;
 }
 
-.page-banner ::deep .mud-paper {
-    padding: clamp(1.25rem, 2vw, 1.75rem);
-}
+.terminal-header { display: grid; gap: .5rem; }
 
-.page-eyebrow {
+.terminal-header__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--mud-palette-text-secondary);
+    color: var(--mud-palette-success);
+    font-size: .75rem;
+    font-weight: 700;
 }
+
+.terminal-header__eyebrow > span:first-child { display: block; width: 1.5rem; height: 2px; background: var(--mud-palette-success); }
+.terminal-header__heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.terminal-header__description { max-width: 64rem; margin-top: .35rem; }
 
 .terminal-panel ::deep .mud-paper,
 .terminal-side ::deep .mud-paper {
@@ -246,18 +253,23 @@
     text-align: left;
     overflow-wrap: anywhere;
     cursor: pointer;
+    transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
 }
 
 .terminal-history__item:hover:not(:disabled) {
     border-color: var(--mud-palette-primary);
+    color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary-hover);
 }
+
+.terminal-history__item:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
 
 .terminal-history__item:disabled {
     cursor: default;
     opacity: 0.6;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 929px) {
     .terminal-page ::deep .terminal-page__container {
         padding-inline: 1rem !important;
     }
@@ -270,4 +282,14 @@
     .terminal-command-input {
         width: 100%;
     }
+}
+
+@media (max-width: 600px) {
+    .terminal-page ::deep .terminal-page__container { padding: .75rem !important; }
+    .terminal-header__heading-row { align-items: flex-start; flex-direction: column; }
+    .terminal-meta-grid { grid-template-columns: minmax(0, 1fr); gap: .2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .terminal-history__item { transition: none; }
 }

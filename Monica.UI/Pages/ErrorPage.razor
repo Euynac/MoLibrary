@@ -1,34 +1,58 @@
 @attribute [Route(PAGE_URL)]
+@layout MainLayout
 @using System.Diagnostics
 @using Microsoft.AspNetCore.Http
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
 @inject IStringLocalizer<SharedResource> L
 
-<PageTitle>Error</PageTitle>
+<PageTitle>@L["Error:PageTitle"]</PageTitle>
 
-<h1 class="text-danger">@L["Error:Title"]</h1>
-<h2 class="text-danger">@L["Error:Message"]</h2>
+<main class="error-page">
+    <section class="error-page__surface" role="alert" aria-labelledby="error-page-title">
+        <span class="error-page__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" />
+        </span>
 
-@if (ShowRequestId)
-{
-    <p>
-        <strong>@L["Error:RequestId"]</strong> <code>@RequestId</code>
-    </p>
-}
+        <div class="error-page__copy">
+            <MudText Typo="Typo.overline" Class="error-page__eyebrow">@L["Error:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h3" HtmlTag="h1" id="error-page-title">@L["Error:Title"]</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Error:Message"]</MudText>
+        </div>
 
-<h3>@L["Error:DevelopmentMode"]</h3>
-<p>
-    @L["Error:DevelopmentModeWarning"]
-</p>
-<p>
-    <strong>@L["Error:DevelopmentModeNote"]</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
+        @if (ShowRequestId)
+        {
+            <div class="error-page__request-id">
+                <span>@L["Error:RequestId"]</span>
+                <code>@RequestId</code>
+            </div>
+        }
 
-@code{
+        <div class="error-page__action">
+            <MudButton Href="/"
+                       FullWidth="true"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Home">
+                @L["Error:BackToOverview"]
+            </MudButton>
+        </div>
+    </section>
+
+    <aside class="error-page__guidance" aria-labelledby="error-guidance-title">
+        <span class="error-page__guidance-icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Outlined.Terminal" />
+        </span>
+        <div>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="error-guidance-title">@L["Error:DevelopmentMode"]</MudText>
+            <MudText Typo="Typo.body2">@L["Error:DevelopmentModeWarning"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Error:DevelopmentModeNote"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Error:DevelopmentModeInstruction"]</MudText>
+        </div>
+    </aside>
+</main>
+
+@code {
     public const string PAGE_URL = "/Error";
 
     [CascadingParameter]

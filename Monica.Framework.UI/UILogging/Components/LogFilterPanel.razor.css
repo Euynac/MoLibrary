@@ -1,10 +1,40 @@
-.log-filter-panel {
-    background-color: var(--mud-palette-surface);
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--mud-palette-divider);
+.log-filter-shell {
+    width: 100%;
+    min-width: 0;
 }
 
-.log-filter-panel ::deep .mud-input-root {
-    min-width: 280px;
+.log-filter-shell ::deep .log-filter-panel {
+    width: 100%;
+    min-width: 0;
+    border-radius: 8px;
+    background: var(--mud-palette-surface);
+}
+
+.log-filter-shell ::deep .mud-stack-row {
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.log-filter-shell ::deep .log-filter-panel__input {
+    flex: 1 1 18rem;
+    min-width: 0;
+}
+
+@media (max-width: 600px) {
+    .log-filter-shell ::deep .log-filter-panel > .mud-stack {
+        align-items: stretch !important;
+        flex-direction: column !important;
+    }
+
+    .log-filter-shell ::deep .mud-button-root,
+    .log-filter-shell ::deep .log-filter-panel__input {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .log-filter-shell ::deep .mud-button-root,
+    .log-filter-shell ::deep .mud-switch-button {
+        transition: none !important;
+    }
 }

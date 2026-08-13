@@ -127,7 +127,7 @@
 }
 
 .job-instances-table__monospace {
-    font-family: monospace;
+    font-family: var(--mo-font-mono);
 }
 
 @media (max-width: 600px) {
@@ -143,4 +143,7 @@
         justify-content: flex-end;
         margin-left: 0;
     }
+}
+.scheduler-page-content {
+    min-width: 0;
 }

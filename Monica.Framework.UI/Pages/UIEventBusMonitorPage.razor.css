@@ -1,66 +1,75 @@
-/* Using MudBlazor CSS variables */
+.event-bus-page { min-height: 100%; width: 100%; }
 
-.event-bus-page-hero {
-    background: var(--mo-color-page-hero-background);
-    color: var(--mo-color-page-hero-text);
-    overflow: hidden;
+.event-bus-page__container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+    padding-block: 2rem 3rem;
 }
 
-.event-bus-page-hero ::deep :is(.mud-typography, .mud-icon) {
-    color: inherit;
+.event-bus-page__header { display: flex; flex-direction: column; gap: 0.75rem; }
+.event-bus-page__eyebrow { align-items: center; color: var(--mud-palette-info); display: flex; font-size: 0.75rem; font-weight: 800; gap: 0.625rem; letter-spacing: 0.09em; text-transform: uppercase; }
+.event-bus-page__eyebrow-line { display: block; background: var(--mud-palette-info); height: 2px; width: 1.5rem; }
+.event-bus-page__heading-row { align-items: flex-end; display: flex; gap: 2rem; justify-content: space-between; }
+.event-bus-page__description { margin-top: 0.375rem; max-width: 54rem; }
+
+.event-bus-page__pulse { display: grid; gap: 0.75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.event-bus-pulse {
+    --pulse-color: var(--mud-palette-primary);
+    align-items: center;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    display: flex;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.875rem 1rem;
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.event-bus-pulse:hover { border-color: color-mix(in srgb, var(--pulse-color) 38%, var(--mud-palette-divider)); box-shadow: 0 10px 24px color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent); transform: translateY(-1px); }
+.event-bus-pulse ::deep > .mud-icon-root { background: color-mix(in srgb, var(--pulse-color) 12%, var(--mud-palette-surface)); border: 1px solid color-mix(in srgb, var(--pulse-color) 22%, var(--mud-palette-divider)); border-radius: 6px; color: var(--pulse-color); padding: 0.5rem; }
+.event-bus-pulse span { display: flex; flex-direction: column; min-width: 0; }
+.event-bus-pulse small { color: var(--mud-palette-text-secondary); font-weight: 650; }
+.event-bus-pulse strong { color: var(--pulse-color); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.event-bus-pulse--primary { --pulse-color: var(--mud-palette-primary); }
+.event-bus-pulse--success { --pulse-color: var(--mud-palette-success); }
+.event-bus-pulse--info { --pulse-color: var(--mud-palette-info); }
+.event-bus-pulse--tertiary { --pulse-color: var(--mud-palette-tertiary); }
+
+.ui-event-bus-tabs ::deep > .mud-tabs > .mud-tabs-tabbar,
+.ui-event-bus-tabs ::deep > .mud-tabs-tabbar {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--mud-palette-text-primary) 5%, transparent);
+    padding: 0.375rem;
+}
+.ui-event-bus-tabs ::deep .mud-tabs-tabbar-wrapper { gap: 0.25rem; }
+.ui-event-bus-tabs ::deep .mud-tab { border: 1px solid transparent; border-radius: 6px; flex: 1 1 0; min-height: 2.75rem; min-width: max-content; transition: background-color 160ms ease, border-color 160ms ease; }
+.ui-event-bus-tabs ::deep .mud-tab:hover { background: var(--mud-palette-action-default-hover); }
+.ui-event-bus-tabs ::deep .mud-tab.mud-tab-active { background: color-mix(in srgb, var(--mud-palette-info) 11%, var(--mud-palette-surface)); border-color: color-mix(in srgb, var(--mud-palette-info) 26%, var(--mud-palette-divider)); }
+.ui-event-bus-tabs ::deep .mud-tab-slider { display: none; }
+.ui-event-bus-tabs ::deep .ui-event-bus-tab-panels { padding: 1.25rem 0 0; }
+.ui-event-bus-tabs ::deep .mud-tab-panel { min-width: 0; }
+
+.event-bus-page ::deep .event-bus-recent-changes { border-color: var(--mud-palette-divider); border-radius: 8px; padding: 1rem; }
+.event-bus-page ::deep .event-bus-recent-changes__list { max-height: 25rem; overflow-y: auto; }
+
+@media (max-width: 929.98px) {
+    .event-bus-page__pulse { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ui-event-bus-tabs ::deep .mud-tab { flex: 0 0 auto; }
 }
 
-.event-bus-page-hero ::deep .event-bus-page-hero-action {
-    border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent) !important;
-    color: var(--mo-color-page-hero-action) !important;
+@media (max-width: 599.98px) {
+    .event-bus-page__container { gap: 1.25rem; padding-block: 1.25rem 1.75rem; }
+    .event-bus-page__heading-row { align-items: flex-start; flex-direction: column; gap: 1rem; }
+    .event-bus-page__heading-row ::deep .mud-button-root { width: 100%; }
+    .event-bus-page__pulse { grid-template-columns: 1fr; }
+    .ui-event-bus-tabs ::deep .ui-event-bus-tab-panels { padding-top: 1rem; }
 }
 
-.event-bus-page-hero ::deep .event-bus-page-hero-action:hover {
-    background-color: color-mix(in srgb, var(--mo-color-page-hero-action) 12%, transparent);
-}
-
-.ui-event-bus-tabs ::deep .ui-event-bus-tab-panels {
-    padding: 24px;
-}
-
-.subscription-table-wrapper ::deep .mud-table-row:hover {
-    background-color: var(--mud-palette-action-default-hover);
-    cursor: pointer;
-}
-
-.subscription-table-wrapper ::deep .mud-table-cell {
-    padding: 12px 16px;
-}
-
-.subscription-table-wrapper ::deep .mud-table-head .mud-table-cell {
-    font-weight: 600;
-    background-color: var(--mud-palette-background-gray);
-}
-
-/* Details panel style */
-.subscription-detail-wrapper ::deep .mud-card {
-    border-left: 4px solid var(--mud-palette-primary);
-}
-
-/* Change flow style */
-.change-feed-item {
-    padding: 8px;
-    border-radius: 4px;
-    margin-bottom: 4px;
-    background-color: var(--mud-palette-background-gray);
-    transition: background-color 0.2s;
-}
-
-.change-feed-item:hover {
-    background-color: var(--mud-palette-action-default-hover);
-}
-
-/* Statistics card animation */
-.subscription-table-wrapper ::deep .mud-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.subscription-table-wrapper ::deep .mud-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+@media (prefers-reduced-motion: reduce) {
+    .event-bus-pulse, .ui-event-bus-tabs ::deep .mud-tab { transition: none; }
+    .event-bus-pulse:hover { transform: none; }
 }

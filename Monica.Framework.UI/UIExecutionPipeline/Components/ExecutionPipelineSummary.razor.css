@@ -15,28 +15,72 @@
     gap: 0.75rem;
     align-items: center;
     height: 100%;
-    border-top: 0.2rem solid var(--mud-palette-primary);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
     background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.execution-pipeline-summary__card:hover ::deep .mud-paper {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-lines-default));
+    box-shadow: var(--mud-elevation-2);
+}
+
+.execution-pipeline-summary__card ::deep .mud-icon-root {
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
 }
 
 .execution-pipeline-summary__card--plans ::deep .mud-paper {
-    border-top-color: var(--mud-palette-info);
+    border-color: color-mix(in srgb, var(--mud-palette-info) 24%, var(--mud-palette-lines-default));
     background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface));
 }
 
+.execution-pipeline-summary__card--plans:hover ::deep .mud-paper {
+    border-color: color-mix(in srgb, var(--mud-palette-info) 40%, var(--mud-palette-lines-default));
+}
+
+.execution-pipeline-summary__card--plans ::deep .mud-icon-root {
+    background: color-mix(in srgb, var(--mud-palette-info) 12%, transparent);
+}
+
 .execution-pipeline-summary__card--points ::deep .mud-paper {
-    border-top-color: var(--mud-palette-secondary);
+    border-color: color-mix(in srgb, var(--mud-palette-secondary) 24%, var(--mud-palette-lines-default));
     background: color-mix(in srgb, var(--mud-palette-secondary) 5%, var(--mud-palette-surface));
 }
 
+.execution-pipeline-summary__card--points:hover ::deep .mud-paper {
+    border-color: color-mix(in srgb, var(--mud-palette-secondary) 40%, var(--mud-palette-lines-default));
+}
+
+.execution-pipeline-summary__card--points ::deep .mud-icon-root {
+    background: color-mix(in srgb, var(--mud-palette-secondary) 12%, transparent);
+}
+
 .execution-pipeline-summary__card--faults-clear ::deep .mud-paper {
-    border-top-color: var(--mud-palette-success);
+    border-color: color-mix(in srgb, var(--mud-palette-success) 24%, var(--mud-palette-lines-default));
     background: color-mix(in srgb, var(--mud-palette-success) 5%, var(--mud-palette-surface));
 }
 
+.execution-pipeline-summary__card--faults-clear:hover ::deep .mud-paper {
+    border-color: color-mix(in srgb, var(--mud-palette-success) 40%, var(--mud-palette-lines-default));
+}
+
+.execution-pipeline-summary__card--faults-clear ::deep .mud-icon-root {
+    background: color-mix(in srgb, var(--mud-palette-success) 12%, transparent);
+}
+
 .execution-pipeline-summary__card--faults-found ::deep .mud-paper {
-    border-top-color: var(--mud-palette-error);
+    border-color: color-mix(in srgb, var(--mud-palette-error) 24%, var(--mud-palette-lines-default));
     background: color-mix(in srgb, var(--mud-palette-error) 5%, var(--mud-palette-surface));
+}
+
+.execution-pipeline-summary__card--faults-found:hover ::deep .mud-paper {
+    border-color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--mud-palette-lines-default));
+}
+
+.execution-pipeline-summary__card--faults-found ::deep .mud-icon-root {
+    background: color-mix(in srgb, var(--mud-palette-error) 12%, transparent);
 }
 
 .execution-pipeline-summary__card span {

@@ -7,7 +7,7 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="activity-timeline-wrapper">
-    <MudPaper Class="activity-card" Elevation="0">
+    <MudPaper Class="activity-card mo-self-painted" Elevation="0">
         <div class="card-header">
             <MudText Typo="Typo.h6">@L["Dashboard:RecentActivity:Title"]</MudText>
             <MudButton Variant="Variant.Text"
@@ -23,7 +23,7 @@
             <div class="timeline-container">
                 @foreach (var activity in Activities)
                 {
-                    <div class="timeline-item" @onclick="() => ViewInstanceAsync(activity.InstanceId)">
+                    <button type="button" class="timeline-item" @onclick="() => ViewInstanceAsync(activity.InstanceId)">
                         <div class="timeline-indicator">
                             <div class="state-dot @GetStateDotClass(activity.State)"></div>
                             <div class="timeline-line"></div>
@@ -47,7 +47,7 @@
                                 }
                             </div>
                         </div>
-                    </div>
+                    </button>
                 }
             </div>
         }

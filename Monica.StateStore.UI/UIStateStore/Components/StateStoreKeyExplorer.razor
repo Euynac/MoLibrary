@@ -8,6 +8,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IStringLocalizer<StateStoreResource> L
+@implements IDisposable
 
 <div class="state-browser-workspace">
     <MudPaper Class="workspace-panel provider-rail-shell" Elevation="0">
@@ -487,6 +488,7 @@
     private bool isSearching;
     private bool isRefreshingProviders;
     private bool isProviderDetailVisible;
+    private bool isDisposed;
     private StateStoreProviderInfo? providerDetailTarget;
 
     protected override void OnParametersSet()
@@ -561,7 +563,7 @@
 
     private async Task RefreshProvidersAsync()
     {
-        if (!OnRefreshProviders.HasDelegate || isRefreshingProviders)
+        if (isDisposed || !OnRefreshProviders.HasDelegate || isRefreshingProviders)
         {
             return;
         }
@@ -575,7 +577,7 @@
         finally
         {
             isRefreshingProviders = false;
-            StateHasChanged();
+            RequestRender();
         }
     }
 
@@ -589,7 +591,7 @@
 
     private async Task SearchKeysAsync()
     {
-        if (selectedProvider is null || !CanSearch())
+        if (isDisposed || selectedProvider is null || !CanSearch())
         {
             return;
         }
@@ -602,7 +604,7 @@
         selectedKeyNames.Clear();
         selectedKey = null;
         loadingKeyName = null;
-        StateHasChanged();
+        RequestRender();
 
         try
         {
@@ -614,6 +616,11 @@
                     Limit = Options.MaxKeysPerPage,
                     SearchMode = searchMode
                 });
+
+            if (isDisposed)
+            {
+                return;
+            }
 
             if (result.IsFailed(out var error))
             {
@@ -636,7 +643,7 @@
         finally
         {
             isSearching = false;
-            StateHasChanged();
+            RequestRender();
         }
     }
 
@@ -650,7 +657,7 @@
         }
         else
         {
-            StateHasChanged();
+            RequestRender();
         }
     }
 
@@ -672,11 +679,16 @@
         }
 
         loadingKeyName = keyInfo.Key;
-        StateHasChanged();
+        RequestRender();
 
         try
         {
             var result = await StateStoreService.GetKeyAsync(selectedProvider.ServiceKey, keyInfo.Key);
+
+            if (isDisposed)
+            {
+                return;
+            }
 
             if (result.IsOk(out var loadedKey))
             {
@@ -700,7 +712,7 @@
                 loadingKeyName = null;
             }
 
-            StateHasChanged();
+            RequestRender();
         }
     }
 
@@ -790,6 +802,11 @@
             keyInfo.Key,
             keyInfo.ETag);
 
+        if (isDisposed)
+        {
+            return;
+        }
+
         if (result.IsFailed(out var error))
         {
             Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteFailed", error.Message ?? string.Empty], Severity.Error);
@@ -811,12 +828,12 @@
 
         if (selectedKey is null)
         {
-            StateHasChanged();
+            RequestRender();
         }
 
         UpdateBrowseResultTotal(-1);
         Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteSuccess"], Severity.Success);
-        StateHasChanged();
+        RequestRender();
     }
 
     private async Task DeleteSelectedKeysAsync()
@@ -839,6 +856,11 @@
 
         var keysToDelete = selectedKeyNames.ToList();
         var result = await StateStoreService.DeleteKeysAsync(selectedProvider.ServiceKey, keysToDelete);
+
+        if (isDisposed)
+        {
+            return;
+        }
 
         if (result.IsFailed(out var error))
         {
@@ -863,7 +885,7 @@
         }
 
         Snackbar.Add(result.Message ?? L["KeyExplorer:Messages:DeleteSuccess"], Severity.Success);
-        StateHasChanged();
+        RequestRender();
     }
 
     private void ToggleKeySelection(StateStoreKeyInfo keyInfo, bool isSelected)
@@ -914,7 +936,7 @@
         }
 
         Snackbar.Add(L["KeyExplorer:Messages:KeySaveSuccess"], Severity.Success);
-        StateHasChanged();
+        RequestRender();
     }
 
     private void OnKeyCreated(StateStoreKeyInfo newKey)
@@ -940,7 +962,7 @@
         };
 
         Snackbar.Add(L["KeyExplorer:Messages:KeyCreateSuccess"], Severity.Success);
-        StateHasChanged();
+        RequestRender();
     }
 
     private void ResetWorkspaceForProvider()
@@ -1368,4 +1390,14 @@
             ? preview
             : $"{preview[..120]}...";
     }
+
+    private void RequestRender()
+    {
+        if (!isDisposed)
+        {
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose() => isDisposed = true;
 }

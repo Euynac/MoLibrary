@@ -1,22 +1,23 @@
 @using Monica.Framework.UI.UILogging.Models
+@inject IStringLocalizer<LoggingResource> L
 
 <div class="log-file-table">
     <div class="table-header-section">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
-            <MudText Typo="Typo.subtitle1">日志文件</MudText>
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Refresh" OnClick="HandleRefresh" Disabled="@IsLoading">刷新</MudButton>
+            <MudText Typo="Typo.subtitle1">@L["Page:Components:Files:Title"]</MudText>
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Refresh" OnClick="HandleRefresh" Disabled="@IsLoading">@L["Page:Components:Files:Refresh"]</MudButton>
         </MudStack>
         <MudText Typo="Typo.caption" Color="Color.Secondary">
-            当前日志目录：@(DisplayDirectory ?? "未配置")
+            @L["Page:Components:Files:Directory", DisplayDirectory ?? L["Page:Components:Files:NotConfigured"]]
         </MudText>
     </div>
 
     <div class="table-container">
         <MudTable Items="@Files" Dense="true" Hover="true" Loading="@IsLoading" Elevation="0">
             <HeaderContent>
-                <MudTh>相对路径</MudTh>
-                <MudTh>大小</MudTh>
-                <MudTh>最后修改时间</MudTh>
+                <MudTh>@L["Page:Components:Files:RelativePath"]</MudTh>
+                <MudTh>@L["Page:Components:Files:Size"]</MudTh>
+                <MudTh>@L["Page:Components:Files:LastModified"]</MudTh>
                 <MudTh></MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -28,12 +29,12 @@
                                Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Download"
                                OnClick="() => HandleDownload(context.RelativePath)">
-                        下载
+                        @L["Page:Components:Files:Download"]
                     </MudButton>
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>
-                <MudAlert Severity="Severity.Info" Dense="true">当前目录暂无日志文件</MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true">@L["Page:Components:Files:Empty"]</MudAlert>
             </NoRecordsContent>
         </MudTable>
     </div>

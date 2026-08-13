@@ -7,11 +7,28 @@
   "GitDashboard": {
     "PageTitle": "Git Repositories",
     "Title": "Git Repositories",
+    "Eyebrow": "Monica / Source control",
+    "Description": "Coordinate working copies, synchronization state, credentials, and resolver ownership from one host-level control surface.",
+    "Summary": {
+      "AriaLabel": "Git repository runtime summary",
+      "Repositories": "Repositories",
+      "Ready": "Ready",
+      "Dirty": "Dirty worktrees",
+      "Credentials": "Credentials"
+    },
+    "Ownership": {
+      "Title": "Host ownership blocks repository {0}",
+      "Description": "The host process cannot safely operate the working copy at {0}. Align filesystem ownership or explicitly configure Git safe-directory policy for this trusted path."
+    },
     "Sections": {
       "Repositories": "Repositories",
+      "RepositoriesDescription": "Configured working copies and their current synchronization evidence.",
       "Details": "Repository Details",
+      "DetailsDescription": "Resolved identity and operational state for the selected repository.",
       "Credentials": "Credentials",
-      "Resolvers": "Credential Resolvers"
+      "CredentialsDescription": "Registered credential references without exposing secret material.",
+      "Resolvers": "Credential Resolvers",
+      "ResolversDescription": "Host-owned resolution order used for remote authentication."
     },
     "Columns": {
       "Id": "Id",
@@ -31,19 +48,13 @@
     },
     "Labels": {
       "RemoteUrl": "Remote URL",
-      "LocalPath": "Local Path",
       "ResolvedLocalPath": "Resolved Local Path",
-      "ConfiguredBranch": "Configured Branch",
       "ResolvedBranch": "Resolved Branch",
-      "LastError": "Last Error",
-      "LastMessage": "Last Message",
       "Available": "Available",
       "Dirty": "Dirty",
       "Credential": "Credential",
       "CurrentCommit": "Current Commit",
-      "LastSync": "Last Sync",
-      "WorkingDirectorySize": "Working Directory Size",
-      "Progress": "Progress"
+      "LastSync": "Last Sync"
     },
     "Actions": {
       "Refresh": "Refresh",

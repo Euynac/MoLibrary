@@ -1,115 +1,29 @@
-.page-container {
-    height: 100%;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 0.75rem;
-    margin: 0;
-    box-sizing: border-box;
-}
-
-.page-loading-state {
-    flex: 1;
-    min-height: 0;
-}
-
-.page-content {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.page-content ::deep .mud-tabs {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.page-content ::deep .mud-tabs-tabbar {
-    flex-shrink: 0;
-}
-
-.page-content ::deep .mud-tabs-panels {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    overflow: hidden;
-}
-
-.page-content ::deep .mud-tab-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    height: 100%;
-    overflow: hidden;
-}
-
-.tab-content {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    overflow: hidden;
-}
-
-.realtime-log-panel,
-.file-table-panel {
-    flex: 1;
-    min-height: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    overflow: hidden;
-    padding: 1rem;
-    box-sizing: border-box;
-}
-
-.file-info,
-.toolbar-section,
-.filter-section {
-    flex-shrink: 0;
-}
-
-.viewer-section {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.viewer-section ::deep .mud-alert .mud-icon-root {
-    vertical-align: middle;
-}
-
-.file-info {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--mud-palette-divider);
-}
-
-.file-info ::deep .mud-icon-root {
-    vertical-align: middle;
-}
-
-.selection-pause-alert {
-    flex-shrink: 0;
-    animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-5px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+.logging-page { width: 100%; height: 100%; min-width: 0; min-height: 0; background: var(--mud-palette-background); }
+.logging-page ::deep .logging-page__outer-container { width: 100%; height: 100%; max-width: none; padding: clamp(1rem, 2vw, 2rem); }
+.logging-page__container { display: flex; flex-direction: column; gap: 1rem; width: 100%; height: 100%; min-width: 0; min-height: 0; }
+.logging-page__header { display: grid; flex: 0 0 auto; gap: .625rem; }
+.logging-page__eyebrow { display: flex; align-items: center; gap: .625rem; color: var(--mud-palette-primary); font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.logging-page__eyebrow > span:first-child { display: block; width: 1.5rem; height: 2px; background: var(--mud-palette-primary); }
+.logging-page__heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.logging-page__pulse { display: grid; flex: 0 0 auto; grid-template-columns: 1.4fr repeat(3, minmax(0, .7fr)); gap: .75rem; }
+.logging-pulse { display: flex; align-items: center; gap: .75rem; min-width: 0; padding: .75rem .875rem; border: 1px solid var(--mud-palette-divider); border-radius: 12px; background: var(--mud-palette-surface); transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.logging-pulse:hover { border-color: color-mix(in srgb, currentColor 32%, var(--mud-palette-divider)); box-shadow: 0 10px 24px color-mix(in srgb, currentColor 8%, transparent); transform: translateY(-1px); }
+.logging-pulse > span { display: grid; min-width: 0; }
+.logging-pulse small { color: var(--mud-palette-text-secondary); }
+.logging-pulse strong { overflow: hidden; color: var(--mud-palette-text-primary); text-overflow: ellipsis; white-space: nowrap; }
+.logging-pulse--primary { color: var(--mud-palette-primary); } .logging-pulse--info { color: var(--mud-palette-info); } .logging-pulse--tertiary { color: var(--mud-palette-tertiary); } .logging-pulse--success { color: var(--mud-palette-success); }
+.logging-page__loading { display: grid; flex: 1 1 auto; place-items: center; align-content: center; gap: 1rem; }
+.logging-page__workspace { display: flex; flex: 1 1 auto; min-height: 0; overflow: hidden; border: 1px solid var(--mud-palette-divider); border-radius: 12px; background: var(--mud-palette-surface); }
+.logging-page__workspace ::deep .mud-tabs { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
+.logging-page__workspace ::deep .mud-tabs-tabbar { flex: 0 0 auto; background: var(--mud-palette-background-gray); border-bottom: 1px solid var(--mud-palette-divider); }
+.logging-page__workspace ::deep .mud-tabs-panels, .logging-page__workspace ::deep .logging-page__tab-content, .logging-page__workspace ::deep .mud-tab-panel { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.realtime-log-panel, .file-table-panel { display: flex; flex: 1; flex-direction: column; gap: .75rem; min-width: 0; min-height: 0; padding: 1rem; overflow: hidden; }
+.logging-command-row, .logging-alert-row, .logging-file-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-width: 0; }
+.logging-command-row > :first-child { flex: 1 1 auto; min-width: 0; }
+.viewer-section { display: flex; flex: 1 1 auto; flex-direction: column; gap: .5rem; min-height: 0; overflow: hidden; }
+.logging-dialog-state { display: grid; min-height: 8rem; place-items: center; align-content: center; gap: .75rem; }
+.logging-file-row { width: 100%; }
+.logging-file-row > span { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+@media (max-width: 929px) { .logging-page__pulse { grid-template-columns: repeat(2, minmax(0, 1fr)); } .logging-page { height: auto; min-height: 100%; } .logging-page__container { min-height: calc(100vh - 8rem); } }
+@media (max-width: 600px) { .logging-page ::deep .logging-page__outer-container { padding: .75rem; } .logging-page__heading-row, .logging-alert-row, .logging-file-row { align-items: flex-start; flex-direction: column; } .logging-page__pulse { grid-template-columns: minmax(0, 1fr); } .realtime-log-panel, .file-table-panel { padding: .75rem; } .logging-command-row { align-items: stretch; } }
+@media (prefers-reduced-motion: reduce) { .logging-pulse { transition: none; } .logging-pulse:hover { transform: none; } }

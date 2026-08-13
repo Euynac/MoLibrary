@@ -26,6 +26,7 @@ public static class ModuleRuntimeMetricsUIBuilderExtensions
         {
             var registration = builder.AddModule<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption>(action);
             registration.Require<ModuleLocalization, ModuleLocalizationOption>()
+                .AddResource<ProfilingResource>()
                 .AddResource<RuntimeMetricsResource>();
             registration.Require<ModuleShellUI, ModuleShellUIOption>()
                 .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIRuntimeMetricsPage, RuntimeMetricsResource>(
@@ -54,7 +55,7 @@ public class ModuleRuntimeMetricsUI : MonicaModule<ModuleRuntimeMetricsUIOption>
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleRuntimeMetricsUIOption> context)
     {
-        context.Services.AddScoped<RuntimeMetricsPageState>();
+        context.Services.AddScoped<RuntimeMetricsPageStateFactory>();
     }
 }
 

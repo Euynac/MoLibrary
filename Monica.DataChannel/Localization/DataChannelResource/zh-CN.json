@@ -1,7 +1,206 @@
 {
   "Pages": {
     "DataChannelManage": {
-      "Title": "DataChannel管理"
+      "Title": "数据通道运维"
+    }
+  },
+  "Common": {
+    "Actions": {
+      "Refresh": "刷新",
+      "Clear": "清空",
+      "Close": "关闭",
+      "Details": "详情"
+    },
+    "Columns": {
+      "Actions": "操作"
+    },
+    "Values": {
+      "Yes": "是",
+      "No": "否",
+      "Empty": "空",
+      "None": "无",
+      "Unknown": "未知"
+    }
+  },
+  "Console": {
+    "Eyebrow": "实时传输 / 消息运维",
+    "Title": "数据通道运维",
+    "Subtitle": "在同一控制台追踪端点流向、管线组成、实时消息证据与通道故障。",
+    "Actions": {
+      "ExceptionEvidence": "异常证据"
+    },
+    "Summary": {
+      "AriaLabel": "数据通道运行摘要",
+      "TotalChannels": "已注册通道",
+      "HealthyChannels": "就绪且健康",
+      "ChannelsWithExceptions": "存在故障的通道",
+      "ExceptionHistory": "历史异常"
+    },
+    "Directory": {
+      "Eyebrow": "传输目录",
+      "Title": "通道管线",
+      "Description": "沿入口到出口查看每条消息路径，并检查转换或观测消息的中间件。",
+      "ChannelCount": "{0} 条通道"
+    },
+    "States": {
+      "Loading": "正在加载数据通道证据",
+      "LoadingDescription": "正在解析通道状态、端点元数据与异常历史。",
+      "Empty": "尚未注册数据通道",
+      "EmptyDescription": "注册通道管线后，这里将显示传输与消息证据。"
+    },
+    "Messages": {
+      "LoadChannelsFailed": "无法加载通道状态：{0}",
+      "LoadSummaryFailed": "无法加载异常摘要：{0}",
+      "LoadSummaryException": "加载异常摘要时发生错误：{0}",
+      "LoadFailed": "加载数据通道证据时发生错误：{0}",
+      "Refreshed": "数据通道证据已刷新。",
+      "ReinitializeFailed": "重新初始化通道失败：{0}",
+      "ReinitializeException": "重新初始化通道时发生错误：{0}",
+      "ReinitializeSucceeded": "通道 {0} 已重新初始化。",
+      "LoadExceptionsFailed": "无法加载通道异常：{0}",
+      "LoadExceptionsException": "加载通道异常证据时发生错误：{0}",
+      "ClearExceptionsFailed": "无法清空通道异常：{0}",
+      "ClearExceptionsException": "清空通道异常时发生错误：{0}",
+      "ClearExceptionsSucceeded": "通道 {0} 的异常已清空。"
+    }
+  },
+  "Channel": {
+    "IdentityLabel": "通道管线",
+    "ExceptionCount": "{0} 个活动故障",
+    "Actions": {
+      "OpenMenu": "打开通道 {0} 的操作菜单",
+      "Reinitialize": "重新初始化",
+      "ViewExceptions": "查看异常",
+      "ClearExceptions": "清空异常",
+      "Inspect": "检查"
+    },
+    "States": {
+      "Ready": "已就绪",
+      "Initializing": "初始化中",
+      "NotInitialized": "未初始化",
+      "Unavailable": "不可用",
+      "Degraded": "已降级",
+      "Reinitializing": "正在重新初始化通道",
+      "ReinitializingDescription": "正在重建端点与中间件状态。"
+    },
+    "Flow": {
+      "AriaLabel": "通道 {0} 的端点流向",
+      "Ingress": "入口端点",
+      "Egress": "出口端点",
+      "MiddlewareCount": "{0} 个阶段"
+    },
+    "Sections": {
+      "EndpointConfiguration": "端点配置",
+      "Pipeline": "管线中间件（{0}）"
+    },
+    "Info": {
+      "ItemCount": "{0} 项信号"
+    },
+    "Exceptions": {
+      "AriaLabel": "通道异常证据",
+      "Active": "{0} 个活动异常",
+      "Historical": "历史累计记录 {0} 个异常"
+    }
+  },
+  "Pipeline": {
+    "ComponentKinds": {
+      "Endpoint": "端点",
+      "Transform": "转换中间件",
+      "Monitor": "监控中间件",
+      "EndpointMiddleware": "端点中间件",
+      "Information": "证据提供器",
+      "Base": "中间件",
+      "Unknown": "未知组件"
+    }
+  },
+  "Metadata": {
+    "ComplexValue": "结构化值",
+    "Empty": "暂无配置元数据",
+    "RawData": "原始数据",
+    "Unreadable": "无法读取",
+    "ArrayData": "数组数据",
+    "Value": "值"
+  },
+  "Debugger": {
+    "DialogTitle": "消息调试器 · {0}",
+    "Controls": {
+      "AriaLabel": "消息捕获控制"
+    },
+    "Fields": {
+      "FilterKeyword": "过滤关键字",
+      "FilterPlaceholder": "匹配消息内容",
+      "QueueLength": "捕获深度"
+    },
+    "Actions": {
+      "Open": "打开消息调试器",
+      "Start": "开始捕获",
+      "Stop": "停止捕获"
+    },
+    "States": {
+      "Listening": "正在捕获",
+      "Paused": "捕获已暂停",
+      "NoMessages": "尚未捕获消息",
+      "NoMessagesDescription": "开始捕获并等待符合当前过滤条件的流量。"
+    },
+    "CapturedMessages": "消息流",
+    "MessageCount": "已捕获 {0} 条",
+    "MetadataAvailable": "消息包含元数据",
+    "Sources": {
+      "Ingress": "入口",
+      "Egress": "出口"
+    },
+    "Tabs": {
+      "FormattedContent": "格式化载荷",
+      "Metadata": "元数据"
+    },
+    "Values": {
+      "EmptyMessage": "（空消息）"
+    },
+    "Messages": {
+      "LoadFailed": "无法解析消息调试器：{0}",
+      "LoadException": "打开消息调试器时发生错误：{0}"
+    }
+  },
+  "Exceptions": {
+    "States": {
+      "Active": "存在活动故障",
+      "Healthy": "健康"
+    },
+    "Columns": {
+      "ChannelId": "通道 ID",
+      "PipelineId": "管线 ID",
+      "Status": "状态",
+      "CurrentCount": "活动异常",
+      "HistoricalCount": "历史异常",
+      "PoolSize": "异常池容量",
+      "Latest": "最新异常",
+      "PoolUsage": "异常池占用",
+      "Timestamp": "时间",
+      "SourceType": "异常源类型",
+      "ExceptionType": "异常类型",
+      "Message": "异常消息",
+      "Description": "运维上下文"
+    },
+    "Summary": {
+      "Title": "异常证据",
+      "Subtitle": "对比活动故障、历史深度与各通道的异常池压力。",
+      "AriaLabel": "异常证据摘要",
+      "ActiveExceptions": "活动异常",
+      "DirectoryEyebrow": "故障清单",
+      "DirectoryTitle": "通道异常压力",
+      "DirectoryCount": "{0} 条通道",
+      "NoChannels": "暂无通道异常证据。"
+    },
+    "Details": {
+      "DialogTitle": "异常详情 · {0}",
+      "Title": "异常详情",
+      "SummaryAriaLabel": "所选通道的异常摘要",
+      "InspectorEyebrow": "所选证据",
+      "InspectorTitle": "异常检查器",
+      "SourceDescription": "异常源描述",
+      "MessageTitle": "异常消息",
+      "StackTraceTitle": "异常堆栈",
+      "Empty": "此通道没有保留的异常详情。"
     }
   }
 }
