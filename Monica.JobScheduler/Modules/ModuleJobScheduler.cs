@@ -9,6 +9,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.TypeDiscovery.Models;
+using Monica.EventBus.Abstractions;
 using Monica.HealthCheck.Extensions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Annotations;
@@ -18,6 +19,8 @@ using Monica.JobScheduler.Providers;
 using Monica.JobScheduler.Services;
 using Monica.JobScheduler.Services.Support;
 using Monica.JobScheduler.Utils;
+using Monica.StateStore.Abstractions;
+using Monica.StateStore.Cancellation.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -48,6 +51,22 @@ public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
     internal const string SCOPE_FEATURE = "scope";
 
     private readonly List<JobDefinition> _jobDefinitions = [];
+
+    /// <inheritdoc />
+    public override void ValidateOptions(ModuleJobSchedulerOption options, string? profileName)
+    {
+        if (options.DefinitionPublicationInterval <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(ModuleJobSchedulerOption.DefinitionPublicationInterval)} must be greater than zero.");
+        }
+
+        if (options.DefinitionPublicationRetryInterval <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(ModuleJobSchedulerOption.DefinitionPublicationRetryInterval)} must be greater than zero.");
+        }
+    }
 
     /// <summary>
     /// Declares structural discovery for recurring and triggered jobs while preserving the business-type order.
@@ -96,30 +115,33 @@ public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
     public override void PostConfigureServices(ModuleContext<ModuleJobSchedulerOption> context)
     {
         var services = context.Services;
-        services.AddSingleton<JobSchedulerFacade>();
-        services.AddSingleton<JobSchedulerAnalyticsFacade>();
-        services.AddSingleton<JobSchedulerDashboardFacade>();
-        services.AddSingleton<JobSchedulerMonitorFacade>();
-        services.AddSingleton<JobSchedulerQueryFacade>();
-        services.AddSingleton<JobExecutor>();
-        services.AddSingleton<JobRegistry>();
+        var serviceDiscovery = context.Modules.Get<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>();
+        var runsControlPlane = serviceDiscovery.Role is ServiceDiscoveryRole.Registry or ServiceDiscoveryRole.Standalone;
+        var runsWorkerPlane = serviceDiscovery.Role is ServiceDiscoveryRole.Worker or ServiceDiscoveryRole.Standalone;
+        IReadOnlyList<JobDefinition> jobDefinitions = Array.AsReadOnly(_jobDefinitions.ToArray());
+
+        if (serviceDiscovery.Role == ServiceDiscoveryRole.Registry && jobDefinitions.Count != 0)
+        {
+            throw new InvalidOperationException(
+                $"A {nameof(ServiceDiscoveryRole.Registry)} JobScheduler host cannot own executable job types. " +
+                $"Move the discovered jobs to a {nameof(ServiceDiscoveryRole.Worker)} host or use " +
+                $"{nameof(ServiceDiscoveryRole.Standalone)} when one process intentionally owns both planes.");
+        }
+
+        services.AddSingleton<IReadOnlyList<JobDefinition>>(jobDefinitions);
         services.AddSingleton<JobInstanceManager>();
-        services.AddSingleton<JobDispatcher>();
         services.AddSingleton<IJobDefinitionCacheService, JobDefinitionCacheServiceDefault>();
-        services.AddSingleton<JobOrchestrator>();
-        services.AddSingleton<ITriggeredJobManager, TriggeredJobManager>();
         services.AddSingleton<IJobCancellationTokenManager, JobCancellationTokenManager>();
-        services.AddSingleton<JobHistoryCleanupExecutor>();
 
-        services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuardHostedService>();
+        if (runsWorkerPlane)
+        {
+            services.AddSingleton<JobExecutor>();
+            services.AddSingleton<JobRegistry>();
+            services.AddSingleton<JobOrchestrator>();
+            services.AddSingleton<ITriggeredJobManager, TriggeredJobManager>();
+        }
 
-        // Register job scheduler components
-        services.AddSingleton<RecurringJobValidator>();
-        services.AddSingleton<DelayedJobRecoveryService>();
-        services.AddSingleton<RecurringJobScheduler>();
-        services.AddSingleton<TriggeredJobScheduler>();
-
-        Logger.LogInformation("Discovered {Count} job type(s) for registration", _jobDefinitions.Count);
+        Logger.LogInformation("Discovered {Count} job type(s) for registration", jobDefinitions.Count);
 
         // Readiness must reflect initialization even when the host discovers no jobs.
         services.AddHealthChecks()
@@ -127,9 +149,22 @@ public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
                 "monica.job-scheduler",
                 tags: ["scheduler"]);
 
-        
-        if (Option.RunControlPlane)
+        if (runsControlPlane)
         {
+            services.AddSingleton<JobSchedulerFacade>();
+            services.AddSingleton<JobSchedulerAnalyticsFacade>();
+            services.AddSingleton<JobSchedulerDashboardFacade>();
+            services.AddSingleton<JobSchedulerMonitorFacade>();
+            services.AddSingleton<JobSchedulerQueryFacade>();
+            services.AddSingleton<JobDispatcher>();
+            services.AddSingleton<JobHistoryCleanupExecutor>();
+            services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuardHostedService>();
+            services.AddSingleton<RecurringJobValidator>();
+            services.AddSingleton<DelayedJobRecoveryService>();
+            services.AddSingleton<RecurringJobScheduler>();
+            services.AddSingleton<TriggeredJobScheduler>();
+            services.AddSingleton<JobDefinitionReconciler>();
+            services.AddHostedService<JobDefinitionControlPlaneHostedService>();
             services.AddHostedService<JobSchedulerHostedService>();
             services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
                                                   ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
@@ -174,10 +209,16 @@ public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
                 Logger.LogInformation("History cleanup disabled");
             }
         }
-       
-        services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
-        services.AddHostedService<JobWorkerManagerHostedService>(provider => ActivatorUtilities.CreateInstance<JobWorkerManagerHostedService>(provider, _jobDefinitions));
+        if (serviceDiscovery.Role == ServiceDiscoveryRole.Worker)
+        {
+            services.AddHostedService<JobDefinitionPublisherHostedService>();
+            services.AddHostedService<JobWorkerManagerHostedService>();
+        }
+        else if (serviceDiscovery.Role == ServiceDiscoveryRole.Standalone)
+        {
+            services.AddHostedService<JobWorkerManagerHostedService>();
+        }
     }
 
     /// <summary>
@@ -240,9 +281,19 @@ public class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
         module.Require<ModuleHostedService, ModuleHostedServiceOption>();
         module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
         module.Require<ModuleHealthCheck, ModuleHealthCheckOption>();
+        module.Require<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>();
         module.RequireFeature(PROVIDER_FEATURE);
         module.RequireFeature(METADATA_STORE_FEATURE);
         module.RequireFeature(SCOPE_FEATURE);
+    }
+
+    /// <inheritdoc />
+    public override void DeclareContracts(ModuleContractDescriptor<ModuleJobSchedulerOption> contracts)
+    {
+        contracts.RequireKeyedService<IEventBus>(nameof(ModuleJobScheduler));
+        contracts.RequireKeyedService<ICancellationManager>(nameof(ModuleJobScheduler));
+        contracts.RequireKeyedService<IStateStore>(nameof(ModuleServiceDiscovery));
+        contracts.RequireService<IJobMetadataRepository>();
     }
 }
 
@@ -300,34 +351,32 @@ public static class ModuleJobSchedulerRegistrationExtensions
     
     
     /// <summary>
-    /// Configures the module to use the distributed event bus and cancellation manager providers.
+    /// Configures distributed event-bus and cancellation providers. Service-discovery role and storage are composed
+    /// independently; the finalized role determines whether this host runs scheduler control-plane services.
     /// </summary>
     /// <returns></returns>
     public static ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> UseDistributedProvider(this ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> module)
     {
         module.SatisfyFeature(ModuleJobScheduler.PROVIDER_FEATURE);
-        module.Configure(options => options.RunControlPlane = true);
         module.Require<ModuleEventBus, ModuleEventBusOption>()
             .AddKeyedEventBus(nameof(ModuleJobScheduler), useDistributed: true);
         module.Require<ModuleCancellationManager, ModuleCancellationManagerOption>()
-            .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: true);
-        module.Require<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>();
+            .AddKeyedDistributedCancellationManager(nameof(ModuleJobScheduler));
         return module;
     }
    
     /// <summary>
-    /// Configures the module to use the in-memory metadata store and event bus and cancellation manager providers.
+    /// Configures process-local event-bus and cancellation providers. Service-discovery role and storage are composed
+    /// independently; the finalized role determines whether this host runs scheduler control-plane services.
     /// </summary>
     /// <returns></returns>
     public static ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> UseInMemoryProvider(this ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> module)
     {
         module.SatisfyFeature(ModuleJobScheduler.PROVIDER_FEATURE);
-        module.Configure(options => options.RunControlPlane = true);
         module.Require<ModuleEventBus, ModuleEventBusOption>()
             .AddKeyedEventBus(nameof(ModuleJobScheduler), useDistributed: false);
         module.Require<ModuleCancellationManager, ModuleCancellationManagerOption>()
-            .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: false);
-        module.Require<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>().UseInMemoryStateStore();
+            .AddKeyedInMemoryCancellationManager(nameof(ModuleJobScheduler));
         return module;
     }
 
@@ -338,11 +387,6 @@ public static class ModuleJobSchedulerRegistrationExtensions
 /// </summary>
 public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
 {
-    /// <summary>
-    /// Gets whether this host runs scheduler control-plane services. Provider feature methods set this explicitly.
-    /// </summary>
-    public bool RunControlPlane { get; internal set; }
-
     /// <summary>
     /// Gets or sets the host-owned timezone used to evaluate recurring cron expressions and calculate upcoming runs.
     /// The default is <see cref="TimeZoneInfo.Local"/>. Configure this per Monica host when scheduler semantics must use
@@ -361,6 +405,19 @@ public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
     /// When not configured, JobScheduler uses the application defaults configured through <see cref="IMonicaBuilder.ConfigureApplication"/>.
     /// </summary>
     public string? ProjectName { get; set; }
+
+    /// <summary>
+    /// Gets or sets how often Worker hosts republish their complete job-definition snapshot. Periodic publication is
+    /// the anti-entropy path for registry startup ordering, transient broker failures, and control-plane failover.
+    /// The default is one minute.
+    /// </summary>
+    public TimeSpan DefinitionPublicationInterval { get; set; } = TimeSpan.FromMinutes(1);
+
+    /// <summary>
+    /// Gets or sets the delay before a Worker retries service-registration waits or a failed snapshot publication.
+    /// The default is five seconds.
+    /// </summary>
+    public TimeSpan DefinitionPublicationRetryInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Resolves the project name used for job reconciliation and identification.

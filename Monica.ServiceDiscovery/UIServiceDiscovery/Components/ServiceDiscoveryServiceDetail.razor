@@ -246,7 +246,7 @@
                         <MudGrid>
                             <MudItem xs="12" sm="4">
                                 <MudTextField T="string" Label="@L["ServiceDetail:Configuration:Fields:StateStoreMode"]"
-                                            Value="@(ServiceDiscoveryOptions.Value.IsStandaloneMode ? L["ServiceDetail:Configuration:Values:StandaloneMode"].Value : L["ServiceDetail:Configuration:Values:DistributedMode"].Value)"
+                                            Value="@GetStorageModeText()"
                                             ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="4">
@@ -256,8 +256,9 @@
                                             HelperText="@L["ServiceDetail:Configuration:Fields:IsolationHandlingHelper"]" />
                             </MudItem>
                             <MudItem xs="12" sm="4">
-                                <MudSwitch T="bool" Value="@ServiceDiscoveryOptions.Value.IsRegistryServer"
-                                          Label="@L["ServiceDetail:Configuration:Fields:RegistryServer"]" Disabled="true" Color="Color.Primary" />
+                                <MudTextField T="string" Label="@L["ServiceDetail:Configuration:Fields:HostRole"]"
+                                            Value="@GetHostRoleText()"
+                                            ReadOnly="true" />
                             </MudItem>
                         </MudGrid>
                         <MudDivider Class="my-4" />
@@ -496,6 +497,28 @@
         {
             EIsolationHandlingMode.ContinueRunning => L["ServiceDetail:Configuration:Values:ContinueRunning"].Value,
             EIsolationHandlingMode.FastShutdown => L["ServiceDetail:Configuration:Values:FastShutdown"].Value,
+            _ => L["Shared:Values:Unknown"].Value
+        };
+    }
+
+    private string GetStorageModeText()
+    {
+        return ServiceDiscoveryOptions.Value.StorageMode switch
+        {
+            ServiceDiscoveryStorageMode.Memory => L["ServiceDetail:Configuration:Values:MemoryStorage"].Value,
+            ServiceDiscoveryStorageMode.Distributed => L["ServiceDetail:Configuration:Values:DistributedStorage"].Value,
+            ServiceDiscoveryStorageMode.ExternalKeyed => L["ServiceDetail:Configuration:Values:ExternalKeyedStorage"].Value,
+            _ => L["Shared:Values:Unknown"].Value
+        };
+    }
+
+    private string GetHostRoleText()
+    {
+        return ServiceDiscoveryOptions.Value.Role switch
+        {
+            ServiceDiscoveryRole.Worker => L["ServiceDetail:Configuration:Values:WorkerRole"].Value,
+            ServiceDiscoveryRole.Registry => L["ServiceDetail:Configuration:Values:RegistryRole"].Value,
+            ServiceDiscoveryRole.Standalone => L["ServiceDetail:Configuration:Values:StandaloneRole"].Value,
             _ => L["Shared:Values:Unknown"].Value
         };
     }

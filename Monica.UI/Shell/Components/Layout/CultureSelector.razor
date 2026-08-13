@@ -1,11 +1,10 @@
 @using System.Globalization
-@using Microsoft.Extensions.Options
 @using Microsoft.Extensions.Localization
-@using Monica.Modules
+@using Monica.Core.Localization.Models
 @using Monica.UI.Localization
 @using Monica.UI.Shell.Support
 @inject NavigationManager NavigationManager
-@inject IOptions<ModuleLocalizationOption> LocalizationOptions
+@inject LocalizationProfile LocalizationProfile
 @inject IJSRuntime JSRuntime
 @inject IBrowserStorage BrowserStorage
 @inject IStringLocalizer<SharedResource> L
@@ -19,12 +18,13 @@
          ListClass="mo-appbar-menu-list"
          Class="action-button"
          title="@L["Layout:LanguageTooltip"]">
-    @foreach (var culture in LocalizationOptions.Value.SupportedCultures)
+    @foreach (var culture in LocalizationProfile.SupportedCultures)
     {
-        var displayName = LocalizationOptions.Value.CultureDisplayNames.TryGetValue(culture, out var name)
-            ? name
-            : new CultureInfo(culture).NativeName;
-        var isCurrentCulture = CultureInfo.CurrentUICulture.Name == culture;
+        var displayName = LocalizationProfile.GetDisplayName(culture);
+        var isCurrentCulture = string.Equals(
+            CultureInfo.CurrentUICulture.Name,
+            culture,
+            StringComparison.OrdinalIgnoreCase);
 
         <MudMenuItem OnClick="@(() => ChangeCultureAsync(culture))"
                      Class="@(isCurrentCulture ? "active" : null)"
@@ -60,31 +60,26 @@
                 return;
             }
 
-            if (storedCulture is not null && LocalizationOptions.Value.SupportedCultures.Contains(storedCulture))
+            var culture = LocalizationProfile.ResolveCulture(storedCulture);
+            if (!string.Equals(storedCulture, culture, StringComparison.Ordinal))
             {
-                var cookieCulture = await cultureInterop.InvokeAsync<string?>(
-                    "getCultureFromCookie",
-                    LocalizationOptions.Value.CookieName);
+                await BrowserStorage.SetAsync(STORAGE_KEY, culture);
+            }
 
-                if (cookieCulture != storedCulture)
-                {
-                    await cultureInterop.InvokeVoidAsync(
-                        "setCultureCookie",
-                        storedCulture,
-                        LocalizationOptions.Value.CookieName);
-                }
-
+            if (_disposed)
+            {
                 return;
             }
 
-            if (storedCulture is null)
+            var cookieCulture = await cultureInterop.InvokeAsync<string?>(
+                "getCultureFromCookie",
+                LocalizationProfile.CookieName);
+            if (!string.Equals(cookieCulture, culture, StringComparison.Ordinal))
             {
-                var defaultCulture = LocalizationOptions.Value.DefaultCulture;
-                await BrowserStorage.SetAsync(STORAGE_KEY, defaultCulture);
                 await cultureInterop.InvokeVoidAsync(
                     "setCultureCookie",
-                    defaultCulture,
-                    LocalizationOptions.Value.CookieName);
+                    culture,
+                    LocalizationProfile.CookieName);
             }
         }
         catch (JSDisconnectedException)
@@ -104,7 +99,8 @@
             return;
         }
 
-        await BrowserStorage.SetAsync(STORAGE_KEY, culture);
+        var resolvedCulture = LocalizationProfile.ResolveCulture(culture);
+        await BrowserStorage.SetAsync(STORAGE_KEY, resolvedCulture);
         if (_disposed)
         {
             return;
@@ -114,8 +110,8 @@
         {
             await cultureInterop.InvokeVoidAsync(
                 "setCultureCookie",
-                culture,
-                LocalizationOptions.Value.CookieName);
+                resolvedCulture,
+                LocalizationProfile.CookieName);
         }
         catch (JSDisconnectedException)
         {

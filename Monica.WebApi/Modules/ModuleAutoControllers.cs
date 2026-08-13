@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -89,7 +89,20 @@ public class ModuleAutoControllers : MonicaModule<ModuleAutoControllersOption>, 
             {
                 foreach (var match in matches)
                 {
-                    _applicationPartCatalog.Add(match.Type);
+                    if (!_applicationPartCatalog.Add(match.Type)
+                        || CrudControllerSuffixMismatch.Create(
+                            match.Type,
+                            Option.Crud.CrudControllerPostfix) is not { } mismatch)
+                    {
+                        continue;
+                    }
+
+                    Logger.LogWarning(
+                        "CRUD controller {ControllerName} ({ControllerType}) does not end with configured route suffix {RequiredSuffix}; its route name will not be stripped. Diagnostic source: {DiagnosticSource}.",
+                        mismatch.ControllerName,
+                        mismatch.ControllerType,
+                        mismatch.RequiredSuffix,
+                        CrudControllerSuffixMismatch.SOURCE);
                 }
             });
     }
@@ -101,9 +114,7 @@ public class ModuleAutoControllers : MonicaModule<ModuleAutoControllersOption>, 
 
         mvcBuilder.PartManager.ApplicationParts.Clear();
         mvcBuilder.PartManager.ApplicationParts.Add(new TypeCollectionApplicationPart(applicationPartTypes));
-        mvcBuilder.PartManager.FeatureProviders.Add(new CrudControllerFeatureProvider(
-            NullLogger<CrudControllerFeatureProvider>.Instance,
-            Microsoft.Extensions.Options.Options.Create(Option.Crud)));
+        mvcBuilder.PartManager.FeatureProviders.Add(new CrudControllerFeatureProvider());
         mvcBuilder.Services.Replace(
             ServiceDescriptor.Transient<IControllerActivator, ServiceBasedControllerActivator>());
     }

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
@@ -15,12 +14,14 @@ internal static class ProjectUnitConfigurationReloadBehaviorEnricher
     /// <summary>
     /// Enriches unknown configuration reload behavior from discovered dependency-injection options usage.
     /// </summary>
-    /// <param name="services">The service collection populated by registered Monica modules.</param>
+    /// <param name="definitionRegistry">The optional host configuration-definition registry.</param>
     /// <param name="catalog">The host-owned project-unit catalog.</param>
     /// <param name="logger">The project-units module logger.</param>
-    public static void Enrich(IServiceCollection services, IProjectUnitCatalog catalog, ILogger logger)
+    public static void Enrich(
+        IConfigurationDefinitionRegistry? definitionRegistry,
+        IProjectUnitCatalog catalog,
+        ILogger logger)
     {
-        var definitionRegistry = ResolveDefinitionRegistry(services);
         if (definitionRegistry is null)
         {
             return;
@@ -89,12 +90,4 @@ internal static class ProjectUnitConfigurationReloadBehaviorEnricher
             inferredBehavior);
     }
 
-    private static IConfigurationDefinitionRegistry? ResolveDefinitionRegistry(IServiceCollection services)
-    {
-        return services
-            .LastOrDefault(descriptor =>
-                !descriptor.IsKeyedService
-                && descriptor.ServiceType == typeof(IConfigurationDefinitionRegistry))
-            ?.ImplementationInstance as IConfigurationDefinitionRegistry;
-    }
 }

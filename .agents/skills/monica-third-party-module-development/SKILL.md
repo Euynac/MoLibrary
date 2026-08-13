@@ -81,7 +81,7 @@ Independently published packages override Monica's first-party test naming rule:
 - Make every manifest module key equal its owning package ID or start with `<PackageId>.`.
 - Use a final `.UI` package/key segment for a separately distributed UI package.
 - Derive a UI category ID by removing only the UI module's manifest ecosystem key final `.UI` segment. Implement `IUIModule`; do not infer UI runtime identity from the key suffix.
-- Register each UI category and its pages in one `RegisterUIComponents` block with the module-owned resource marker.
+- Contribute each UI category and its pages through one `ModuleShellUIOption.ConfigureNavigation` callback in `Describe`, and contribute the module-owned resource marker to `ModuleLocalizationOption` there as well.
 - Derive public routes from the package family without `<Publisher>.Monica.` or a distribution-only final `.UI`: `Tairitsua.Monica.GachaPool` uses `/gacha-pool`; `Tairitsua.Monica.AI.OCR.UI` uses `/ai-ocr`.
 - Keep public routes under the package-family prefix; the host route namespace is shared and duplicate normalized routes fail fast.
 

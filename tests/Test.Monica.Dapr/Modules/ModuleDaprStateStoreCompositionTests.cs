@@ -1,6 +1,9 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Monica.Core.Modularity.Extensions;
+using Monica.Dapr.Services;
 using Monica.Modules;
+using Monica.StateStore.Abstractions;
 using Xunit;
 
 namespace Test.Monica.Dapr.Modules;
@@ -8,17 +11,19 @@ namespace Test.Monica.Dapr.Modules;
 public sealed class ModuleDaprStateStoreCompositionTests
 {
     [Fact]
-    public void Composition_WhenDaprStateStoreProviderIsSelected_ShouldValidateProviderFeature()
+    public void Build_WhenDaprStateStoreProviderIsSelected_ShouldResolveSdkNativeProvider()
     {
         var builder = Host.CreateApplicationBuilder();
-
-        var exception = Record.Exception(() => builder.AddMonica(monica =>
+        builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
             monica.AddStateStore()
                 .UseDaprStateStoreProvider(static options => options.StateStoreName = "test-state-store");
-        }));
+        });
 
-        Assert.Null(exception);
+        using var host = builder.Build();
+        var provider = host.Services.GetRequiredService<IDistributedStateStore>();
+
+        Assert.IsType<DaprStateStoreProvider>(provider);
     }
 }

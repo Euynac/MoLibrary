@@ -164,7 +164,7 @@
     private void SelectEvent(ProjectUnitDomainEventInfo eventInfo)
     {
         _selectedEvent = eventInfo;
-        _eventContent = JsonSerializer.Serialize(eventInfo.Structure, JsonSerializerOptionsProvider.SerializerOptions.Clone(o => o.WriteIndented = true)) ?? "{}";
+        _eventContent = JsonSerializer.Serialize(eventInfo.Structure, JsonSerializerOptionsProvider.SerializerOptions.Copy(o => o.WriteIndented = true)) ?? "{}";
     }
 
     private async Task PublishEventAsync()

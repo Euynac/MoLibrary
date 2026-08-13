@@ -22,26 +22,29 @@ public static class ModuleServiceDiscoveryUIBuilderExtensions
         public ModuleRegistration<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption> AddServiceDiscoveryUI(
             Action<ModuleServiceDiscoveryUIOption>? configure = null)
         {
-            var registration = builder.AddModule<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption>(configure);
-            registration.Require<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<ServiceDiscoveryResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(navigation =>
-                    navigation.RegisterLocalizedPage<UIServiceDiscoveryPage, ServiceDiscoveryResource>(
-                        UIServiceDiscoveryPage.SERVICE_DISCOVERY_DEBUG_URL,
-                        "Pages:ServiceDiscovery:Title",
-                        Icons.Material.Filled.CloudQueue,
-                        BuiltInNavigationCategoryIds.Monitor,
-                        addToNav: true,
-                        navOrder: 40));
-            return registration;
+            return builder.AddModule<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption>(configure);
         }
     }
 }
 
 public class ModuleServiceDiscoveryUI : MonicaModule<ModuleServiceDiscoveryUIOption>, IUIModule
 {
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleServiceDiscovery, ModuleServiceDiscoveryOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<ServiceDiscoveryResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static navigation =>
+                navigation.RegisterLocalizedPage<UIServiceDiscoveryPage, ServiceDiscoveryResource>(
+                    UIServiceDiscoveryPage.SERVICE_DISCOVERY_DEBUG_URL,
+                    "Pages:ServiceDiscovery:Title",
+                    Icons.Material.Filled.CloudQueue,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 40)));
+    }
+
     public override void ConfigureServices(ModuleContext<ModuleServiceDiscoveryUIOption> context)
     {
         context.Services.AddScoped<ServiceDiscoveryDomainColorResolver>();

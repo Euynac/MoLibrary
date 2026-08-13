@@ -1,24 +1,28 @@
-using System.Text;
-using System.Text.Json;
 using Dapr.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Modules;
+using Monica.Dapr.Services.Support;
 using Monica.StateStore.Abstractions;
 using Monica.StateStore.Queries;
 
 namespace Monica.Dapr.Services;
 
 /// <summary>
-/// Dapr state store implementation
+/// Dapr state store backed by the SDK's typed APIs and the host-wide canonical JSON contract.
 /// </summary>
-public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvider> logger, IOptions<ModuleDaprStateStoreOption> options) : DistributedStateStoreBase(logger)
+internal sealed class DaprStateStoreProvider(
+    DaprClient dapr,
+    ILogger<DaprStateStoreProvider> logger,
+    IOptions<ModuleDaprStateStoreOption> options,
+    IJsonSerializerOptionsProvider serializerOptionsProvider) : DistributedStateStoreBase(logger)
 {
     /// <summary>
     /// Configuration options
     /// </summary>
-    protected ModuleDaprStateStoreOption Option { get; set; } = options.Value;
+    private ModuleDaprStateStoreOption Option { get; } = options.Value;
 
     /// <summary>
     /// State store name
@@ -32,10 +36,19 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
         {
             var queryBuilder = new QueryBuilder<T>();
             var finished = query.Invoke(queryBuilder);
-            queryStr = finished.ToString() ?? throw new InvalidOperationException("State query builder returned a null query string.");
-            var response =
-                await dapr.QueryStateAsync<T>(StateStoreName, queryStr, cancellationToken: cancellationToken);
-            return response.Results.ToDictionary(p => p.Key, item => item.Data);
+            if (!ReferenceEquals(finished, queryBuilder))
+            {
+                throw new InvalidOperationException("State query delegates must return the supplied query builder.");
+            }
+
+            queryStr = DaprStateQueryRenderer.Render(
+                queryBuilder.BuildDefinition(),
+                serializerOptionsProvider.SerializerOptions);
+            var response = await dapr.QueryStateAsync<T>(
+                StateStoreName,
+                queryStr,
+                cancellationToken: cancellationToken);
+            return response.Results.ToDictionary(static item => item.Key, static item => item.Data);
         }
         catch (Exception e)
         {
@@ -50,22 +63,10 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
     {
         try
         {
-            return (await dapr.GetBulkStateAsync(StateStoreName, keys.ToList(), Option.DefaultBulkParallelism,
+            return (await dapr.GetBulkStateAsync<T>(StateStoreName, keys, Option.DefaultBulkParallelism,
                 cancellationToken: cancellationToken))
-                .Where(p => !removeEmptyValue || !string.IsNullOrEmpty(p.Value))
-                .ToDictionary(
-                    p => p.Key,
-                    item =>
-                    {
-                        try
-                        {
-                            return JsonSerializer.Deserialize<T>(item.Value, dapr.JsonSerializerOptions);
-                        }
-                        catch (Exception e)
-                        {
-                            throw e.CreateException(Logger, "Failed to deserialize JSON value \"{0}\" to type {1}", item.Value, typeof(T).FullName);
-                        }
-                    });
+                .Where(item => !removeEmptyValue || item.Value is not null)
+                .ToDictionary(static item => item.Key, static item => (T?)item.Value);
         }
         catch (Exception e)
         {
@@ -109,7 +110,7 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
         try
         {
             var data = await dapr.GetByteStateAsync(StateStoreName, key, cancellationToken: cancellationToken);
-            return data.IsEmpty ? null : Encoding.UTF8.GetString(data.Span);
+            return data.IsEmpty ? null : System.Text.Encoding.UTF8.GetString(data.Span);
         }
         catch (Exception e)
         {
@@ -122,7 +123,12 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
         try
         {
             var metadata = BuildTtlMetadata(ttl);
-            await dapr.SaveStateAsync(StateStoreName, key, (object?)value, metadata: metadata, cancellationToken: cancellationToken);
+            await dapr.SaveStateAsync(
+                StateStoreName,
+                key,
+                value,
+                metadata: metadata,
+                cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {
@@ -161,7 +167,10 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
     {
         try
         {
-            return await dapr.GetStateAndETagAsync<T>(StateStoreName, key, cancellationToken: cancellationToken);
+            return await dapr.GetStateAndETagAsync<T>(
+                StateStoreName,
+                key,
+                cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {
@@ -177,13 +186,17 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
             var metadata = BuildTtlMetadata(ttl);
 
             // Use Dapr's TrySaveStateAsync for optimistic locking
-            var success = await dapr.TrySaveStateAsync(StateStoreName, key, value, expectedETag,
+            var success = await dapr.TrySaveStateAsync(
+                StateStoreName,
+                key,
+                value,
+                expectedETag,
                 metadata: metadata, cancellationToken: cancellationToken);
 
             if (success)
             {
                 // Save succeeded, get new ETag
-                var (_, newETag) = await dapr.GetStateAndETagAsync<T>(StateStoreName, key,
+                var (_, newETag) = await dapr.GetByteStateAndETagAsync(StateStoreName, key,
                     cancellationToken: cancellationToken);
                 return (true, newETag);
             }
@@ -204,7 +217,11 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
         try
         {
             var metadata = BuildTtlMetadata(ttl);
-            var success = await dapr.TrySaveStateAsync(StateStoreName, key, value, expectedETag,
+            var success = await dapr.TrySaveStateAsync(
+                StateStoreName,
+                key,
+                value,
+                expectedETag,
                 metadata: metadata, cancellationToken: cancellationToken);
 
             if (!success)
@@ -226,7 +243,7 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
         try
         {
             // Check if key exists first
-            var (existingValue, existingETag) = await dapr.GetStateAndETagAsync<T>(StateStoreName, key,
+            var (_, existingETag) = await dapr.GetByteStateAndETagAsync(StateStoreName, key,
                 cancellationToken: cancellationToken);
 
             // If ETag is not empty, key already exists
@@ -240,7 +257,11 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
             var metadata = BuildTtlMetadata(ttl);
 
             // Use empty ETag for save, will fail if another process created this key
-            var success = await dapr.TrySaveStateAsync(StateStoreName, key, value, "",
+            var success = await dapr.TrySaveStateAsync(
+                StateStoreName,
+                key,
+                value,
+                "",
                 metadata: metadata, cancellationToken: cancellationToken);
 
             if (success)
@@ -276,13 +297,11 @@ public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvi
         try
         {
             var metadata = BuildTtlMetadata(ttl);
-
             var saveItems = items.Select(item => new SaveStateItem<T>(
                 item.Key,
                 item.Value,
-                string.Empty,
-                new StateOptions(),
-                metadata)).ToList();
+                null!,
+                metadata: metadata)).ToArray();
 
             await dapr.SaveBulkStateAsync(StateStoreName, saveItems, cancellationToken);
         }

@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
+using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
 using Monica.HealthCheck.UI.Localization;
 using Monica.HealthCheck.UI.Pages;
@@ -22,10 +23,15 @@ public sealed class ModuleHealthCheckUITests
         options.AuthorizationPolicyOverride.Should().BeNull();
     }
 
-    [Fact]
-    public async Task AddHealthCheckUI_ShouldPublishProtectedMonitorPageUsingSharedAccessPolicy()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DirectAndTransitiveComposition_ShouldPublishTheSameProtectedMonitorPage(
+        bool useConvenienceEntry)
     {
-        await using var app = Compose(configurePipeline: true);
+        await using var app = Compose(
+            configurePipeline: true,
+            useConvenienceEntry: useConvenienceEntry);
         var catalog = app.Services.GetRequiredService<IPageCatalog>();
         var route = UIHealthCheckPage.PAGE_URL.Trim('/');
         var page = catalog.GetRegisteredPages().Single(definition => definition.Route == route);
@@ -55,7 +61,9 @@ public sealed class ModuleHealthCheckUITests
             .Should().NotBeSameAs(firstAccess);
     }
 
-    private static WebApplication Compose(bool configurePipeline = false)
+    private static WebApplication Compose(
+        bool configurePipeline = false,
+        bool useConvenienceEntry = true)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -71,7 +79,14 @@ public sealed class ModuleHealthCheckUITests
                     typeof(ModuleHealthCheck).Assembly,
                     typeof(ModuleShellUI).Assembly);
             });
-            monica.AddHealthCheckUI();
+            if (useConvenienceEntry)
+            {
+                monica.AddHealthCheckUI();
+            }
+            else
+            {
+                monica.AddModule<HealthCheckUIConsumerModule, HealthCheckUIConsumerModuleOption>();
+            }
         });
 
         var app = builder.Build();
@@ -84,3 +99,13 @@ public sealed class ModuleHealthCheckUITests
         return app;
     }
 }
+
+public sealed class HealthCheckUIConsumerModule : MonicaModule<HealthCheckUIConsumerModuleOption>
+{
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleHealthCheckUI, ModuleHealthCheckUIOption>();
+    }
+}
+
+public sealed class HealthCheckUIConsumerModuleOption : ModuleOptions<HealthCheckUIConsumerModule>;

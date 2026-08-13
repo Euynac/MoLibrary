@@ -15,6 +15,11 @@ public enum ModulePhase
     /// Finalizes and validates the module's default options and named profiles.
     /// </summary>
     FinalizeOptions,
+
+    /// <summary>
+    /// Declares finalized option-dependent service contracts without mutating the host.
+    /// </summary>
+    DeclareContracts,
     
     /// <summary>
     /// Configures the IHostApplicationBuilder for the module.

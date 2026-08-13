@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Monica.Configuration.Abstractions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -44,10 +45,7 @@ public static class ModuleProjectUnitsBuilderExtensions
 /// </summary>
 public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebModule
 {
-    private ProjectUnitCatalog? _catalog;
-
-    private ProjectUnitCatalog Catalog => _catalog
-        ?? throw new InvalidOperationException("ProjectUnits has not completed service configuration.");
+    private readonly ProjectUnitDiscoveryPlan _discoveryPlan = new();
 
     /// <inheritdoc />
     public override void Describe(ModuleDescriptor module)
@@ -61,15 +59,28 @@ public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebMo
     public override void ConfigureServices(ModuleContext<ModuleProjectUnitsOption> context)
     {
         var services = context.Services;
-        _catalog = new ProjectUnitCatalog(Option, CreateEffectiveNamingOptions(context.Modules), Logger);
-        Catalog.SetDocumentationService(Option.ParseUnitDetails ? ResolveDocumentationService(services) : null);
+        var namingOptions = CreateEffectiveNamingOptions(context.Modules);
 
-        services.AddSingleton(Catalog);
-        services.AddSingleton<IProjectUnitCatalog>(Catalog);
+        services.AddSingleton(serviceProvider => ProjectUnitCatalog.CreateCompleted(
+            Option,
+            namingOptions,
+            Logger,
+            _discoveryPlan.GetRequiredSnapshot(),
+            Option.ParseUnitDetails
+                ? serviceProvider.GetService<IXmlDocumentationService>()
+                : null,
+            serviceProvider.GetService<IConfigurationDefinitionRegistry>()));
+        services.AddSingleton<IProjectUnitCatalog>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectUnitCatalog>());
         services.TryAddScoped<IProjectUnitRequirementLinkResolver, NullProjectUnitRequirementLinkResolver>();
         services.AddScoped<ProjectUnitProjectionService>();
         services.AddScoped<ProjectUnitCatalogService>();
         services.AddScoped<ProjectUnitsFacade>();
+
+        if (Option.EnableRequestFilter)
+        {
+            services.AddRequestFilter();
+        }
     }
 
     /// <inheritdoc />
@@ -77,19 +88,7 @@ public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebMo
     {
         discovery.Match(
             TypeQuery.All,
-            (context, matches) => Catalog.Discover(matches.Select(static match => match.Shape)));
-    }
-
-    /// <inheritdoc />
-    public override void PostConfigureServices(ModuleContext<ModuleProjectUnitsOption> context)
-    {
-        var services = context.Services;
-        Catalog.ConnectUnits();
-        ProjectUnitConfigurationReloadBehaviorEnricher.Enrich(services, Catalog, Logger);
-        if (Option.EnableRequestFilter)
-        {
-            services.AddRequestFilter(Catalog);
-        }
+            (_, matches) => _discoveryPlan.Publish(matches.Select(static match => match.Shape)));
     }
 
     private sealed class RequestFilterDto
@@ -195,15 +194,6 @@ public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebMo
                 .WithSummary("List discovered enum metadata")
                 .WithDescription("Returns discovered enum names and values, optionally filtered by enum name.");
         });
-    }
-
-    private static IXmlDocumentationService? ResolveDocumentationService(IServiceCollection services)
-    {
-        return services
-            .LastOrDefault(descriptor =>
-                !descriptor.IsKeyedService
-                && descriptor.ServiceType == typeof(IXmlDocumentationService))
-            ?.ImplementationInstance as IXmlDocumentationService;
     }
 
     /// <summary>

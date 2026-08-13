@@ -30,18 +30,7 @@ public static class ModuleSystemInfoUIBuilderExtensions
         public ModuleRegistration<ModuleSystemInfoUI, ModuleSystemInfoUIOption> AddSystemInfoUI(
             Action<ModuleSystemInfoUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleSystemInfoUI, ModuleSystemInfoUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<SystemInfoResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UISystemInfoPage, SystemInfoResource>(
-                    UISystemInfoPage.PAGE_URL,
-                    "Pages:SystemInfo:Title",
-                    Icons.Material.Filled.Info,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 50));
-            return registration;
+            return builder.AddModule<ModuleSystemInfoUI, ModuleSystemInfoUIOption>(action);
         }
     }
 
@@ -156,6 +145,22 @@ public static class ModuleSystemInfoUIBuilderExtensions
 /// </summary>
 public class ModuleSystemInfoUI : MonicaModule<ModuleSystemInfoUIOption>, IWebHostRequiredModule, IUIModule
 {
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<SystemInfoResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UISystemInfoPage, SystemInfoResource>(
+                    UISystemInfoPage.PAGE_URL,
+                    "Pages:SystemInfo:Title",
+                    Icons.Material.Filled.Info,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 50)));
+    }
+
     /// <summary>
     /// Registers the services required by the system information UI.
     /// </summary>

@@ -30,4 +30,31 @@ public sealed class ProjectUnitsGenericHostTests
             && snapshot.IsWebModule
             && !snapshot.RequiresWebHost);
     }
+
+    [Fact]
+    public async Task Resolve_Concurrently_ShouldPublishOneFullyConnectedCatalog()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(options => options
+                .ExcludeDefault()
+                .Add(typeof(ProjectUnitCatalogTests).Assembly));
+            monica.AddProjectUnits();
+        });
+
+        using var host = builder.Build();
+        var resolutions = Enumerable.Range(0, 32)
+            .Select(_ => Task.Run(
+                () => host.Services.GetRequiredService<IProjectUnitCatalog>(),
+                TestContext.Current.CancellationToken))
+            .ToArray();
+        var catalogs = await Task.WhenAll(resolutions);
+
+        catalogs.Should().OnlyContain(catalog => ReferenceEquals(catalog, catalogs[0]));
+        catalogs[0]
+            .FindByFullName(typeof(ProjectUnitCatalogTests.CompleteDomainService).FullName)!
+            .DependencyUnits.Should().ContainSingle(dependency =>
+                dependency.Type == typeof(ProjectUnitCatalogTests.DependencyDomainService));
+    }
 }

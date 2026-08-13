@@ -1,8 +1,10 @@
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Extensions;
 using Monica.Framework.UI.UIExecutionPipeline.State;
 using Monica.Modules;
@@ -18,13 +20,14 @@ public sealed class ModuleExecutionPipelineUITests
         var module = new ModuleExecutionPipelineUI();
 
         module.Should().BeAssignableTo<IModule>();
+        module.Should().BeAssignableTo<IUIModule>();
         module.Should().NotBeAssignableTo<IWebModule>();
     }
 
     [Fact]
     public async Task Composition_ShouldRegisterScopedPageState()
     {
-        await using var app = Compose(includePageFeature: false);
+        await using var app = Compose(useConvenienceEntry: false);
         using var firstScope = app.Services.CreateScope();
         using var secondScope = app.Services.CreateScope();
 
@@ -35,7 +38,7 @@ public sealed class ModuleExecutionPipelineUITests
     [Fact]
     public async Task AddExecutionPipelineUI_ShouldComposeRuntimeAndPageDependencies()
     {
-        await using var app = Compose(includePageFeature: true);
+        await using var app = Compose(useConvenienceEntry: true);
         var application = app.Services.GetRequiredService<MonicaApplication>();
         var dependencies = GetDirectDependencyTypes(application, typeof(ModuleExecutionPipelineUI));
 
@@ -45,16 +48,39 @@ public sealed class ModuleExecutionPipelineUITests
     }
 
     [Fact]
-    public async Task AddModule_WithoutPageFeature_ShouldKeepOnlyIntrinsicDependency()
+    public async Task DirectAndTransitiveComposition_ShouldDeclareEquivalentIntrinsicDependencies()
     {
-        await using var app = Compose(includePageFeature: false);
-        var application = app.Services.GetRequiredService<MonicaApplication>();
-        var dependencies = GetDirectDependencyTypes(application, typeof(ModuleExecutionPipelineUI));
+        await using var directApp = Compose(useConvenienceEntry: true);
+        await using var transitiveApp = Compose(useConvenienceEntry: false);
+        var directDependencies = GetDirectDependencyTypes(
+            directApp.Services.GetRequiredService<MonicaApplication>(),
+            typeof(ModuleExecutionPipelineUI));
+        var transitiveDependencies = GetDirectDependencyTypes(
+            transitiveApp.Services.GetRequiredService<MonicaApplication>(),
+            typeof(ModuleExecutionPipelineUI));
 
-        dependencies.Should().BeEquivalentTo([typeof(ModuleExecutionPipeline)]);
+        transitiveDependencies.Should().BeEquivalentTo(directDependencies);
+        transitiveDependencies.Should().Contain(typeof(ModuleExecutionPipeline));
+        transitiveDependencies.Should().Contain(typeof(ModuleLocalization));
+        transitiveDependencies.Should().Contain(typeof(ModuleShellUI));
     }
 
-    private static WebApplication Compose(bool includePageFeature)
+    [Fact]
+    public void GenericHost_WhenLeafUiIsIncludedTransitively_ShouldAttributeHostRequirementToShell()
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        Action compose = () => builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddModule<ExecutionPipelineUIConsumerModule, ExecutionPipelineUIConsumerModuleOption>();
+        });
+
+        compose.Should().Throw<ModuleRegistrationException>()
+            .WithMessage($"*WebApplicationBuilder*{nameof(ModuleShellUI)}*");
+    }
+
+    private static WebApplication Compose(bool useConvenienceEntry)
     {
         var builder = WebApplication.CreateBuilder();
         builder.AddMonica(monica =>
@@ -67,13 +93,13 @@ public sealed class ModuleExecutionPipelineUITests
                     typeof(ModuleExecutionPipeline).Assembly,
                     typeof(ModuleShellUI).Assembly);
             });
-            if (includePageFeature)
+            if (useConvenienceEntry)
             {
                 monica.AddExecutionPipelineUI();
             }
             else
             {
-                monica.AddModule<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption>();
+                monica.AddModule<ExecutionPipelineUIConsumerModule, ExecutionPipelineUIConsumerModuleOption>();
             }
         });
 
@@ -90,3 +116,15 @@ public sealed class ModuleExecutionPipelineUITests
             .ToHashSet();
     }
 }
+
+public sealed class ExecutionPipelineUIConsumerModule
+    : MonicaModule<ExecutionPipelineUIConsumerModuleOption>
+{
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleExecutionPipelineUI, ModuleExecutionPipelineUIOption>();
+    }
+}
+
+public sealed class ExecutionPipelineUIConsumerModuleOption
+    : ModuleOptions<ExecutionPipelineUIConsumerModule>;

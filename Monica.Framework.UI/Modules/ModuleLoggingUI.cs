@@ -28,18 +28,7 @@ public static class ModuleLoggingUIBuilderExtensions
         public ModuleRegistration<ModuleLoggingUI, ModuleLoggingUIOption> AddLoggingUI(
             Action<ModuleLoggingUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleLoggingUI, ModuleLoggingUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<LoggingResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UILoggingMonitorPage, LoggingResource>(
-                    UILoggingMonitorPage.PAGE_URL,
-                    "Pages:LoggingMonitor:Title",
-                    Icons.Material.Filled.Article,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 30));
-            return registration;
+            return builder.AddModule<ModuleLoggingUI, ModuleLoggingUIOption>(action);
         }
     }
 }
@@ -52,6 +41,17 @@ public class ModuleLoggingUI : MonicaModule<ModuleLoggingUIOption>, IWebHostRequ
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleLogging, ModuleLoggingOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<LoggingResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UILoggingMonitorPage, LoggingResource>(
+                    UILoggingMonitorPage.PAGE_URL,
+                    "Pages:LoggingMonitor:Title",
+                    Icons.Material.Filled.Article,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 30)));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleLoggingUIOption> context)

@@ -39,6 +39,7 @@ public sealed class ModuleResultEnvelopeTests
 
         foreach (var serializerOptions in new[] { canonicalOptions, httpOptions, mvcOptions })
         {
+            serializerOptions.IsReadOnly.Should().BeTrue();
             var json = JsonSerializer.Serialize(Res.Ok("ready"), serializerOptions);
             using var document = JsonDocument.Parse(json);
 

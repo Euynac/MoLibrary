@@ -19,6 +19,10 @@ public static class ModuleRedisStateStoreBuilderExtensions
     /// <param name="module">The StateStore registration that will use Redis.</param>
     /// <param name="action">Redis state store configuration delegate</param>
     /// <returns>The Redis StateStore module registration for chaining.</returns>
+    /// <remarks>
+    /// Typed values use the canonical JSON contract configured for this Monica host. Changing that contract can make
+    /// existing persisted state incompatible.
+    /// </remarks>
     public static ModuleRegistration<ModuleRedisStateStore, ModuleRedisStateStoreOption> UseRedisStateStoreProvider(
         this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         Action<ModuleRedisStateStoreOption>? action = null)
@@ -47,6 +51,9 @@ public static class ModuleRedisStateStoreBuilderExtensions
     /// <param name="serviceKey">Service key to identify this StateStore instance</param>
     /// <param name="configureOptions">Redis state store configuration delegate</param>
     /// <returns>The StateStore module registration for chaining.</returns>
+    /// <remarks>
+    /// The service key isolates Redis connection settings, but every keyed store uses the host's canonical JSON contract.
+    /// </remarks>
     public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddKeyedRedisStateStore(
         this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         string serviceKey,
@@ -90,7 +97,7 @@ public class ModuleRedisStateStore : MonicaModule<ModuleRedisStateStoreOption>,
 
     public override void Describe(ModuleDescriptor module)
     {
-        // Depends on StateStore basic module
+        module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
         module.Require<ModuleStateStore, ModuleStateStoreOption>();
     }
 

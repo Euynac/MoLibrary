@@ -43,8 +43,20 @@ public class ModuleMarkdownUI : MonicaModule<ModuleMarkdownUIOption>, IWebHostRe
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleMarkdown, ModuleMarkdownOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<MarkdownResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+        {
+            option.EnableMarkdown = true;
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIMarkdownPage, MarkdownResource>(
+                    MarkdownViewerLocation.PAGE_URL,
+                    "Pages:MarkdownDocuments:Title",
+                    Icons.Material.Filled.MenuBook,
+                    BuiltInNavigationCategoryIds.Documentation,
+                    addToNav: true,
+                    navOrder: 50));
+        });
     }
 
     /// <summary>
@@ -124,17 +136,7 @@ public static class ModuleMarkdownUIBuilderExtensions
         /// </summary>
         public ModuleRegistration<ModuleMarkdownUI, ModuleMarkdownUIOption> AddMarkdownUI(Action<ModuleMarkdownUIOption>? action = null)
         {
-            var module = builder.AddModule<ModuleMarkdownUI, ModuleMarkdownUIOption>(action);
-            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<MarkdownResource>();
-            module.Require<ModuleShellUI, ModuleShellUIOption>(options => options.EnableMarkdown = true)
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIMarkdownPage, MarkdownResource>(
-                    MarkdownViewerLocation.PAGE_URL,
-                    "Pages:MarkdownDocuments:Title",
-                    Icons.Material.Filled.MenuBook,
-                    BuiltInNavigationCategoryIds.Documentation,
-                    addToNav: true,
-                    navOrder: 50));
-            return module;
+            return builder.AddModule<ModuleMarkdownUI, ModuleMarkdownUIOption>(action);
         }
     }
 }

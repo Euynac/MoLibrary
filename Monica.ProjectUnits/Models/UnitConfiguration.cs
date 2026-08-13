@@ -89,7 +89,7 @@ public class UnitConfiguration : ProjectUnit
         unit.CheckNameConventionMode();
         unit.DefinitionKey = configuration.DefinitionKey ?? shape.Type.FullName ?? shape.Type.Name;
         unit.Title = configuration.DisplayName ?? unit.Title;
-        unit.Description = configuration.Description ?? unit.Description;
+        unit.SetConfigurationDescription(configuration.Description);
 
         return unit;
     }

@@ -6,5 +6,5 @@ namespace Monica.StateStore.Queries;
 
 public interface IFinishedFilterQuery
 {
-    internal object GetFilter();
+    internal StateFilterNode GetFilterNode();
 }

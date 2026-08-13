@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Configuration.Abstractions;
 using Monica.Core.XmlDocumentation.Abstractions;
 using Monica.Core.TypeDiscovery.Models;
 using Monica.Modules;
@@ -20,7 +21,6 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
     private readonly Dictionary<string, Type> _enumTypes = [];
     private readonly ConcurrentDictionary<string, byte> _disabledRequestUrls = new(StringComparer.Ordinal);
     private readonly ProjectUnitFactory _unitFactory;
-    private ProjectUnitDocumentationResolver _documentation = new(null);
 
     internal ProjectUnitCatalog(
         ModuleProjectUnitsOption options,
@@ -39,13 +39,30 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
 
     internal ILogger Logger { get; }
 
-    internal ProjectUnitDocumentationResolver Documentation => _documentation;
+    internal ProjectUnitDocumentationResolver Documentation { get; } = new(null);
 
     public IReadOnlyDictionary<string, Type> EnumTypes => _enumTypes;
 
-    internal void SetDocumentationService(IXmlDocumentationService? documentationService)
+    /// <summary>
+    /// Creates and completes one host catalog before the DI singleton becomes observable.
+    /// </summary>
+    internal static ProjectUnitCatalog CreateCompleted(
+        ModuleProjectUnitsOption options,
+        ProjectUnitNamingOptions namingOptions,
+        ILogger logger,
+        IEnumerable<BusinessTypeShape> shapes,
+        IXmlDocumentationService? documentationService,
+        IConfigurationDefinitionRegistry? configurationDefinitionRegistry)
     {
-        _documentation = new ProjectUnitDocumentationResolver(documentationService);
+        var catalog = new ProjectUnitCatalog(options, namingOptions, logger);
+        catalog.Discover(shapes);
+        catalog.ApplyDocumentation(documentationService);
+        catalog.ConnectUnits();
+        ProjectUnitConfigurationReloadBehaviorEnricher.Enrich(
+            configurationDefinitionRegistry,
+            catalog,
+            logger);
+        return catalog;
     }
 
     /// <summary>
@@ -65,6 +82,15 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
         foreach (var unit in _unitsByFullName.Values)
         {
             unit.DoingConnect();
+        }
+    }
+
+    private void ApplyDocumentation(IXmlDocumentationService? documentationService)
+    {
+        var documentation = new ProjectUnitDocumentationResolver(documentationService);
+        foreach (var unit in _unitsByFullName.Values)
+        {
+            unit.ApplyDocumentation(documentation);
         }
     }
 
@@ -180,19 +206,30 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
         configurationType = null!;
         usageType = EConfigurationUsageType.Unknown;
 
-        if (!parameterType.IsInterface
-            || !parameterType.IsImplementInterfaceGeneric(typeof(IOptions<>), out var optionsInterface)
-            || optionsInterface.GetGenericArguments().FirstOrDefault() is not { } discoveredConfigurationType)
+        if (!parameterType.IsInterface)
         {
             return false;
         }
 
-        configurationType = discoveredConfigurationType;
-        usageType = parameterType.IsImplementInterfaceGeneric(typeof(IOptionsSnapshot<>))
-            ? EConfigurationUsageType.OnlineSnapshot
-            : parameterType.IsImplementInterfaceGeneric(typeof(IOptionsMonitor<>))
-                ? EConfigurationUsageType.OnlineMonitor
-                : EConfigurationUsageType.Offline;
+        Type? optionsInterface;
+        if (parameterType.IsImplementInterfaceGeneric(typeof(IOptionsMonitor<>), out optionsInterface))
+        {
+            usageType = EConfigurationUsageType.OnlineMonitor;
+        }
+        else if (parameterType.IsImplementInterfaceGeneric(typeof(IOptionsSnapshot<>), out optionsInterface))
+        {
+            usageType = EConfigurationUsageType.OnlineSnapshot;
+        }
+        else if (parameterType.IsImplementInterfaceGeneric(typeof(IOptions<>), out optionsInterface))
+        {
+            usageType = EConfigurationUsageType.Offline;
+        }
+        else
+        {
+            return false;
+        }
+
+        configurationType = optionsInterface.GetGenericArguments()[0];
         return true;
     }
 }

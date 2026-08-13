@@ -7,7 +7,6 @@ using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.JsonSerialization.Annotations;
 using Monica.Core.JsonSerialization.Models;
 using Monica.Core.JsonSerialization.Services;
-using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 
@@ -34,27 +33,24 @@ public class ModuleJsonSerialization : MonicaModule<ModuleJsonSerializationOptio
     public override void ConfigureServices(ModuleContext<ModuleJsonSerializationOption> context)
     {
         var services = context.Services;
-        var jsonSerializerOptions = new JsonSerializerOptions();
-        jsonSerializerOptions.ApplyJsonSerializationDefaults(Option);
-        Option.ExtendAction?.Invoke(jsonSerializerOptions);
-
-        jsonSerializerOptions.TypeInfoResolver = jsonSerializerOptions.GetConfiguredTypeInfoResolver();
-        var provider = new JsonSerializerOptionsProvider(jsonSerializerOptions, Option.DateTimeFormat);
+        var plan = Option.WireContract;
+        var serializerOptions = plan.GetCanonicalOptions();
+        var provider = new JsonSerializerOptionsProvider(serializerOptions, Option.DateTimeFormat);
 
         services.AddHttpContextAccessor();
-
-        services.Configure<JsonOptions>(o =>
-        {
-            o.SerializerOptions.CloneFrom(jsonSerializerOptions);
-        });
-
-        services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o =>
-        {
-            o.JsonSerializerOptions.CloneFrom(jsonSerializerOptions);
-        });
-
-        services.AddSingleton(jsonSerializerOptions);
+        services.AddSingleton(plan);
+        services.AddSingleton(serializerOptions);
         services.AddSingleton<IJsonSerializerOptionsProvider>(provider);
+        services.Configure<JsonOptions>(options =>
+        {
+            plan.ApplyTo(options.SerializerOptions);
+            options.SerializerOptions.MakeReadOnly();
+        });
+        services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+        {
+            plan.ApplyTo(options.JsonSerializerOptions);
+            options.JsonSerializerOptions.MakeReadOnly();
+        });
     }
 }
 
@@ -71,9 +67,31 @@ public class ModuleJsonSerializationOption : ModuleOptions<ModuleJsonSerializati
     public DateTimeWireFormat DateTimeFormat { get; set; } = DateTimeWireFormat.Iso8601WallClock;
 
     /// <summary>
-    /// Gets or sets an action that applies additional host-specific JSON serializer configuration after Monica's defaults.
+    /// Adds an ordered host contribution to the canonical JSON contract.
     /// </summary>
-    public Action<JsonSerializerOptions>? ExtendAction { get; set; }
+    /// <param name="configure">The serializer-options contribution to apply after Monica's defaults.</param>
+    /// <remarks>
+    /// Contributions are replayed into every supported adapter, including typed state-store operations, then the
+    /// canonical snapshot becomes read-only. Changing this contract can make existing persisted state incompatible.
+    /// </remarks>
+    public void ConfigureSerializer(Action<JsonSerializerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        if (_wireContract is null)
+        {
+            _serializerContributions.Add(configure);
+            return;
+        }
+
+        _wireContract.Configure(configure);
+    }
+
+    private readonly List<Action<JsonSerializerOptions>> _serializerContributions = [];
+    private JsonWireContractPlan? _wireContract;
+
+    internal IReadOnlyList<Action<JsonSerializerOptions>> SerializerContributions => _serializerContributions;
+
+    internal JsonWireContractPlan WireContract => _wireContract ??= new JsonWireContractPlan(this);
 
     /// <summary>
     /// Gets or sets a value that determines when properties with default values are ignored during serialization or deserialization.

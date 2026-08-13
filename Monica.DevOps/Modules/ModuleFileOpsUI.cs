@@ -15,8 +15,17 @@ public class ModuleFileOpsUI : MonicaModule<ModuleFileOpsUIOption>, IUIModule
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleFileOps, ModuleFileOpsOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<FileOpsResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIFileOpsPage, FileOpsResource>(
+                    UIFileOpsPage.PAGE_URL,
+                    "Pages:FileOps:Title",
+                    Icons.Material.Filled.Folder,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 36)));
     }
 }
 
@@ -26,17 +35,7 @@ public static class ModuleFileOpsUIBuilderExtensions
     {
         public ModuleRegistration<ModuleFileOpsUI, ModuleFileOpsUIOption> AddFileOpsUI(Action<ModuleFileOpsUIOption>? action = null)
         {
-            var module = builder.AddModule<ModuleFileOpsUI, ModuleFileOpsUIOption>(action);
-            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<FileOpsResource>();
-            module.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIFileOpsPage, FileOpsResource>(
-                    UIFileOpsPage.PAGE_URL,
-                    "Pages:FileOps:Title",
-                    Icons.Material.Filled.Folder,
-                    BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
-                    navOrder: 36));
-            return module;
+            return builder.AddModule<ModuleFileOpsUI, ModuleFileOpsUIOption>(action);
         }
     }
 }

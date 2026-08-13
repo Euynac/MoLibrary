@@ -477,6 +477,7 @@
       "None": "Not started",
       "Describe": "Describe",
       "FinalizeOptions": "Finalize options",
+      "DeclareContracts": "Declare service contracts",
       "ConfigureBuilder": "Configure builder",
       "ConfigureServices": "Configure services",
       "DeclareTypeDiscovery": "Declare type discovery",

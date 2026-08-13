@@ -397,18 +397,18 @@ builder.AddMonica(monica =>
             options.UseNormalConnection("localhost", 6379));
 
     monica.AddTaskProgress()
-        .UseDistributedState();
+        .UseDistributedStorage();
 });
 ```
 
-此示例需要引用 `Monica.StateStore.StackExchange`。也可以选择 Dapr 或实现 `IDistributedStateStore` 的自定义 provider，但必须在调用 `UseDistributedState()` 的同一个组合边界中显式选择一个分布式 provider。
+此示例需要引用 `Monica.StateStore.StackExchange`。也可以选择 Dapr 或实现 `IDistributedStateStore` 的自定义 provider，但必须在调用 `UseDistributedStorage()` 的同一个组合边界中显式选择一个分布式 provider。
 
 ## 依赖模块
 
 - **StateStore**: 用于状态持久化
 - **CancellationManager**: 用于分布式取消令牌管理
 
-这两个依赖模块会自动包含；分布式 provider 不会被框架擅自选择。启用 `UseDistributedState()` 却未选择 provider 时，模块系统会以缺少 `distributed-provider` 能力拒绝启动。
+这两个依赖模块会自动包含；分布式 provider 不会被框架擅自选择。启用 `UseDistributedStorage()` 却未选择 provider 时，模块系统会以缺少 `distributed-provider` 能力拒绝启动。
 
 ## 跨微服务状态检查
 

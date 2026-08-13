@@ -361,7 +361,7 @@
         "IsolationHandlingMode": "Isolation handling mode",
         "LeaderTtl": "Leader TTL",
         "Multiplier": "Multiplier",
-        "RegistryServer": "Registry server",
+        "HostRole": "Host role",
         "StateStoreMode": "State store mode"
       },
       "Messages": {
@@ -374,9 +374,13 @@
       },
       "Values": {
         "ContinueRunning": "Continue running (degraded mode)",
-        "DistributedMode": "Distributed StateStore mode",
+        "DistributedStorage": "Distributed state store",
+        "ExternalKeyedStorage": "External keyed state store",
         "FastShutdown": "Fast shutdown",
-        "StandaloneMode": "Single-instance in-memory mode"
+        "MemoryStorage": "Process-local memory state store",
+        "RegistryRole": "Registry control plane",
+        "StandaloneRole": "Standalone control plane and worker",
+        "WorkerRole": "Worker"
       }
     },
     "Dialogs": {

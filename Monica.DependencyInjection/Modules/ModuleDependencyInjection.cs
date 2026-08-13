@@ -126,7 +126,7 @@ public class ModuleDependencyInjectionOption : ModuleOptions<ModuleDependencyInj
     /// diagnostics snapshot consumed by the dependency-injection UI module.
     /// Leave this disabled when diagnostics are not needed so startup registration avoids the extra tracking overhead.
     /// </remarks>
-    public bool EnableAutoRegistrationDiagnostics { get; internal set; }
+    public bool EnableAutoRegistrationDiagnostics { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether Monica writes a startup log entry for each auto-registered type.

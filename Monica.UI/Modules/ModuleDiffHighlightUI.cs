@@ -19,19 +19,7 @@ public static class ModuleDiffHighlightUIBuilderExtensions
         public ModuleRegistration<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption> AddDiffHighlightUI(
             Action<ModuleDiffHighlightUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption>(action);
-            registration.Require<ModuleDiffHighlight, ModuleDiffHighlightOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<SharedResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<DiffHighlightPage, SharedResource>(
-                    DiffHighlightPage.DIFF_HIGHLIGHT_URL,
-                    "Pages:DiffHighlight:Title",
-                    Icons.Material.Filled.Compare,
-                    BuiltInNavigationCategoryIds.Debug,
-                    addToNav: true,
-                    navOrder: 60));
-            return registration;
+            return builder.AddModule<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption>(action);
         }
     }
 }
@@ -41,6 +29,22 @@ public static class ModuleDiffHighlightUIBuilderExtensions
 /// </summary>
 public class ModuleDiffHighlightUI : MonicaModule<ModuleDiffHighlightUIOption>, IUIModule
 {
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleDiffHighlight, ModuleDiffHighlightOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<SharedResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<DiffHighlightPage, SharedResource>(
+                    DiffHighlightPage.DIFF_HIGHLIGHT_URL,
+                    "Pages:DiffHighlight:Title",
+                    Icons.Material.Filled.Compare,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 60)));
+    }
+
     public override void ConfigureServices(ModuleContext<ModuleDiffHighlightUIOption> context)
     {
         // The mixed module already registers the diff facade and infrastructure services.

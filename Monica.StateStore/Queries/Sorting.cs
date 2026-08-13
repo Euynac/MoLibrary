@@ -2,13 +2,13 @@
 //  Copyright (c) 2023 Innovian Corporation. All rights reserved.
 //  -------------------------------------------------------------
 
-using System.Text.Json.Serialization;
+using System.Linq.Expressions;
 
 namespace Monica.StateStore.Queries;
 
 /// <summary>
 /// Configures sorting values.
 /// </summary>
-/// <param name="Key">The key to sort by from the state store.</param>
+/// <param name="Property">The strongly typed property path to sort by.</param>
 /// <param name="Order">An optional value indicating sorting order.</param>
-public record Sorting([property: JsonPropertyName("key")] string Key, [property: JsonPropertyName("order")] Ordering Order = Ordering.Ascending);
+public sealed record Sorting(LambdaExpression Property, Ordering Order = Ordering.Ascending);

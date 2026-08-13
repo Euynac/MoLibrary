@@ -29,6 +29,18 @@ public sealed class ModuleConfigurationEventBus : MonicaModule<ModuleConfigurati
         module.Require<ModuleConfiguration, ModuleConfigurationOption>();
         module.Require<ModuleEventBus, ModuleEventBusOption>();
     }
+
+    /// <inheritdoc />
+    public override void DeclareContracts(ModuleContractDescriptor<ModuleConfigurationEventBusOption> contracts)
+    {
+        if (string.IsNullOrWhiteSpace(contracts.Options.DistributedEventBusServiceKey))
+        {
+            contracts.RequireService<IDistributedEventBus>();
+            return;
+        }
+
+        contracts.RequireKeyedService<IDistributedEventBus>(contracts.Options.DistributedEventBusServiceKey);
+    }
 }
 
 /// <summary>

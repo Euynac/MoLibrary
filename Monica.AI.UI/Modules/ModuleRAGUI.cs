@@ -6,6 +6,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.UI.Shell.Models;
+using Monica.UI.Shell.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -24,38 +25,10 @@ public static class ModuleRAGUIBuilderExtensions
         public ModuleRegistration<ModuleRAGUI, ModuleRAGUIOption> AddRAGUI(
             Action<ModuleRAGUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleRAGUI, ModuleRAGUIOption>(action);
-            registration.Require<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<AIResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry =>
-                {
-                    registry.RegisterLocalizedPage<RAGManagePage, AIResource>(
-                        RAGManagePage.PAGE_URL,
-                        "Pages:RAGManage:Title",
-                        Icons.Material.Filled.PlaylistPlay,
-                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
-                        addToNav: true,
-                        navOrder: 4);
-                    registry.RegisterLocalizedPage<RAGDebugPage, AIResource>(
-                        RAGDebugPage.PAGE_URL,
-                        "Pages:RAGDebug:Title",
-                        Icons.Material.Filled.ManageSearch,
-                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
-                        addToNav: true,
-                        navOrder: 5);
-                    registry.RegisterLocalizedPage<RAGChunkersPage, AIResource>(
-                        RAGChunkersPage.PAGE_URL,
-                        "Pages:RAGChunkers:Title",
-                        Icons.Material.Filled.AccountTree,
-                        BuiltInNavigationCategoryIds.KnowledgeRetrieval,
-                        addToNav: true,
-                        navOrder: 6);
-                });
-            return registration;
+            return builder.AddModule<ModuleRAGUI, ModuleRAGUIOption>(action);
         }
     }
+
 }
 
 /// <summary>
@@ -67,6 +40,36 @@ public class ModuleRAGUI : MonicaModule<ModuleRAGUIOption>, IUIModule
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleRAG, ModuleRAGOption>();
+        module.Require<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<AIResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(
+            static option => option.ConfigureNavigation(RegisterNavigation));
+    }
+
+    private static void RegisterNavigation(INavigationRegistryBuilder registry)
+    {
+        registry.RegisterLocalizedPage<RAGManagePage, AIResource>(
+            RAGManagePage.PAGE_URL,
+            "Pages:RAGManage:Title",
+            Icons.Material.Filled.PlaylistPlay,
+            BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+            addToNav: true,
+            navOrder: 4);
+        registry.RegisterLocalizedPage<RAGDebugPage, AIResource>(
+            RAGDebugPage.PAGE_URL,
+            "Pages:RAGDebug:Title",
+            Icons.Material.Filled.ManageSearch,
+            BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+            addToNav: true,
+            navOrder: 5);
+        registry.RegisterLocalizedPage<RAGChunkersPage, AIResource>(
+            RAGChunkersPage.PAGE_URL,
+            "Pages:RAGChunkers:Title",
+            Icons.Material.Filled.AccountTree,
+            BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+            addToNav: true,
+            navOrder: 6);
     }
 
     public override void ConfigureServices(ModuleContext<ModuleRAGUIOption> context)

@@ -26,20 +26,7 @@ public static class ModuleOpenTelemetryUIBuilderExtensions
         public ModuleRegistration<ModuleOpenTelemetryUI, ModuleOpenTelemetryUIOption> AddOpenTelemetryUI(
             Action<ModuleOpenTelemetryUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleOpenTelemetryUI, ModuleOpenTelemetryUIOption>(action);
-            registration.Require<ModuleOpenTelemetry, ModuleOpenTelemetryOption>()
-                .UseInProcessCollector();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<OpenTelemetryUIResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIOpenTelemetryDashboardPage, OpenTelemetryUIResource>(
-                    UIOpenTelemetryDashboardPage.PAGE_URL,
-                    "Pages:OpenTelemetryMetrics:Title",
-                    Icons.Material.Filled.MonitorHeart,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 12));
-            return registration;
+            return builder.AddModule<ModuleOpenTelemetryUI, ModuleOpenTelemetryUIOption>(action);
         }
     }
 }
@@ -52,7 +39,19 @@ public class ModuleOpenTelemetryUI : MonicaModule<ModuleOpenTelemetryUIOption>, 
     /// <inheritdoc />
     public override void Describe(ModuleDescriptor module)
     {
-        module.Require<ModuleOpenTelemetry, ModuleOpenTelemetryOption>();
+        module.Require<ModuleOpenTelemetry, ModuleOpenTelemetryOption>(
+            static option => option.EnableInProcessCollector = true);
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<OpenTelemetryUIResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIOpenTelemetryDashboardPage, OpenTelemetryUIResource>(
+                    UIOpenTelemetryDashboardPage.PAGE_URL,
+                    "Pages:OpenTelemetryMetrics:Title",
+                    Icons.Material.Filled.MonitorHeart,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 12)));
     }
 
     /// <inheritdoc />

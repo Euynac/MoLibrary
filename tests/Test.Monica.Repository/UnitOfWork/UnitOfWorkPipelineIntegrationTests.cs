@@ -1,8 +1,11 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Monica.Core;
 using Monica.Core.Execution;
+using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
+using Monica.Core.Modularity.Models;
 using Monica.Modules;
 using Monica.Repository.UnitOfWork.Abstractions;
 using Xunit;
@@ -11,11 +14,24 @@ namespace Test.Monica.Repository.UnitOfWork;
 
 public sealed class UnitOfWorkPipelineIntegrationTests
 {
-    [Fact]
-    public async Task ExecuteAsync_ShouldApplyUnitOfWorkOnlyToAutomaticBoundaries()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteAsync_ShouldApplyUnitOfWorkOnlyToAutomaticBoundaries(
+        bool registerTransitively)
     {
         var builder = Host.CreateApplicationBuilder();
-        builder.AddMonica(monica => monica.AddUnitOfWork());
+        builder.AddMonica(monica =>
+        {
+            if (registerTransitively)
+            {
+                monica.AddModule<TransitiveUnitOfWorkModule, TransitiveUnitOfWorkModuleOption>();
+            }
+            else
+            {
+                monica.AddUnitOfWork();
+            }
+        });
         using var host = builder.Build();
         using var scope = host.Services.CreateScope();
         var pipeline = scope.ServiceProvider.GetRequiredService<IExecutionPipeline>();
@@ -62,4 +78,14 @@ public sealed class UnitOfWorkPipelineIntegrationTests
             isBusinessOperation: true,
             transactionMode: transactionMode);
     }
+
+    public sealed class TransitiveUnitOfWorkModule : MonicaModule<TransitiveUnitOfWorkModuleOption>
+    {
+        public override void Describe(ModuleDescriptor module)
+        {
+            module.Require<ModuleUnitOfWork, ModuleUnitOfWorkOption>();
+        }
+    }
+
+    public sealed class TransitiveUnitOfWorkModuleOption : ModuleOptions<TransitiveUnitOfWorkModule>;
 }

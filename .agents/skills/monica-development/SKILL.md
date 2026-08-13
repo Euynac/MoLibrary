@@ -46,21 +46,19 @@ Choose the module runtime kind before writing registration code:
 
 ### Localization Registration Rules
 
-- If a module uses `IStringLocalizer<TResource>` directly or indirectly, declare `ModuleLocalization` as an intrinsic dependency in `Describe(...)`. Its public builder entry also registers the resource marker through the localization registration extension:
+- If a module uses `IStringLocalizer<TResource>` directly or indirectly, declare `ModuleLocalization` as an intrinsic dependency in `Describe(...)` and contribute the resource marker through that dependency. Keep the public builder entry thin:
 
 ```csharp
 public override void Describe(ModuleDescriptor module)
 {
-    module.Require<ModuleLocalization, ModuleLocalizationOption>();
+    module.Require<ModuleLocalization, ModuleLocalizationOption>(
+        static option => option.AddResource<ExampleResource>());
 }
 
 public static ModuleRegistration<ModuleExample, ModuleExampleOption> AddExample(
     this IMonicaBuilder builder)
 {
-    var registration = builder.AddModule<ModuleExample, ModuleExampleOption>();
-    registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-        .AddResource<ExampleResource>();
-    return registration;
+    return builder.AddModule<ModuleExample, ModuleExampleOption>();
 }
 ```
 

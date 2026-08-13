@@ -7,6 +7,9 @@ using Monica.Core.ObservableInstance.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
+using Monica.ServiceDiscovery.Abstractions;
+using Monica.ServiceDiscovery.Events;
+using Monica.ServiceDiscovery.Services.Support;
 
 namespace Monica.JobScheduler.Services.Support;
 
@@ -16,6 +19,7 @@ namespace Monica.JobScheduler.Services.Support;
 /// 1. In-memory long-interval recurring job schedules
 /// 2. Database Scheduled state triggered job instances
 /// Converts them to Timer mode when close to execution time.
+/// Runs only while this control-plane instance owns service-discovery leadership.
 /// </summary>
 public class LongIntervalSchedulerService(
     RecurringJobScheduler recurringJobScheduler,
@@ -23,18 +27,50 @@ public class LongIntervalSchedulerService(
     IJobDefinitionCacheService cacheService,
     IJobMetadataRepository metadataRepository,
     IOptions<ModuleJobSchedulerOption> options,
+    IMoHostedServiceCheckpointCoordinator hostedServiceCheckpointCoordinator,
+    ILeaderElectionService leaderService,
+    IServiceRegistrationCoordinator registrationCoordinator,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
     IServiceScopeFactory serviceScopeFactory,
     ILogger<LongIntervalSchedulerService> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, serviceScopeFactory, logger)
+    : CoordinatedLeaderService(
+        leaderService,
+        serviceDiscoveryOptions,
+        registrationCoordinator,
+        observableManager,
+        hostedServiceOptions,
+        serviceScopeFactory,
+        logger)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
     public override string ServiceName => nameof(LongIntervalSchedulerService);
     public override string? ServiceGroupId => nameof(ModuleJobScheduler);
 
-    protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
+    protected override async Task OnBecameLeaderAsync(CancellationToken leaderToken)
+    {
+        RecordState(
+            $"Waiting for {nameof(JobSchedulerHostedService)} checkpoint " +
+            $"'{JobSchedulerHostedServiceCheckpoints.SchedulerReady}'",
+            HostedServiceState.WaitingDependency,
+            logLevel: LogLevel.Information);
+        await hostedServiceCheckpointCoordinator.WaitForCheckpointAsync<JobSchedulerHostedService>(
+            JobSchedulerHostedServiceCheckpoints.SchedulerReady,
+            LeaderService.LeaderBecomeTime,
+            leaderToken);
+    }
+
+    protected override Task OnLeaderLostAsync(LeaderLostReason reason)
+    {
+        RecordState(
+            $"Long-interval scheduling stopped after losing leadership ({reason})",
+            logLevel: LogLevel.Information);
+        return Task.CompletedTask;
+    }
+
+    protected override async Task LeaderExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
         if (!_options.EnableLongIntervalScheduler)
         {

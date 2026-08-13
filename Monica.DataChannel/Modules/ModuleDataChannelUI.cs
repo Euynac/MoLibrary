@@ -15,6 +15,23 @@ namespace Monica.Modules;
 /// </summary>
 public class ModuleDataChannelUI : MonicaModule<ModuleDataChannelUIOption>, IUIModule
 {
+    /// <inheritdoc />
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleDataChannel, ModuleDataChannelOption>();
+        module.Require<ModuleStackTraceUI, ModuleStackTraceUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<DataChannelResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIDataChannelPage, DataChannelResource>(
+                    UIDataChannelPage.PAGE_URL,
+                    "Pages:DataChannelManage:Title",
+                    Icons.Material.Filled.DataObject,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 30)));
+    }
 }
 
 public static class ModuleDataChannelUIBuilderExtensions
@@ -27,20 +44,7 @@ public static class ModuleDataChannelUIBuilderExtensions
         public ModuleRegistration<ModuleDataChannelUI, ModuleDataChannelUIOption> AddDataChannelUI(
             Action<ModuleDataChannelUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleDataChannelUI, ModuleDataChannelUIOption>(action);
-            registration.Require<ModuleDataChannel, ModuleDataChannelOption>();
-            registration.Require<ModuleStackTraceUI, ModuleStackTraceUIOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<DataChannelResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIDataChannelPage, DataChannelResource>(
-                    UIDataChannelPage.PAGE_URL,
-                    "Pages:DataChannelManage:Title",
-                    Icons.Material.Filled.DataObject,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 30));
-            return registration;
+            return builder.AddModule<ModuleDataChannelUI, ModuleDataChannelUIOption>(action);
         }
     }
 }

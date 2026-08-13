@@ -88,13 +88,8 @@ public class ModuleAuthorization : MonicaModule<ModuleAuthorizationOption>, IWeb
     public override void Describe(ModuleDescriptor module)
     {
         module.RequireFeature(DEFAULT_PERMISSION_FEATURE);
-        module.Require<ModuleLocalization, ModuleLocalizationOption>(localization =>
-        {
-            if (!localization.ResourceMarkerTypes.Contains(typeof(AuthorityResource)))
-            {
-                localization.ResourceMarkerTypes.Add(typeof(AuthorityResource));
-            }
-        });
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static localization => localization.AddResource<AuthorityResource>());
         module.Require<ModuleExceptionHandling, ModuleExceptionHandlingOption>(
             options => options.AddExceptionMapper<AuthorizationExceptionMapper>());
         module.Require<ModuleAuthentication, ModuleAuthenticationOption>();

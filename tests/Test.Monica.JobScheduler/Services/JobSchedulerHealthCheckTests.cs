@@ -38,7 +38,7 @@ public sealed class JobSchedulerHealthCheckTests
             TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Description.Should().Contain(nameof(JobRegistrationHostedService));
+        result.Description.Should().Contain(nameof(JobDefinitionPublisherHostedService));
         result.Description.Should().NotContain(nameof(JobWorkerManagerHostedService));
     }
 
@@ -51,7 +51,6 @@ public sealed class JobSchedulerHealthCheckTests
     {
         var options = new ModuleJobSchedulerOption
         {
-            RunControlPlane = true,
             EnableLongIntervalScheduler = enabledService == EnabledControlPlaneService.LongIntervalScheduler,
             EnableZombieDetection = enabledService == EnabledControlPlaneService.ZombieDetector,
             EnableHistoryCleanup = enabledService == EnabledControlPlaneService.HistoryCleanup
@@ -65,12 +64,12 @@ public sealed class JobSchedulerHealthCheckTests
         };
         var healthCheck = CreateHealthCheck(
             [
-                typeof(JobRegistrationHostedService),
-                typeof(JobWorkerManagerHostedService),
+                typeof(JobDefinitionControlPlaneHostedService),
                 typeof(JobConcurrencyGuardHostedService),
                 typeof(JobSchedulerHostedService)
             ],
-            options);
+            options,
+            ServiceDiscoveryRole.Registry);
 
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(),
@@ -84,7 +83,7 @@ public sealed class JobSchedulerHealthCheckTests
     public async Task CheckHealthAsync_WhenControlPlaneDoesNotRun_ShouldOnlyRequireWorkerServices()
     {
         var healthCheck = CreateHealthCheck(
-            [typeof(JobRegistrationHostedService), typeof(JobWorkerManagerHostedService)],
+            [typeof(JobDefinitionPublisherHostedService), typeof(JobWorkerManagerHostedService)],
             new ModuleJobSchedulerOption());
 
         var result = await healthCheck.CheckHealthAsync(
@@ -99,19 +98,19 @@ public sealed class JobSchedulerHealthCheckTests
     {
         var options = new ModuleJobSchedulerOption
         {
-            RunControlPlane = true,
             EnableLongIntervalScheduler = false,
             EnableZombieDetection = false,
             EnableHistoryCleanup = false
         };
         var healthCheck = CreateHealthCheck(
             [
-                typeof(JobRegistrationHostedService),
+                typeof(JobDefinitionControlPlaneHostedService),
                 typeof(JobWorkerManagerHostedService),
                 typeof(JobConcurrencyGuardHostedService),
                 typeof(JobSchedulerHostedService)
             ],
-            options);
+            options,
+            ServiceDiscoveryRole.Standalone);
 
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(),
@@ -122,7 +121,8 @@ public sealed class JobSchedulerHealthCheckTests
 
     private static JobSchedulerHealthCheck CreateHealthCheck(
         IReadOnlyCollection<Type> registeredServiceTypes,
-        ModuleJobSchedulerOption options)
+        ModuleJobSchedulerOption options,
+        ServiceDiscoveryRole role = ServiceDiscoveryRole.Worker)
     {
         var servicesByType = registeredServiceTypes.ToDictionary(
             static serviceType => serviceType,
@@ -134,7 +134,10 @@ public sealed class JobSchedulerHealthCheckTests
                 call.Arg<Type>(),
                 Array.Empty<HostedServiceRuntimeInfo>()));
 
-        return new JobSchedulerHealthCheck(registry, Options.Create(options));
+        return new JobSchedulerHealthCheck(
+            registry,
+            Options.Create(options),
+            Options.Create(new ModuleServiceDiscoveryOption { Role = role }));
     }
 
     private static HostedServiceRuntimeInfo CreateRuntimeInfo(Type serviceType)

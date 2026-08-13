@@ -1,15 +1,12 @@
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Results;
-using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Services;
 using Monica.JobScheduler.Services.Support;
-using Monica.JobScheduler.Utils;
 using Monica.Modules;
 
 namespace Monica.JobScheduler.Facades;
@@ -30,8 +27,6 @@ public class JobSchedulerFacade(
     JobDispatcher jobDispatcher,
     JobHistoryCleanupExecutor cleanupExecutor,
     IOptions<ModuleJobSchedulerOption> options,
-    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     ILogger<JobSchedulerFacade> logger)
 {
     /// <summary>
@@ -70,15 +65,6 @@ public class JobSchedulerFacade(
                 return Res.Fail($"Job {jobKey} not found");
             }
 
-            var serviceDiscoveryOption = serviceDiscoveryOptions.Value;
-
-            // On worker nodes, delegate to the registry via the event bus.
-            if (!serviceDiscoveryOption.IsRegistryServer && !serviceDiscoveryOption.IsStandaloneMode)
-            {
-                return await CreateJobInstanceViaRegistryAsync(definition, jobArgs, cancellationToken);
-            }
-
-            // Registry/standalone: execute locally.
             var jobArgsJson = jobArgs != null
                 ? JsonSerializer.Serialize(jobArgs, options.Value.JobArgsSerializerOptions)
                 : null;
@@ -126,73 +112,6 @@ public class JobSchedulerFacade(
         JobDefinition updatedDefinition,
         CancellationToken cancellationToken = default)
         => UpdateJobConfigAsync(updatedDefinition.JobKey, updatedDefinition, cancellationToken);
-
-    private async Task<Res<string>> CreateJobInstanceViaRegistryAsync(
-        JobDefinition definition,
-        object? jobArgs,
-        CancellationToken cancellationToken)
-    {
-        var instanceId = Guid.NewGuid().ToString();
-        var jobArgsJson = jobArgs != null
-            ? JsonSerializer.Serialize(jobArgs, options.Value.JobArgsSerializerOptions)
-            : null;
-        var instance = await jobInstanceManager.CreateInstanceAsync(
-            definition,
-            jobArgs,
-            JobState.Enqueued,
-            cancellationToken,
-            instanceId,
-            initDescription: "Worker API manual trigger delegated to the registry");
-
-        var requestEvent = new ManualJobExecutionRequestEvent
-        {
-            SchedulerScopeKey = definition.SchedulerScopeKey,
-            JobKey = definition.JobKey,
-            JobArgsJson = jobArgsJson,
-            InstanceId = instanceId,
-            RequestedAt = DateTime.UtcNow
-        };
-
-        try
-        {
-            await eventBus.PublishAsync(
-                requestEvent,
-                JobEventTopicHelper.GetTopicName<ManualJobExecutionRequestEvent>(definition.SchedulerScopeKey),
-                cancellationToken);
-
-            logger.LogInformation(
-                "Delegated manual job execution to the registry: {JobKey}, InstanceId: {InstanceId}",
-                definition.JobKey, instance.InstanceId);
-
-            return Res.Ok(instance.InstanceId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Failed to publish manual execution request to the registry for {JobKey}, InstanceId: {InstanceId}",
-                definition.JobKey,
-                instance.InstanceId);
-
-            try
-            {
-                await jobInstanceManager.UpdateStateAsync(
-                    instance.InstanceId,
-                    JobState.Failed,
-                    $"Event bus publishing failure: {ex.Message}",
-                    cancellationToken);
-            }
-            catch (Exception updateEx)
-            {
-                logger.LogWarning(
-                    updateEx,
-                    "Failed to mark instance {InstanceId} as Failed after request publish failure",
-                    instance.InstanceId);
-            }
-
-            return Res.Fail($"Failed to publish manual execution request: {ex.Message}");
-        }
-    }
 
     /// <summary>
     /// Gets job definitions with advanced filtering and pagination.

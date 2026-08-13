@@ -11,7 +11,8 @@ namespace Monica.JobScheduler.Services.Support;
 /// </summary>
 internal sealed class JobSchedulerHealthCheck(
     IMoHostedServiceRegistry serviceRegistry,
-    IOptions<ModuleJobSchedulerOption> options) : IHealthCheck
+    IOptions<ModuleJobSchedulerOption> options,
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -19,7 +20,7 @@ internal sealed class JobSchedulerHealthCheck(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var expectedServices = GetExpectedServiceTypes(options.Value)
+        var expectedServices = GetExpectedServiceTypes(options.Value, serviceDiscoveryOptions.Value.Role)
             .Select(serviceType => new ExpectedService(
                 serviceType,
                 serviceRegistry.GetServices(serviceType)))
@@ -80,21 +81,30 @@ internal sealed class JobSchedulerHealthCheck(
             $"All JobScheduler services healthy: {healthyNames}"));
     }
 
-    private static IReadOnlyList<Type> GetExpectedServiceTypes(ModuleJobSchedulerOption options)
+    private static IReadOnlyList<Type> GetExpectedServiceTypes(
+        ModuleJobSchedulerOption options,
+        ServiceDiscoveryRole role)
     {
-        var expectedServices = new List<Type>
+        if (role == ServiceDiscoveryRole.Worker)
         {
-            typeof(JobRegistrationHostedService),
-            typeof(JobWorkerManagerHostedService)
-        };
-
-        if (!options.RunControlPlane)
-        {
-            return expectedServices;
+            return
+            [
+                typeof(JobDefinitionPublisherHostedService),
+                typeof(JobWorkerManagerHostedService)
+            ];
         }
 
-        expectedServices.Add(typeof(JobConcurrencyGuardHostedService));
-        expectedServices.Add(typeof(JobSchedulerHostedService));
+        var expectedServices = new List<Type>
+        {
+            typeof(JobDefinitionControlPlaneHostedService),
+            typeof(JobConcurrencyGuardHostedService),
+            typeof(JobSchedulerHostedService)
+        };
+
+        if (role == ServiceDiscoveryRole.Standalone)
+        {
+            expectedServices.Add(typeof(JobWorkerManagerHostedService));
+        }
 
         if (options.EnableLongIntervalScheduler)
         {

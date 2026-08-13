@@ -22,6 +22,9 @@ public sealed class JobSchedulerApplicationFactory : MonicaTestApplicationFactor
 
     protected override void ConfigureMonica(IMonicaBuilder builder)
     {
+        builder.AddServiceDiscovery()
+            .AsStandalone()
+            .UseMemoryStorage();
         builder.AddJobScheduler(options =>
             {
                 options.ProjectName = PROJECT_NAME;

@@ -26,18 +26,7 @@ public static class ModuleKnowledgeBaseUIBuilderExtensions
         public ModuleRegistration<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption> AddKnowledgeBaseUI(
             Action<ModuleKnowledgeBaseUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<AIResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<KnowledgeBaseManagePage, AIResource>(
-                    KnowledgeBaseManagePage.PAGE_URL,
-                    "Pages:KnowledgeBaseManage:Title",
-                    Icons.Material.Filled.Storage,
-                    BuiltInNavigationCategoryIds.KnowledgeRetrieval,
-                    addToNav: true,
-                    navOrder: 3));
-            return registration;
+            return builder.AddModule<ModuleKnowledgeBaseUI, ModuleKnowledgeBaseUIOption>(action);
         }
     }
 }
@@ -52,6 +41,17 @@ public sealed class ModuleKnowledgeBaseUI : MonicaModule<ModuleKnowledgeBaseUIOp
     {
         module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>();
         module.Require<ModuleRAG, ModuleRAGOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<AIResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<KnowledgeBaseManagePage, AIResource>(
+                    KnowledgeBaseManagePage.PAGE_URL,
+                    "Pages:KnowledgeBaseManage:Title",
+                    Icons.Material.Filled.Storage,
+                    BuiltInNavigationCategoryIds.KnowledgeRetrieval,
+                    addToNav: true,
+                    navOrder: 3)));
     }
 
     /// <inheritdoc />

@@ -361,7 +361,7 @@
         "IsolationHandlingMode": "孤立处理模式",
         "LeaderTtl": "Leader TTL",
         "Multiplier": "倍率",
-        "RegistryServer": "注册中心服务器",
+        "HostRole": "主机角色",
         "StateStoreMode": "状态存储模式"
       },
       "Messages": {
@@ -374,9 +374,13 @@
       },
       "Values": {
         "ContinueRunning": "继续运行（降级模式）",
-        "DistributedMode": "分布式 StateStore 模式",
+        "DistributedStorage": "分布式状态存储",
+        "ExternalKeyedStorage": "外部键控状态存储",
         "FastShutdown": "快速下线",
-        "StandaloneMode": "单实例内存模式"
+        "MemoryStorage": "进程内内存状态存储",
+        "RegistryRole": "注册中心控制平面",
+        "StandaloneRole": "独立控制平面与工作节点",
+        "WorkerRole": "工作节点"
       }
     },
     "Dialogs": {

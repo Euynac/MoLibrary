@@ -26,18 +26,7 @@ public static class ModuleObservableInstanceUIBuilderExtensions
         public ModuleRegistration<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption> AddObservableInstanceUI(
             Action<ModuleObservableInstanceUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<ObservableInstanceResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIObservableInstanceMonitorPage, ObservableInstanceResource>(
-                    UIObservableInstanceMonitorPage.PAGE_URL,
-                    "Pages:ObservableInstance:Title",
-                    Icons.Material.Filled.Inventory,
-                    BuiltInNavigationCategoryIds.Debug,
-                    addToNav: true,
-                    navOrder: 50));
-            return registration;
+            return builder.AddModule<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption>(action);
         }
     }
 }
@@ -50,6 +39,17 @@ public class ModuleObservableInstanceUI : MonicaModule<ModuleObservableInstanceU
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleObservableInstance, ModuleObservableInstanceOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<ObservableInstanceResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIObservableInstanceMonitorPage, ObservableInstanceResource>(
+                    UIObservableInstanceMonitorPage.PAGE_URL,
+                    "Pages:ObservableInstance:Title",
+                    Icons.Material.Filled.Inventory,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 50)));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleObservableInstanceUIOption> context)

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
-using Monica.Core.JsonSerialization.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Results;
@@ -55,15 +54,18 @@ public class ModuleResultEnvelope : MonicaModule<ModuleResultEnvelopeOption>
         module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
     }
 
+    /// <inheritdoc />
+    public override void DeclareContracts(ModuleContractDescriptor<ModuleResultEnvelopeOption> contracts)
+    {
+        contracts.Modules.Get<ModuleJsonSerialization, ModuleJsonSerializationOption>()
+            .WireContract
+            .ConfigureResultEnvelope(contracts.Options.FieldNames);
+    }
+
     public override void ConfigureServices(ModuleContext<ModuleResultEnvelopeOption> context)
     {
         var services = context.Services;
         services.AddSingleton<IResultEnvelopeReader, ResultEnvelopeProvider>();
-
-        // ResultEnvelope composes after JsonSerialization. Apply its wire names to the single
-        // host-owned options instance so HTTP endpoints, Dapr, and generated RPC clients all
-        // serialize and deserialize the same result-envelope contract.
-        Option.FieldNames.ApplyTo(services.GetMonicaJsonSerializerOptions());
     }
 }
 

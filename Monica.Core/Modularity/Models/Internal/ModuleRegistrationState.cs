@@ -17,6 +17,7 @@ internal sealed class ModuleRegistrationState
     private readonly HashSet<string> _requiredFeatures = new(StringComparer.Ordinal);
     private readonly HashSet<string> _satisfiedFeatures = new(StringComparer.Ordinal);
     private readonly HashSet<string> _keyedServiceKeys = new(StringComparer.Ordinal);
+    private readonly List<ModuleServiceRequirement> _serviceRequirements = [];
     private readonly List<string> _webHostRequirementReasons = [];
     private readonly List<ModuleConfigurationRequest> _configurationRequests = [];
     private IModuleOptions? _moduleOption;
@@ -66,6 +67,11 @@ internal sealed class ModuleRegistrationState
     /// Gets keyed service identities published by this module.
     /// </summary>
     internal IReadOnlySet<string> KeyedServiceKeys => _keyedServiceKeys;
+
+    /// <summary>
+    /// Gets finalized service identities consumed by this module.
+    /// </summary>
+    internal IReadOnlyList<ModuleServiceRequirement> ServiceRequirements => _serviceRequirements;
 
     /// <summary>
     /// Gets the single host-owned module strategy instance.
@@ -212,6 +218,25 @@ internal sealed class ModuleRegistrationState
         ArgumentException.ThrowIfNullOrWhiteSpace(serviceKey);
         EnsureNotFinalized();
         _keyedServiceKeys.Add(serviceKey);
+    }
+
+    internal void RequireService(Type serviceType, bool isKeyed, object? serviceKey)
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+        if (isKeyed)
+        {
+            ArgumentNullException.ThrowIfNull(serviceKey);
+        }
+        else if (serviceKey is not null)
+        {
+            throw new ArgumentException("An unkeyed service requirement cannot have a service key.", nameof(serviceKey));
+        }
+
+        var requirement = new ModuleServiceRequirement(serviceType, isKeyed, serviceKey);
+        if (!_serviceRequirements.Contains(requirement))
+        {
+            _serviceRequirements.Add(requirement);
+        }
     }
 
     internal void MarkDisabled(string reason)

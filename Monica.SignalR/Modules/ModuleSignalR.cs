@@ -59,6 +59,12 @@ public class ModuleSignalR : MonicaModule<ModuleSignalROption>, IWebHostRequired
     public override void ConfigureServices(ModuleContext<ModuleSignalROption> context)
     {
         var services = context.Services;
+        var wireOptions = services.GetMonicaJsonSerializerOptions();
+
+        services.AddOptions<JsonHubProtocolOptions>()
+            .Configure(options => options.PayloadSerializerOptions.CopyFrom(wireOptions))
+            .PostConfigure(options => options.PayloadSerializerOptions.MakeReadOnly());
+
         services.AddScoped<SignalRFacade>();
         services.AddScoped<SignalRInspectionService>();
         services.AddSingleton<SignalRHubMetadataReader>();
@@ -122,6 +128,10 @@ public static class ModuleSignalRRegistrationExtensions
     /// <param name="jsonConfigure">Optional JsonHubProtocolOptions configuration delegate.</param>
     /// <param name="module">The SignalR registration being configured.</param>
     /// <returns>The same SignalR registration for fluent chaining.</returns>
+    /// <remarks>
+    /// JSON protocol contributions are applied in registration order after Monica's canonical wire contract. Monica
+    /// seals the payload serializer options once, after every registered contribution has run.
+    /// </remarks>
     public static ModuleRegistration<ModuleSignalR, ModuleSignalROption> AddSignalR<TIHubOperator, THubOperator, TContract, TUser>(this ModuleRegistration<ModuleSignalR, ModuleSignalROption> module,
         Action<HubOptions>? configure = null,
         Action<JsonHubProtocolOptions>? jsonConfigure = null)
@@ -145,8 +155,6 @@ public static class ModuleSignalRRegistrationExtensions
 
             signalRBuilder.AddJsonProtocol(options =>
             {
-                options.PayloadSerializerOptions.CloneFrom(
-                    context.Services.GetMonicaJsonSerializerOptions());
                 jsonConfigure?.Invoke(options);
             });
         });

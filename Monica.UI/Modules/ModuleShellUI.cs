@@ -40,24 +40,6 @@ public static class ModuleShellUIBuilderExtensions
     extension(ModuleRegistration<ModuleShellUI, ModuleShellUIOption> registration)
     {
         /// <summary>
-        /// Registers a startup-only page or navigation contribution with the shell.
-        /// </summary>
-        /// <param name="registrationAction">The contribution applied before routing begins.</param>
-        /// <returns>The same host-bound shell registration.</returns>
-        public ModuleRegistration<ModuleShellUI, ModuleShellUIOption> RegisterUIComponents(
-            Action<INavigationRegistryBuilder> registrationAction)
-        {
-            ArgumentNullException.ThrowIfNull(registrationAction);
-
-            return registration.ConfigureApplicationBuilder(context =>
-            {
-                var registry = context.ApplicationBuilder.ApplicationServices
-                    .GetRequiredService<INavigationRegistryBuilder>();
-                registrationAction(registry);
-            }, ModuleWebStage.BeforeRouting);
-        }
-
-        /// <summary>
         /// Adds a route redirect emitted by the shell during endpoint mapping.
         /// </summary>
         /// <param name="fromPath">The source route.</param>
@@ -92,13 +74,8 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
     /// </summary>
     public override void Describe(ModuleDescriptor module)
     {
-        module.Require<ModuleLocalization, ModuleLocalizationOption>(option =>
-        {
-            if (!option.ResourceMarkerTypes.Contains(typeof(SharedResource)))
-            {
-                option.ResourceMarkerTypes.Add(typeof(SharedResource));
-            }
-        });
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<SharedResource>());
     }
 
     /// <inheritdoc />
@@ -130,9 +107,9 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
         var services = context.Services;
         // Add MudBlazor service
         services.AddMudServices();
-        if(Option.EnableMarkdown)
+        if (Option.EnableMarkdown)
         {
-            services.AddMudMarkdownServices();   
+            services.AddMudMarkdownServices();
         }
 
         // Add Razor component and interactive server component services
@@ -178,6 +155,9 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
     {
         var app = context.ApplicationBuilder;
         var webApp = context.RequireWebApplication();
+        var navigation = app.ApplicationServices.GetRequiredService<INavigationRegistryBuilder>();
+
+        Option.ApplyNavigation(navigation);
 
         webApp.MapStaticAssets()
             .WithMonicaEndpoint(MonicaEndpointKind.StaticAsset);  // .NET 9 support
@@ -219,10 +199,12 @@ public class ModuleShellUI : MonicaModule<ModuleShellUIOption>, IWebHostRequired
 public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
 {
 #if DEBUG
-    private const bool EnableDebugDefault = true;
+    private const bool ENABLE_DEBUG_DEFAULT = true;
 #else
-    private const bool EnableDebugDefault = false;
+    private const bool ENABLE_DEBUG_DEFAULT = false;
 #endif
+
+    private readonly List<Action<INavigationRegistryBuilder>> _navigationContributions = [];
 
     /// <summary>
     /// Application name displayed in the shell app bar.
@@ -277,7 +259,7 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// Defaults to <see langword="true"/> in DEBUG builds and <see langword="false"/> otherwise.
     /// Keep this disabled for production because detailed errors can expose sensitive information to clients.
     /// </remarks>
-    public bool EnableDebug { get; set; } = EnableDebugDefault;
+    public bool EnableDebug { get; set; } = ENABLE_DEBUG_DEFAULT;
 
     /// <summary>
     /// Gets the shared authorization configuration for Monica operational pages and protected diagnostics surfaces.
@@ -363,4 +345,28 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// Whether to show the language switcher
     /// </summary>
     public bool ShowLanguageSwitcher { get; set; } = true;
+
+    /// <summary>
+    /// Adds an ordered navigation contribution that the Shell applies during its own web startup lifecycle.
+    /// </summary>
+    /// <param name="contribution">
+    /// A write-only contribution that registers pages or categories through the current host's navigation builder.
+    /// </param>
+    /// <remarks>
+    /// UI modules should call this from their <c>Describe</c> dependency contribution. Contributions are applied in
+    /// composition order before the Shell seals its page catalog, so direct and transitive inclusion are equivalent.
+    /// </remarks>
+    public void ConfigureNavigation(Action<INavigationRegistryBuilder> contribution)
+    {
+        ArgumentNullException.ThrowIfNull(contribution);
+        _navigationContributions.Add(contribution);
+    }
+
+    internal void ApplyNavigation(INavigationRegistryBuilder navigation)
+    {
+        foreach (var contribution in _navigationContributions)
+        {
+            contribution(navigation);
+        }
+    }
 }

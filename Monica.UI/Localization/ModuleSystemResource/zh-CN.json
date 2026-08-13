@@ -477,6 +477,7 @@
       "None": "尚未开始",
       "Describe": "描述依赖",
       "FinalizeOptions": "完成配置",
+      "DeclareContracts": "声明服务契约",
       "ConfigureBuilder": "配置构建器",
       "ConfigureServices": "配置服务",
       "DeclareTypeDiscovery": "声明类型发现",
