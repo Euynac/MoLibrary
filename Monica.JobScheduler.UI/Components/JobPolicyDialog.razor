@@ -1,0 +1,123 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject JobSchedulerFacade Facade
+@inject IJobSchedulerUiAccess Access
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@L["Policy:Title"]</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@Definition.Declaration.JobName</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                @L["Policy:ImmutableNotice"]
+            </MudAlert>
+
+            <MudSelect T="bool?"
+                       @bind-Value="_disabledOverride"
+                       Label="@L["Policy:DisabledOverride"]"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                <MudSelectItem T="bool?" Value="@(null)">@L["Policy:InheritDefault"]</MudSelectItem>
+                <MudSelectItem T="bool?" Value="@(false)">@L["Policy:ForceEnabled"]</MudSelectItem>
+                <MudSelectItem T="bool?" Value="@(true)">@L["Policy:ForceDisabled"]</MudSelectItem>
+            </MudSelect>
+
+            <MudNumericField T="int?"
+                             @bind-Value="_maxRecords"
+                             Label="@L["Policy:MaxRecords"]"
+                             HelperText="@L["Policy:MaxRecordsHelp"]"
+                             Min="1"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense" />
+
+            <MudNumericField T="int?"
+                             @bind-Value="_maxDays"
+                             Label="@L["Policy:MaxDays"]"
+                             HelperText="@L["Policy:MaxDaysHelp"]"
+                             Min="1"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense" />
+
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@_isSaving"
+                   OnClick="SaveAsync">
+            @(_isSaving ? L["Common:Saving"] : L["Common:Save"])
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public ActiveJobDefinition Definition { get; set; } = null!;
+
+    private bool? _disabledOverride;
+    private int? _maxRecords;
+    private int? _maxDays;
+    private bool _isSaving;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        _disabledOverride = Definition.Policy.DisabledOverride;
+        _maxRecords = Definition.Policy.MaxRetainedHistoryRecords;
+        _maxDays = Definition.Policy.MaxRetentionDays;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _error = null;
+        try
+        {
+            if (!await Access.IsAuthorizedAsync())
+            {
+                _error = L["Access:DeniedDescription"];
+                return;
+            }
+
+            var result = await Facade.UpdatePolicyAsync(
+                Definition.OwnerId,
+                Definition.Declaration.JobKey,
+                new JobPolicyChange
+                {
+                    DisabledOverride = _disabledOverride,
+                    MaxRetainedHistoryRecords = _maxRecords,
+                    MaxRetentionDays = _maxDays,
+                    ExpectedConcurrencyStamp = Definition.Policy.ConcurrencyStamp
+                });
+            if (result.IsFailed(out var error, out var policy))
+            {
+                _error = error.Message;
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(policy));
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

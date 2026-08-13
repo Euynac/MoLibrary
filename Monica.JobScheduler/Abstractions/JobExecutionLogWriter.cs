@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace Monica.JobScheduler.Abstractions;
 
 /// <summary>
-/// Internal job execution log writer bound to a single running job instance.
+/// Internal job execution log writer bound to a single running durable execution.
 /// </summary>
 internal sealed class JobExecutionLogWriter(
     string instanceId,

@@ -1,0 +1,43 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+@if (!AccessChecked)
+{
+    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="2" Class="pa-8" role="status">
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        <MudText Typo="Typo.body1">@L["Access:Checking"]</MudText>
+    </MudStack>
+}
+else if (!IsAuthorized)
+{
+    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="2" Class="pa-8" role="alert">
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
+        <MudText Typo="Typo.h5">@L["Access:DeniedTitle"]</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Access:DeniedDescription"]</MudText>
+    </MudStack>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    /// <summary>
+    /// Gets whether the circuit access check has completed.
+    /// </summary>
+    [Parameter]
+    public bool AccessChecked { get; set; }
+
+    /// <summary>
+    /// Gets whether the current circuit is authorized.
+    /// </summary>
+    [Parameter]
+    public bool IsAuthorized { get; set; }
+
+    /// <summary>
+    /// Gets the protected scheduler page content.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

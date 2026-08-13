@@ -1,0 +1,109 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject JobSchedulerFacade Facade
+@inject IJobSchedulerUiAccess Access
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@L["Trigger:Title"]</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@Definition.Declaration.JobName</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Trigger:Revision"]</MudText>
+                <MudText Typo="Typo.body2">@JobSchedulerUiPresentation.ShortIdentity(Definition.JobRevisionId, 20)</MudText>
+            </MudPaper>
+
+            <MudTextField T="string"
+                          @bind-Value="_jobArgs"
+                          Label="@L["Trigger:Arguments"]"
+                          HelperText="@GetArgumentsHelp()"
+                          Variant="Variant.Outlined"
+                          Lines="9"
+                          Immediate="true" />
+
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                   Disabled="@_isSubmitting"
+                   OnClick="TriggerAsync">
+            @(_isSubmitting ? L["Common:Submitting"] : L["Trigger:Action"])
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public ActiveJobDefinition Definition { get; set; } = null!;
+
+    private string? _jobArgs;
+    private bool _isSubmitting;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (Definition.Declaration.JobType != JobType.Triggered)
+        {
+            throw new InvalidOperationException("Only triggered definitions can open the execution admission dialog.");
+        }
+
+        _jobArgs = "{}";
+    }
+
+    private async Task TriggerAsync()
+    {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            if (!await Access.IsAuthorizedAsync())
+            {
+                _error = L["Access:DeniedDescription"];
+                return;
+            }
+
+            var result = await Facade.TriggerAsync(new JobTriggerRequest
+            {
+                JobKey = Definition.Declaration.JobKey,
+                JobArgs = _jobArgs,
+                ExpectedOwnerId = Definition.OwnerId,
+                ExpectedJobRevisionId = Definition.JobRevisionId
+            });
+            if (result.IsFailed(out var error, out var execution))
+            {
+                _error = error.Message;
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(execution));
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private string GetArgumentsHelp() => string.IsNullOrWhiteSpace(Definition.Declaration.JobArgsKey)
+        ? L["Trigger:ArgumentsUnknown"]
+        : L["Trigger:ArgumentsType", Definition.Declaration.JobArgsKey];
+
+    private void Cancel() => MudDialog.Cancel();
+}

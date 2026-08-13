@@ -92,6 +92,46 @@ public sealed class PageAccessEvaluatorTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
+    [Fact]
+    public async Task IsRouteAuthorizedAsync_WhenComponentIsUnregisteredOrPublic_ShouldAllowAccess()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterPage<TestPage>("open", "Open");
+        registry.Seal();
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var evaluator = new PageAccessEvaluator(registry, services);
+
+        (await evaluator.IsRouteAuthorizedAsync(
+                typeof(UnregisteredPage),
+                TestContext.Current.CancellationToken))
+            .Should().BeTrue();
+        (await evaluator.IsRouteAuthorizedAsync(
+                typeof(TestPage),
+                TestContext.Current.CancellationToken))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsRouteAuthorizedAsync_WhenComponentOwnsSeveralAliases_ShouldEnforceEveryDistinctPolicy()
+    {
+        var registry = new PageRegistry();
+        registry.RegisterPage<TestPage>("public-alias", "Public alias");
+        registry.RegisterPage<TestPage>("allowed-alias", "Allowed alias", accessPolicyType: typeof(AllowPolicy));
+        registry.RegisterPage<TestPage>("denied-alias", "Denied alias", accessPolicyType: typeof(DenyPolicy));
+        registry.Seal();
+        await using var services = new ServiceCollection()
+            .AddSingleton(new AllowPolicy())
+            .AddSingleton(new DenyPolicy())
+            .BuildServiceProvider();
+        var evaluator = new PageAccessEvaluator(registry, services);
+
+        var authorized = await evaluator.IsRouteAuthorizedAsync(
+            typeof(TestPage),
+            TestContext.Current.CancellationToken);
+
+        authorized.Should().BeFalse();
+    }
+
     private static PageRegistry CreateProtectedRegistry<TPolicy>()
         where TPolicy : class, IPageAccessPolicy
     {
@@ -102,6 +142,8 @@ public sealed class PageAccessEvaluatorTests
     }
 
     private sealed class TestPage : ComponentBase;
+
+    private sealed class UnregisteredPage : ComponentBase;
 
     private sealed class AllowPolicy : IPageAccessPolicy
     {

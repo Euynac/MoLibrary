@@ -5,23 +5,15 @@
 <div class="scheduler-workspace mo-page-shell mo-page-shell--full-width">
     <header class="scheduler-workspace__header">
         <div class="scheduler-workspace__identity">
-            <div class="scheduler-workspace__eyebrow">
-                <span class="scheduler-workspace__signal" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </span>
-                <span>@L["Workspace:Eyebrow"]</span>
-            </div>
+            <MudText Typo="Typo.overline" Color="Color.Primary">@L["Workspace:Eyebrow"]</MudText>
             <MudText Typo="Typo.h3" HtmlTag="h1" Class="scheduler-workspace__title">@Title</MudText>
             <MudText Typo="Typo.body1" Class="scheduler-workspace__description">@Description</MudText>
         </div>
-
-        <div class="scheduler-workspace__plane" aria-label="@L["Workspace:ControlPlaneLabel"]">
-            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Medium" />
+        <div class="scheduler-workspace__contract">
+            <MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Medium" />
             <div>
-                <span class="scheduler-workspace__plane-label">@L["Workspace:ControlPlaneLabel"]</span>
-                <strong>@L["Workspace:ControlPlaneValue"]</strong>
+                <span>@L["Workspace:ContractLabel"]</span>
+                <strong>@L["Workspace:ContractValue"]</strong>
             </div>
         </div>
     </header>
@@ -29,23 +21,15 @@
     <nav class="scheduler-workspace__nav" aria-label="@L["Workspace:NavigationLabel"]">
         <NavLink href="/job-scheduler" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
             <MudIcon Icon="@Icons.Material.Filled.SpaceDashboard" Size="Size.Small" />
-            <span>@L["Workspace:Navigation:Dashboard"]</span>
+            <span>@L["Workspace:Navigation:Overview"]</span>
         </NavLink>
-        <NavLink href="/job-scheduler/monitor" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
-            <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Size="Size.Small" />
-            <span>@L["Workspace:Navigation:Monitor"]</span>
+        <NavLink href="/job-scheduler/catalog" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
+            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" />
+            <span>@L["Workspace:Navigation:Catalog"]</span>
         </NavLink>
-        <NavLink href="/job-scheduler/definitions" Match="NavLinkMatch.Prefix" class="scheduler-workspace__nav-item">
-            <MudIcon Icon="@Icons.Material.Filled.EventRepeat" Size="Size.Small" />
-            <span>@L["Workspace:Navigation:Definitions"]</span>
-        </NavLink>
-        <NavLink href="/job-scheduler/instances" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
-            <MudIcon Icon="@Icons.Material.Filled.PlaylistPlay" Size="Size.Small" />
-            <span>@L["Workspace:Navigation:Instances"]</span>
-        </NavLink>
-        <NavLink href="/job-scheduler/statistics" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
-            <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" />
-            <span>@L["Workspace:Navigation:Statistics"]</span>
+        <NavLink href="/job-scheduler/executions" Match="NavLinkMatch.All" class="scheduler-workspace__nav-item">
+            <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Size="Size.Small" />
+            <span>@L["Workspace:Navigation:Executions"]</span>
         </NavLink>
     </nav>
 
@@ -68,7 +52,7 @@
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the route body rendered below the shared navigation rail.
+    /// Gets or sets the route body.
     /// </summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }

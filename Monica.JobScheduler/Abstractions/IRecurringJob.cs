@@ -25,17 +25,18 @@ public interface IRecurringJob : IJobDefinition
     /// <remarks>
     /// <para>
     /// <b>Error Handling:</b> Exceptions thrown from this method will be caught by the job executor.
-    /// The job will be marked as Failed and the error message will be logged to the metadata store.
-    /// If RetryCount is configured, the job will be automatically retried.
+    /// The durable execution becomes failed, and the exception is recorded in its history.
+    /// If RetryCount is configured, the store durably requeues another attempt.
     /// </para>
     /// <para>
     /// <b>Timeout Handling:</b> If execution exceeds MaxExecutionTimeoutSeconds, the cancellation token
     /// will be signaled. Jobs that do not respect the cancellation token will continue to occupy
-    /// worker threads but will be marked as Failed in the metadata store.
+    /// worker capacity until they eventually exit; their lease cannot be safely completed by stale code.
     /// </para>
     /// <para>
-    /// <b>Concurrency:</b> Multiple instances of this job may execute concurrently based on the
-    /// MaxConcurrency setting. Ensure your implementation is thread-safe or set MaxConcurrency to 1.
+    /// <b>Concurrency:</b> Multiple instances of this logical job may execute concurrently based on the
+    /// MaxConcurrency setting. The scope-wide JobKey gate includes superseded owners and revisions that are still
+    /// stopping after catalog cutover. Ensure your implementation is thread-safe or set MaxConcurrency to 1.
     /// </para>
     /// </remarks>
     Task ExecuteAsync(CancellationToken cancellationToken);

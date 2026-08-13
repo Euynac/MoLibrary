@@ -72,14 +72,30 @@ public sealed class DomainOrderApproval(
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 var workerCount = builder.Configuration.GetValue<int?>("Ordering:WorkerCount") ?? 4;
+var releaseId = builder.Configuration["JobScheduler:ReleaseId"]
+                ?? throw new InvalidOperationException("JobScheduler:ReleaseId is required.");
+var deploymentGeneration = builder.Configuration.GetValue<long?>("JobScheduler:DeploymentGeneration")
+                           ?? throw new InvalidOperationException(
+                               "JobScheduler:DeploymentGeneration is required.");
+var workerRevisionId = builder.Configuration["JobScheduler:WorkerRevisionId"]
+                       ?? throw new InvalidOperationException("JobScheduler:WorkerRevisionId is required.");
 
 builder.AddMonica(monica =>
 {
     monica.AddConfiguration();
-    monica.AddJobScheduler(options => options.MaxWorkerExecutionThreads = workerCount)
-        .UseInMemoryMetadataRepository()
+    monica.AddJobScheduler(options =>
+        {
+            options.ProjectName = "Ordering";
+            options.MaxWorkerExecutionThreads = workerCount;
+        })
+        .AsStandalone()
+        .UseInMemoryStore()
         .UseSchedulerScope("ordering")
-        .UseInMemoryProvider();
+        .UseCatalogRelease(
+            releaseId,
+            deploymentGeneration,
+            [new("Ordering", workerRevisionId)])
+        .UseLocalWorkerIdentity("Ordering", workerRevisionId);
 });
 ```
 
@@ -88,3 +104,5 @@ builder.AddMonica(monica =>
 - Use configuration for environment- or host-specific behavior, not for domain constants that belong in code.
 - Keep option names explicit and developer-facing.
 - Do not build a temporary service provider or resolve `IOptions<T>` during composition. Runtime code should use normal typed options injection.
+- `UseInMemoryStore()` is the single unified catalog-and-execution store for local standalone hosts. Production replicas must select one shared durable `IJobSchedulerStore`, normally through `UseEfCoreStore(...)` with PostgreSQL.
+- Treat the release ID, deployment generation, complete owner manifest, and worker revision as deployment identity. Every host in one release must receive identical manifest values, and the deployment generation must increase monotonically for the lifetime of the scheduler database.

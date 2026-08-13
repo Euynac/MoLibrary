@@ -161,5 +161,12 @@
     "PageTitle": "Not found",
     "Title": "Page not found",
     "Message": "Sorry, the page you requested does not exist."
+  },
+  "RouteAccess": {
+    "CheckingPageTitle": "Checking access",
+    "Checking": "Checking whether you can access this page...",
+    "DeniedPageTitle": "Access denied",
+    "DeniedTitle": "Access denied",
+    "DeniedDescription": "You do not have permission to view this page."
   }
 }

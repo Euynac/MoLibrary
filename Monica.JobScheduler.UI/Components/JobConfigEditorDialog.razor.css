@@ -1,8 +1,0 @@
-.job-config-editor ::deep .job-config-editor__timeout-field {
-    flex: 1 1 0;
-    min-width: 0;
-}
-
-.job-config-editor ::deep .job-config-editor__info-icon {
-    font-size: 1rem;
-}

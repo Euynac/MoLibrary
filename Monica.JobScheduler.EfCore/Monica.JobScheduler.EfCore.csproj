@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <PackageDescription>Entity Framework Core metadata repository implementation for Monica JobScheduler, providing persistent storage for job definitions and execution history.</PackageDescription>
+        <PackageDescription>Relational correctness store for Monica JobScheduler catalogs, policies, durable execution, leases, and history.</PackageDescription>
     </PropertyGroup>
 
     <ItemGroup>

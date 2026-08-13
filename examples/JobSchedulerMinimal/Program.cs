@@ -9,9 +9,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddMonica(monica =>
 {
     monica.AddJobScheduler()
-        .UseInMemoryMetadataRepository()
+        .UseInMemoryStore()
         .UseSchedulerScope("job-scheduler-minimal")
-        .UseInMemoryProvider();
+        .UseCatalogRelease(
+            "job-scheduler-minimal:development",
+            deploymentGeneration: 1,
+            [new("job-scheduler-minimal", "job-scheduler-minimal:development")])
+        .AsStandalone()
+        .UseLocalWorkerIdentity("job-scheduler-minimal", "job-scheduler-minimal:development");
     monica.AddJobSchedulerUI();
 });
 
@@ -24,11 +29,11 @@ app.MapMonica();
 app.Run();
 
 /// <summary>
-/// Recurring example job that gives the JobScheduler dashboard a visible execution history.
+/// Recurring example job that gives the JobScheduler UI visible execution history.
 /// </summary>
 [JobConfig(
     JobName = "Minimal heartbeat",
-    Description = "Writes a log entry every 30 seconds so the dashboard has a recurring job to display.",
+    Description = "Writes a log entry every 30 seconds so the scheduler UI has a recurring job to display.",
     CronSchedule = "*/30 * * * * *")]
 public sealed class MinimalHeartbeatJob(ILogger<MinimalHeartbeatJob> logger) : RecurringJob(logger)
 {
