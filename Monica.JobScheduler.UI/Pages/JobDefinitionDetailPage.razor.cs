@@ -4,7 +4,9 @@ using Monica.Core.Results;
 using Monica.JobScheduler.UI.Components;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Components;
+using Monica.JobScheduler.UI.UIJobScheduler.Shared;
 using Monica.JobScheduler.UI.UIJobScheduler.State;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using MudBlazor;
 
 namespace Monica.JobScheduler.UI.Pages;
@@ -37,7 +39,15 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
     [Inject]
     private ISnackbar Snackbar { get; set; } = null!;
 
+    [Inject]
+    private SchedulerTimePresentation TimePresentation { get; set; } = null!;
+
+    [Inject]
+    private TimeProvider TimeProvider { get; set; } = null!;
+
     private JobDefinitionDetailPageState? PageState { get; set; }
+    private Func<Task>? _stateChangedHandler;
+    private int _stateVersion;
     private bool _disposed;
 
     private string PageTitleText => PageState?.Summary?.Definition.Declaration.JobName
@@ -57,23 +67,50 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
 
     private async Task ReplaceStateAsync(string jobKey)
     {
+        var version = Interlocked.Increment(ref _stateVersion);
         var previousState = PageState;
+        var previousHandler = _stateChangedHandler;
         PageState = null;
+        _stateChangedHandler = null;
         if (previousState is not null)
         {
-            previousState.Changed -= HandleStateChangedAsync;
+            if (previousHandler is not null)
+            {
+                previousState.Changed -= previousHandler;
+            }
+
             await previousState.DisposeAsync();
         }
 
-        if (_disposed)
+        if (!IsCurrentStateVersion(version))
         {
             return;
         }
 
         var state = PageStateFactory.Create(jobKey);
-        state.Changed += HandleStateChangedAsync;
+        Func<Task> stateChangedHandler = () => HandleStateChangedAsync(state, version);
+        state.Changed += stateChangedHandler;
+        if (!IsCurrentStateVersion(version))
+        {
+            state.Changed -= stateChangedHandler;
+            await state.DisposeAsync();
+            return;
+        }
+
         PageState = state;
+        _stateChangedHandler = stateChangedHandler;
         await state.InitializeAsync();
+        if (!IsCurrentStateVersion(version) || !ReferenceEquals(PageState, state))
+        {
+            state.Changed -= stateChangedHandler;
+            if (ReferenceEquals(PageState, state))
+            {
+                PageState = null;
+                _stateChangedHandler = null;
+            }
+
+            await state.DisposeAsync();
+        }
     }
 
     private async Task OpenScheduleInspectorAsync()
@@ -141,7 +178,15 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
 
         try
         {
-            var disabled = !summary.Definition.IsDisabled;
+            var operatorPaused = JobSchedulerUiPresentation.IsOperatorPaused(summary);
+            var debugSuppressed = JobSchedulerUiPresentation.IsDebugSuppressed(summary);
+            if (!operatorPaused && debugSuppressed)
+            {
+                Snackbar.Add(L["Catalog:Messages:PauseUnavailableDebug"], Severity.Info);
+                return;
+            }
+
+            var disabled = !operatorPaused;
             var result = await state.SetDisabledAsync(disabled);
             if (_disposed || PageState != state)
             {
@@ -154,9 +199,12 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
                 return;
             }
 
-            Snackbar.Add(
-                disabled ? L["Catalog:Messages:Paused"] : L["Catalog:Messages:Resumed"],
-                Severity.Success);
+            var message = !disabled && debugSuppressed
+                ? L["Catalog:Messages:ResumedDebugRemains"]
+                : disabled
+                    ? L["Catalog:Messages:Paused"]
+                    : L["Catalog:Messages:Resumed"];
+            Snackbar.Add(message, !disabled && debugSuppressed ? Severity.Info : Severity.Success);
         }
         catch (OperationCanceledException) when (_disposed)
         {
@@ -222,7 +270,19 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
         }
     }
 
-    private Task HandleStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+    private Task HandleStateChangedAsync(JobDefinitionDetailPageState state, int version) =>
+        !IsCurrentStateVersion(version) || !ReferenceEquals(PageState, state)
+            ? Task.CompletedTask
+            : InvokeAsync(() =>
+            {
+                if (IsCurrentStateVersion(version) && ReferenceEquals(PageState, state))
+                {
+                    StateHasChanged();
+                }
+            });
+
+    private bool IsCurrentStateVersion(int version) =>
+        !_disposed && version == Volatile.Read(ref _stateVersion);
 
     private static DialogOptions SmallDialogOptions { get; } = new()
     {
@@ -241,11 +301,18 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
         }
 
         _disposed = true;
+        Interlocked.Increment(ref _stateVersion);
         var state = PageState;
+        var stateChangedHandler = _stateChangedHandler;
         PageState = null;
+        _stateChangedHandler = null;
         if (state is not null)
         {
-            state.Changed -= HandleStateChangedAsync;
+            if (stateChangedHandler is not null)
+            {
+                state.Changed -= stateChangedHandler;
+            }
+
             await state.DisposeAsync();
         }
     }

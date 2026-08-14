@@ -337,7 +337,7 @@ public sealed partial class InMemoryJobSchedulerStore
                 : [];
             filtered = FilterDefinitions(filtered, query);
 
-            var ordered = filtered.OrderBy(static item => item.Declaration.JobKey, StringComparer.Ordinal).ToArray();
+            var ordered = filtered.ApplyCatalogOrdering(query).ToArray();
             var page = ordered
                 .Skip((query.PageNumber - 1) * query.PageSize)
                 .Take(query.PageSize)

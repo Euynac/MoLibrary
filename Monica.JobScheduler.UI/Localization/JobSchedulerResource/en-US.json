@@ -10,7 +10,7 @@
     "Eyebrow": "MONICA / DURABLE SCHEDULING",
     "ContractLabel": "Correctness boundary",
     "ContractValue": "Catalog · queue · leases",
-    "NavigationLabel": "Scheduler sections",
+    "TimeZone": "Scheduler timezone · {0}",
     "Navigation": {
       "Overview": "Overview",
       "Catalog": "Catalog",
@@ -57,7 +57,14 @@
     "Close": "Close",
     "Keep": "Keep execution",
     "NotAvailable": "Not available",
-    "RunningDuration": "{0} and running"
+    "RunningDuration": "{0} and running",
+    "Duration": {
+      "Days": "{0} d",
+      "Hours": "{0} h",
+      "Minutes": "{0} min",
+      "Seconds": "{0} s",
+      "Milliseconds": "{0} ms"
+    }
   },
   "ExecutionStates": {
     "Queued": "Queued",
@@ -130,22 +137,43 @@
     "Owners": {
       "Title": "Owner convergence",
       "Description": "A release is operational only when each expected declaration snapshot and matching worker revision are present.",
-      "Owner": "Owner",
       "Revision": "Worker revision",
       "Publication": "Published",
       "Workers": "Live workers",
       "Definitions": "Active jobs",
       "Published": "Published",
       "Pending": "Pending",
-      "Empty": "No owners are present in the desired release."
+      "Empty": "No owners are present in the desired release.",
+      "Ready": "Ready",
+      "NeedsAttention": "Needs attention",
+      "OpenDetails": "Open details for {0}",
+      "SignalsAriaLabel": "Readiness signals for {0}",
+      "Detail": {
+        "Title": "Owner details",
+        "Eyebrow": "OWNER READINESS",
+        "ReadinessTitle": "Owner signals",
+        "Ready": "Runtime-ready",
+        "Waiting": "Waiting for evidence",
+        "ReadyDescription": "The required snapshot and matching worker revision are present. This owner signal does not by itself mean the desired release is active.",
+        "WaitingDescription": "A declaration snapshot or matching worker revision is still missing. Release activation is evaluated separately.",
+        "SnapshotReadyDescription": "The expected immutable declaration snapshot is available.",
+        "SnapshotWaitingDescription": "The expected declaration snapshot has not been published.",
+        "WorkersDescription": "Active leases matching the expected revision.",
+        "DefinitionsDescription": "Jobs from this exact owner revision in the active catalog.",
+        "RevisionDescription": "Worker capabilities must report this exact executable revision.",
+        "ReleaseTitle": "Release activation",
+        "ReleaseDescription": "Owner readiness and catalog activation are independent signals.",
+        "DesiredReleaseActive": "Desired release active",
+        "DesiredReleasePending": "Desired release not active",
+        "JobsTitle": "Matching active jobs",
+        "JobsDescription": "Definitions in the active catalog owned by this exact worker revision.",
+        "JobsEmpty": "No matching definitions are present in the active catalog.",
+        "CapturedAt": "Evidence captured"
+      }
     },
     "Recent": {
       "Title": "Recent queue activity",
       "Description": "The newest durable execution admissions across all jobs.",
-      "Job": "Job",
-      "State": "State",
-      "Created": "Enqueued",
-      "Duration": "Duration",
       "Empty": "No executions have been admitted yet."
     },
     "RefreshFailed": "The last refresh failed: {0}",
@@ -166,33 +194,30 @@
       "Owner": "Source project",
       "AnyOwner": "All source projects",
       "Type": "Job type",
-      "AnyType": "Any type",
-      "State": "Effective state",
-      "AnyState": "Any state"
+      "Policy": "Operator policy",
+      "AnyPolicy": "Any policy",
+      "PageSize": "Rows per page"
     },
     "Columns": {
       "Definition": "Definition",
       "Owner": "Owner",
-      "Type": "Type",
-      "Schedule": "Schedule contract",
-      "Concurrency": "Concurrency",
-      "Readiness": "Executable revision",
+      "Lifecycle": "Scheduling mode",
+      "Schedule": "Schedule",
       "NextRun": "Next run",
+      "Readiness": "Readiness",
       "LastRun": "Last run",
-      "Activity": "Active / limit",
-      "Policy": "Effective policy",
       "Revision": "Job revision",
       "Actions": "Actions"
     },
     "Actions": {
-      "OpenJob": "Open details for {0}",
       "Run": "Run job now",
       "Trigger": "Run through active catalog",
       "Policy": "Edit operator policy",
       "Details": "Open job details",
-      "InspectSchedule": "Inspect schedule and upcoming occurrences",
       "Pause": "Pause recurring materialization",
       "Resume": "Resume recurring materialization",
+      "PauseUnavailableDebug": "Automatic materialization is already suppressed by debug mode. Use Run job now for an explicit execution.",
+      "RunDuringDebug": "Run job now remains available because explicit admission does not advance the recurring cursor.",
       "PauseSelected": "Pause selected",
       "ResumeSelected": "Resume selected",
       "Reset": "Reset filters"
@@ -203,16 +228,33 @@
     },
     "ScheduleStatus": {
       "Awaiting": "Awaiting synchronization",
-      "Suspended": "Suspended",
       "Exhausted": "Schedule exhausted"
     },
+    "Policy": {
+      "Enabled": "Policy enabled",
+      "Paused": "Policy paused"
+    },
+    "Lifecycle": {
+      "Automatic": "Automatic schedule",
+      "OperatorPaused": "Paused by policy",
+      "DebugSuppressed": "Manual run only",
+      "OperatorAndDebug": "Policy paused · debug mode",
+      "AutomaticDescription": "Automatic recurring materialization is active.",
+      "OperatorPausedDescription": "Operator policy prevents automatic recurring materialization.",
+      "DebugSuppressedDescription": "Debug mode suppresses automatic materialization; explicit Run job now remains available.",
+      "OperatorAndDebugDescription": "Operator policy and debug mode both suppress automatic recurring materialization.",
+      "AwaitingDescription": "The recurring cursor is waiting for the active declaration to synchronize.",
+      "ExhaustedDescription": "No automatic occurrence remains within the declared schedule boundaries.",
+      "TriggeredEnabledDescription": "Operator admission is enabled for this triggered job.",
+      "TriggeredDisabledDescription": "Operator policy blocks new admissions for this triggered job."
+    },
+    "NextRun": {
+      "In": "Runs in {0}",
+      "DueNow": "The next occurrence is due now."
+    },
     "Cron": {
-      "Unavailable": "No recurring schedule",
-      "Custom": "Custom recurring schedule",
-      "EveryMinutes": "Every {0} minutes",
-      "EveryHour": "Every hour",
-      "EveryDayAt": "Every day at {0}",
-      "Tooltip": "{0} · Timezone {1} · Next {2}"
+      "Unavailable": "Description unavailable",
+      "Parsing": "Reading schedule…"
     },
     "Triggered": {
       "Ready": "Ready for operator admission",
@@ -223,16 +265,18 @@
     "Selection": {
       "SelectAll": "Select all recurring jobs on this page",
       "SelectPage": "Select page",
-      "Select": "Select",
       "SelectJob": "Select {0}",
       "ToolbarLabel": "Selected recurring job operations",
       "Count": "{0} recurring job(s) selected",
       "Description": "Batch changes retain each job's independent retention policy and optimistic concurrency fence.",
+      "DebugPauseUnavailable": "One or more selected jobs already run in debug manual-only mode; quick Pause is unavailable for that selection.",
       "Clear": "Clear selection"
     },
     "Messages": {
       "Paused": "Recurring materialization is paused.",
       "Resumed": "Recurring materialization will resume from the next future occurrence.",
+      "PauseUnavailableDebug": "Automatic materialization is already suppressed by debug mode. Run job now remains available.",
+      "ResumedDebugRemains": "Operator pause was cleared. Debug mode still keeps automatic materialization suppressed; Run job now remains available.",
       "UpdateFailed": "The policy update failed.",
       "RunFailed": "The job could not be queued.",
       "Queued": "Execution {0} was queued."
@@ -243,7 +287,9 @@
       "ResumeTitle": "Resume selected recurring jobs?",
       "PauseMessage": "Pause new recurring occurrences for {0} selected job(s)? Existing queued and running executions are unchanged.",
       "ResumeMessage": "Resume {0} selected job(s) from their next future occurrence? Disabled-period occurrences are not replayed.",
-      "Result": "{0} policy update(s) succeeded; {1} failed."
+      "PauseUnavailableDebug": "Quick Pause is unavailable because one or more selected jobs are already suppressed by debug mode without an operator pause.",
+      "Result": "{0} policy update(s) succeeded; {1} failed.",
+      "ResultDebugRemains": "{0} operator pause update(s) succeeded; {1} failed. Debug mode still suppresses automatic materialization where configured."
     }
   },
   "Policy": {
@@ -288,12 +334,18 @@
       "EndBoundary": "End boundary",
       "TriggeredTitle": "On-demand admission",
       "TriggeredDescription": "This job has no recurring cursor. Operators admit an execution explicitly through the active catalog.",
+      "DebugManualOnly": "Debug mode is suppressing automatic occurrences. Run job now remains available and does not advance the recurring cursor.",
       "StatusDescriptions": {
         "NotRecurring": "No recurring cursor applies to an on-demand job.",
         "AwaitingSynchronization": "The active declaration is waiting for the control plane to create its durable cursor.",
         "Scheduled": "The durable cursor has a next occurrence ready for future materialization.",
         "Suspended": "Operator policy has suspended new recurring occurrence materialization.",
         "Exhausted": "No occurrence remains within the declared schedule boundaries."
+      },
+      "SuspensionDescriptions": {
+        "OperatorPolicy": "Operator policy has paused automatic recurring occurrence materialization.",
+        "DebugMode": "Debug mode suppresses automatic occurrence materialization while preserving explicit Run job now admission.",
+        "OperatorAndDebug": "Operator policy and debug mode both suppress automatic occurrence materialization. Clearing the operator pause leaves debug suppression active."
       }
     },
     "Contract": {
@@ -373,7 +425,7 @@
       "AriaLabel": "Upcoming schedule occurrences",
       "Sequence": "#",
       "ScheduleTime": "Schedule-local time",
-      "UtcTime": "UTC time"
+      "SchedulerTime": "Scheduler time"
     }
   },
   "Trigger": {
@@ -390,12 +442,13 @@
     "Queued": "Execution {0} was durably queued.",
     "Delay": {
       "Title": "Queue availability",
-      "Description": "Choose the first UTC instant at which a worker may claim this execution.",
+      "Description": "Choose the first scheduler wall time at which a worker may claim this execution.",
       "Enable": "Delay admission",
-      "Date": "Available date (UTC)",
-      "Time": "Available time (UTC)",
-      "UtcHelp": "The selected timestamp is interpreted as UTC and stored with the durable execution.",
-      "Required": "Choose both a UTC date and time.",
+      "Date": "Available date",
+      "Time": "Available time",
+      "TimeZoneHelp": "The selected wall time is interpreted in scheduler timezone {0} and persisted as UTC.",
+      "Required": "Choose both a date and time.",
+      "InvalidWallTime": "This wall time does not exist in scheduler timezone {0}. Choose another time.",
       "Future": "Delayed availability must be in the future."
     }
   },
@@ -463,15 +516,14 @@
     "LastRefreshed": "Observed {0}",
     "Empty": "No durable executions match the current filters.",
     "Filters": {
+      "AriaLabel": "Execution search and filters",
       "Search": "Execution",
       "SearchPlaceholder": "Instance ID or job key",
-      "State": "State",
       "AnyState": "Any state",
       "States": "States",
       "TimeRange": "Enqueued within",
       "StartDate": "Start date",
       "EndDate": "End date",
-      "SortBy": "Sort by",
       "PageSize": "Rows per page",
       "InvalidRange": "The end date must be on or after the start date."
     },
@@ -483,21 +535,10 @@
       "Last30Days": "Last 30 days",
       "Custom": "Custom range"
     },
-    "SortFields": {
-      "CreatedAtUtc": "Enqueued time",
-      "AvailableAtUtc": "Available time",
-      "StartedAtUtc": "Start time",
-      "CompletedAtUtc": "Completion time"
-    },
-    "SortDirection": {
-      "Ascending": "Sort ascending",
-      "Descending": "Sort descending"
-    },
     "Columns": {
+      "Definition": "Definition",
       "Instance": "Instance",
-      "Job": "Job",
       "State": "State",
-      "Available": "Available",
       "Created": "Enqueued",
       "Started": "Started",
       "Completed": "Completed",
@@ -538,10 +579,6 @@
     "JobRevision": "Job revision",
     "Arguments": "Serialized arguments",
     "History": "Append-only execution history",
-    "HistoryTime": "Time",
-    "HistoryKind": "Kind",
-    "HistoryTransition": "Transition",
-    "HistoryMessage": "Evidence",
     "Identity": "Execution identity",
     "Instance": "Instance ID",
     "Scope": "Scheduler scope",
@@ -563,8 +600,6 @@
     "LeaseExpires": "Lease expires",
     "NoArguments": "No serialized arguments were captured.",
     "HistoryCount": "{0} retained entries",
-    "HistoryLogLevel": "Level",
-    "HistoryWorker": "Worker",
     "EmptyHistory": "No retained history entries are available.",
     "CancellationPending": "A cooperative cancellation request has been pending since {0}.",
     "Copied": "Diagnostics copied to the clipboard.",

@@ -623,8 +623,9 @@ public sealed class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
         Environment.GetEnvironmentVariable("HOSTNAME") ?? $"{Environment.MachineName}:{Environment.ProcessId}";
 
     /// <summary>
-    /// Gets or sets whether recurring occurrences should remain suspended while debugging. Triggered work is
-    /// unaffected. The default is <see langword="false"/>.
+    /// Gets or sets whether automatic recurring occurrence materialization is suppressed with an explicit debug-mode
+    /// reason. This setting does not change operator policy or prevent an explicit recurring run-now command. Triggered
+    /// work is unaffected. The default is <see langword="false"/>.
     /// </summary>
     public bool RecurringJobDebugMode { get; set; }
 

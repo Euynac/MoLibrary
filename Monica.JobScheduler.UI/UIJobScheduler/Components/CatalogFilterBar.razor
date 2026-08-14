@@ -68,9 +68,9 @@
         </div>
     </div>
 
-    <div class="catalog-filter__states" role="group" aria-label="@L["Catalog:Filters:State"]">
-        <span class="catalog-filter__states-label">@L["Catalog:Filters:State"]</span>
-        @foreach (var option in StateOptions)
+    <div class="catalog-filter__states" role="group" aria-label="@L["Catalog:Filters:Policy"]">
+        <span class="catalog-filter__states-label">@L["Catalog:Filters:Policy"]</span>
+        @foreach (var option in PolicyOptions)
         {
             <button type="button"
                     class="catalog-filter__state @(SelectedDisabledState == option.Value ? "is-active" : null)"
@@ -125,9 +125,9 @@
     [Parameter]
     public EventCallback ResetRequested { get; set; }
 
-    private IReadOnlyList<StateOption> StateOptions =>
+    private IReadOnlyList<PolicyOption> PolicyOptions =>
     [
-        new(null, L["Catalog:Filters:AnyState"], "neutral"),
+        new(null, L["Catalog:Filters:AnyPolicy"], "neutral"),
         new(false, L["Catalog:Enabled"], "success"),
         new(true, L["Catalog:Disabled"], "warning")
     ];
@@ -147,5 +147,5 @@
         _ => Icons.Material.Filled.Work
     };
 
-    private sealed record StateOption(bool? Value, string Label, string Tone);
+    private sealed record PolicyOption(bool? Value, string Label, string Tone);
 }

@@ -2,6 +2,7 @@
 
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject TimeProvider TimeProvider
+@inject SchedulerTimePresentation TimePresentation
 
 <section class="recent-panel" aria-labelledby="recent-panel-title">
     <header class="recent-panel__heading">
@@ -37,18 +38,19 @@
                         </span>
                         <span class="recent-panel__event-copy">
                             <span class="recent-panel__event-heading">
-                                <strong title="@execution.Template.Revision.JobKey">
-                                    @JobSchedulerUiPresentation.GetJobKeyLabel(execution.Template.Revision.JobKey)
+                                <strong title="@JobSchedulerUiPresentation.GetJobDisplayName(execution.Template)">
+                                    @JobSchedulerUiPresentation.GetJobDisplayName(execution.Template)
                                 </strong>
                                 <span class="recent-panel__state">@L[$"ExecutionStates:{execution.State}"]</span>
                             </span>
+                            <code title="@execution.Template.Revision.JobKey">@execution.Template.Revision.JobKey</code>
                             <code title="@execution.InstanceId">@JobSchedulerUiPresentation.ShortIdentity(execution.InstanceId, 18)</code>
                         </span>
                         <span class="recent-panel__event-time">
                             <time datetime="@execution.CreatedAtUtc.ToString("O")">
-                                @execution.CreatedAtUtc.ToLocalTime().ToString("g")
+                                @TimePresentation.FormatTimestamp(execution.CreatedAtUtc)
                             </time>
-                            <small>@JobSchedulerUiPresentation.FormatExecutionDuration(execution, TimeProvider.GetUtcNow(), L)</small>
+                            <small>@TimePresentation.FormatExecutionDuration(execution, TimeProvider.GetUtcNow())</small>
                         </span>
                         <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
                                  Size="Size.Small"

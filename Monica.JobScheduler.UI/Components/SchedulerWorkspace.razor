@@ -1,6 +1,7 @@
 @using Monica.JobScheduler.UI.Localization
 
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 <div class="scheduler-workspace mo-page-shell mo-page-shell--full-width">
     <header class="scheduler-workspace__header">
@@ -14,6 +15,9 @@
             <div>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Workspace:ContractLabel"]</MudText>
                 <MudText Typo="Typo.subtitle2">@L["Workspace:ContractValue"]</MudText>
+                <span class="scheduler-workspace__timezone" title="@TimePresentation.TimeZoneDisplayName">
+                    @L["Workspace:TimeZone", TimePresentation.TimeZoneId]
+                </span>
             </div>
         </div>
     </header>

@@ -12,6 +12,7 @@ using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
 using Monica.JobScheduler.UI.UIJobScheduler.State;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using Monica.Modules;
 using Monica.Testing.Localization;
 using Monica.Testing.UI;
@@ -27,10 +28,14 @@ public sealed class JobSchedulerUiTestContext : BunitContext
     public const string OWNER = "worker-a";
     public const string WORKER_REVISION = "sha256:worker-a";
 
-    public JobSchedulerUiTestContext(bool isAuthorized = true)
+    public JobSchedulerUiTestContext(
+        bool isAuthorized = true,
+        TimeZoneInfo? schedulerTimeZone = null,
+        TimeProvider? timeProvider = null)
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
-        Store = new InMemoryJobSchedulerStore(TimeProvider.System);
+        var schedulerClock = timeProvider ?? TimeProvider.System;
+        Store = new InMemoryJobSchedulerStore(schedulerClock);
         SeedStore();
 
         var schedulerOptions = new ModuleJobSchedulerOption
@@ -38,19 +43,20 @@ public sealed class JobSchedulerUiTestContext : BunitContext
             SchedulerScopeKey = SCOPE,
             CatalogReleaseId = "release-1",
             DeploymentGeneration = 1,
-            Role = JobSchedulerRole.ControlPlane
+            Role = JobSchedulerRole.ControlPlane,
+            CronTimeZone = schedulerTimeZone ?? TimeZoneInfo.Utc
         };
         var facade = new JobSchedulerFacade(
             Store,
             Options.Create(schedulerOptions),
-            TimeProvider.System,
+            schedulerClock,
             NullLogger<JobSchedulerFacade>.Instance);
 
         Services.AddMudServices();
         Services.AddSingleton<IStringLocalizer<JobSchedulerResource>, EchoStringLocalizer<JobSchedulerResource>>();
         Services.AddSingleton<IThemeState, TestThemeState>();
         Services.AddSingleton<IOptions<ModuleJobSchedulerOption>>(Options.Create(schedulerOptions));
-        Services.AddSingleton(TimeProvider.System);
+        Services.AddSingleton<TimeProvider>(schedulerClock);
         Services.AddSingleton<IOptions<ModuleJobSchedulerUIOption>>(Options.Create(new ModuleJobSchedulerUIOption
         {
             AutoRefreshInterval = TimeSpan.Zero,
@@ -59,6 +65,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         Access = new TestJobSchedulerUiAccess(isAuthorized);
         Services.AddSingleton<IJobSchedulerUiAccess>(Access);
         Services.AddSingleton(facade);
+        Services.AddScoped<SchedulerTimePresentation>();
         Services.AddScoped<SchedulerOverviewPageStateFactory>();
         Services.AddScoped<JobCatalogPageStateFactory>();
         Services.AddScoped<JobDefinitionDetailPageStateFactory>();
@@ -126,7 +133,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
                 EndTimeUtc = RecurringDefinition.Declaration.EndTimeUtc
             },
             ChangeEpoch = activeCatalog.Version.ChangeEpoch,
-            IsSuspended = RecurringDefinition.IsDisabled
+            SuspensionReasons = JobRecurringScheduleSuspensionReason.None
         }).GetAwaiter().GetResult();
         Store.RegisterWorkerCapabilityAsync(
             new WorkerCapabilityRegistration
@@ -147,6 +154,8 @@ public sealed class JobSchedulerUiTestContext : BunitContext
 
         internal bool IsAuthorized { get; set; } = isAuthorized;
 
+        internal Exception? AuthorizationException { get; set; }
+
         internal Task AuthorizationStarted => _authorizationStarted?.Task ?? Task.CompletedTask;
 
         internal void BlockAuthorization()
@@ -162,6 +171,11 @@ public sealed class JobSchedulerUiTestContext : BunitContext
             if (_authorizationGate is not null)
             {
                 await _authorizationGate.Task.WaitAsync(cancellationToken);
+            }
+
+            if (AuthorizationException is not null)
+            {
+                throw AuthorizationException;
             }
 
             return IsAuthorized;

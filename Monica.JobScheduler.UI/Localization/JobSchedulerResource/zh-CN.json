@@ -10,7 +10,7 @@
     "Eyebrow": "MONICA / 持久化调度",
     "ContractLabel": "一致性边界",
     "ContractValue": "目录 · 队列 · 租约",
-    "NavigationLabel": "调度功能区",
+    "TimeZone": "调度时区 · {0}",
     "Navigation": {
       "Overview": "总览",
       "Catalog": "目录",
@@ -57,7 +57,14 @@
     "Close": "关闭",
     "Keep": "保留执行",
     "NotAvailable": "暂无",
-    "RunningDuration": "已运行 {0}"
+    "RunningDuration": "已运行 {0}",
+    "Duration": {
+      "Days": "{0} 天",
+      "Hours": "{0} 小时",
+      "Minutes": "{0} 分钟",
+      "Seconds": "{0} 秒",
+      "Milliseconds": "{0} 毫秒"
+    }
   },
   "ExecutionStates": {
     "Queued": "排队中",
@@ -130,22 +137,43 @@
     "Owners": {
       "Title": "所有者收敛",
       "Description": "仅当每个预期定义快照和匹配的工作节点版本都存在时，发布才具备运行条件。",
-      "Owner": "所有者",
       "Revision": "工作节点版本",
       "Publication": "已发布",
       "Workers": "在线节点",
       "Definitions": "活动作业",
       "Published": "已发布",
       "Pending": "待发布",
-      "Empty": "期望发布中没有所有者。"
+      "Empty": "期望发布中没有所有者。",
+      "Ready": "已就绪",
+      "NeedsAttention": "需要关注",
+      "OpenDetails": "查看 {0} 的详情",
+      "SignalsAriaLabel": "{0} 的就绪信号",
+      "Detail": {
+        "Title": "所有者详情",
+        "Eyebrow": "所有者就绪状态",
+        "ReadinessTitle": "所有者信号",
+        "Ready": "运行条件已就绪",
+        "Waiting": "等待就绪证据",
+        "ReadyDescription": "所需快照与匹配的工作节点版本均已存在。此所有者信号本身并不表示期望发布已激活。",
+        "WaitingDescription": "仍缺少定义快照或匹配的工作节点版本；发布激活会单独评估。",
+        "SnapshotReadyDescription": "预期的不可变定义快照已可用。",
+        "SnapshotWaitingDescription": "预期的定义快照尚未发布。",
+        "WorkersDescription": "与预期版本匹配的在线工作节点。",
+        "DefinitionsDescription": "活动目录中来自此所有者精确版本的作业。",
+        "RevisionDescription": "工作节点能力必须报告此精确的可执行版本。",
+        "ReleaseTitle": "发布激活",
+        "ReleaseDescription": "所有者就绪与目录激活是两个独立信号。",
+        "DesiredReleaseActive": "期望发布已激活",
+        "DesiredReleasePending": "期望发布尚未激活",
+        "JobsTitle": "匹配的活动作业",
+        "JobsDescription": "活动目录中由此精确工作节点版本拥有的定义。",
+        "JobsEmpty": "活动目录中没有匹配的定义。",
+        "CapturedAt": "证据采集于"
+      }
     },
     "Recent": {
       "Title": "最近队列活动",
       "Description": "所有作业中最新的持久化执行准入记录。",
-      "Job": "作业",
-      "State": "状态",
-      "Created": "入队时间",
-      "Duration": "耗时",
       "Empty": "尚未准入任何执行。"
     },
     "RefreshFailed": "最近一次刷新失败：{0}",
@@ -166,33 +194,30 @@
       "Owner": "来源项目",
       "AnyOwner": "全部来源项目",
       "Type": "作业类型",
-      "AnyType": "全部类型",
-      "State": "生效状态",
-      "AnyState": "全部状态"
+      "Policy": "运维策略",
+      "AnyPolicy": "全部策略",
+      "PageSize": "每页行数"
     },
     "Columns": {
       "Definition": "定义",
       "Owner": "所有者",
-      "Type": "类型",
-      "Schedule": "调度契约",
-      "Concurrency": "并发数",
-      "Readiness": "可执行版本",
+      "Lifecycle": "调度状态",
+      "Schedule": "调度",
       "NextRun": "下次执行",
+      "Readiness": "运行就绪",
       "LastRun": "上次执行",
-      "Activity": "活动数 / 上限",
-      "Policy": "生效策略",
       "Revision": "作业版本",
       "Actions": "操作"
     },
     "Actions": {
-      "OpenJob": "打开 {0} 的详情",
       "Run": "立即执行作业",
       "Trigger": "通过活动目录执行",
       "Policy": "编辑运维策略",
       "Details": "打开作业详情",
-      "InspectSchedule": "检查调度与后续执行时间",
       "Pause": "暂停周期实例物化",
       "Resume": "继续周期实例物化",
+      "PauseUnavailableDebug": "调试模式已抑制自动物化，无法再次快速暂停；仍可通过“立即执行作业”显式运行。",
+      "RunDuringDebug": "立即执行仍然可用，因为显式准入不会推进周期游标。",
       "PauseSelected": "暂停所选",
       "ResumeSelected": "继续所选",
       "Reset": "重置筛选"
@@ -203,16 +228,33 @@
     },
     "ScheduleStatus": {
       "Awaiting": "等待同步",
-      "Suspended": "已暂停",
       "Exhausted": "调度已结束"
     },
+    "Policy": {
+      "Enabled": "策略已启用",
+      "Paused": "策略已暂停"
+    },
+    "Lifecycle": {
+      "Automatic": "自动调度",
+      "OperatorPaused": "已由策略暂停",
+      "DebugSuppressed": "仅手动执行",
+      "OperatorAndDebug": "策略暂停 · 调试模式",
+      "AutomaticDescription": "周期实例自动物化已启用。",
+      "OperatorPausedDescription": "运维策略阻止周期实例自动物化。",
+      "DebugSuppressedDescription": "调试模式抑制自动物化；仍可显式立即执行作业。",
+      "OperatorAndDebugDescription": "运维策略与调试模式都在抑制周期实例自动物化。",
+      "AwaitingDescription": "周期游标正在等待活动声明完成同步。",
+      "ExhaustedDescription": "声明的调度边界内已没有可自动物化的执行时点。",
+      "TriggeredEnabledDescription": "该触发作业已允许运维人员准入执行。",
+      "TriggeredDisabledDescription": "运维策略阻止该触发作业准入新的执行。"
+    },
+    "NextRun": {
+      "In": "将在 {0} 后执行",
+      "DueNow": "下一个执行时点已到。"
+    },
     "Cron": {
-      "Unavailable": "没有周期调度",
-      "Custom": "自定义周期调度",
-      "EveryMinutes": "每 {0} 分钟",
-      "EveryHour": "每小时",
-      "EveryDayAt": "每天 {0}",
-      "Tooltip": "{0} · 时区 {1} · 下次 {2}"
+      "Unavailable": "无法解析调度含义",
+      "Parsing": "正在解析调度…"
     },
     "Triggered": {
       "Ready": "可由运维人员触发",
@@ -223,16 +265,18 @@
     "Selection": {
       "SelectAll": "选择本页全部周期作业",
       "SelectPage": "选择本页",
-      "Select": "选择",
       "SelectJob": "选择 {0}",
       "ToolbarLabel": "所选周期作业操作",
       "Count": "已选择 {0} 个周期作业",
       "Description": "批量变更会保留每个作业独立的历史保留策略和乐观并发栅栏。",
+      "DebugPauseUnavailable": "所选作业中存在已处于调试手动模式的作业，因此不能对该选择执行快速暂停。",
       "Clear": "清除选择"
     },
     "Messages": {
       "Paused": "周期实例物化已暂停。",
       "Resumed": "周期实例物化将从下一个未来时点继续。",
+      "PauseUnavailableDebug": "调试模式已抑制自动物化；仍可立即执行作业。",
+      "ResumedDebugRemains": "运维暂停已解除；调试模式仍在抑制自动物化，立即执行仍然可用。",
       "UpdateFailed": "策略更新失败。",
       "RunFailed": "作业无法入队。",
       "Queued": "执行 {0} 已入队。"
@@ -243,7 +287,9 @@
       "ResumeTitle": "继续所选周期作业？",
       "PauseMessage": "暂停 {0} 个所选作业的新周期实例？现有排队及运行中的执行不受影响。",
       "ResumeMessage": "从下一个未来时点继续 {0} 个所选作业？暂停期间的执行时点不会补跑。",
-      "Result": "{0} 项策略更新成功，{1} 项失败。"
+      "PauseUnavailableDebug": "所选作业中至少有一个仅由调试模式抑制且没有运维暂停，因此不能快速暂停。",
+      "Result": "{0} 项策略更新成功，{1} 项失败。",
+      "ResultDebugRemains": "{0} 项运维暂停更新成功，{1} 项失败；已配置调试模式的作业仍会抑制自动物化。"
     }
   },
   "Policy": {
@@ -288,12 +334,18 @@
       "EndBoundary": "结束边界",
       "TriggeredTitle": "按需准入",
       "TriggeredDescription": "该作业没有周期游标，运维人员需通过活动目录显式准入执行。",
+      "DebugManualOnly": "调试模式正在抑制自动周期实例；立即执行仍然可用，并且不会推进周期游标。",
       "StatusDescriptions": {
         "NotRecurring": "按需作业不使用周期游标。",
         "AwaitingSynchronization": "活动声明正在等待控制平面创建持久化游标。",
         "Scheduled": "持久化游标已确定下一个待物化的未来时点。",
         "Suspended": "运维策略已暂停新的周期实例物化。",
         "Exhausted": "声明的调度边界内已没有后续执行时点。"
+      },
+      "SuspensionDescriptions": {
+        "OperatorPolicy": "运维策略已暂停周期实例自动物化。",
+        "DebugMode": "调试模式抑制周期实例自动物化，同时保留显式立即执行能力。",
+        "OperatorAndDebug": "运维策略与调试模式都在抑制自动物化；解除运维暂停后，调试抑制仍会生效。"
       }
     },
     "Contract": {
@@ -373,7 +425,7 @@
       "AriaLabel": "后续调度执行时点",
       "Sequence": "序号",
       "ScheduleTime": "调度本地时间",
-      "UtcTime": "UTC 时间"
+      "SchedulerTime": "调度时区时间"
     }
   },
   "Trigger": {
@@ -390,12 +442,13 @@
     "Queued": "执行 {0} 已持久化入队。",
     "Delay": {
       "Title": "队列可用时间",
-      "Description": "设置工作节点最早可领取此执行的 UTC 时间。",
+      "Description": "设置工作节点最早可领取此执行的调度墙上时间。",
       "Enable": "延迟准入",
-      "Date": "可用日期（UTC）",
-      "Time": "可用时间（UTC）",
-      "UtcHelp": "所选时间按 UTC 解释，并随持久化执行一并存储。",
-      "Required": "请选择完整的 UTC 日期和时间。",
+      "Date": "可用日期",
+      "Time": "可用时间",
+      "TimeZoneHelp": "所选墙上时间按调度时区 {0} 解释，并以 UTC 持久化。",
+      "Required": "请选择完整的日期和时间。",
+      "InvalidWallTime": "该墙上时间在调度时区 {0} 中不存在，请选择其他时间。",
       "Future": "延迟可用时间必须晚于当前时间。"
     }
   },
@@ -463,15 +516,14 @@
     "LastRefreshed": "观测时间：{0}",
     "Empty": "没有符合当前筛选条件的持久化执行。",
     "Filters": {
+      "AriaLabel": "执行搜索与筛选",
       "Search": "执行",
       "SearchPlaceholder": "实例 ID 或作业键",
-      "State": "状态",
       "AnyState": "全部状态",
       "States": "状态",
       "TimeRange": "入队时间范围",
       "StartDate": "开始日期",
       "EndDate": "结束日期",
-      "SortBy": "排序字段",
       "PageSize": "每页行数",
       "InvalidRange": "结束日期不能早于开始日期。"
     },
@@ -483,21 +535,10 @@
       "Last30Days": "最近 30 天",
       "Custom": "自定义范围"
     },
-    "SortFields": {
-      "CreatedAtUtc": "入队时间",
-      "AvailableAtUtc": "可执行时间",
-      "StartedAtUtc": "开始时间",
-      "CompletedAtUtc": "完成时间"
-    },
-    "SortDirection": {
-      "Ascending": "升序排列",
-      "Descending": "降序排列"
-    },
     "Columns": {
+      "Definition": "定义",
       "Instance": "实例",
-      "Job": "作业",
       "State": "状态",
-      "Available": "可执行时间",
       "Created": "入队时间",
       "Started": "开始时间",
       "Completed": "完成时间",
@@ -538,10 +579,6 @@
     "JobRevision": "作业版本",
     "Arguments": "序列化参数",
     "History": "追加式执行历史",
-    "HistoryTime": "时间",
-    "HistoryKind": "类型",
-    "HistoryTransition": "状态变更",
-    "HistoryMessage": "证据",
     "Identity": "执行身份",
     "Instance": "实例 ID",
     "Scope": "调度范围",
@@ -563,8 +600,6 @@
     "LeaseExpires": "租约到期时间",
     "NoArguments": "没有捕获序列化参数。",
     "HistoryCount": "保留 {0} 条记录",
-    "HistoryLogLevel": "级别",
-    "HistoryWorker": "工作节点",
     "EmptyHistory": "没有可用的保留历史记录。",
     "CancellationPending": "协作取消请求自 {0} 起等待处理。",
     "Copied": "诊断信息已复制到剪贴板。",

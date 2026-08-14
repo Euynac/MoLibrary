@@ -1,5 +1,6 @@
 @using Monica.JobScheduler.UI.Localization
 
+@inject IDialogService DialogService
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <section class="owner-panel">
@@ -9,58 +10,91 @@
             <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Owners:Description"]</MudText>
         </div>
         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-            @Owners.Count
+            @Overview.Owners.Count
         </MudChip>
     </header>
 
-    <div class="owner-panel__table-scroll">
-        <MudTable T="JobOwnerConvergence"
-                  Items="@Owners"
-                  Dense="true"
-                  Hover="true"
-                  Breakpoint="Breakpoint.None"
-                  Elevation="0">
-            <HeaderContent>
-                <MudTh>@L["Overview:Owners:Owner"]</MudTh>
-                <MudTh>@L["Overview:Owners:Revision"]</MudTh>
-                <MudTh>@L["Overview:Owners:Publication"]</MudTh>
-                <MudTh>@L["Overview:Owners:Workers"]</MudTh>
-                <MudTh>@L["Overview:Owners:Definitions"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["Overview:Owners:Owner"]">
-                    <MudTooltip Text="@context.OwnerId">
-                        <strong class="owner-panel__ellipsis">@context.OwnerId</strong>
-                    </MudTooltip>
-                </MudTd>
-                <MudTd DataLabel="@L["Overview:Owners:Revision"]">
-                    <MudTooltip Text="@context.WorkerRevisionId">
-                        <code class="owner-panel__identity">@context.WorkerRevisionId</code>
-                    </MudTooltip>
-                </MudTd>
-                <MudTd DataLabel="@L["Overview:Owners:Publication"]">
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Variant="Variant.Text"
-                             Color="@(context.HasPublishedSnapshot ? Color.Success : Color.Warning)"
-                             Icon="@(context.HasPublishedSnapshot ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Pending)">
-                        @(context.HasPublishedSnapshot ? L["Overview:Owners:Published"] : L["Overview:Owners:Pending"])
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="@L["Overview:Owners:Workers"]">@context.ActiveWorkerCount</MudTd>
-                <MudTd DataLabel="@L["Overview:Owners:Definitions"]">@context.ActiveDefinitionCount</MudTd>
-            </RowTemplate>
-            <NoRecordsContent>
-                <MudText Class="pa-4" Color="Color.Secondary">@L["Overview:Owners:Empty"]</MudText>
-            </NoRecordsContent>
-        </MudTable>
-    </div>
+    @if (Overview.Owners.Count == 0)
+    {
+        <div class="owner-panel__empty">
+            <MudIcon Icon="@Icons.Material.Filled.DomainDisabled" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Owners:Empty"]</MudText>
+        </div>
+    }
+    else
+    {
+        <div class="owner-panel__items">
+            @foreach (var owner in Overview.Owners)
+            {
+                <button type="button"
+                        class="owner-panel__item"
+                        data-state="@(owner.IsConverged ? "ready" : "attention")"
+                        aria-label="@L["Overview:Owners:OpenDetails", owner.OwnerId]"
+                        @onclick="@(() => OpenDetailsAsync(owner))">
+                    <span class="owner-panel__state" aria-hidden="true">
+                        <MudIcon Icon="@(owner.IsConverged ? Icons.Material.Filled.Verified : Icons.Material.Filled.PendingActions)"
+                                 Size="Size.Small" />
+                    </span>
+
+                    <span class="owner-panel__identity">
+                        <span class="owner-panel__name" title="@owner.OwnerId">@owner.OwnerId</span>
+                        <MudTooltip Text="@owner.WorkerRevisionId" Placement="Placement.Bottom">
+                            <code class="owner-panel__revision">@owner.WorkerRevisionId</code>
+                        </MudTooltip>
+                    </span>
+
+                    <span class="owner-panel__signals"
+                          aria-label="@L["Overview:Owners:SignalsAriaLabel", owner.OwnerId]">
+                        <span class="owner-panel__signal" data-state="@(owner.HasPublishedSnapshot ? "ready" : "attention")">
+                            <MudIcon Icon="@(owner.HasPublishedSnapshot ? Icons.Material.Filled.Inventory : Icons.Material.Filled.Inventory2)"
+                                     Size="Size.Small" />
+                            <span>@(owner.HasPublishedSnapshot ? L["Overview:Owners:Published"] : L["Overview:Owners:Pending"])</span>
+                        </span>
+                        <span class="owner-panel__metric">
+                            <small>@L["Overview:Owners:Workers"]</small>
+                            <strong>@owner.ActiveWorkerCount</strong>
+                        </span>
+                        <span class="owner-panel__metric">
+                            <small>@L["Overview:Owners:Definitions"]</small>
+                            <strong>@owner.ActiveDefinitionCount</strong>
+                        </span>
+                    </span>
+
+                    <span class="owner-panel__disclosure" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" />
+                    </span>
+                </button>
+            }
+        </div>
+    }
 </section>
 
 @code {
     /// <summary>
-    /// Gets the desired-owner publication and runtime capability projections.
+    /// Gets the bounded scheduler overview used to resolve owner, release, and active-definition evidence.
     /// </summary>
     [Parameter, EditorRequired]
-    public IReadOnlyList<JobOwnerConvergence> Owners { get; set; } = [];
+    public JobSchedulerOverview Overview { get; set; } = null!;
+
+    private async Task OpenDetailsAsync(JobOwnerConvergence owner)
+    {
+        var parameters = new DialogParameters<OwnerConvergenceDetailDialog>
+        {
+            { dialog => dialog.Overview, Overview },
+            { dialog => dialog.Owner, owner }
+        };
+        var dialog = await DialogService.ShowAsync<OwnerConvergenceDetailDialog>(
+            L["Overview:Owners:Detail:Title"],
+            parameters,
+            DialogOptions);
+        await dialog.Result;
+    }
+
+    private static DialogOptions DialogOptions { get; } = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Medium
+    };
 }

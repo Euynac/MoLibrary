@@ -876,7 +876,8 @@ public sealed partial class InMemoryJobSchedulerStore
                     $"Catalog change epoch {synchronization.ChangeEpoch} has not been committed.");
             }
 
-            var isSuspended = synchronization.IsSuspended || IsActiveJobDisabledUnsafe(revision);
+            var suspensionReasons = synchronization.ResolveSuspensionReasons(
+                IsActiveJobDisabledUnsafe(revision));
             if (existing is not null)
             {
                 if (existing.Template != synchronization.Template || existing.Schedule != synchronization.Schedule)
@@ -885,7 +886,8 @@ public sealed partial class InMemoryJobSchedulerStore
                         $"Recurring cursor '{revision.JobRevisionId}' was synchronized with a different execution template.");
                 }
 
-                if (existing.LastSynchronizedChangeEpoch == synchronization.ChangeEpoch)
+                if (existing.LastSynchronizedChangeEpoch == synchronization.ChangeEpoch
+                    && existing.SuspensionReasons == suspensionReasons)
                 {
                     return Task.FromResult(new RecurringScheduleSynchronizationResult
                     {
@@ -895,10 +897,10 @@ public sealed partial class InMemoryJobSchedulerStore
                 }
 
                 var now = UtcNow;
-                if (existing.IsSuspended != isSuspended)
+                if (existing.SuspensionReasons != suspensionReasons)
                 {
-                    existing.IsSuspended = isSuspended;
-                    existing.NextOccurrenceUtc = isSuspended
+                    existing.SuspensionReasons = suspensionReasons;
+                    existing.NextOccurrenceUtc = suspensionReasons != JobRecurringScheduleSuspensionReason.None
                         ? null
                         : synchronization.Schedule.GetNextOccurrence(now);
                 }
@@ -925,11 +927,11 @@ public sealed partial class InMemoryJobSchedulerStore
             {
                 Template = synchronization.Template,
                 Schedule = synchronization.Schedule,
-                NextOccurrenceUtc = isSuspended
+                NextOccurrenceUtc = suspensionReasons != JobRecurringScheduleSuspensionReason.None
                     ? null
                     : synchronization.Schedule.GetNextOccurrence(activation.ActivatedAtUtc),
                 LastSynchronizedChangeEpoch = synchronization.ChangeEpoch,
-                IsSuspended = isSuspended,
+                SuspensionReasons = suspensionReasons,
                 Version = 1,
                 UpdatedAtUtc = createdAtUtc
             };
@@ -1010,9 +1012,14 @@ public sealed partial class InMemoryJobSchedulerStore
                 });
             }
 
-            if (cursor.IsSuspended || IsActiveJobDisabledUnsafe(cursor.Template.Revision))
+            var isSuspendedByOperatorPolicy = IsActiveJobDisabledUnsafe(cursor.Template.Revision);
+            if (cursor.IsSuspended || isSuspendedByOperatorPolicy)
             {
-                SuspendRecurringCursorUnsafe(cursor);
+                if (isSuspendedByOperatorPolicy)
+                {
+                    ApplyOperatorPolicySuspensionUnsafe(cursor);
+                }
+
                 return Task.FromResult(new RecurringMaterializationResult
                 {
                     Status = RecurringMaterializationStatus.Suspended,
@@ -1458,17 +1465,18 @@ public sealed partial class InMemoryJobSchedulerStore
         return policy.DisabledOverride ?? declaration.IsDisabledByDefault;
     }
 
-    private void SuspendRecurringCursorUnsafe(StoredRecurringCursor cursor)
+    private void ApplyOperatorPolicySuspensionUnsafe(StoredRecurringCursor cursor)
     {
         var changeEpoch = _catalogScopes[cursor.Template.Revision.SchedulerScopeKey].ChangeEpoch;
-        if (cursor.IsSuspended
+        var suspensionReasons = cursor.SuspensionReasons | JobRecurringScheduleSuspensionReason.OperatorPolicy;
+        if (cursor.SuspensionReasons == suspensionReasons
             && cursor.NextOccurrenceUtc is null
             && cursor.LastSynchronizedChangeEpoch >= changeEpoch)
         {
             return;
         }
 
-        cursor.IsSuspended = true;
+        cursor.SuspensionReasons = suspensionReasons;
         cursor.NextOccurrenceUtc = null;
         cursor.LastSynchronizedChangeEpoch = Math.Max(cursor.LastSynchronizedChangeEpoch, changeEpoch);
         cursor.Version++;
@@ -1638,7 +1646,7 @@ public sealed partial class InMemoryJobSchedulerStore
             Schedule = cursor.Schedule,
             NextOccurrenceUtc = cursor.NextOccurrenceUtc,
             LastSynchronizedChangeEpoch = cursor.LastSynchronizedChangeEpoch,
-            IsSuspended = cursor.IsSuspended,
+            SuspensionReasons = cursor.SuspensionReasons,
             Version = cursor.Version,
             UpdatedAtUtc = cursor.UpdatedAtUtc
         };
@@ -1719,7 +1727,9 @@ public sealed partial class InMemoryJobSchedulerStore
         public required RecurringScheduleDefinition Schedule { get; init; }
         public DateTimeOffset? NextOccurrenceUtc { get; set; }
         public long LastSynchronizedChangeEpoch { get; set; }
-        public bool IsSuspended { get; set; }
+        public JobRecurringScheduleSuspensionReason SuspensionReasons { get; set; }
+
+        public bool IsSuspended => SuspensionReasons != JobRecurringScheduleSuspensionReason.None;
         public long Version { get; set; }
         public DateTimeOffset UpdatedAtUtc { get; set; }
     }

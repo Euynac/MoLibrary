@@ -176,8 +176,10 @@ public interface IJobExecutionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Synchronizes one recurring cursor with a newly observed catalog change epoch. The store calculates a new
-    /// active cursor from the durable activation boundary and a resumed cursor from its authoritative current time.
+    /// Synchronizes one recurring cursor with the observed catalog epoch and host-owned automatic-materialization
+    /// reasons. Implementations must compare effective suspension reasons even when the catalog epoch is unchanged,
+    /// because host mode may change independently across restarts. The store calculates a new active cursor from the
+    /// durable activation boundary and a resumed cursor from its authoritative current time.
     /// </summary>
     Task<RecurringScheduleSynchronizationResult> SynchronizeRecurringScheduleAsync(
         RecurringScheduleSynchronization synchronization,

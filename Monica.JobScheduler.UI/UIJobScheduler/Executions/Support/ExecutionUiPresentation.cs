@@ -18,36 +18,6 @@ internal static class ExecutionUiPresentation
         WriteIndented = true
     };
 
-    internal static string FormatDateTime(DateTimeOffset? value)
-    {
-        return value?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz") ?? "—";
-    }
-
-    internal static TimeSpan? GetDuration(JobExecutionInstance execution, DateTimeOffset observedAtUtc)
-    {
-        if (!execution.StartedAtUtc.HasValue)
-        {
-            return null;
-        }
-
-        var end = execution.CompletedAtUtc ?? observedAtUtc;
-        return end < execution.StartedAtUtc.Value
-            ? TimeSpan.Zero
-            : end - execution.StartedAtUtc.Value;
-    }
-
-    internal static string FormatDuration(TimeSpan? duration)
-    {
-        if (!duration.HasValue)
-        {
-            return "—";
-        }
-
-        return duration.Value.TotalDays >= 1
-            ? duration.Value.ToString(@"d\.hh\:mm\:ss")
-            : duration.Value.ToString(@"hh\:mm\:ss\.fff");
-    }
-
     internal static string FormatJson(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))

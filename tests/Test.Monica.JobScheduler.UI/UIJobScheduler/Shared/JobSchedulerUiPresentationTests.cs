@@ -1,8 +1,6 @@
 using AwesomeAssertions;
 using Monica.JobScheduler.Models.Execution;
-using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
-using Monica.Testing.Localization;
 using MudBlazor;
 using Xunit;
 
@@ -37,17 +35,5 @@ public sealed class JobSchedulerUiPresentationTests
     public void GetJobKeyLabel_ShouldUseTheFinalKeySegment(string jobKey, string expected)
     {
         JobSchedulerUiPresentation.GetJobKeyLabel(jobKey).Should().Be(expected);
-    }
-
-    [Theory]
-    [InlineData("0 */5 * * * *", "Catalog:Cron:EveryMinutes")]
-    [InlineData("0 * * * *", "Catalog:Cron:EveryHour")]
-    [InlineData("30 2 * * *", "Catalog:Cron:EveryDayAt")]
-    [InlineData("0 0 * * MON", "Catalog:Cron:Custom")]
-    public void DescribeCron_ShouldGiveDeterministicLocalizedDescriptions(string expression, string expectedKey)
-    {
-        var localizer = new EchoStringLocalizer<JobSchedulerResource>();
-
-        JobSchedulerUiPresentation.DescribeCron(expression, localizer).Should().StartWith(expectedKey);
     }
 }

@@ -49,25 +49,6 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
-    public async Task Catalog_ShouldRenderImmutableScheduleAndPolicyOnlyActions()
-    {
-        await using var context = new JobSchedulerUiTestContext();
-
-        var cut = context.Render<JobCatalogPage>();
-
-        cut.WaitForAssertion(() =>
-        {
-            cut.Markup.Should().Contain("0 */5 * * * *");
-            cut.Markup.Should().Contain("UTC");
-            cut.FindAll("button").Should().HaveCountGreaterThanOrEqualTo(5);
-            cut.Markup.Should().Contain("catalog-item");
-            cut.Markup.Should().Contain("Catalog:Cron:EveryMinutes");
-            cut.Markup.Should().Contain("Catalog:Selection:SelectPage");
-        });
-        cut.Markup.Should().NotContain("CronEditor");
-    }
-
-    [Fact]
     public async Task Catalog_ShouldSeparateRecurringAndTriggeredViews()
     {
         await using var context = new JobSchedulerUiTestContext();
@@ -108,6 +89,12 @@ public sealed class SchedulerOperationalPagesTests
         await using var context = new JobSchedulerUiTestContext();
         await using var state = context.Services.GetRequiredService<JobCatalogPageStateFactory>().Create(20);
         await state.InitializeAsync();
+        await state.LoadTableAsync(new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortDirection = SortDirection.Ascending
+        }, Xunit.TestContext.Current.CancellationToken);
         var recurring = state.Summaries.Single(summary =>
             summary.Definition.Declaration.JobType == JobType.Recurring);
 
@@ -130,6 +117,12 @@ public sealed class SchedulerOperationalPagesTests
         await using var context = new JobSchedulerUiTestContext();
         await using var state = context.Services.GetRequiredService<JobCatalogPageStateFactory>().Create(20);
         await state.InitializeAsync();
+        await state.LoadTableAsync(new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortDirection = SortDirection.Ascending
+        }, Xunit.TestContext.Current.CancellationToken);
         var recurring = state.Summaries.Single();
         (await state.SetDisabledAsync(recurring, true)).Status.Should().Be(ResStatus.Ok);
         recurring = state.Summaries.Single();
@@ -140,6 +133,120 @@ public sealed class SchedulerOperationalPagesTests
         result.Data.Should().NotBeNull();
         result.Data!.Origin.Should().Be(JobExecutionOrigin.RecurringRunNow);
         result.Data.State.Should().Be(JobExecutionState.Queued);
+    }
+
+    [Fact]
+    public async Task CatalogState_WhenDebugModeAloneSuppressesMaterialization_ShouldRejectQuickPauseAndAllowRunNow()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await SetDebugSuppressionAsync(context);
+        await using var state = context.Services.GetRequiredService<JobCatalogPageStateFactory>().Create(20);
+        await state.InitializeAsync();
+        await state.LoadTableAsync(new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortDirection = SortDirection.Ascending
+        }, Xunit.TestContext.Current.CancellationToken);
+        var recurring = state.Summaries.Single();
+        recurring.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.DebugMode);
+
+        var pause = await state.SetDisabledAsync(recurring, true);
+        pause.IsFailed(out _).Should().BeTrue();
+
+        state.ToggleSelection(recurring);
+        var batchPause = await state.SetSelectedDisabledAsync(true);
+        batchPause.IsFailed(out _).Should().BeTrue();
+
+        var runNow = await state.RunRecurringNowAsync(recurring);
+        runNow.Status.Should().Be(ResStatus.Ok);
+        var persisted = await context.Store.GetActiveDefinitionAsync(
+            JobSchedulerUiTestContext.SCOPE,
+            recurring.Definition.Declaration.JobKey,
+            Xunit.TestContext.Current.CancellationToken);
+        persisted!.IsDisabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Catalog_WhenDebugModeSuppressesMaterialization_ShouldShowManualOnlyAndKeepActionsDiscoverable()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await SetDebugSuppressionAsync(context);
+
+        var cut = context.Render<JobCatalogPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Markup.Should().Contain("Catalog:Lifecycle:DebugSuppressed");
+            var actions = cut.Find(".catalog-table__actions");
+            actions.QuerySelector("[aria-label='Catalog:Actions:Pause']")!
+                .HasAttribute("disabled").Should().BeFalse();
+            actions.QuerySelector("[aria-label='Catalog:Actions:Run']")!
+                .HasAttribute("disabled").Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task CatalogState_WhenPolicyAndDebugBothSuppressMaterialization_ShouldResumeOnlyOperatorPolicy()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await using var state = context.Services.GetRequiredService<JobCatalogPageStateFactory>().Create(20);
+        await state.InitializeAsync();
+        await state.LoadTableAsync(new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortDirection = SortDirection.Ascending
+        }, Xunit.TestContext.Current.CancellationToken);
+        var recurring = state.Summaries.Single();
+        (await state.SetDisabledAsync(recurring, true)).Status.Should().Be(ResStatus.Ok);
+        await SetDebugSuppressionAsync(context);
+        await state.LoadTableAsync(new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortDirection = SortDirection.Ascending
+        }, Xunit.TestContext.Current.CancellationToken);
+        recurring = state.Summaries.Single();
+        recurring.SuspensionReasons.Should().Be(
+            JobRecurringScheduleSuspensionReason.OperatorPolicy | JobRecurringScheduleSuspensionReason.DebugMode);
+
+        (await state.SetDisabledAsync(recurring, false)).Status.Should().Be(ResStatus.Ok);
+
+        var optimistic = state.Summaries.Single();
+        optimistic.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.DebugMode);
+        optimistic.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Suspended);
+    }
+
+    [Fact]
+    public async Task JobDetail_WhenDebugModeSuppressesMaterialization_ShouldExplainManualOnlyLifecycle()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await SetDebugSuppressionAsync(context);
+
+        var cut = context.Render<JobDefinitionDetailPage>(parameters => parameters
+            .Add(page => page.JobKey, context.RecurringDefinition.Declaration.JobKey));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Markup.Should().Contain("Catalog:Policy:Enabled");
+            cut.Markup.Should().Contain("Catalog:Lifecycle:DebugSuppressed");
+            cut.Markup.Should().Contain("JobDetail:Schedule:DebugManualOnly");
+        });
+        var pause = cut.FindAll("button").Single(button =>
+            button.TextContent.Contains("Catalog:Actions:Pause", StringComparison.Ordinal));
+        pause.HasAttribute("disabled").Should().BeFalse();
+        var runNow = cut.FindAll("button").Single(button =>
+            button.TextContent.Contains("Catalog:Actions:Run", StringComparison.Ordinal));
+        runNow.HasAttribute("disabled").Should().BeFalse();
+
+        pause.Click();
+
+        var persisted = await context.Store.GetActiveDefinitionAsync(
+            JobSchedulerUiTestContext.SCOPE,
+            context.RecurringDefinition.Declaration.JobKey,
+            Xunit.TestContext.Current.CancellationToken);
+        persisted!.IsDisabled.Should().BeFalse();
     }
 
     [Fact]
@@ -284,74 +391,6 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
-    public async Task Executions_ShouldRenderDurablyQueuedWork()
-    {
-        await using var context = new JobSchedulerUiTestContext();
-        var execution = await context.Store.EnqueueAsync(new JobEnqueueRequest
-        {
-            SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
-            InstanceId = "execution-ui-test-0001",
-            JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
-            JobArgs = "{}",
-            AvailableAtUtc = DateTimeOffset.UtcNow
-        }, Xunit.TestContext.Current.CancellationToken);
-
-        var cut = context.Render<JobExecutionsPage>();
-
-        cut.WaitForAssertion(() =>
-        {
-            cut.Markup.Should().Contain(execution.InstanceId);
-            cut.Markup.Should().Contain("ExecutionStates:Queued");
-            cut.Markup.Should().Contain("Executions:Filters:States");
-            cut.Markup.Should().Contain("Executions:Filters:TimeRange");
-            cut.Markup.Should().Contain("Executions:Filters:SortBy");
-            cut.Markup.Should().Contain("Executions:Filters:PageSize");
-            cut.Markup.Should().Contain("Executions:Columns:Duration");
-            cut.Markup.Should().Contain("execution-activity__item");
-        });
-        cut.Markup.Should().NotContain("executions-page__table");
-    }
-
-    [Fact]
-    public async Task ExecutionLedgerState_ShouldApplyMultiStateTimeSortAndPageSizeControls()
-    {
-        await using var context = new JobSchedulerUiTestContext();
-        var execution = await context.Store.EnqueueAsync(new JobEnqueueRequest
-        {
-            SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
-            InstanceId = "execution-filter-test-0001",
-            JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
-            JobArgs = "{}",
-            AvailableAtUtc = DateTimeOffset.UtcNow
-        }, Xunit.TestContext.Current.CancellationToken);
-        var factory = context.Services.GetRequiredService<JobExecutionsStateFactory>();
-        await using var state = factory.CreatePageState();
-
-        state.SetSelectedStates([JobExecutionState.Succeeded, JobExecutionState.Failed]);
-        await state.ApplyFiltersAsync();
-        state.Executions.Should().BeEmpty();
-
-        state.SetSelectedStates([JobExecutionState.Queued]);
-        state.TimeRange = ExecutionTimeRange.Custom;
-        state.CustomStartDate = DateTime.Today.AddDays(1);
-        await state.ApplyFiltersAsync();
-        state.Executions.Should().BeEmpty();
-
-        await state.ResetFiltersAsync();
-        await state.SetSortFieldAsync(JobExecutionSortField.AvailableAtUtc);
-        await state.ToggleSortDirectionAsync();
-        await state.SetPageSizeAsync(10);
-        state.Executions.Should().ContainSingle(item => item.InstanceId == execution.InstanceId);
-        state.SortField.Should().Be(JobExecutionSortField.AvailableAtUtc);
-        state.SortDescending.Should().BeFalse();
-        state.PageSize.Should().Be(10);
-    }
-
-    [Fact]
     public async Task ExecutionDetail_ShouldRenderTimingPolicyLeaseHistoryAndDiagnosticActions()
     {
         await using var context = new JobSchedulerUiTestContext();
@@ -418,6 +457,12 @@ public sealed class SchedulerOperationalPagesTests
         await using var state = context.Services.GetRequiredService<JobExecutionsStateFactory>().CreatePageState();
         state.ApplyInitialQuery("queued,Running,invalid", execution.InstanceId);
         await state.InitializeAsync();
+        await state.LoadTableAsync(new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobExecutionSortField.CreatedAtUtc),
+            SortDirection = SortDirection.Descending
+        }, Xunit.TestContext.Current.CancellationToken);
 
         state.SelectedStates.Should().BeEquivalentTo(
             [JobExecutionState.Queued, JobExecutionState.Running]);
@@ -426,7 +471,7 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
-    public async Task ExecutionCancellation_ShouldReauthorizeBeforePersistingAndRefreshTheLedger()
+    public async Task ExecutionCancellation_ShouldReauthorizeBeforePersistingAndReloadThroughTableState()
     {
         await using var context = new JobSchedulerUiTestContext();
         var execution = await context.Store.EnqueueAsync(new JobEnqueueRequest
@@ -454,7 +499,35 @@ public sealed class SchedulerOperationalPagesTests
         context.Access.IsAuthorized = true;
         var applied = await state.RequestCancellationAsync(execution.InstanceId);
         applied.Status.Should().Be(JobCancellationStatus.Cancelled);
+        await state.LoadTableAsync(new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobExecutionSortField.CreatedAtUtc),
+            SortDirection = SortDirection.Descending
+        }, Xunit.TestContext.Current.CancellationToken);
         state.Executions.Should().ContainSingle(item =>
             item.InstanceId == execution.InstanceId && item.State == JobExecutionState.Cancelled);
+    }
+
+    private static async Task SetDebugSuppressionAsync(JobSchedulerUiTestContext context)
+    {
+        var catalog = await context.Store.GetActiveCatalogAsync(
+            JobSchedulerUiTestContext.SCOPE,
+            Xunit.TestContext.Current.CancellationToken);
+        await context.Store.SynchronizeRecurringScheduleAsync(
+            new RecurringScheduleSynchronization
+            {
+                Template = context.RecurringDefinition.CreateExecutionTemplate(),
+                Schedule = new RecurringScheduleDefinition
+                {
+                    CronExpression = context.RecurringDefinition.Declaration.CronExpression!,
+                    TimeZoneId = context.RecurringDefinition.Declaration.TimeZoneId!,
+                    StartTimeUtc = context.RecurringDefinition.Declaration.StartTimeUtc,
+                    EndTimeUtc = context.RecurringDefinition.Declaration.EndTimeUtc
+                },
+                ChangeEpoch = catalog!.Version.ChangeEpoch,
+                SuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode
+            },
+            Xunit.TestContext.Current.CancellationToken);
     }
 }

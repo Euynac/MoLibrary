@@ -3,6 +3,7 @@
 @using Monica.JobScheduler.UI.Localization
 
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 <section class="job-contract-panel" aria-labelledby="job-contract-heading">
     <header class="job-contract-panel__heading">
@@ -47,7 +48,7 @@
                 </div>
                 <div>
                     <dt>@L["JobDetail:Contract:ExecutionTimeout"]</dt>
-                    <dd>@JobSchedulerUiPresentation.FormatDuration(Definition.Declaration.MaxExecutionTimeout)</dd>
+                    <dd>@TimePresentation.FormatDuration(Definition.Declaration.MaxExecutionTimeout)</dd>
                 </div>
                 <div>
                     <dt>@L["JobDetail:Contract:DeclarationDefault"]</dt>
@@ -86,7 +87,7 @@
                 </div>
                 <div>
                     <dt>@L["JobDetail:Contract:PolicyUpdated"]</dt>
-                    <dd>@JobSchedulerUiPresentation.FormatUtc(Definition.Policy.UpdatedAtUtc)</dd>
+                    <dd>@TimePresentation.FormatTimestamp(Definition.Policy.UpdatedAtUtc)</dd>
                 </div>
                 <div>
                     <dt>@L["JobDetail:Contract:PolicyStamp"]</dt>

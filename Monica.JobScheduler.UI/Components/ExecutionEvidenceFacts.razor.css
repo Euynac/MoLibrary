@@ -63,6 +63,20 @@
     font-variant-numeric: tabular-nums;
 }
 
+.execution-evidence__job {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.execution-evidence__job strong {
+    color: var(--mud-palette-text-primary);
+}
+
+.execution-evidence__facts .execution-evidence__job code {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.78rem;
+}
+
 .execution-evidence__facts code,
 .execution-evidence__facts time {
     color: var(--mud-palette-text-primary);

@@ -9,6 +9,7 @@ using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
+using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.Providers;
 using Monica.JobScheduler.Services;
 using Monica.JobScheduler.Services.Support;
@@ -125,6 +126,79 @@ public sealed class JobSchedulerRuntimeServiceTests
         transitioning.Message.Should().Contain("remains available on active release");
         transitioning.Message.Should().Contain("awaits activation");
         runtimeState.ControlPlaneReady.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ControlPlaneConvergence_WhenDebugModeChangesAcrossRestart_ShouldUpdateSameEpochSuspension()
+    {
+        var timeProvider = new ManualTimeProvider(NOW);
+        var store = new InMemoryJobSchedulerStore(timeProvider);
+        var options = Options.Create(new ModuleJobSchedulerOption
+        {
+            Role = JobSchedulerRole.ControlPlane,
+            RecurringJobDebugMode = true,
+            EnableHistoryCleanup = false
+        });
+        await using var services = new ServiceCollection().BuildServiceProvider();
+        using var service = new JobControlPlaneHostedService(
+            store,
+            CreateIdentity(JobSchedulerRole.ControlPlane),
+            new JobSchedulerRuntimeState(),
+            timeProvider,
+            options,
+            CreateObservableRegistry(),
+            Options.Create(new ModuleHostedServiceOption()),
+            services.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<JobControlPlaneHostedService>.Instance);
+        _ = await service.ConvergeAsync(TestContext.Current.CancellationToken);
+        await store.PublishOwnerSnapshotAsync(
+            new JobOwnerCatalogSnapshot(
+                SCOPE,
+                RELEASE,
+                OWNER,
+                WORKER_REVISION,
+                [CreateRecurringDeclaration("jobs.debug")]),
+            TestContext.Current.CancellationToken);
+
+        _ = await service.ConvergeAsync(TestContext.Current.CancellationToken);
+        var summary = await store.GetOperationalSummaryAsync(
+            SCOPE,
+            "jobs.debug",
+            TestContext.Current.CancellationToken);
+
+        summary.Should().NotBeNull();
+        summary!.Definition.IsDisabled.Should().BeFalse();
+        summary.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.DebugMode);
+        summary.IsSuspended.Should().BeTrue();
+        summary.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Suspended);
+        summary.NextOccurrenceUtc.Should().BeNull();
+
+        using var resumedService = new JobControlPlaneHostedService(
+            store,
+            CreateIdentity(JobSchedulerRole.ControlPlane),
+            new JobSchedulerRuntimeState(),
+            timeProvider,
+            Options.Create(new ModuleJobSchedulerOption
+            {
+                Role = JobSchedulerRole.ControlPlane,
+                EnableHistoryCleanup = false
+            }),
+            CreateObservableRegistry(),
+            Options.Create(new ModuleHostedServiceOption()),
+            services.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<JobControlPlaneHostedService>.Instance);
+
+        _ = await resumedService.ConvergeAsync(TestContext.Current.CancellationToken);
+        var resumed = await store.GetOperationalSummaryAsync(
+            SCOPE,
+            "jobs.debug",
+            TestContext.Current.CancellationToken);
+
+        resumed!.Definition.IsDisabled.Should().BeFalse();
+        resumed.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.None);
+        resumed.IsSuspended.Should().BeFalse();
+        resumed.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Scheduled);
+        resumed.NextOccurrenceUtc.Should().NotBeNull();
     }
 
     [Fact]
@@ -565,6 +639,7 @@ public sealed class JobSchedulerRuntimeServiceTests
                         JobRevisionId = JOB_REVISION,
                         JobKey = jobKey
                     },
+                    JobName = jobKey,
                     JobType = JobType.Recurring,
                     MaxConcurrency = 1,
                     MaxExecutionTimeout = maxExecutionTimeout ?? TimeSpan.FromMinutes(1)

@@ -374,7 +374,7 @@ public sealed partial class EfCoreJobSchedulerStore
                 : await ProjectActiveDefinitionsAsync(dbContext, scope, token);
             filtered = FilterDefinitions(filtered, query);
 
-            var ordered = filtered.OrderBy(item => item.Declaration.JobKey, StringComparer.Ordinal).ToArray();
+            var ordered = filtered.ApplyCatalogOrdering(query).ToArray();
             return new QueryResult<ActiveJobDefinition>(
                 ordered.Skip((query.PageNumber - 1) * query.PageSize).Take(query.PageSize).ToList(),
                 ordered.Length);

@@ -26,12 +26,12 @@
                                   OwnerFacets="@_state.OwnerFacets"
                                   SelectedJobType="@_state.SelectedJobType"
                                   JobTypeCounts="@_state.JobTypeCounts"
-                                  JobTypeSelected="@_state.SelectJobTypeAsync"
+                                  JobTypeSelected="SelectJobTypeAsync"
                                   SelectedDisabledState="@_state.SelectedDisabledState"
-                                  DisabledStateSelected="@_state.SelectDisabledStateAsync"
+                                  DisabledStateSelected="SelectDisabledStateAsync"
                                   IsLoading="@_state.IsLoading"
-                                  SearchRequested="@_state.SearchAsync"
-                                  ResetRequested="@_state.ResetAsync" />
+                                  SearchRequested="SearchAsync"
+                                  ResetRequested="ResetAsync" />
 
                 @if (_state.Error is not null)
                 {
@@ -51,6 +51,12 @@
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                                     @L["Catalog:Selection:Description"]
                                 </MudText>
+                                @if (_state.HasDebugOnlySuppressedSelection)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Info">
+                                        @L["Catalog:Selection:DebugPauseUnavailable"]
+                                    </MudText>
+                                }
                             </div>
                         </div>
                         <div class="catalog-page__selection-actions">
@@ -77,15 +83,13 @@
                     </MudPaper>
                 }
 
-                <JobCatalogOperationalTable Summaries="@_state.Summaries"
+                <JobCatalogOperationalTable @ref="_catalogTable"
+                                            ServerData="@_state.LoadTableAsync"
                                             SelectedJobKeys="@_state.SelectedJobKeys"
                                             TotalCount="@_state.TotalCount"
-                                            PageNumber="@_state.PageNumber"
-                                            PageCount="@_state.PageCount"
-                                            IsLoading="@_state.IsLoading"
+                                            PageSize="@_state.PageSize"
+                                            PageSizeOptions="@_state.PageSizeOptions"
                                             IsMutating="@_state.IsMutating"
-                                            RefreshRequested="@_state.RefreshAsync"
-                                            PageChanged="@_state.ChangePageAsync"
                                             AllRecurringSelectionChanged="SetAllRecurringSelection"
                                             SelectionToggled="ToggleSelection"
                                             DisabledStateToggled="ToggleDisabledAsync"
@@ -99,6 +103,7 @@
     public const string PAGE_URL = "/job-scheduler/catalog";
 
     private JobCatalogPageState? _state;
+    private JobCatalogOperationalTable? _catalogTable;
     private bool _disposed;
 
     protected override async Task OnInitializedAsync()
@@ -109,6 +114,40 @@
     }
 
     private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    private async Task SearchAsync()
+    {
+        _state?.Search();
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task ResetAsync()
+    {
+        _state?.Reset();
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task SelectJobTypeAsync(JobType jobType)
+    {
+        _state?.SelectJobType(jobType);
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task SelectDisabledStateAsync(bool? disabled)
+    {
+        _state?.SelectDisabledState(disabled);
+        await ReloadFromFirstPageAsync();
+    }
+
+    private Task ReloadFromFirstPageAsync() =>
+        _catalogTable is null || _disposed
+            ? Task.CompletedTask
+            : _catalogTable.ReloadFromFirstPageAsync();
+
+    private Task ReloadTableAsync() =>
+        _catalogTable is null || _disposed
+            ? Task.CompletedTask
+            : _catalogTable.ReloadAsync();
 
     private void ToggleSelection(JobOperationalSummary summary)
     {
@@ -130,7 +169,15 @@
 
         try
         {
-            var disabled = !summary.Definition.IsDisabled;
+            var operatorPaused = JobSchedulerUiPresentation.IsOperatorPaused(summary);
+            var debugSuppressed = JobSchedulerUiPresentation.IsDebugSuppressed(summary);
+            if (!operatorPaused && debugSuppressed)
+            {
+                Snackbar.Add(L["Catalog:Messages:PauseUnavailableDebug"], Severity.Info);
+                return;
+            }
+
+            var disabled = !operatorPaused;
             var result = await state.SetDisabledAsync(summary, disabled);
             if (_disposed || _state != state)
             {
@@ -143,9 +190,13 @@
                 return;
             }
 
-            Snackbar.Add(
-                disabled ? L["Catalog:Messages:Paused"] : L["Catalog:Messages:Resumed"],
-                Severity.Success);
+            var message = !disabled && debugSuppressed
+                ? L["Catalog:Messages:ResumedDebugRemains"]
+                : disabled
+                    ? L["Catalog:Messages:Paused"]
+                    : L["Catalog:Messages:Resumed"];
+            Snackbar.Add(message, !disabled && debugSuppressed ? Severity.Info : Severity.Success);
+            await ReloadTableAsync();
         }
         catch (OperationCanceledException) when (_disposed || state.IsDisposed)
         {
@@ -155,11 +206,21 @@
     private async Task ApplyBatchDisabledAsync(bool disabled)
     {
         var state = _state;
-        var selectedCount = state?.SelectedRecurringSummaries.Count ?? 0;
+        var selected = state?.SelectedRecurringSummaries ?? [];
+        var selectedCount = selected.Count;
         if (state is null || _disposed || selectedCount == 0)
         {
             return;
         }
+
+        if (disabled && selected.Any(JobSchedulerUiPresentation.IsDebugOnlySuppressed))
+        {
+            Snackbar.Add(L["Catalog:Batch:PauseUnavailableDebug"], Severity.Info);
+            return;
+        }
+
+        var debugSuppressionRemains = !disabled
+                                      && selected.Any(JobSchedulerUiPresentation.IsDebugSuppressed);
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
             disabled ? L["Catalog:Batch:PauseTitle"] : L["Catalog:Batch:ResumeTitle"],
@@ -188,8 +249,16 @@
                 return;
             }
 
-            var severity = batch.FailedCount > 0 ? Severity.Warning : Severity.Success;
-            Snackbar.Add(L["Catalog:Batch:Result", batch.SucceededCount, batch.FailedCount], severity);
+            var severity = batch.FailedCount > 0
+                ? Severity.Warning
+                : debugSuppressionRemains
+                    ? Severity.Info
+                    : Severity.Success;
+            var message = debugSuppressionRemains
+                ? L["Catalog:Batch:ResultDebugRemains", batch.SucceededCount, batch.FailedCount]
+                : L["Catalog:Batch:Result", batch.SucceededCount, batch.FailedCount];
+            Snackbar.Add(message, severity);
+            await ReloadTableAsync();
         }
         catch (OperationCanceledException) when (_disposed || state.IsDisposed)
         {
@@ -225,7 +294,7 @@
             }
 
             Snackbar.Add(L["Catalog:Messages:Queued", execution.InstanceId], Severity.Success);
-            await state.RefreshAsync();
+            await ReloadTableAsync();
         }
         catch (OperationCanceledException) when (_disposed || state.IsDisposed)
         {
@@ -254,7 +323,7 @@
         if (result is { Canceled: false, Data: JobExecutionInstance execution })
         {
             Snackbar.Add(L["Trigger:Queued", execution.InstanceId], Severity.Success);
-            await state.RefreshAsync();
+            await ReloadTableAsync();
         }
     }
 

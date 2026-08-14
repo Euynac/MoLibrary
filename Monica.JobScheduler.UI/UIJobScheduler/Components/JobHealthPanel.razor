@@ -2,6 +2,7 @@
 @using Monica.JobScheduler.UI.Localization
 
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 <section class="job-health" aria-labelledby="job-health-heading">
     <header class="job-health__heading">
@@ -100,6 +101,6 @@
         : "—";
 
     private string FormatDuration(TimeSpan? duration) => duration is { } value
-        ? JobSchedulerUiPresentation.FormatDuration(value)
+        ? TimePresentation.FormatDuration(value)
         : L["Common:NotAvailable"];
 }

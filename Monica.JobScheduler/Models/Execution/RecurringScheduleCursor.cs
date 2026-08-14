@@ -3,6 +3,29 @@ using Monica.JobScheduler.Utils;
 namespace Monica.JobScheduler.Models.Execution;
 
 /// <summary>
+/// Identifies the independent reasons that currently prevent automatic recurring occurrence materialization.
+/// </summary>
+[Flags]
+public enum JobRecurringScheduleSuspensionReason
+{
+    /// <summary>
+    /// Automatic recurring occurrence materialization is allowed.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
+    /// The active definition's effective policy, including its declaration default and operator override, prevents
+    /// automatic materialization.
+    /// </summary>
+    OperatorPolicy = 1 << 0,
+
+    /// <summary>
+    /// The scheduler host is running in recurring-job debug mode, where occurrences are admitted only explicitly.
+    /// </summary>
+    DebugMode = 1 << 1
+}
+
+/// <summary>
 /// Captures the code-owned recurring schedule needed to calculate occurrences after a scheduler restart.
 /// </summary>
 /// <remarks>
@@ -123,14 +146,18 @@ public sealed record RecurringScheduleCursorKey
 /// Synchronizes the durable cursor for a recurring declaration with an observed catalog version.
 /// </summary>
 /// <remarks>
-/// A newer change epoch may suspend a cursor or ask the store to resume it. The store calculates an active cursor's
-/// initial occurrence from the durable catalog activation boundary, so delayed control-plane synchronization cannot
-/// skip already-due work. Resuming an explicitly suspended cursor starts after the store's authoritative current time
-/// instead of replaying disabled time. When the desired suspension state has not changed, synchronization preserves
-/// the cursor's current occurrence so unrelated policy changes cannot skip or duplicate work.
+/// A newer change epoch may change policy-owned suspension, while a host-owned suspension reason may change at the
+/// same epoch. The store calculates an active cursor's initial occurrence from the durable catalog activation boundary,
+/// so delayed control-plane synchronization cannot skip already-due work. Resuming a suspended cursor starts after the
+/// store's authoritative current time instead of replaying suppressed time. When the reasons have not changed,
+/// synchronization preserves the cursor's current occurrence so unrelated policy changes cannot skip or duplicate work.
 /// </remarks>
 public sealed record RecurringScheduleSynchronization
 {
+    private const JobRecurringScheduleSuspensionReason SUPPORTED_SUSPENSION_REASONS =
+        JobRecurringScheduleSuspensionReason.OperatorPolicy
+        | JobRecurringScheduleSuspensionReason.DebugMode;
+
     /// <summary>
     /// Gets the recurring job's immutable execution template.
     /// </summary>
@@ -142,14 +169,32 @@ public sealed record RecurringScheduleSynchronization
     public required RecurringScheduleDefinition Schedule { get; init; }
 
     /// <summary>
-    /// Gets the catalog change epoch observed while deriving the desired suspension state.
+    /// Gets the catalog change epoch observed alongside the host-owned suspension reasons.
     /// </summary>
     public long ChangeEpoch { get; init; }
 
     /// <summary>
-    /// Gets whether recurring materialization must be suspended by the current operator policy.
+    /// Gets the host-owned reasons that prevent automatic materialization. The store always removes any caller-supplied
+    /// <see cref="JobRecurringScheduleSuspensionReason.OperatorPolicy"/> value and derives that reason from the active
+    /// catalog policy.
     /// </summary>
-    public bool IsSuspended { get; init; }
+    public JobRecurringScheduleSuspensionReason SuspensionReasons { get; init; }
+
+    /// <summary>
+    /// Resolves the effective suspension reasons while preserving store ownership of the operator-policy reason.
+    /// </summary>
+    /// <param name="isSuspendedByOperatorPolicy">
+    /// Whether the active definition's effective declaration and operator policy currently prevents automatic
+    /// materialization.
+    /// </param>
+    /// <returns>The effective independent suspension reasons.</returns>
+    internal JobRecurringScheduleSuspensionReason ResolveSuspensionReasons(bool isSuspendedByOperatorPolicy)
+    {
+        var reasons = SuspensionReasons & ~JobRecurringScheduleSuspensionReason.OperatorPolicy;
+        return isSuspendedByOperatorPolicy
+            ? reasons | JobRecurringScheduleSuspensionReason.OperatorPolicy
+            : reasons;
+    }
 
     internal void Validate()
     {
@@ -163,6 +208,14 @@ public sealed record RecurringScheduleSynchronization
                 nameof(ChangeEpoch),
                 ChangeEpoch,
                 "A catalog change epoch must be greater than zero.");
+        }
+
+        if ((SuspensionReasons & ~SUPPORTED_SUSPENSION_REASONS) != JobRecurringScheduleSuspensionReason.None)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(SuspensionReasons),
+                SuspensionReasons,
+                "The recurring schedule suspension reasons contain an unsupported value.");
         }
 
         if (Template.JobType != JobType.Recurring)
@@ -183,12 +236,12 @@ public enum RecurringScheduleSynchronizationStatus
     Created,
 
     /// <summary>
-    /// A newer catalog change epoch updated the cursor.
+    /// A newer catalog change epoch or changed host-owned suspension reason updated the cursor.
     /// </summary>
     Updated,
 
     /// <summary>
-    /// The cursor had already observed the same catalog change epoch.
+    /// The cursor had already observed the same catalog change epoch and effective suspension reasons.
     /// </summary>
     Unchanged,
 
@@ -250,9 +303,14 @@ public sealed record RecurringScheduleCursor
     public long LastSynchronizedChangeEpoch { get; init; }
 
     /// <summary>
-    /// Gets whether materialization is suspended by the current operator policy.
+    /// Gets the independent reasons that prevent automatic recurring occurrence materialization.
     /// </summary>
-    public bool IsSuspended { get; init; }
+    public JobRecurringScheduleSuspensionReason SuspensionReasons { get; init; }
+
+    /// <summary>
+    /// Gets whether any reason currently prevents automatic recurring occurrence materialization.
+    /// </summary>
+    public bool IsSuspended => SuspensionReasons != JobRecurringScheduleSuspensionReason.None;
 
     /// <summary>
     /// Gets the compare-and-swap version used to fence stale control-plane replicas.

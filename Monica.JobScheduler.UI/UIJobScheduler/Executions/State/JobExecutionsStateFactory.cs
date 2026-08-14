@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using Monica.Modules;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
@@ -12,14 +13,20 @@ internal sealed class JobExecutionsStateFactory(
     JobSchedulerFacade facade,
     IJobSchedulerUiAccess access,
     IOptions<ModuleJobSchedulerUIOption> options,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    SchedulerTimePresentation timePresentation)
 {
     /// <summary>
     /// Creates a fresh state for one execution-ledger page instance.
     /// </summary>
     public JobExecutionsPageState CreatePageState()
     {
-        return new JobExecutionsPageState(facade, access, options.Value.DefaultPageSize, timeProvider);
+        return new JobExecutionsPageState(
+            facade,
+            access,
+            options.Value.DefaultPageSize,
+            timeProvider,
+            timePresentation);
     }
 
     /// <summary>

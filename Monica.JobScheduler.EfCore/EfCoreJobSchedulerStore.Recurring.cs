@@ -55,7 +55,7 @@ public sealed partial class EfCoreJobSchedulerStore
             }
 
             var policyDisabled = await IsActiveJobDisabledAsync(dbContext, revision, token);
-            var isSuspended = synchronization.IsSuspended || policyDisabled;
+            var suspensionReasons = synchronization.ResolveSuspensionReasons(policyDisabled);
             if (cursor is not null)
             {
                 if (Deserialize<JobExecutionTemplate>(cursor.TemplateJson) != synchronization.Template
@@ -64,7 +64,8 @@ public sealed partial class EfCoreJobSchedulerStore
                     throw new InvalidOperationException(
                         $"Recurring cursor '{revision.JobRevisionId}' was synchronized with a different execution template.");
                 }
-                if (cursor.LastSynchronizedChangeEpoch == synchronization.ChangeEpoch)
+                if (cursor.LastSynchronizedChangeEpoch == synchronization.ChangeEpoch
+                    && cursor.SuspensionReasons == suspensionReasons)
                 {
                     return new RecurringScheduleSynchronizationResult
                     {
@@ -74,10 +75,10 @@ public sealed partial class EfCoreJobSchedulerStore
                 }
 
                 var now = await GetUtcNowAsync(dbContext, token);
-                if (cursor.IsSuspended != isSuspended)
+                if (cursor.SuspensionReasons != suspensionReasons)
                 {
-                    cursor.IsSuspended = isSuspended;
-                    cursor.NextOccurrenceUtcTicks = isSuspended
+                    cursor.SuspensionReasons = suspensionReasons;
+                    cursor.NextOccurrenceUtcTicks = suspensionReasons != JobRecurringScheduleSuspensionReason.None
                         ? null
                         : ToTicks(synchronization.Schedule.GetNextOccurrence(now));
                 }
@@ -108,11 +109,11 @@ public sealed partial class EfCoreJobSchedulerStore
                 JobRevisionId = revision.JobRevisionId,
                 TemplateJson = Serialize(synchronization.Template),
                 ScheduleJson = Serialize(synchronization.Schedule),
-                NextOccurrenceUtcTicks = isSuspended
+                NextOccurrenceUtcTicks = suspensionReasons != JobRecurringScheduleSuspensionReason.None
                     ? null
                     : ToTicks(synchronization.Schedule.GetNextOccurrence(activationBoundaryUtc)),
                 LastSynchronizedChangeEpoch = synchronization.ChangeEpoch,
-                IsSuspended = isSuspended,
+                SuspensionReasons = suspensionReasons,
                 CursorVersion = 1,
                 UpdatedAtUtcTicks = ToTicks(createdAtUtc),
                 ConcurrencyToken = NewVersion()
@@ -152,7 +153,7 @@ public sealed partial class EfCoreJobSchedulerStore
             var entities = await dbContext.RecurringCursors.AsNoTracking()
                 .Where(item => item.SchedulerScopeKey == schedulerScopeKey
                                && item.ActivationEpoch == scope.ActivationEpoch
-                               && !item.IsSuspended
+                               && item.SuspensionReasons == JobRecurringScheduleSuspensionReason.None
                                && item.NextOccurrenceUtcTicks <= nowTicks)
                 .OrderBy(item => item.NextOccurrenceUtcTicks)
                 .ThenBy(item => item.JobRevisionId)
@@ -191,13 +192,25 @@ public sealed partial class EfCoreJobSchedulerStore
                 };
             }
             var template = Deserialize<JobExecutionTemplate>(cursor.TemplateJson);
-            if (cursor.IsSuspended || await IsActiveJobDisabledAsync(dbContext, template.Revision, token))
+            var isSuspendedByOperatorPolicy = await IsActiveJobDisabledAsync(dbContext, template.Revision, token);
+            if (cursor.SuspensionReasons != JobRecurringScheduleSuspensionReason.None
+                || isSuspendedByOperatorPolicy)
             {
-                if (!cursor.IsSuspended)
+                var suspensionReasons = cursor.SuspensionReasons;
+                if (isSuspendedByOperatorPolicy)
                 {
-                    cursor.IsSuspended = true;
+                    suspensionReasons |= JobRecurringScheduleSuspensionReason.OperatorPolicy;
+                }
+
+                if (cursor.SuspensionReasons != suspensionReasons
+                    || cursor.NextOccurrenceUtcTicks is not null
+                    || cursor.LastSynchronizedChangeEpoch < scope.ChangeEpoch)
+                {
+                    cursor.SuspensionReasons = suspensionReasons;
                     cursor.NextOccurrenceUtcTicks = null;
-                    cursor.LastSynchronizedChangeEpoch = scope.ChangeEpoch;
+                    cursor.LastSynchronizedChangeEpoch = Math.Max(
+                        cursor.LastSynchronizedChangeEpoch,
+                        scope.ChangeEpoch);
                     cursor.CursorVersion++;
                     cursor.UpdatedAtUtcTicks = ToTicks(await GetUtcNowAsync(dbContext, token));
                     cursor.ConcurrencyToken = NewVersion();
@@ -350,7 +363,7 @@ public sealed partial class EfCoreJobSchedulerStore
         Schedule = Deserialize<RecurringScheduleDefinition>(entity.ScheduleJson),
         NextOccurrenceUtc = FromTicks(entity.NextOccurrenceUtcTicks),
         LastSynchronizedChangeEpoch = entity.LastSynchronizedChangeEpoch,
-        IsSuspended = entity.IsSuspended,
+        SuspensionReasons = entity.SuspensionReasons,
         Version = entity.CursorVersion,
         UpdatedAtUtc = FromTicks(entity.UpdatedAtUtcTicks)
     };

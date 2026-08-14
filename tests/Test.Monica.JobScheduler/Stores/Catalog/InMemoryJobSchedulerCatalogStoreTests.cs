@@ -47,6 +47,7 @@ public sealed class InMemoryJobSchedulerCatalogStoreTests
         rollback.Version.ActivationEpoch.Should().Be(3);
         restored!.Policy.Should().Be(changedPolicy);
         restored.JobRevisionId.Should().Be(restored.CreateExecutionTemplate().Revision.JobRevisionId);
+        restored.CreateExecutionTemplate().JobName.Should().Be(restored.Declaration.JobName);
     }
 
     [Fact]

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Test.Monica.JobScheduler.Stores.Execution;
 
-public sealed class InMemoryJobSchedulerStoreExecutionTests
+public sealed partial class InMemoryJobSchedulerStoreExecutionTests
 {
     private static readonly DateTimeOffset START_TIME = new(2026, 8, 13, 1, 2, 3, TimeSpan.Zero);
 
@@ -919,6 +919,146 @@ public sealed class InMemoryJobSchedulerStoreExecutionTests
     }
 
     [Fact]
+    public async Task SynchronizeRecurringScheduleAsync_WhenDebugReasonChangesAtSameEpoch_ShouldUpdateAndResume()
+    {
+        var time = new ManualTimeProvider(START_TIME);
+        var store = new InMemoryJobSchedulerStore(time);
+        var active = await ActivateRecurringDefinitionAsync(store, TestContext.Current.CancellationToken);
+        var version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var synchronization = new RecurringScheduleSynchronization
+        {
+            Template = active.CreateExecutionTemplate(),
+            Schedule = new RecurringScheduleDefinition
+            {
+                CronExpression = active.Declaration.CronExpression!,
+                TimeZoneId = active.Declaration.TimeZoneId!
+            },
+            ChangeEpoch = version.ChangeEpoch
+        };
+
+        var created = await store.SynchronizeRecurringScheduleAsync(
+            synchronization,
+            TestContext.Current.CancellationToken);
+        var suspended = await store.SynchronizeRecurringScheduleAsync(
+            synchronization with { SuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode },
+            TestContext.Current.CancellationToken);
+        time.Advance(TimeSpan.FromMinutes(5));
+        var resumed = await store.SynchronizeRecurringScheduleAsync(
+            synchronization,
+            TestContext.Current.CancellationToken);
+        var unchanged = await store.SynchronizeRecurringScheduleAsync(
+            synchronization,
+            TestContext.Current.CancellationToken);
+
+        created.Status.Should().Be(RecurringScheduleSynchronizationStatus.Created);
+        suspended.Status.Should().Be(RecurringScheduleSynchronizationStatus.Updated);
+        suspended.Cursor!.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.DebugMode);
+        suspended.Cursor.IsSuspended.Should().BeTrue();
+        suspended.Cursor.NextOccurrenceUtc.Should().BeNull();
+        resumed.Status.Should().Be(RecurringScheduleSynchronizationStatus.Updated);
+        resumed.Cursor!.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.None);
+        resumed.Cursor.IsSuspended.Should().BeFalse();
+        resumed.Cursor.NextOccurrenceUtc.Should().Be(START_TIME.AddMinutes(6).AddSeconds(-3));
+        unchanged.Status.Should().Be(RecurringScheduleSynchronizationStatus.Unchanged);
+        unchanged.Cursor!.Version.Should().Be(resumed.Cursor.Version);
+    }
+
+    [Fact]
+    public async Task SynchronizeRecurringScheduleAsync_ShouldDeriveOperatorPolicyReasonFromActivePolicy()
+    {
+        var store = new InMemoryJobSchedulerStore(new ManualTimeProvider(START_TIME));
+        var active = await ActivateRecurringDefinitionAsync(store, TestContext.Current.CancellationToken);
+        var version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var synchronization = new RecurringScheduleSynchronization
+        {
+            Template = active.CreateExecutionTemplate(),
+            Schedule = new RecurringScheduleDefinition
+            {
+                CronExpression = active.Declaration.CronExpression!,
+                TimeZoneId = active.Declaration.TimeZoneId!
+            },
+            ChangeEpoch = version.ChangeEpoch,
+            SuspensionReasons = JobRecurringScheduleSuspensionReason.OperatorPolicy
+        };
+
+        var callerPolicyReasonCleared = await store.SynchronizeRecurringScheduleAsync(
+            synchronization,
+            TestContext.Current.CancellationToken);
+        var disabledPolicy = await store.UpdatePolicyAsync(
+            SCOPE,
+            active.OwnerId,
+            active.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                DisabledOverride = true,
+                MaxRetainedHistoryRecords = active.Policy.MaxRetainedHistoryRecords,
+                MaxRetentionDays = active.Policy.MaxRetentionDays,
+                ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var operatorAndDebugSuspended = await store.SynchronizeRecurringScheduleAsync(
+            synchronization with
+            {
+                ChangeEpoch = version.ChangeEpoch,
+                SuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode
+            },
+            TestContext.Current.CancellationToken);
+        _ = await store.UpdatePolicyAsync(
+            SCOPE,
+            active.OwnerId,
+            active.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                DisabledOverride = false,
+                MaxRetainedHistoryRecords = disabledPolicy.MaxRetainedHistoryRecords,
+                MaxRetentionDays = disabledPolicy.MaxRetentionDays,
+                ExpectedConcurrencyStamp = disabledPolicy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var operatorReasonCleared = await store.SynchronizeRecurringScheduleAsync(
+            synchronization with
+            {
+                ChangeEpoch = version.ChangeEpoch,
+                SuspensionReasons = JobRecurringScheduleSuspensionReason.OperatorPolicy
+                                    | JobRecurringScheduleSuspensionReason.DebugMode
+            },
+            TestContext.Current.CancellationToken);
+
+        callerPolicyReasonCleared.Cursor!.SuspensionReasons
+            .Should().Be(JobRecurringScheduleSuspensionReason.None);
+        operatorAndDebugSuspended.Cursor!.SuspensionReasons.Should().Be(
+            JobRecurringScheduleSuspensionReason.OperatorPolicy
+            | JobRecurringScheduleSuspensionReason.DebugMode);
+        operatorReasonCleared.Cursor!.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.DebugMode);
+    }
+
+    [Fact]
+    public async Task SynchronizeRecurringScheduleAsync_WhenTemplateJobNameIsEmpty_ShouldRejectTemplate()
+    {
+        var store = new InMemoryJobSchedulerStore(new ManualTimeProvider(START_TIME));
+        var active = await ActivateRecurringDefinitionAsync(store, TestContext.Current.CancellationToken);
+        var version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+
+        var synchronize = async () => await store.SynchronizeRecurringScheduleAsync(
+            new RecurringScheduleSynchronization
+            {
+                Template = active.CreateExecutionTemplate() with { JobName = string.Empty },
+                Schedule = new RecurringScheduleDefinition
+                {
+                    CronExpression = active.Declaration.CronExpression!,
+                    TimeZoneId = active.Declaration.TimeZoneId!
+                },
+                ChangeEpoch = version.ChangeEpoch
+            },
+            TestContext.Current.CancellationToken);
+
+        await synchronize.Should().ThrowAsync<ArgumentException>()
+            .WithParameterName(nameof(JobExecutionTemplate.JobName));
+    }
+
+    [Fact]
     public async Task TryMaterializeRecurringOccurrenceAsync_WhenOutstandingCapacityIsFull_ShouldRecordSkippedOccurrence()
     {
         var time = new ManualTimeProvider(START_TIME);
@@ -1075,6 +1215,8 @@ public sealed class InMemoryJobSchedulerStoreExecutionTests
 
         var summary = page.Items.Should().ContainSingle().Subject;
         summary.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Scheduled);
+        summary.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.None);
+        summary.IsSuspended.Should().BeFalse();
         summary.NextOccurrenceUtc.Should().Be(nextOccurrence);
         summary.LatestExecution!.InstanceId.Should().Be(materialized.Execution!.InstanceId);
         summary.LatestExecution.History.Should().BeEmpty();
@@ -1108,6 +1250,8 @@ public sealed class InMemoryJobSchedulerStoreExecutionTests
             new JobCatalogQuery(),
             TestContext.Current.CancellationToken)).Items.Single();
         suspended.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Suspended);
+        suspended.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.OperatorPolicy);
+        suspended.IsSuspended.Should().BeTrue();
         suspended.NextOccurrenceUtc.Should().BeNull();
     }
 
@@ -1233,8 +1377,10 @@ public sealed class InMemoryJobSchedulerStoreExecutionTests
         created.Cursor!.NextOccurrenceUtc.Should().Be(START_TIME.AddMinutes(1).AddSeconds(-3));
         preserved.Cursor!.NextOccurrenceUtc.Should().Be(created.Cursor.NextOccurrenceUtc);
         suspended.Cursor!.IsSuspended.Should().BeTrue();
+        suspended.Cursor.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.OperatorPolicy);
         suspended.Cursor.NextOccurrenceUtc.Should().BeNull();
         resumed.Cursor!.IsSuspended.Should().BeFalse();
+        resumed.Cursor.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.None);
         resumed.Cursor.NextOccurrenceUtc.Should().Be(START_TIME.AddMinutes(16).AddSeconds(-3));
     }
 

@@ -129,6 +129,7 @@ public sealed record ActiveJobDefinition
                 JobRevisionId = JobRevisionId,
                 JobKey = Declaration.JobKey
             },
+            JobName = Declaration.JobName,
             JobType = Declaration.JobType,
             JobArgsKey = Declaration.JobArgsKey,
             MaxConcurrency = Declaration.MaxConcurrency,
@@ -203,6 +204,40 @@ public sealed record JobCatalogSnapshot(
     JobCatalogVersion Version,
     IReadOnlyList<ActiveJobDefinition> Definitions);
 
+/// <summary>
+/// Selects the stable ordering used for catalog and operational-summary queries.
+/// </summary>
+public enum JobCatalogSortField
+{
+    /// <summary>
+    /// Sort by the operator-facing job name.
+    /// </summary>
+    JobName,
+
+    /// <summary>
+    /// Sort by the stable logical job key.
+    /// </summary>
+    JobKey,
+
+    /// <summary>
+    /// Sort by the source owner identity.
+    /// </summary>
+    OwnerId,
+
+    /// <summary>
+    /// Sort by recurring or triggered job type.
+    /// </summary>
+    JobType,
+
+    /// <summary>
+    /// Sort by the effective disabled policy.
+    /// </summary>
+    IsDisabled
+}
+
+/// <summary>
+/// Defines a bounded active-catalog query with stable server-side ordering.
+/// </summary>
 public sealed record JobCatalogQuery
 {
     /// <summary>
@@ -214,6 +249,17 @@ public sealed record JobCatalogQuery
     public string? SearchText { get; init; }
     public JobType? JobType { get; init; }
     public bool? IsDisabled { get; init; }
+
+    /// <summary>
+    /// Gets the selected server-side sort field.
+    /// </summary>
+    public JobCatalogSortField SortField { get; init; } = JobCatalogSortField.JobName;
+
+    /// <summary>
+    /// Gets whether results are returned in descending order.
+    /// </summary>
+    public bool SortDescending { get; init; }
+
     public int PageNumber { get; init; } = 1;
     public int PageSize { get; init; } = 20;
 }

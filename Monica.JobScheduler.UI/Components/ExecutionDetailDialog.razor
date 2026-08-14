@@ -10,13 +10,23 @@
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject SchedulerTimePresentation TimePresentation
+@inject TimeProvider TimeProvider
 
 @implements IAsyncDisposable
 
 <MudDialog>
     <TitleContent>
         <div class="execution-detail__title">
-            <MudText Typo="Typo.h6">@L["ExecutionDetail:Title"]</MudText>
+            <MudText Typo="Typo.h6">
+                @(DetailState.Execution is { } execution
+                    ? JobSchedulerUiPresentation.GetJobDisplayName(execution.Template)
+                    : L["ExecutionDetail:Title"])
+            </MudText>
+            @if (DetailState.Execution is { } titleExecution)
+            {
+                <code title="@titleExecution.Template.Revision.JobKey">@titleExecution.Template.Revision.JobKey</code>
+            }
             <code title="@InstanceId">@InstanceId</code>
         </div>
     </TitleContent>
@@ -62,12 +72,12 @@
                 @if (execution.CancellationRequestedAtUtc.HasValue && !execution.IsTerminal)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                        @L["ExecutionDetail:CancellationPending", ExecutionUiPresentation.FormatDateTime(execution.CancellationRequestedAtUtc)]
+                        @L["ExecutionDetail:CancellationPending", TimePresentation.FormatTimestamp(execution.CancellationRequestedAtUtc)]
                     </MudAlert>
                 }
 
                 <ExecutionEvidenceFacts Execution="@execution"
-                                        ObservedAtUtc="@(DetailState.ObservedAtUtc ?? DateTimeOffset.UtcNow)" />
+                                        ObservedAtUtc="@(DetailState.ObservedAtUtc ?? TimeProvider.GetUtcNow())" />
                 <ExecutionHistoryLedger Entries="@execution.History" />
             </div>
         }
@@ -143,7 +153,7 @@
                 cancellationToken,
                 ExecutionUiPresentation.ExportDiagnostics(
                     execution,
-                    DetailState.ObservedAtUtc ?? DateTimeOffset.UtcNow));
+                    DetailState.ObservedAtUtc ?? TimeProvider.GetUtcNow()));
             if (!_disposed)
             {
                 Snackbar.Add(

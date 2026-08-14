@@ -15,9 +15,22 @@
                 <MudChip T="string"
                          Size="Size.Small"
                          Variant="Variant.Outlined"
-                         Color="@(Definition.IsDisabled ? Color.Warning : Color.Success)">
-                    @(Definition.IsDisabled ? L["Catalog:Disabled"] : L["Catalog:Enabled"])
+                         Icon="@(IsPolicyDisabled ? Icons.Material.Filled.PauseCircle : Icons.Material.Filled.CheckCircle)"
+                         Color="@(IsPolicyDisabled ? Color.Warning : Color.Success)">
+                    @(IsPolicyDisabled ? L["Catalog:Policy:Paused"] : L["Catalog:Policy:Enabled"])
                 </MudChip>
+                @if (IsDebugSuppressed)
+                {
+                    <MudTooltip Text="@L["Catalog:Lifecycle:DebugSuppressedDescription"]" Placement="Placement.Top" Arrow="true">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Icon="@Icons.Material.Filled.BugReport"
+                                 Color="Color.Info">
+                            @L["Catalog:Lifecycle:DebugSuppressed"]
+                        </MudChip>
+                    </MudTooltip>
+                }
                 @if (!Summary.HasCompatibleWorker)
                 {
                     <MudChip T="string"
@@ -53,20 +66,26 @@
             }
             @if (Definition.Declaration.JobType == JobType.Recurring)
             {
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.PlayArrow"
-                           Disabled="@IsMutating"
-                           OnClick="OnRunNow">
-                    @L["Catalog:Actions:Run"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="@(Definition.IsDisabled ? Color.Success : Color.Warning)"
-                           StartIcon="@(Definition.IsDisabled ? Icons.Material.Filled.PlayCircle : Icons.Material.Filled.PauseCircle)"
-                           Disabled="@IsMutating"
-                           OnClick="OnToggleDisabled">
-                    @(Definition.IsDisabled ? L["Catalog:Actions:Resume"] : L["Catalog:Actions:Pause"])
-                </MudButton>
+                <MudTooltip Text="@(IsDebugSuppressed ? L["Catalog:Actions:RunDuringDebug"] : L["Catalog:Actions:Run"])"
+                            Placement="Placement.Top"
+                            Arrow="true">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               Disabled="@IsMutating"
+                               OnClick="OnRunNow">
+                        @L["Catalog:Actions:Run"]
+                    </MudButton>
+                </MudTooltip>
+                <MudTooltip Text="@ToggleDisabledTooltip" Placement="Placement.Top" Arrow="true">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="@(IsOperatorPaused ? Color.Success : Color.Warning)"
+                               StartIcon="@(IsOperatorPaused ? Icons.Material.Filled.PlayCircle : Icons.Material.Filled.PauseCircle)"
+                               Disabled="@IsMutating"
+                               OnClick="OnToggleDisabled">
+                        @(IsOperatorPaused ? L["Catalog:Actions:Resume"] : L["Catalog:Actions:Pause"])
+                    </MudButton>
+                </MudTooltip>
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.EventRepeat"
@@ -168,6 +187,18 @@
     public EventCallback OnTrigger { get; set; }
 
     private ActiveJobDefinition Definition => Summary.Definition;
+
+    private bool IsPolicyDisabled => Definition.IsDisabled;
+
+    private bool IsOperatorPaused => JobSchedulerUiPresentation.IsOperatorPaused(Summary);
+
+    private bool IsDebugSuppressed => JobSchedulerUiPresentation.IsDebugSuppressed(Summary);
+
+    private string ToggleDisabledTooltip => JobSchedulerUiPresentation.IsDebugOnlySuppressed(Summary)
+        ? L["Catalog:Actions:PauseUnavailableDebug"]
+        : IsOperatorPaused
+            ? L["Catalog:Actions:Resume"]
+            : L["Catalog:Actions:Pause"];
 
     private string GetWorkerMetricClass() => Summary.HasCompatibleWorker
         ? "job-detail-header__metric"

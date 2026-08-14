@@ -67,7 +67,7 @@ public sealed record JobRevisionIdentity
 }
 
 /// <summary>
-/// Captures all execution-affecting declaration values required after a job is enqueued.
+/// Captures the immutable declaration values required to execute and present a job after it is enqueued.
 /// </summary>
 /// <remarks>
 /// The snapshot prevents a later catalog activation or policy edit from changing the semantics of work that has
@@ -79,6 +79,11 @@ public sealed record JobExecutionTemplate
     /// Gets the exact job revision identity.
     /// </summary>
     public required JobRevisionIdentity Revision { get; init; }
+
+    /// <summary>
+    /// Gets the immutable user-facing job name captured with the execution.
+    /// </summary>
+    public required string JobName { get; init; }
 
     /// <summary>
     /// Gets whether the job is recurring or explicitly triggered.
@@ -111,6 +116,7 @@ public sealed record JobExecutionTemplate
     {
         ArgumentNullException.ThrowIfNull(Revision);
         Revision.Validate();
+        JobSchedulerIdentity.ValidateStandard(JobName, nameof(JobName));
 
         if (!Enum.IsDefined(JobType))
         {

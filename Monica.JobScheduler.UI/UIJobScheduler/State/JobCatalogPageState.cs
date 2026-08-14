@@ -7,6 +7,7 @@ using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using MudBlazor;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.State;
 
@@ -42,6 +43,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         _access = access;
         _localizer = localizer;
         PageSize = Math.Max(1, pageSize);
+        PageSizeOptions = [.. new[] { 10, 20, 50, 100, PageSize }.Distinct().Order()];
     }
 
     internal event Func<Task>? Changed;
@@ -66,39 +68,71 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     internal bool IsMutating { get; private set; }
     internal string? Error { get; private set; }
     internal int PageNumber { get; private set; } = 1;
-    internal int PageSize { get; }
-    internal int PageCount { get; private set; } = 1;
+    internal int PageSize { get; private set; }
+    internal int[] PageSizeOptions { get; }
     internal int TotalCount { get; private set; }
+    internal JobCatalogSortField SortField { get; private set; } = JobCatalogSortField.JobName;
+    internal bool SortDescending { get; private set; }
     internal bool HasSelection => _selectedJobKeys.Count > 0;
+    internal bool HasDebugOnlySuppressedSelection =>
+        SelectedRecurringSummaries.Any(JobSchedulerUiPresentation.IsDebugOnlySuppressed);
     internal bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
-    internal Task InitializeAsync() => LoadAsync(clearSelection: true);
-
-    internal async Task SearchAsync()
+    internal async Task InitializeAsync()
     {
-        PageNumber = 1;
-        await LoadAsync(clearSelection: true);
+        var cancellationToken = _lifetimeCancellation.Token;
+        try
+        {
+            IsLoading = true;
+            await NotifyChangedAsync();
+            if (!await EnsureAuthorizedAsync(cancellationToken))
+            {
+                ClearResults();
+                return;
+            }
+
+            await LoadFacetsAsync(cancellationToken);
+            Error = null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (!AccessChecked)
+            {
+                ClearResults();
+                AccessChecked = true;
+                IsAuthorized = false;
+            }
+
+            Error = exception.Message;
+        }
+        finally
+        {
+            if (!IsDisposed)
+            {
+                IsLoading = false;
+                await NotifyChangedAsync();
+            }
+        }
     }
 
-    internal async Task ResetAsync()
+    internal void Search()
+    {
+        _selectedJobKeys.Clear();
+    }
+
+    internal void Reset()
     {
         SearchText = null;
         OwnerId = null;
         SelectedJobType = JobType.Recurring;
         SelectedDisabledState = null;
-        PageNumber = 1;
-        await LoadAsync(clearSelection: true);
+        _selectedJobKeys.Clear();
     }
 
-    internal async Task ChangePageAsync(int page)
-    {
-        PageNumber = Math.Max(1, page);
-        await LoadAsync(clearSelection: true);
-    }
-
-    internal Task RefreshAsync() => LoadAsync(clearSelection: false);
-
-    internal async Task SelectJobTypeAsync(JobType jobType)
+    internal void SelectJobType(JobType jobType)
     {
         if (SelectedJobType == jobType)
         {
@@ -106,11 +140,10 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         }
 
         SelectedJobType = jobType;
-        PageNumber = 1;
-        await LoadAsync(clearSelection: true);
+        _selectedJobKeys.Clear();
     }
 
-    internal async Task SelectDisabledStateAsync(bool? disabled)
+    internal void SelectDisabledState(bool? disabled)
     {
         if (SelectedDisabledState == disabled)
         {
@@ -118,8 +151,31 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         }
 
         SelectedDisabledState = disabled;
-        PageNumber = 1;
-        await LoadAsync(clearSelection: true);
+        _selectedJobKeys.Clear();
+    }
+
+    internal async Task<TableData<JobOperationalSummary>> LoadTableAsync(
+        TableState tableState,
+        CancellationToken requestCancellation)
+    {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        ArgumentNullException.ThrowIfNull(tableState);
+
+        PageNumber = tableState.Page + 1;
+        PageSize = Math.Clamp(tableState.PageSize, 1, 200);
+        SortField = ResolveSortField(tableState.SortLabel);
+        SortDescending = tableState.SortDirection == SortDirection.Descending;
+
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _lifetimeCancellation.Token,
+            requestCancellation);
+        await LoadAsync(linkedCancellation.Token);
+        linkedCancellation.Token.ThrowIfCancellationRequested();
+        return new TableData<JobOperationalSummary>
+        {
+            Items = Summaries,
+            TotalItems = TotalCount
+        };
     }
 
     internal void ToggleSelection(JobOperationalSummary summary)
@@ -161,14 +217,20 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
 
         var updatedDefinition = items[index].Definition with { Policy = policy };
         var isRecurring = updatedDefinition.Declaration.JobType == JobType.Recurring;
+        var suspensionReasons = isRecurring
+            ? JobSchedulerUiPresentation.SetOperatorPolicySuspension(
+                items[index].SuspensionReasons,
+                updatedDefinition.IsDisabled)
+            : JobRecurringScheduleSuspensionReason.None;
         items[index] = items[index] with
         {
             Definition = updatedDefinition,
             RecurringScheduleStatus = isRecurring
-                ? updatedDefinition.IsDisabled
+                ? suspensionReasons != JobRecurringScheduleSuspensionReason.None
                     ? JobRecurringScheduleStatus.Suspended
                     : JobRecurringScheduleStatus.AwaitingSynchronization
                 : JobRecurringScheduleStatus.NotRecurring,
+            SuspensionReasons = suspensionReasons,
             NextOccurrenceUtc = isRecurring ? null : items[index].NextOccurrenceUtc
         };
         Summaries = items;
@@ -186,6 +248,11 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             if (!await EnsureAuthorizedAsync(cancellationToken))
             {
                 return Res.Fail(_localizer["Access:DeniedDescription"]);
+            }
+
+            if (disabled && JobSchedulerUiPresentation.IsDebugOnlySuppressed(summary))
+            {
+                return Res.Fail(_localizer["Catalog:Messages:PauseUnavailableDebug"]);
             }
 
             var definition = summary.Definition;
@@ -276,6 +343,11 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
                 return _localizer["Catalog:Batch:Empty"].Value;
             }
 
+            if (disabled && selected.Any(JobSchedulerUiPresentation.IsDebugOnlySuppressed))
+            {
+                return _localizer["Catalog:Batch:PauseUnavailableDebug"].Value;
+            }
+
             var result = await _facade.UpdatePoliciesAsync(
                 new JobPolicyBatchUpdateRequest
                 {
@@ -338,9 +410,8 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         _lifetimeCancellation.Dispose();
     }
 
-    private async Task LoadAsync(bool clearSelection)
+    private async Task LoadAsync(CancellationToken cancellationToken)
     {
-        var cancellationToken = _lifetimeCancellation.Token;
         await _loadGate.WaitAsync(cancellationToken);
         try
         {
@@ -350,14 +421,9 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
 
             if (!await EnsureAuthorizedAsync(cancellationToken))
             {
-                Summaries = [];
-                TotalCount = 0;
-                PageCount = 1;
-                Error = null;
+                ClearResults();
                 return;
             }
-
-            await LoadFacetsAsync(cancellationToken);
 
             var result = await _facade.QueryOperationalSummariesAsync(new JobCatalogQuery
             {
@@ -365,32 +431,35 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
                 OwnerId = OwnerId,
                 JobType = SelectedJobType,
                 IsDisabled = SelectedDisabledState,
+                SortField = SortField,
+                SortDescending = SortDescending,
                 PageNumber = PageNumber,
                 PageSize = PageSize
             }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (result.IsFailed(out var error, out var page))
             {
+                Summaries = [];
+                TotalCount = 0;
+                _selectedJobKeys.Clear();
                 Error = error.Message;
                 return;
             }
 
             Summaries = page.Items;
             TotalCount = page.TotalCount;
-            PageCount = Math.Max(1, (int)Math.Ceiling((double)TotalCount / PageSize));
             Error = null;
-            if (clearSelection)
-            {
-                _selectedJobKeys.Clear();
-            }
-            else
-            {
-                _selectedJobKeys.IntersectWith(Summaries.Select(static summary =>
-                    summary.Definition.Declaration.JobKey));
-            }
+            RetainVisibleSelection();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+        }
+        catch (Exception exception)
+        {
+            Summaries = [];
+            TotalCount = 0;
+            _selectedJobKeys.Clear();
+            Error = exception.Message;
         }
         finally
         {
@@ -423,6 +492,29 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             .GroupBy(static definition => definition.Declaration.JobType)
             .ToDictionary(static group => group.Key, static group => group.Count());
     }
+
+    private void ClearResults()
+    {
+        Summaries = [];
+        TotalCount = 0;
+        PageNumber = 1;
+        Error = null;
+        _selectedJobKeys.Clear();
+    }
+
+    private void RetainVisibleSelection()
+    {
+        var visibleRecurringJobKeys = Summaries
+            .Where(static summary => summary.Definition.Declaration.JobType == JobType.Recurring)
+            .Select(static summary => summary.Definition.Declaration.JobKey)
+            .ToHashSet(StringComparer.Ordinal);
+        _selectedJobKeys.IntersectWith(visibleRecurringJobKeys);
+    }
+
+    private static JobCatalogSortField ResolveSortField(string? sortLabel) =>
+        Enum.TryParse<JobCatalogSortField>(sortLabel, ignoreCase: false, out var field)
+            ? field
+            : JobCatalogSortField.JobName;
 
     private async Task<bool> EnsureAuthorizedAsync(CancellationToken cancellationToken)
     {

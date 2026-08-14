@@ -2,6 +2,8 @@ using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
+using MudBlazor;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 
@@ -13,6 +15,7 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
     private readonly JobSchedulerFacade _facade;
     private readonly IJobSchedulerUiAccess _access;
     private readonly TimeProvider _timeProvider;
+    private readonly SchedulerTimePresentation _timePresentation;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _loadGate = new(1, 1);
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
@@ -23,11 +26,13 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
         JobSchedulerFacade facade,
         IJobSchedulerUiAccess access,
         int defaultPageSize,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        SchedulerTimePresentation timePresentation)
     {
         _facade = facade;
         _access = access;
         _timeProvider = timeProvider;
+        _timePresentation = timePresentation;
         PageSize = Math.Clamp(defaultPageSize, 1, 200);
         PageSizeOptions = [.. new[] { 10, 20, 50, 100, PageSize }.Distinct().Order()];
     }
@@ -83,12 +88,12 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
     public ExecutionTimeRange TimeRange { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional custom local start date.
+    /// Gets or sets the optional custom scheduler-zone start date.
     /// </summary>
     public DateTime? CustomStartDate { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional custom local end date.
+    /// Gets or sets the optional custom scheduler-zone end date.
     /// </summary>
     public DateTime? CustomEndDate { get; set; }
 
@@ -117,19 +122,14 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
     public int PageNumber { get; private set; } = 1;
 
     /// <summary>
-    /// Gets the available page-size choices, including the configured default.
+    /// Gets the available native table page-size choices, including the configured default.
     /// </summary>
-    public IReadOnlyList<int> PageSizeOptions { get; }
+    public int[] PageSizeOptions { get; }
 
     /// <summary>
     /// Gets the selected bounded page size.
     /// </summary>
     public int PageSize { get; private set; }
-
-    /// <summary>
-    /// Gets the number of available result pages.
-    /// </summary>
-    public int PageCount { get; private set; } = 1;
 
     /// <summary>
     /// Gets the total number of executions matching the current query.
@@ -142,14 +142,69 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
     public DateTimeOffset? ObservedAtUtc { get; private set; }
 
     /// <summary>
-    /// Loads the first ledger snapshot.
+    /// Evaluates access before the native table requests its first server page.
     /// </summary>
-    public Task InitializeAsync() => LoadPageAsync();
+    public async Task InitializeAsync()
+    {
+        ThrowIfDisposed();
+        var cancellationToken = _lifetimeCancellation.Token;
+        try
+        {
+            IsLoading = true;
+            await NotifyStateChangedAsync();
+            IsAuthorized = await _access.IsAuthorizedAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            AccessChecked = true;
+            if (!IsAuthorized)
+            {
+                ClearResults();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Error = exception.Message;
+            AccessChecked = true;
+            IsAuthorized = false;
+        }
+        finally
+        {
+            if (!_disposed)
+            {
+                IsLoading = false;
+                await NotifyStateChangedAsync();
+            }
+        }
+    }
 
     /// <summary>
-    /// Re-runs the current bounded query without changing its filters or page.
+    /// Loads one server-backed table page using the table's native sort and paging state.
     /// </summary>
-    public Task RefreshAsync() => LoadPageAsync();
+    public async Task<TableData<JobExecutionInstance>> LoadTableAsync(
+        TableState tableState,
+        CancellationToken requestCancellation)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(tableState);
+
+        PageNumber = tableState.Page + 1;
+        PageSize = Math.Clamp(tableState.PageSize, 1, 200);
+        SortField = ResolveSortField(tableState.SortLabel);
+        SortDescending = tableState.SortDirection != SortDirection.Ascending;
+
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _lifetimeCancellation.Token,
+            requestCancellation);
+        await LoadPageAsync(linkedCancellation.Token);
+        linkedCancellation.Token.ThrowIfCancellationRequested();
+        return new TableData<JobExecutionInstance>
+        {
+            Items = Executions,
+            TotalItems = TotalCount
+        };
+    }
 
     /// <summary>
     /// Applies optional route query values before the initial ledger query.
@@ -171,19 +226,9 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
     }
 
     /// <summary>
-    /// Applies the current filter inputs from the first page.
+    /// Clears all filters while preserving the native table's current ordering.
     /// </summary>
-    public async Task ApplyFiltersAsync()
-    {
-        ThrowIfDisposed();
-        PageNumber = 1;
-        await LoadPageAsync();
-    }
-
-    /// <summary>
-    /// Clears all filters and restores chronological newest-first ordering.
-    /// </summary>
-    public async Task ResetFiltersAsync()
+    public void ResetFilters()
     {
         ThrowIfDisposed();
         SearchText = null;
@@ -191,53 +236,6 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
         TimeRange = ExecutionTimeRange.All;
         CustomStartDate = null;
         CustomEndDate = null;
-        SortField = JobExecutionSortField.CreatedAtUtc;
-        SortDescending = true;
-        PageNumber = 1;
-        await LoadPageAsync();
-    }
-
-    /// <summary>
-    /// Selects a backend sort field and reloads from the first page.
-    /// </summary>
-    public async Task SetSortFieldAsync(JobExecutionSortField sortField)
-    {
-        ThrowIfDisposed();
-        SortField = sortField;
-        PageNumber = 1;
-        await LoadPageAsync();
-    }
-
-    /// <summary>
-    /// Reverses the selected backend ordering and reloads from the first page.
-    /// </summary>
-    public async Task ToggleSortDirectionAsync()
-    {
-        ThrowIfDisposed();
-        SortDescending = !SortDescending;
-        PageNumber = 1;
-        await LoadPageAsync();
-    }
-
-    /// <summary>
-    /// Changes the bounded page size and reloads from the first page.
-    /// </summary>
-    public async Task SetPageSizeAsync(int pageSize)
-    {
-        ThrowIfDisposed();
-        PageSize = Math.Clamp(pageSize, 1, 200);
-        PageNumber = 1;
-        await LoadPageAsync();
-    }
-
-    /// <summary>
-    /// Loads the requested one-based result page.
-    /// </summary>
-    public async Task SetPageAsync(int pageNumber)
-    {
-        ThrowIfDisposed();
-        PageNumber = Math.Clamp(pageNumber, 1, PageCount);
-        await LoadPageAsync();
     }
 
     /// <summary>
@@ -278,7 +276,6 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
                 return new ExecutionCancellationUiResult(true, null, error.Message);
             }
 
-            await LoadPageAsync();
             return new ExecutionCancellationUiResult(true, cancellation.Status, null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -319,16 +316,16 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
         _lifetimeCancellation.Dispose();
     }
 
-    private async Task LoadPageAsync()
+    private async Task LoadPageAsync(CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
         if (HasInvalidCustomRange)
         {
+            ClearResults();
             await NotifyStateChangedAsync();
             return;
         }
 
-        var cancellationToken = _lifetimeCancellation.Token;
         try
         {
             await _loadGate.WaitAsync(cancellationToken);
@@ -377,8 +374,6 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
 
             Executions = page.Items;
             TotalCount = page.TotalCount;
-            PageCount = Math.Max(1, (int)Math.Ceiling((double)TotalCount / PageSize));
-            PageNumber = Math.Min(PageNumber, PageCount);
             ObservedAtUtc = observedAtUtc;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -435,25 +430,30 @@ internal sealed class JobExecutionsPageState : IAsyncDisposable
         return states;
     }
 
-    private static DateTimeOffset? ToUtcCalendarBoundary(DateTime? value, bool endOfDay)
+    private static JobExecutionSortField ResolveSortField(string? sortLabel) =>
+        Enum.TryParse<JobExecutionSortField>(sortLabel, ignoreCase: false, out var field)
+            ? field
+            : JobExecutionSortField.CreatedAtUtc;
+
+    private DateTimeOffset? ToUtcCalendarBoundary(DateTime? value, bool endOfDay)
     {
         if (!value.HasValue)
         {
             return null;
         }
 
-        var localValue = endOfDay
+        var schedulerWallTime = endOfDay
             ? value.Value.Date.AddDays(1).AddTicks(-1)
             : value.Value.Date;
-        return new DateTimeOffset(DateTime.SpecifyKind(localValue, DateTimeKind.Local)).ToUniversalTime();
+        return _timePresentation.ConvertSchedulerWallTimeToUtc(schedulerWallTime);
     }
 
     private void ClearResults()
     {
         Executions = [];
         TotalCount = 0;
-        PageCount = 1;
         PageNumber = 1;
+        ObservedAtUtc = null;
         Error = null;
     }
 

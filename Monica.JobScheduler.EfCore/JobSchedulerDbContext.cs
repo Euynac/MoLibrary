@@ -161,6 +161,7 @@ public sealed class JobSchedulerDbContext(
             entity.Property(item => item.JobRevisionId).HasMaxLength(JobSchedulerIdentity.HASH_LENGTH);
             entity.Property(item => item.TemplateJson).HasColumnType("text");
             entity.Property(item => item.ScheduleJson).HasColumnType("text");
+            entity.Property(item => item.SuspensionReasons).HasConversion<int>();
             entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
             entity.HasIndex(item => new { item.SchedulerScopeKey, item.ActivationEpoch, item.NextOccurrenceUtcTicks });
         });

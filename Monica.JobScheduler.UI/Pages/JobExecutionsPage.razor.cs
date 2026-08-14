@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Localization;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.UI.Components;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using MudBlazor;
 
 namespace Monica.JobScheduler.UI.Pages;
@@ -31,6 +33,12 @@ public partial class JobExecutionsPage : IAsyncDisposable
     [Inject]
     private IStringLocalizer<JobSchedulerResource> L { get; set; } = null!;
 
+    [Inject]
+    private SchedulerTimePresentation TimePresentation { get; set; } = null!;
+
+    [Inject]
+    private TimeProvider TimeProvider { get; set; } = null!;
+
     /// <summary>
     /// Gets or sets the optional comma-separated execution-state deep-link filter.
     /// </summary>
@@ -44,6 +52,7 @@ public partial class JobExecutionsPage : IAsyncDisposable
     public string? InitialInstanceId { get; set; }
 
     private JobExecutionsPageState PageState { get; set; } = null!;
+    private MudTable<JobExecutionInstance>? _executionTable;
     private bool _disposed;
     private bool _initialDetailOpened;
 
@@ -72,16 +81,70 @@ public partial class JobExecutionsPage : IAsyncDisposable
         await OpenDetailsAsync(initialInstanceId.Trim());
     }
 
-    private void SetSelectedStates(IEnumerable<JobExecutionState>? states)
+    private Task<TableData<JobExecutionInstance>> LoadExecutionsAsync(
+        TableState tableState,
+        CancellationToken cancellationToken) =>
+        PageState.LoadTableAsync(tableState, cancellationToken);
+
+    private async Task HandleStateSelectionAsync(IReadOnlyCollection<JobExecutionState>? states)
     {
         PageState.SetSelectedStates(states);
+        await ReloadFromFirstPageAsync();
     }
 
-    private string FormatState(JobExecutionState state) => L[$"ExecutionStates:{state}"];
+    private async Task ClearStateSelectionAsync()
+    {
+        if (PageState.SelectedStates.Count == 0)
+        {
+            return;
+        }
+
+        PageState.SetSelectedStates(null);
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        PageState.ResetFilters();
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task HandleSearchKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !PageState.IsLoading && !PageState.HasInvalidCustomRange)
+        {
+            await ApplyFiltersAsync();
+        }
+    }
+
+    private async Task ReloadFromFirstPageAsync()
+    {
+        var table = _executionTable;
+        if (table is null || _disposed)
+        {
+            return;
+        }
+
+        if (table.CurrentPage != 0)
+        {
+            table.NavigateTo(0);
+            return;
+        }
+
+        await table.ReloadServerData();
+    }
+
+    private Task RefreshTableAsync() =>
+        _executionTable is null || _disposed
+            ? Task.CompletedTask
+            : _executionTable.ReloadServerData();
 
     private string FormatTimeRange(ExecutionTimeRange range) => L[$"Executions:TimeRanges:{range}"];
-
-    private string FormatSortField(JobExecutionSortField sortField) => L[$"Executions:SortFields:{sortField}"];
 
     private static string GetStateIcon(JobExecutionState state) => state switch
     {
@@ -113,7 +176,7 @@ public partial class JobExecutionsPage : IAsyncDisposable
         await dialog.Result;
         if (!_disposed)
         {
-            await PageState.RefreshAsync();
+            await RefreshTableAsync();
         }
     }
 
@@ -134,6 +197,7 @@ public partial class JobExecutionsPage : IAsyncDisposable
         {
             var feedback = ExecutionUiPresentation.GetCancellationFeedback(result, L);
             Snackbar.Add(feedback.Message, feedback.Severity);
+            await RefreshTableAsync();
         }
     }
 

@@ -4,6 +4,7 @@
 
 @inject SchedulerStatisticsPageStateFactory PageStateFactory
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 @implements IAsyncDisposable
 
@@ -78,7 +79,7 @@
 
                     <footer class="statistics-page__freshness">
                         <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
-                        <span>@L["Analytics:ObservedAt", JobSchedulerUiPresentation.FormatUtc(_state.ObservedAtUtc)]</span>
+                        <span>@L["Analytics:ObservedAt", TimePresentation.FormatTimestamp(_state.ObservedAtUtc)]</span>
                     </footer>
                 }
             </div>

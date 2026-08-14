@@ -8,6 +8,7 @@ using Monica.JobScheduler.UI.Pages;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
 using Monica.JobScheduler.UI.UIJobScheduler.State;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
 using MudBlazor;
@@ -94,6 +95,7 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
     {
         context.Services.TryAddScoped<OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>>();
         context.Services.TryAddScoped<IJobSchedulerUiAccess, JobSchedulerUiAccess>();
+        context.Services.TryAddScoped<SchedulerTimePresentation>();
         context.Services.TryAddScoped<SchedulerOverviewPageStateFactory>();
         context.Services.TryAddScoped<JobCatalogPageStateFactory>();
         context.Services.TryAddScoped<JobDefinitionDetailPageStateFactory>();

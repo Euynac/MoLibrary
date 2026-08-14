@@ -49,6 +49,15 @@
 .scheduler-workspace__contract > div {
     display: grid;
     gap: 1px;
+    min-width: 0;
+}
+
+.scheduler-workspace__timezone {
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .scheduler-workspace__nav-wrap {

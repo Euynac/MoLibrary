@@ -46,7 +46,7 @@ public sealed partial class InMemoryJobSchedulerStore
 
             var filtered = FilterDefinitions(ProjectActiveDefinitions(schedulerScopeKey, scope), query);
 
-            var ordered = filtered.OrderBy(static item => item.Declaration.JobKey, StringComparer.Ordinal).ToArray();
+            var ordered = filtered.ApplyCatalogOrdering(query).ToArray();
             var definitions = ordered
                 .Skip((query.PageNumber - 1) * query.PageSize)
                 .Take(query.PageSize)
@@ -98,12 +98,14 @@ public sealed partial class InMemoryJobSchedulerStore
             var summaries = definitions.Select(definition =>
             {
                 cursors.TryGetValue(definition.JobRevisionId, out var cursor);
-                var recurringStatus = GetRecurringStatus(definition, cursor);
+                var suspensionReasons = GetRecurringSuspensionReasons(definition, cursor);
+                var recurringStatus = GetRecurringStatus(definition, cursor, suspensionReasons);
                 var jobKey = definition.Declaration.JobKey;
                 return new JobOperationalSummary
                 {
                     Definition = definition,
                     RecurringScheduleStatus = recurringStatus,
+                    SuspensionReasons = suspensionReasons,
                     NextOccurrenceUtc = recurringStatus == JobRecurringScheduleStatus.Scheduled
                         ? cursor!.NextOccurrenceUtc
                         : null,
@@ -158,13 +160,14 @@ public sealed partial class InMemoryJobSchedulerStore
 
     private static JobRecurringScheduleStatus GetRecurringStatus(
         ActiveJobDefinition definition,
-        StoredRecurringCursor? cursor)
+        StoredRecurringCursor? cursor,
+        JobRecurringScheduleSuspensionReason suspensionReasons)
     {
         if (definition.Declaration.JobType != JobType.Recurring)
         {
             return JobRecurringScheduleStatus.NotRecurring;
         }
-        if (definition.IsDisabled || cursor?.IsSuspended is true)
+        if (suspensionReasons != JobRecurringScheduleSuspensionReason.None)
         {
             return JobRecurringScheduleStatus.Suspended;
         }
@@ -176,5 +179,20 @@ public sealed partial class InMemoryJobSchedulerStore
         return cursor.NextOccurrenceUtc is null
             ? JobRecurringScheduleStatus.Exhausted
             : JobRecurringScheduleStatus.Scheduled;
+    }
+
+    private static JobRecurringScheduleSuspensionReason GetRecurringSuspensionReasons(
+        ActiveJobDefinition definition,
+        StoredRecurringCursor? cursor)
+    {
+        if (definition.Declaration.JobType != JobType.Recurring)
+        {
+            return JobRecurringScheduleSuspensionReason.None;
+        }
+
+        var reasons = cursor?.SuspensionReasons ?? JobRecurringScheduleSuspensionReason.None;
+        return definition.IsDisabled
+            ? reasons | JobRecurringScheduleSuspensionReason.OperatorPolicy
+            : reasons;
     }
 }

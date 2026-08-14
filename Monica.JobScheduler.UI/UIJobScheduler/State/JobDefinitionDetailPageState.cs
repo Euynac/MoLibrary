@@ -222,6 +222,11 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
                 return _localizer["JobDetail:NotFound", JobKey].Value;
             }
 
+            if (disabled && JobSchedulerUiPresentation.IsDebugOnlySuppressed(summary))
+            {
+                return _localizer["Catalog:Messages:PauseUnavailableDebug"].Value;
+            }
+
             var definition = summary.Definition;
             var result = await _facade.UpdatePolicyAsync(
                 definition.OwnerId,
@@ -237,12 +242,16 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (!result.IsFailed(out _, out var policy))
             {
+                var suspensionReasons = JobSchedulerUiPresentation.SetOperatorPolicySuspension(
+                    summary.SuspensionReasons,
+                    disabled);
                 Summary = summary with
                 {
                     Definition = definition with { Policy = policy },
-                    RecurringScheduleStatus = disabled
+                    RecurringScheduleStatus = suspensionReasons != JobRecurringScheduleSuspensionReason.None
                         ? JobRecurringScheduleStatus.Suspended
                         : JobRecurringScheduleStatus.AwaitingSynchronization,
+                    SuspensionReasons = suspensionReasons,
                     NextOccurrenceUtc = null
                 };
                 ObservedAtUtc = _timeProvider.GetUtcNow();

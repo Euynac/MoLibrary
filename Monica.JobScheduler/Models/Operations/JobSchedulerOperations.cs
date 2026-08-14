@@ -24,7 +24,7 @@ public enum JobRecurringScheduleStatus
     Scheduled,
 
     /// <summary>
-    /// Materialization is suspended by effective operator policy or by the durable cursor.
+    /// One or more explicit suspension reasons prevent automatic materialization.
     /// </summary>
     Suspended,
 
@@ -53,6 +53,17 @@ public sealed record JobOperationalSummary
     /// Gets the recurring runtime state for the current active revision.
     /// </summary>
     public JobRecurringScheduleStatus RecurringScheduleStatus { get; init; }
+
+    /// <summary>
+    /// Gets the independent reasons that currently prevent automatic recurring occurrence materialization.
+    /// Triggered jobs always return <see cref="JobRecurringScheduleSuspensionReason.None"/>.
+    /// </summary>
+    public JobRecurringScheduleSuspensionReason SuspensionReasons { get; init; }
+
+    /// <summary>
+    /// Gets whether any reason currently prevents automatic recurring occurrence materialization.
+    /// </summary>
+    public bool IsSuspended => SuspensionReasons != JobRecurringScheduleSuspensionReason.None;
 
     /// <summary>
     /// Gets the next UTC occurrence for a scheduled recurring job. Suspended, exhausted, unsynchronized, and

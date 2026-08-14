@@ -11,119 +11,107 @@
                     ActivePanelIndex="2">
     <SchedulerAccessBoundary AccessChecked="@PageState.AccessChecked" IsAuthorized="@PageState.IsAuthorized">
         <div class="executions-page">
-            <div class="executions-page__filter-shell">
+            <section class="executions-page__filter-shell" aria-label="@L["Executions:Filters:AriaLabel"]">
                 <MudPaper Outlined="true" Class="executions-page__filters pa-4">
-                    <MudTextField T="string"
-                                  @bind-Value="PageState.SearchText"
-                                  Label="@L["Executions:Filters:Search"]"
-                                  Placeholder="@L["Executions:Filters:SearchPlaceholder"]"
-                                  Clearable="true"
-                                  Immediate="true"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search" />
+                    <div class="executions-page__filter-grid">
+                        <MudTextField T="string"
+                                      @bind-Value="PageState.SearchText"
+                                      Label="@L["Executions:Filters:Search"]"
+                                      Placeholder="@L["Executions:Filters:SearchPlaceholder"]"
+                                      Clearable="true"
+                                      Immediate="true"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      OnKeyDown="HandleSearchKeyDownAsync" />
 
-                    <MudSelect T="JobExecutionState"
-                               Label="@L["Executions:Filters:States"]"
-                               MultiSelection="true"
-                               SelectedValues="@PageState.SelectedStates"
-                               SelectedValuesChanged="SetSelectedStates"
-                               ToStringFunc="FormatState"
-                               Placeholder="@L["Executions:Filters:AnyState"]"
-                               Clearable="true"
-                               Variant="Variant.Outlined"
-                               Margin="Margin.Dense">
-                        @foreach (var state in Enum.GetValues<JobExecutionState>())
+                        <MudSelect T="ExecutionTimeRange"
+                                   @bind-Value="PageState.TimeRange"
+                                   ToStringFunc="FormatTimeRange"
+                                   Label="@L["Executions:Filters:TimeRange"]"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense">
+                            @foreach (var range in Enum.GetValues<ExecutionTimeRange>())
+                            {
+                                <MudSelectItem T="ExecutionTimeRange" Value="@range">
+                                    @L[$"Executions:TimeRanges:{range}"]
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+
+                        @if (PageState.TimeRange == ExecutionTimeRange.Custom)
                         {
-                            <MudSelectItem T="JobExecutionState" Value="@state">
-                                @L[$"ExecutionStates:{state}"]
-                            </MudSelectItem>
+                            <MudDatePicker @bind-Date="PageState.CustomStartDate"
+                                           Label="@L["Executions:Filters:StartDate"]"
+                                           Editable="true"
+                                           Clearable="true"
+                                           Variant="Variant.Outlined"
+                                           Margin="Margin.Dense" />
+                            <MudDatePicker @bind-Date="PageState.CustomEndDate"
+                                           Label="@L["Executions:Filters:EndDate"]"
+                                           Editable="true"
+                                           Clearable="true"
+                                           Variant="Variant.Outlined"
+                                           Margin="Margin.Dense" />
                         }
-                    </MudSelect>
+                    </div>
 
-                    <MudSelect T="ExecutionTimeRange"
-                               @bind-Value="PageState.TimeRange"
-                               ToStringFunc="FormatTimeRange"
-                               Label="@L["Executions:Filters:TimeRange"]"
-                               Variant="Variant.Outlined"
-                               Margin="Margin.Dense">
-                        @foreach (var range in Enum.GetValues<ExecutionTimeRange>())
-                        {
-                            <MudSelectItem T="ExecutionTimeRange" Value="@range">
-                                @L[$"Executions:TimeRanges:{range}"]
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-
-                    @if (PageState.TimeRange == ExecutionTimeRange.Custom)
-                    {
-                        <MudDatePicker @bind-Date="PageState.CustomStartDate"
-                                       Label="@L["Executions:Filters:StartDate"]"
-                                       Editable="true"
-                                       Clearable="true"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense" />
-                        <MudDatePicker @bind-Date="PageState.CustomEndDate"
-                                       Label="@L["Executions:Filters:EndDate"]"
-                                       Editable="true"
-                                       Clearable="true"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense" />
-                    }
-
-                    <MudSelect T="JobExecutionSortField"
-                               Value="@PageState.SortField"
-                               ValueChanged="@PageState.SetSortFieldAsync"
-                               ToStringFunc="FormatSortField"
-                               Label="@L["Executions:Filters:SortBy"]"
-                               Variant="Variant.Outlined"
-                               Margin="Margin.Dense">
-                        @foreach (var sortField in Enum.GetValues<JobExecutionSortField>())
-                        {
-                            <MudSelectItem T="JobExecutionSortField" Value="@sortField">
-                                @L[$"Executions:SortFields:{sortField}"]
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-
-                    <MudSelect T="int"
-                               Value="@PageState.PageSize"
-                               ValueChanged="@PageState.SetPageSizeAsync"
-                               Label="@L["Executions:Filters:PageSize"]"
-                               Variant="Variant.Outlined"
-                               Margin="Margin.Dense">
-                        @foreach (var pageSize in PageState.PageSizeOptions)
-                        {
-                            <MudSelectItem T="int" Value="@pageSize">@pageSize</MudSelectItem>
-                        }
-                    </MudSelect>
+                    <div class="executions-page__state-filter">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Executions:Filters:States"]
+                        </MudText>
+                        <div class="executions-page__state-chips">
+                            <MudChip T="string"
+                                     Label="true"
+                                     Size="Size.Small"
+                                     Variant="Variant.Outlined"
+                                     Color="@(PageState.SelectedStates.Count == 0 ? Color.Primary : Color.Default)"
+                                     Icon="@Icons.Material.Filled.SelectAll"
+                                     Disabled="@PageState.IsLoading"
+                                     OnClick="ClearStateSelectionAsync">
+                                @L["Executions:Filters:AnyState"]
+                            </MudChip>
+                            <MudChipSet T="JobExecutionState"
+                                        SelectionMode="SelectionMode.MultiSelection"
+                                        SelectedValues="@PageState.SelectedStates"
+                                        SelectedValuesChanged="HandleStateSelectionAsync"
+                                        CheckMark="true"
+                                        Size="Size.Small"
+                                        Variant="Variant.Outlined"
+                                        Disabled="@PageState.IsLoading">
+                                @foreach (var state in Enum.GetValues<JobExecutionState>())
+                                {
+                                    <MudChip T="JobExecutionState"
+                                             Value="@state"
+                                             Label="true"
+                                             Color="@JobSchedulerUiPresentation.GetStateColor(state)"
+                                             SelectedColor="@JobSchedulerUiPresentation.GetStateColor(state)"
+                                             Icon="@GetStateIcon(state)">
+                                        @L[$"ExecutionStates:{state}"]
+                                    </MudChip>
+                                }
+                            </MudChipSet>
+                        </div>
+                    </div>
 
                     <div class="executions-page__filter-actions">
-                        <MudTooltip Text="@(PageState.SortDescending ? L["Executions:SortDirection:Descending"] : L["Executions:SortDirection:Ascending"])">
-                            <MudIconButton Icon="@(PageState.SortDescending ? Icons.Material.Filled.South : Icons.Material.Filled.North)"
-                                           Variant="Variant.Outlined"
-                                           Color="Color.Primary"
-                                           Disabled="@PageState.IsLoading"
-                                           OnClick="@PageState.ToggleSortDirectionAsync"
-                                           aria-label="@(PageState.SortDescending ? L["Executions:SortDirection:Descending"] : L["Executions:SortDirection:Ascending"])" />
-                        </MudTooltip>
                         <MudButton Variant="Variant.Outlined"
                                    StartIcon="@Icons.Material.Filled.FilterAltOff"
                                    Disabled="@PageState.IsLoading"
-                                   OnClick="@PageState.ResetFiltersAsync">
+                                   OnClick="ResetFiltersAsync">
                             @L["Executions:Actions:Reset"]
                         </MudButton>
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    StartIcon="@Icons.Material.Filled.Search"
                                    Disabled="@(PageState.IsLoading || PageState.HasInvalidCustomRange)"
-                                   OnClick="@PageState.ApplyFiltersAsync">
+                                   OnClick="ApplyFiltersAsync">
                             @L["Executions:Actions:Apply"]
                         </MudButton>
                     </div>
                 </MudPaper>
-            </div>
+            </section>
 
             @if (PageState.HasInvalidCustomRange)
             {
@@ -137,16 +125,20 @@
                 <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@PageState.Error</MudAlert>
             }
 
-            <div class="executions-page__ledger-shell">
+            <section class="executions-page__ledger-shell" aria-labelledby="execution-ledger-title">
                 <MudPaper Outlined="true" Class="executions-page__ledger pa-0">
-                    <div class="executions-page__heading">
+                    <header class="executions-page__heading">
                         <div>
-                            <MudText Typo="Typo.h6">@L["Executions:Title"]</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Executions:Count", PageState.TotalCount]</MudText>
+                            <MudText id="execution-ledger-title" Typo="Typo.h6" HtmlTag="h2">
+                                @L["Executions:Title"]
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @L["Executions:Count", PageState.TotalCount]
+                            </MudText>
                             @if (PageState.ObservedAtUtc.HasValue)
                             {
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @L["Executions:LastRefreshed", ExecutionUiPresentation.FormatDateTime(PageState.ObservedAtUtc)]
+                                    @L["Executions:LastRefreshed", TimePresentation.FormatTimestamp(PageState.ObservedAtUtc)]
                                 </MudText>
                             }
                         </div>
@@ -154,103 +146,111 @@
                             <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                            Color="Color.Primary"
                                            Disabled="@PageState.IsLoading"
-                                           OnClick="@PageState.RefreshAsync"
+                                           OnClick="RefreshTableAsync"
                                            aria-label="@L["Common:Refresh"]" />
                         </MudTooltip>
-                    </div>
+                    </header>
 
-                    @if (PageState.IsLoading)
-                    {
-                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-                    }
-
-                    @if (PageState.Executions.Count == 0 && !PageState.IsLoading)
-                    {
-                        <div class="executions-page__empty">
-                            <MudIcon Icon="@Icons.Material.Filled.EventBusy" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Executions:Empty"]</MudText>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="execution-activity" role="list" aria-label="@L["Executions:Title"]">
-                            @foreach (var execution in PageState.Executions)
-                            {
-                                <article class="execution-activity__item" role="listitem" data-state="@execution.State.ToString().ToLowerInvariant()">
-                                    <button type="button"
-                                            class="execution-activity__open"
-                                            aria-label="@L["Executions:Actions:Details"]"
-                                            @onclick="@(() => OpenDetailsAsync(execution.InstanceId))">
-                                        <span class="execution-activity__state-icon" aria-hidden="true">
-                                            <MudIcon Icon="@GetStateIcon(execution.State)" Size="Size.Medium"
-                                                     Color="@JobSchedulerUiPresentation.GetStateColor(execution.State)" />
-                                        </span>
-
-                                        <span class="execution-activity__identity">
-                                            <span class="execution-activity__title-row">
-                                                <strong title="@execution.Template.Revision.JobKey">@execution.Template.Revision.JobKey</strong>
-                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                                         Color="@JobSchedulerUiPresentation.GetStateColor(execution.State)">
-                                                    @L[$"ExecutionStates:{execution.State}"]
-                                                </MudChip>
-                                            </span>
-                                            <span class="execution-activity__owner">@execution.Template.Revision.OwnerKey</span>
-                                            <code title="@execution.InstanceId">@execution.InstanceId</code>
-                                        </span>
-
-                                        <span class="execution-activity__facts">
-                                            <span>
-                                                <small>@L["Executions:Columns:Created"]</small>
-                                                <strong>@ExecutionUiPresentation.FormatDateTime(execution.CreatedAtUtc)</strong>
-                                            </span>
-                                            <span>
-                                                <small>@L["Executions:Columns:Duration"]</small>
-                                                <strong>@ExecutionUiPresentation.FormatDuration(ExecutionUiPresentation.GetDuration(execution, PageState.ObservedAtUtc ?? DateTimeOffset.UtcNow))</strong>
-                                            </span>
-                                            <span>
-                                                <small>@L["Executions:Columns:Attempts"]</small>
-                                                <strong>@execution.ExecutionAttempt / @execution.RetryAttempt</strong>
-                                            </span>
-                                            <span>
-                                                <small>@L["Executions:Columns:Worker"]</small>
-                                                <code title="@execution.RunningWorkerInstanceId">@(execution.RunningWorkerInstanceId ?? "—")</code>
-                                            </span>
-                                        </span>
-
-                                        <span class="execution-activity__chronology" aria-hidden="true">
-                                            <span class="execution-activity__chronology-node"></span>
-                                            <span class="execution-activity__chronology-line"></span>
-                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
-                                        </span>
-                                    </button>
-
-                                    @if (!execution.IsTerminal)
-                                    {
-                                        <div class="execution-activity__actions">
+                    <div class="executions-page__table">
+                        <MudTable @ref="_executionTable"
+                                  T="JobExecutionInstance"
+                                  ServerData="LoadExecutionsAsync"
+                                  RowsPerPage="@PageState.PageSize"
+                                  Dense="true"
+                                  Hover="true"
+                                  Breakpoint="Breakpoint.None"
+                                  HorizontalScrollbar="true"
+                                  Elevation="0"
+                                  AllowUnsorted="false">
+                            <HeaderContent>
+                                <MudTh>@L["Executions:Columns:Definition"]</MudTh>
+                                <MudTh>@L["Executions:Columns:State"]</MudTh>
+                                <MudTh>
+                                    <MudTableSortLabel T="JobExecutionInstance"
+                                                       SortLabel="@nameof(JobExecutionSortField.CreatedAtUtc)"
+                                                       InitialDirection="SortDirection.Descending">
+                                        @L["Executions:Columns:Created"]
+                                    </MudTableSortLabel>
+                                </MudTh>
+                                <MudTh>@L["Executions:Columns:Duration"]</MudTh>
+                                <MudTh>@L["Executions:Columns:Attempts"]</MudTh>
+                                <MudTh>@L["Executions:Columns:Worker"]</MudTh>
+                                <MudTh Class="executions-page__actions-heading">@L["Executions:Columns:Actions"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["Executions:Columns:Definition"]">
+                                    <div class="execution-table__identity">
+                                        <strong title="@JobSchedulerUiPresentation.GetJobDisplayName(context.Template)">
+                                            @JobSchedulerUiPresentation.GetJobDisplayName(context.Template)
+                                        </strong>
+                                        <code title="@context.Template.Revision.JobKey">@context.Template.Revision.JobKey</code>
+                                        <span title="@context.Template.Revision.OwnerKey">@context.Template.Revision.OwnerKey</span>
+                                        <code title="@context.InstanceId">@context.InstanceId</code>
+                                    </div>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Executions:Columns:State"]">
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Label="true"
+                                             Variant="Variant.Outlined"
+                                             Icon="@GetStateIcon(context.State)"
+                                             Color="@JobSchedulerUiPresentation.GetStateColor(context.State)">
+                                        @L[$"ExecutionStates:{context.State}"]
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Executions:Columns:Created"]">
+                                    <code class="execution-table__time">@TimePresentation.FormatTimestamp(context.CreatedAtUtc)</code>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Executions:Columns:Duration"]">
+                                    <strong class="execution-table__duration">
+                                        @TimePresentation.FormatExecutionDuration(context, PageState.ObservedAtUtc ?? TimeProvider.GetUtcNow())
+                                    </strong>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Executions:Columns:Attempts"]">
+                                    <span class="execution-table__attempts">@context.ExecutionAttempt / @context.RetryAttempt</span>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Executions:Columns:Worker"]">
+                                    <code class="execution-table__worker" title="@context.RunningWorkerInstanceId">
+                                        @(context.RunningWorkerInstanceId ?? "—")
+                                    </code>
+                                </MudTd>
+                                <MudTd DataLabel="@L["Executions:Columns:Actions"]">
+                                    <div class="execution-table__actions" @onclick:stopPropagation="true">
+                                        @if (!context.IsTerminal)
+                                        {
                                             <MudTooltip Text="@L["Executions:Actions:Cancel"]">
                                                 <MudIconButton Icon="@Icons.Material.Filled.StopCircle"
                                                                Color="Color.Warning"
+                                                               Size="Size.Small"
                                                                Disabled="@PageState.IsMutating"
-                                                               OnClick="@(() => CancelAsync(execution))"
+                                                               OnClick="@(() => CancelAsync(context))"
                                                                aria-label="@L["Executions:Actions:Cancel"]" />
                                             </MudTooltip>
-                                        </div>
-                                    }
-                                </article>
-                            }
-                        </div>
-                    }
-
-                    @if (PageState.PageCount > 1)
-                    {
-                        <div class="executions-page__pagination">
-                            <MudPagination Count="@PageState.PageCount"
-                                           Selected="@PageState.PageNumber"
-                                           SelectedChanged="@PageState.SetPageAsync" />
-                        </div>
-                    }
+                                        }
+                                        <MudTooltip Text="@L["Executions:Actions:Details"]">
+                                            <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                                           Color="Color.Primary"
+                                                           Size="Size.Small"
+                                                           OnClick="@(() => OpenDetailsAsync(context.InstanceId))"
+                                                           aria-label="@L["Executions:Actions:Details"]" />
+                                        </MudTooltip>
+                                    </div>
+                                </MudTd>
+                            </RowTemplate>
+                            <NoRecordsContent>
+                                <div class="executions-page__empty">
+                                    <MudIcon Icon="@Icons.Material.Filled.EventBusy" Color="Color.Secondary" Size="Size.Large" />
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Executions:Empty"]</MudText>
+                                </div>
+                            </NoRecordsContent>
+                            <PagerContent>
+                                <MudTablePager PageSizeOptions="@PageState.PageSizeOptions"
+                                               RowsPerPageString="@L["Executions:Filters:PageSize"]" />
+                            </PagerContent>
+                        </MudTable>
+                    </div>
                 </MudPaper>
-            </div>
+            </section>
         </div>
     </SchedulerAccessBoundary>
 </SchedulerWorkspace>

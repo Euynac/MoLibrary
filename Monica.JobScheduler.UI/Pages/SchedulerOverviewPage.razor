@@ -7,6 +7,7 @@
 @inject SchedulerOverviewPageStateFactory PageStateFactory
 @inject IOptions<ModuleJobSchedulerUIOption> UiOptions
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 @implements IAsyncDisposable
 
@@ -95,14 +96,14 @@
                         </header>
                         <div class="overview-page__deployment-grid">
                             <ReleaseReadinessBand Overview="@overview" />
-                            <OwnerConvergencePanel Owners="@overview.Owners" />
+                            <OwnerConvergencePanel Overview="@overview" />
                         </div>
                     </section>
 
                     <footer class="overview-page__freshness">
                         <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Overview:LastRefreshed", (_state.LastRefreshedUtc ?? overview.CapturedAtUtc).ToLocalTime().ToString("G")]
+                            @L["Overview:LastRefreshed", TimePresentation.FormatTimestamp(_state.LastRefreshedUtc ?? overview.CapturedAtUtc)]
                         </MudText>
                     </footer>
                 }

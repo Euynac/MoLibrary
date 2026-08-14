@@ -2,6 +2,7 @@
 @using Monica.JobScheduler.UI.Localization
 
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 <section class="job-latest-panel" aria-labelledby="job-latest-heading">
     <header class="job-latest-panel__heading">
@@ -53,19 +54,19 @@
         <dl class="job-latest-panel__facts">
             <div>
                 <dt>@L["Executions:Columns:Created"]</dt>
-                <dd>@JobSchedulerUiPresentation.FormatUtc(execution.CreatedAtUtc)</dd>
+                <dd>@TimePresentation.FormatTimestamp(execution.CreatedAtUtc)</dd>
             </div>
             <div>
                 <dt>@L["Executions:Columns:Started"]</dt>
-                <dd>@JobSchedulerUiPresentation.FormatUtc(execution.StartedAtUtc)</dd>
+                <dd>@TimePresentation.FormatTimestamp(execution.StartedAtUtc)</dd>
             </div>
             <div>
                 <dt>@L["Executions:Columns:Completed"]</dt>
-                <dd>@JobSchedulerUiPresentation.FormatUtc(execution.CompletedAtUtc)</dd>
+                <dd>@TimePresentation.FormatTimestamp(execution.CompletedAtUtc)</dd>
             </div>
             <div>
                 <dt>@L["Executions:Columns:Duration"]</dt>
-                <dd>@JobSchedulerUiPresentation.FormatExecutionDuration(execution, ObservedAtUtc, L)</dd>
+                <dd>@TimePresentation.FormatExecutionDuration(execution, ObservedAtUtc)</dd>
             </div>
             <div>
                 <dt>@L["Executions:Columns:Attempts"]</dt>

@@ -2,6 +2,7 @@
 @using Monica.JobScheduler.UI.Localization
 
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 <div class="analytics-dashboard">
     <section class="analytics-dashboard__pulse" aria-label="@L["Analytics:Metrics:AriaLabel"]">
@@ -152,7 +153,7 @@
                             <strong title="@execution.JobKey">@execution.JobKey</strong>
                             <code title="@execution.InstanceId">@execution.InstanceId</code>
                         </span>
-                        <time>@JobSchedulerUiPresentation.FormatUtc(execution.CompletedAtUtc)</time>
+                        <time datetime="@execution.CompletedAtUtc.ToString("O")">@TimePresentation.FormatTimestamp(execution.CompletedAtUtc)</time>
                         <b>@FormatDuration(execution.Duration)</b>
                         <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
                     </a>
@@ -238,26 +239,22 @@
 
     private string GetBucketTooltip(JobExecutionAnalyticsBucket bucket) => L[
         "Analytics:Trend:BucketTooltip",
-        FormatBucketLabel(bucket.StartTimeUtc),
+        TimePresentation.FormatTimestamp(bucket.StartTimeUtc),
         bucket.SucceededCount,
         bucket.FailedCount,
         bucket.SkippedCount,
         bucket.CancelledCount];
 
-    private string FormatBucketLabel(DateTimeOffset timestamp) => Snapshot.BucketSize switch
-    {
-        JobExecutionAnalyticsBucketSize.Hour => timestamp.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture),
-        JobExecutionAnalyticsBucketSize.Day => timestamp.ToLocalTime().ToString("MM-dd", CultureInfo.CurrentCulture),
-        _ => timestamp.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
-    };
+    private string FormatBucketLabel(DateTimeOffset timestamp) =>
+        TimePresentation.FormatBucketLabel(timestamp, Snapshot.BucketSize);
 
     private static string FormatRatio(double value, bool hasSample) => hasSample
         ? value.ToString("P1", CultureInfo.CurrentCulture)
         : "—";
 
-    private string FormatDuration(TimeSpan? duration) => duration is { } value
-        ? JobSchedulerUiPresentation.FormatDuration(value)
-        : L["Common:NotAvailable"];
+    private string FormatDuration(TimeSpan? duration) => duration is null
+        ? L["Common:NotAvailable"]
+        : TimePresentation.FormatDuration(duration);
 
     private static string GetJobHref(string jobKey) =>
         $"/job-scheduler/catalog/{Uri.EscapeDataString(jobKey)}";

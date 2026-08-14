@@ -86,7 +86,7 @@
                             <JobDefinitionSchedulePanel Summary="@summary"
                                                         OnInspectSchedule="OpenScheduleInspectorAsync" />
                             <JobDefinitionLatestExecutionPanel Execution="@summary.LatestExecution"
-                                                               ObservedAtUtc="@(state.ObservedAtUtc ?? DateTimeOffset.UtcNow)" />
+                                                               ObservedAtUtc="@(state.ObservedAtUtc ?? TimeProvider.GetUtcNow())" />
                         </div>
 
                         <JobDefinitionContractPanel Definition="@summary.Definition" />
@@ -96,7 +96,7 @@
                             <footer class="job-detail-page__freshness">
                                 <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @L["JobDetail:ObservedAt", JobSchedulerUiPresentation.FormatUtc(observedAtUtc)]
+                                    @L["JobDetail:ObservedAt", TimePresentation.FormatTimestamp(observedAtUtc)]
                                 </MudText>
                             </footer>
                         }

@@ -134,7 +134,7 @@ internal sealed class JobRecurringCursorEntity
     public long? NextOccurrenceUtcTicks { get; set; }
     public long CursorVersion { get; set; }
     public long UpdatedAtUtcTicks { get; set; }
-    public bool IsSuspended { get; set; }
+    public JobRecurringScheduleSuspensionReason SuspensionReasons { get; set; }
     public long LastSynchronizedChangeEpoch { get; set; }
     public Guid ConcurrencyToken { get; set; }
 }

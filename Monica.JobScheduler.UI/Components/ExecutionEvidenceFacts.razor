@@ -2,6 +2,7 @@
 @using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
 
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 <div class="execution-evidence">
     <section class="execution-evidence__section" aria-labelledby="execution-identity-heading">
@@ -26,7 +27,10 @@
             </div>
             <div>
                 <dt>@L["ExecutionDetail:Job"]</dt>
-                <dd><code>@Execution.Template.Revision.JobKey</code></dd>
+                <dd class="execution-evidence__job">
+                    <strong>@JobSchedulerUiPresentation.GetJobDisplayName(Execution.Template)</strong>
+                    <code>@Execution.Template.Revision.JobKey</code>
+                </dd>
             </div>
             <div>
                 <dt>@L["ExecutionDetail:JobType"]</dt>
@@ -64,7 +68,7 @@
             </div>
             <div>
                 <dt>@L["ExecutionDetail:Timeout"]</dt>
-                <dd><code>@ExecutionUiPresentation.FormatDuration(Execution.Template.MaxExecutionTimeout)</code></dd>
+                <dd><code>@TimePresentation.FormatDuration(Execution.Template.MaxExecutionTimeout)</code></dd>
             </div>
         </dl>
     </section>
@@ -74,31 +78,31 @@
         <dl class="execution-evidence__facts execution-evidence__facts--timing">
             <div>
                 <dt>@L["ExecutionDetail:Created"]</dt>
-                <dd><time>@ExecutionUiPresentation.FormatDateTime(Execution.CreatedAtUtc)</time></dd>
+                <dd><time>@TimePresentation.FormatTimestamp(Execution.CreatedAtUtc)</time></dd>
             </div>
             <div>
                 <dt>@L["ExecutionDetail:Available"]</dt>
-                <dd><time>@ExecutionUiPresentation.FormatDateTime(Execution.AvailableAtUtc)</time></dd>
+                <dd><time>@TimePresentation.FormatTimestamp(Execution.AvailableAtUtc)</time></dd>
             </div>
             <div>
                 <dt>@L["ExecutionDetail:Started"]</dt>
-                <dd><time>@ExecutionUiPresentation.FormatDateTime(Execution.StartedAtUtc)</time></dd>
+                <dd><time>@TimePresentation.FormatTimestamp(Execution.StartedAtUtc)</time></dd>
             </div>
             <div>
                 <dt>@L["ExecutionDetail:Completed"]</dt>
-                <dd><time>@ExecutionUiPresentation.FormatDateTime(Execution.CompletedAtUtc)</time></dd>
+                <dd><time>@TimePresentation.FormatTimestamp(Execution.CompletedAtUtc)</time></dd>
             </div>
             <div>
                 <dt>@L["ExecutionDetail:Duration"]</dt>
-                <dd><code>@ExecutionUiPresentation.FormatDuration(ExecutionUiPresentation.GetDuration(Execution, ObservedAtUtc))</code></dd>
+                <dd><code>@TimePresentation.FormatExecutionDuration(Execution, ObservedAtUtc)</code></dd>
             </div>
             <div>
                 <dt>@L["ExecutionDetail:CancellationRequested"]</dt>
-                <dd><time>@ExecutionUiPresentation.FormatDateTime(Execution.CancellationRequestedAtUtc)</time></dd>
+                <dd><time>@TimePresentation.FormatTimestamp(Execution.CancellationRequestedAtUtc)</time></dd>
             </div>
             <div>
                 <dt>@L["ExecutionDetail:Observed"]</dt>
-                <dd><time>@ExecutionUiPresentation.FormatDateTime(ObservedAtUtc)</time></dd>
+                <dd><time>@TimePresentation.FormatTimestamp(ObservedAtUtc)</time></dd>
             </div>
         </dl>
     </section>
@@ -116,7 +120,7 @@
             </div>
             <div>
                 <dt>@L["ExecutionDetail:LeaseExpires"]</dt>
-                <dd><time>@ExecutionUiPresentation.FormatDateTime(Execution.LeaseExpiresAtUtc)</time></dd>
+                <dd><time>@TimePresentation.FormatTimestamp(Execution.LeaseExpiresAtUtc)</time></dd>
             </div>
             <div>
                 <dt>@L["ExecutionDetail:Worker"]</dt>

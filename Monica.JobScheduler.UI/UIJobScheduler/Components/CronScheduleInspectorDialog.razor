@@ -7,6 +7,7 @@
 
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject TimeProvider TimeProvider
+@inject SchedulerTimePresentation TimePresentation
 
 <MudDialog>
     <TitleContent>
@@ -84,15 +85,15 @@
                 </div>
                 <div>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["CronInspector:StartBoundary"]</MudText>
-                    <strong>@JobSchedulerUiPresentation.FormatUtc(Declaration.StartTimeUtc)</strong>
+                    <strong>@TimePresentation.FormatTimestamp(Declaration.StartTimeUtc)</strong>
                 </div>
                 <div>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["CronInspector:EndBoundary"]</MudText>
-                    <strong>@JobSchedulerUiPresentation.FormatUtc(Declaration.EndTimeUtc)</strong>
+                    <strong>@TimePresentation.FormatTimestamp(Declaration.EndTimeUtc)</strong>
                 </div>
                 <div>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["CronInspector:OperationalNext"]</MudText>
-                    <strong>@JobSchedulerUiPresentation.FormatUtc(OperationalSummary?.NextOccurrenceUtc)</strong>
+                    <strong>@TimePresentation.FormatTimestamp(OperationalSummary?.NextOccurrenceUtc)</strong>
                 </div>
             </div>
 
@@ -103,7 +104,7 @@
                             @L["CronInspector:Preview:Title"]
                         </MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            @L["CronInspector:Preview:Description", JobSchedulerUiPresentation.FormatUtc(_previewReferenceUtc)]
+                            @L["CronInspector:Preview:Description", TimePresentation.FormatTimestamp(_previewReferenceUtc)]
                         </MudText>
                     </div>
                 </div>
@@ -128,7 +129,7 @@
                                 <tr>
                                     <th scope="col">@L["CronInspector:Preview:Sequence"]</th>
                                     <th scope="col">@L["CronInspector:Preview:ScheduleTime"]</th>
-                                    <th scope="col">@L["CronInspector:Preview:UtcTime"]</th>
+                                    <th scope="col">@L["CronInspector:Preview:SchedulerTime"]</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -138,7 +139,7 @@
                                     <tr>
                                         <td><span class="cron-inspector__sequence">@(index + 1)</span></td>
                                         <td><code>@FormatScheduleTime(occurrence)</code></td>
-                                        <td><code>@JobSchedulerUiPresentation.FormatUtc(occurrence)</code></td>
+                                        <td><code>@TimePresentation.FormatTimestamp(occurrence)</code></td>
                                     </tr>
                                 }
                             </tbody>
@@ -299,8 +300,9 @@
     }
 
     private string FormatScheduleTime(DateTimeOffset value) => _timeZone is null
-        ? JobSchedulerUiPresentation.FormatUtc(value)
-        : TimeZoneInfo.ConvertTime(value, _timeZone).ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture);
+        ? TimePresentation.FormatTimestamp(value)
+        : TimeZoneInfo.ConvertTime(value, _timeZone)
+            .ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.CurrentCulture);
 
     private void SetCronExpression(string? value)
     {

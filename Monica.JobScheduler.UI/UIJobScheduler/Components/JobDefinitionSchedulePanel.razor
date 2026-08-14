@@ -4,6 +4,7 @@
 @using Monica.JobScheduler.UI.Localization
 
 @inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
 
 <section class="job-schedule-panel" aria-labelledby="job-schedule-heading">
     <header class="job-schedule-panel__heading">
@@ -20,8 +21,9 @@
             <MudChip T="string"
                      Size="Size.Small"
                      Variant="Variant.Outlined"
-                     Color="@JobSchedulerUiPresentation.GetRecurringScheduleStatusColor(Summary.RecurringScheduleStatus)">
-                @L[$"RecurringScheduleStatuses:{Summary.RecurringScheduleStatus}"]
+                     Icon="@ScheduleStatusIcon"
+                     Color="@ScheduleStatusColor">
+                @ScheduleStatusLabel
             </MudChip>
         }
     </header>
@@ -33,7 +35,7 @@
                 <MudText Typo="Typo.overline" Color="Color.Primary">
                     @L["JobDetail:Schedule:NextOccurrence"]
                 </MudText>
-                <strong>@JobSchedulerUiPresentation.FormatUtc(Summary.NextOccurrenceUtc)</strong>
+                <strong>@TimePresentation.FormatTimestamp(Summary.NextOccurrenceUtc)</strong>
             </div>
             <MudButton Variant="Variant.Text"
                        Color="Color.Primary"
@@ -44,8 +46,15 @@
         </div>
 
         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="job-schedule-panel__status-note">
-            @L[$"JobDetail:Schedule:StatusDescriptions:{Summary.RecurringScheduleStatus}"]
+            @ScheduleStatusDescription
         </MudText>
+
+        @if (IsDebugSuppressed)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                @L["JobDetail:Schedule:DebugManualOnly"]
+            </MudAlert>
+        }
 
         <dl class="job-schedule-panel__facts">
             <div class="job-schedule-panel__fact job-schedule-panel__fact--wide">
@@ -58,11 +67,11 @@
             </div>
             <div>
                 <dt>@L["JobDetail:Schedule:StartBoundary"]</dt>
-                <dd>@JobSchedulerUiPresentation.FormatUtc(Declaration.StartTimeUtc)</dd>
+                <dd>@TimePresentation.FormatTimestamp(Declaration.StartTimeUtc)</dd>
             </div>
             <div>
                 <dt>@L["JobDetail:Schedule:EndBoundary"]</dt>
-                <dd>@JobSchedulerUiPresentation.FormatUtc(Declaration.EndTimeUtc)</dd>
+                <dd>@TimePresentation.FormatTimestamp(Declaration.EndTimeUtc)</dd>
             </div>
         </dl>
     }
@@ -94,4 +103,38 @@
     public EventCallback OnInspectSchedule { get; set; }
 
     private JobDeclaration Declaration => Summary.Definition.Declaration;
+
+    private bool IsOperatorPaused => JobSchedulerUiPresentation.IsOperatorPaused(Summary);
+
+    private bool IsDebugSuppressed => JobSchedulerUiPresentation.IsDebugSuppressed(Summary);
+
+    private string ScheduleStatusLabel => (IsOperatorPaused, IsDebugSuppressed) switch
+    {
+        (true, true) => L["Catalog:Lifecycle:OperatorAndDebug"],
+        (true, false) => L["Catalog:Lifecycle:OperatorPaused"],
+        (false, true) => L["Catalog:Lifecycle:DebugSuppressed"],
+        _ => L[$"RecurringScheduleStatuses:{Summary.RecurringScheduleStatus}"]
+    };
+
+    private string ScheduleStatusDescription => (IsOperatorPaused, IsDebugSuppressed) switch
+    {
+        (true, true) => L["JobDetail:Schedule:SuspensionDescriptions:OperatorAndDebug"],
+        (true, false) => L["JobDetail:Schedule:SuspensionDescriptions:OperatorPolicy"],
+        (false, true) => L["JobDetail:Schedule:SuspensionDescriptions:DebugMode"],
+        _ => L[$"JobDetail:Schedule:StatusDescriptions:{Summary.RecurringScheduleStatus}"]
+    };
+
+    private Color ScheduleStatusColor => IsOperatorPaused
+        ? Color.Warning
+        : IsDebugSuppressed
+            ? Color.Info
+            : JobSchedulerUiPresentation.GetRecurringScheduleStatusColor(Summary.RecurringScheduleStatus);
+
+    private string ScheduleStatusIcon => IsOperatorPaused
+        ? Icons.Material.Filled.PauseCircle
+        : IsDebugSuppressed
+            ? Icons.Material.Filled.BugReport
+            : Summary.RecurringScheduleStatus == JobRecurringScheduleStatus.Scheduled
+                ? Icons.Material.Filled.Schedule
+                : Icons.Material.Filled.Info;
 }

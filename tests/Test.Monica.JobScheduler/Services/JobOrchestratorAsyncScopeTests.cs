@@ -116,6 +116,7 @@ public sealed class JobOrchestratorAsyncScopeTests
                 JobRevisionId = JOB_REVISION,
                 JobKey = jobKey
             },
+            JobName = jobKey,
             JobType = JobType.Recurring,
             MaxConcurrency = 1,
             MaxExecutionTimeout = TimeSpan.FromMinutes(1)

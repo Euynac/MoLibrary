@@ -142,13 +142,14 @@ internal sealed class JobControlPlaneHostedService(
                 StartTimeUtc = declaration.StartTimeUtc,
                 EndTimeUtc = declaration.EndTimeUtc
             };
-            var suspended = _options.RecurringJobDebugMode || definition.IsDisabled;
             await store.SynchronizeRecurringScheduleAsync(new RecurringScheduleSynchronization
             {
                 Template = definition.CreateExecutionTemplate(),
                 Schedule = schedule,
                 ChangeEpoch = catalog.Version.ChangeEpoch,
-                IsSuspended = suspended
+                SuspensionReasons = _options.RecurringJobDebugMode
+                    ? JobRecurringScheduleSuspensionReason.DebugMode
+                    : JobRecurringScheduleSuspensionReason.None
             }, cancellationToken);
         }
     }
