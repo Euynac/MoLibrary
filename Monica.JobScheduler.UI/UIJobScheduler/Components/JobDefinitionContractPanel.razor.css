@@ -8,6 +8,18 @@
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
     background-color: var(--mud-palette-surface);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.job-contract-panel:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
+    box-shadow: var(--mud-elevation-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .job-contract-panel {
+        transition-duration: 0.01ms;
+    }
 }
 
 .job-contract-panel__heading {
@@ -33,9 +45,7 @@
     align-content: start;
     gap: 10px;
     min-width: 0;
-    padding: 14px;
-    border-radius: 6px;
-    background-color: var(--mud-palette-background-gray);
+    padding: 2px 0 0;
 }
 
 .job-contract-panel dl {
@@ -78,6 +88,36 @@
     color: var(--mud-palette-text-secondary);
     font-size: 0.72rem;
     font-weight: 650;
+}
+
+.job-contract-panel__term-with-help {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.job-contract-panel__help {
+    display: inline-grid;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    color: var(--mud-palette-info);
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: help;
+    place-items: center;
+}
+
+.job-contract-panel__help:hover,
+.job-contract-panel__help:focus-visible {
+    color: var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+    outline: none;
+}
+
+.job-contract-panel__help:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--mud-palette-primary) 35%, transparent);
 }
 
 .job-contract-panel dd {

@@ -4,6 +4,7 @@ using Monica.Core.Results;
 using Monica.JobScheduler.UI.Components;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Components;
+using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
 using Monica.JobScheduler.UI.UIJobScheduler.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Support;
@@ -137,6 +138,21 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
                 FullWidth = true,
                 MaxWidth = MaxWidth.Large
             });
+    }
+
+    private async Task OpenExecutionDetailsAsync(string instanceId)
+    {
+        var state = PageState;
+        if (_disposed || state is null || string.IsNullOrWhiteSpace(instanceId))
+        {
+            return;
+        }
+
+        await ExecutionDetailDialogLauncher.ShowAsync(DialogService, L, instanceId);
+        if (!_disposed && ReferenceEquals(PageState, state))
+        {
+            await state.RefreshAsync();
+        }
     }
 
     private async Task OpenPolicyAsync()

@@ -74,14 +74,30 @@ public sealed partial class EfCoreJobSchedulerStore
                 || item.State == JobExecutionState.Cancelled
                 || item.State == JobExecutionState.Skipped));
         var outcomeRows = await completions
-            .GroupBy(static item => item.State)
-            .Select(static group => new AnalyticsStateCount(group.Key, group.LongCount()))
+            .GroupBy(static item => new { item.State, item.Origin })
+            .Select(static group => new AnalyticsOutcomeCount(
+                group.Key.State,
+                group.Key.Origin,
+                group.LongCount()))
             .ToArrayAsync(cancellationToken);
-        var outcomes = outcomeRows.ToDictionary(static item => item.State, static item => item.Count);
+        var outcomes = outcomeRows
+            .GroupBy(static item => item.State)
+            .ToDictionary(static group => group.Key, static group => group.Sum(static item => item.Count));
         var succeededCount = outcomes.GetValueOrDefault(JobExecutionState.Succeeded);
         var failedCount = outcomes.GetValueOrDefault(JobExecutionState.Failed);
-        var skippedCount = outcomes.GetValueOrDefault(JobExecutionState.Skipped);
         var completedTerminalCount = outcomeRows.Sum(static item => item.Count);
+        var recurringScheduleDispositionCount = outcomeRows
+            .Where(static item =>
+                item.Origin == JobExecutionOrigin.RecurringSchedule
+                && item.State is (JobExecutionState.Succeeded
+                    or JobExecutionState.Failed
+                    or JobExecutionState.Skipped))
+            .Sum(static item => item.Count);
+        var fulfilledRecurringScheduleCount = outcomeRows
+            .Where(static item =>
+                item.Origin == JobExecutionOrigin.RecurringSchedule
+                && item.State is (JobExecutionState.Succeeded or JobExecutionState.Failed))
+            .Sum(static item => item.Count);
         var executedTerminalCount = await completions.LongCountAsync(
             static item => item.StartedAtUtcTicks != null,
             cancellationToken);
@@ -107,27 +123,42 @@ public sealed partial class EfCoreJobSchedulerStore
             query.TopJobLimit,
             AnalyticsJobRanking.Failures,
             cancellationToken);
-        var topBySkips = await GetJobRankingAsync(
-            completions,
-            query.TopJobLimit,
-            AnalyticsJobRanking.Skips,
-            cancellationToken);
-        var slowestRows = await completions
+        var measurableCompletions = completions
             .Where(static execution =>
                 execution.StartedAtUtcTicks != null
-                && execution.CompletedAtUtcTicks >= execution.StartedAtUtcTicks)
-            .OrderByDescending(static execution =>
-                execution.CompletedAtUtcTicks!.Value - execution.StartedAtUtcTicks!.Value)
+                && execution.CompletedAtUtcTicks >= execution.StartedAtUtcTicks);
+        var slowestExecutionKeys = measurableCompletions
+            .Select(static execution => execution.JobKey)
+            .Distinct()
+            .Select(jobKey => new
+            {
+                JobKey = jobKey,
+                InstanceId = measurableCompletions
+                    .Where(execution => execution.JobKey == jobKey)
+                    .OrderByDescending(static execution =>
+                        execution.CompletedAtUtcTicks!.Value - execution.StartedAtUtcTicks!.Value)
+                    .ThenBy(static execution => execution.InstanceId)
+                    .Select(static execution => execution.InstanceId)
+                    .First()
+            });
+        var slowestRows = await measurableCompletions
+            .Join(
+                slowestExecutionKeys,
+                static execution => new { execution.JobKey, execution.InstanceId },
+                static selected => new { selected.JobKey, selected.InstanceId },
+                static (execution, _) => new
+                {
+                    execution.InstanceId,
+                    execution.TemplateJson,
+                    execution.JobKey,
+                    execution.State,
+                    StartedAtUtcTicks = execution.StartedAtUtcTicks!.Value,
+                    CompletedAtUtcTicks = execution.CompletedAtUtcTicks!.Value,
+                    DurationTicks = execution.CompletedAtUtcTicks.Value - execution.StartedAtUtcTicks.Value
+                })
+            .OrderByDescending(static execution => execution.DurationTicks)
             .ThenBy(static execution => execution.InstanceId)
             .Take(query.SlowestExecutionLimit)
-            .Select(static execution => new
-            {
-                execution.InstanceId,
-                execution.JobKey,
-                execution.State,
-                StartedAtUtcTicks = execution.StartedAtUtcTicks!.Value,
-                CompletedAtUtcTicks = execution.CompletedAtUtcTicks!.Value
-            })
             .ToArrayAsync(cancellationToken);
 
         return new JobExecutionAnalyticsSnapshot
@@ -141,17 +172,18 @@ public sealed partial class EfCoreJobSchedulerStore
             ExecutedTerminalCount = executedTerminalCount,
             ExecutedThroughputPerHour = executedTerminalCount / (range.EndTimeUtc - range.StartTimeUtc).TotalHours,
             Reliability = JobExecutionAnalyticsMath.Ratio(succeededCount, succeededCount + failedCount),
-            SkipRate = JobExecutionAnalyticsMath.Ratio(
-                skippedCount,
-                succeededCount + failedCount + skippedCount),
+            RecurringScheduleDispositionCount = recurringScheduleDispositionCount,
+            RecurringScheduleFulfillment = JobExecutionAnalyticsMath.Ratio(
+                fulfilledRecurringScheduleCount,
+                recurringScheduleDispositionCount),
             Duration = duration,
             Trend = trend,
             TopJobsByVolume = topByVolume,
             TopJobsByFailures = topByFailures,
-            TopJobsBySkips = topBySkips,
             SlowestExecutions = slowestRows.Select(static item => new JobExecutionAnalyticsSlowExecution
             {
                 InstanceId = item.InstanceId,
+                JobName = Deserialize<JobExecutionTemplate>(item.TemplateJson).JobName,
                 JobKey = item.JobKey,
                 State = item.State,
                 StartedAtUtc = FromTicks(item.StartedAtUtcTicks),
@@ -267,15 +299,6 @@ public sealed partial class EfCoreJobSchedulerStore
                 .Select(static item => item.JobKey)
                 .Take(limit)
                 .ToArrayAsync(cancellationToken),
-            AnalyticsJobRanking.Skips => await completions
-                .Where(static item => item.State == JobExecutionState.Skipped)
-                .GroupBy(static item => item.JobKey)
-                .Select(static group => new { JobKey = group.Key, Metric = group.LongCount() })
-                .OrderByDescending(static item => item.Metric)
-                .ThenBy(static item => item.JobKey)
-                .Select(static item => item.JobKey)
-                .Take(limit)
-                .ToArrayAsync(cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(ranking), ranking, "Analytics ranking is not supported.")
         };
         if (jobKeys.Length == 0)
@@ -293,9 +316,27 @@ public sealed partial class EfCoreJobSchedulerStore
                 group.LongCount(item => item.State == JobExecutionState.Skipped),
                 group.LongCount(item => item.State == JobExecutionState.Cancelled)))
             .ToArrayAsync(cancellationToken);
-        var byJobKey = rows.ToDictionary(static item => item.JobKey, StringComparer.Ordinal);
-        return jobKeys.Select(jobKey => byJobKey[jobKey]).Select(static item => new JobExecutionAnalyticsJobRank
+        var latestTemplates = await completions
+            .Where(item => jobKeys.Contains(item.JobKey))
+            .Select(static item => item.JobKey)
+            .Distinct()
+            .Select(jobKey => new AnalyticsJobTitleRow(
+                jobKey,
+                completions
+                    .Where(item => item.JobKey == jobKey)
+                    .OrderByDescending(static item => item.CompletedAtUtcTicks)
+                    .ThenBy(static item => item.InstanceId)
+                    .Select(static item => item.TemplateJson)
+                    .First()))
+            .ToArrayAsync(cancellationToken);
+        var templateByJobKey = latestTemplates.ToDictionary(
+            static item => item.JobKey,
+            static item => item.TemplateJson,
+            StringComparer.Ordinal);
+        var rowsByJobKey = rows.ToDictionary(static item => item.JobKey, StringComparer.Ordinal);
+        return jobKeys.Select(jobKey => rowsByJobKey[jobKey]).Select(item => new JobExecutionAnalyticsJobRank
         {
+            JobName = Deserialize<JobExecutionTemplate>(templateByJobKey[item.JobKey]).JobName,
             JobKey = item.JobKey,
             SucceededCount = item.SucceededCount,
             FailedCount = item.FailedCount,
@@ -307,6 +348,11 @@ public sealed partial class EfCoreJobSchedulerStore
     private static DateTimeOffset Min(DateTimeOffset left, DateTimeOffset right) => left <= right ? left : right;
 
     private sealed record AnalyticsStateCount(JobExecutionState State, long Count);
+
+    private sealed record AnalyticsOutcomeCount(
+        JobExecutionState State,
+        JobExecutionOrigin Origin,
+        long Count);
 
     private sealed record AnalyticsTrendRow(
         long BucketIndex,
@@ -323,10 +369,11 @@ public sealed partial class EfCoreJobSchedulerStore
         long SkippedCount,
         long CancelledCount);
 
+    private sealed record AnalyticsJobTitleRow(string JobKey, string TemplateJson);
+
     private enum AnalyticsJobRanking
     {
         Volume,
-        Failures,
-        Skips
+        Failures
     }
 }

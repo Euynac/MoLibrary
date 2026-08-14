@@ -1,15 +1,13 @@
-.execution-detail__title {
-    display: grid;
-    gap: 0.125rem;
+.execution-detail__dialog-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     min-width: 0;
 }
 
-.execution-detail__title code {
-    max-width: min(70vw, 60rem);
-    overflow: hidden;
-    color: var(--mud-palette-text-secondary);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.execution-detail__viewport {
+    width: 100%;
+    min-width: 0;
 }
 
 .execution-detail__loading {
@@ -22,7 +20,7 @@
 
 .execution-detail {
     display: grid;
-    gap: 1.25rem;
+    gap: 16px;
     width: 100%;
     min-width: 0;
 }

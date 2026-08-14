@@ -60,12 +60,12 @@ public sealed record JobExecutionAnalyticsQuery
     public string? JobKey { get; init; }
 
     /// <summary>
-    /// Gets the maximum number of entries in each volume, failure, and skip ranking.
+    /// Gets the maximum number of entries in each volume and failure ranking.
     /// </summary>
     public int TopJobLimit { get; init; } = 8;
 
     /// <summary>
-    /// Gets the maximum number of longest terminal attempts returned.
+    /// Gets the maximum number of distinct jobs represented by their longest terminal attempt.
     /// </summary>
     public int SlowestExecutionLimit { get; init; } = 10;
 
@@ -129,9 +129,9 @@ public sealed record JobExecutionAnalyticsQuery
 /// </summary>
 /// <remarks>
 /// <see cref="StateTotals"/> describes the cohort created in the requested range, including work that remains queued
-/// or running. Outcome, throughput, trend, duration, ranking, and slow-execution metrics instead describe executions
-/// completed in that range. This deliberate split answers both “what entered the scheduler?” and “what work finished?”
-/// without excluding long-running work that began before the range.
+/// or running. Reliability, recurring-schedule fulfillment, throughput, trend, duration, ranking, and slow-execution
+/// metrics instead describe executions completed in that range. This deliberate split answers both “what entered the
+/// scheduler?” and “what work finished?” without excluding long-running work that began before the range.
 /// </remarks>
 public sealed record JobExecutionAnalyticsSnapshot
 {
@@ -181,10 +181,18 @@ public sealed record JobExecutionAnalyticsSnapshot
     public double Reliability { get; init; }
 
     /// <summary>
-    /// Gets skipped completions divided by successful, failed, plus skipped completions. Returns zero with no schedule
-    /// dispositions. Operator cancellation is intentionally excluded from this schedule-delivery denominator.
+    /// Gets the number of completed recurring-schedule occurrences whose terminal state is succeeded, failed, or
+    /// skipped. Triggered executions, operator run-now executions, and cancelled schedule occurrences are excluded.
     /// </summary>
-    public double SkipRate { get; init; }
+    public long RecurringScheduleDispositionCount { get; init; }
+
+    /// <summary>
+    /// Gets the fraction of completed recurring-schedule dispositions that entered execution instead of being skipped.
+    /// Successful and failed scheduled executions both count as fulfilled because the scheduler delivered the
+    /// occurrence to a worker. Returns zero when <see cref="RecurringScheduleDispositionCount"/> is zero. Triggered
+    /// executions, operator run-now executions, and cancelled schedule occurrences are excluded.
+    /// </summary>
+    public double RecurringScheduleFulfillment { get; init; }
 
     /// <summary>
     /// Gets terminal-attempt duration statistics for executions completed in the range.
@@ -207,12 +215,7 @@ public sealed record JobExecutionAnalyticsSnapshot
     public required IReadOnlyList<JobExecutionAnalyticsJobRank> TopJobsByFailures { get; init; }
 
     /// <summary>
-    /// Gets the bounded skipped-completion ranking. Jobs without skips are omitted.
-    /// </summary>
-    public required IReadOnlyList<JobExecutionAnalyticsJobRank> TopJobsBySkips { get; init; }
-
-    /// <summary>
-    /// Gets the bounded longest terminal attempts.
+    /// Gets the bounded longest terminal attempts with at most one execution per logical job.
     /// </summary>
     public required IReadOnlyList<JobExecutionAnalyticsSlowExecution> SlowestExecutions { get; init; }
 }
@@ -315,6 +318,15 @@ public sealed record JobExecutionDurationStatistics
 public sealed record JobExecutionAnalyticsJobRank
 {
     /// <summary>
+    /// Gets the immutable user-facing job name captured by the most recently completed execution in this range.
+    /// </summary>
+    /// <remarks>
+    /// Ranking identity remains <see cref="JobKey"/> so a display-name change does not split one logical job into
+    /// multiple rows.
+    /// </remarks>
+    public required string JobName { get; init; }
+
+    /// <summary>
     /// Gets the logical job key.
     /// </summary>
     public required string JobKey { get; init; }
@@ -349,16 +361,10 @@ public sealed record JobExecutionAnalyticsJobRank
     /// </summary>
     public double Reliability => JobExecutionAnalyticsMath.Ratio(SucceededCount, SucceededCount + FailedCount);
 
-    /// <summary>
-    /// Gets skipped completions divided by successful, failed, plus skipped completions.
-    /// </summary>
-    public double SkipRate => JobExecutionAnalyticsMath.Ratio(
-        SkippedCount,
-        SucceededCount + FailedCount + SkippedCount);
 }
 
 /// <summary>
-/// Describes one of the longest terminal attempts completed in an analytics range.
+/// Describes one logical job's longest terminal attempt completed in an analytics range.
 /// </summary>
 public sealed record JobExecutionAnalyticsSlowExecution
 {
@@ -366,6 +372,11 @@ public sealed record JobExecutionAnalyticsSlowExecution
     /// Gets the execution identifier.
     /// </summary>
     public required string InstanceId { get; init; }
+
+    /// <summary>
+    /// Gets the immutable user-facing job name captured by this execution.
+    /// </summary>
+    public required string JobName { get; init; }
 
     /// <summary>
     /// Gets the logical job key.

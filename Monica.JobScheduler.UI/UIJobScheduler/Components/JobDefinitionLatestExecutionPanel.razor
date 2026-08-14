@@ -45,8 +45,8 @@
             </div>
             <MudButton Variant="Variant.Text"
                        Color="Color.Primary"
-                       EndIcon="@Icons.Material.Filled.OpenInNew"
-                       Href="@GetExecutionHref(execution.InstanceId)">
+                       EndIcon="@Icons.Material.Filled.OpenInFull"
+                       OnClick="() => OpenAsync(execution.InstanceId)">
                 @L["Executions:Actions:Details"]
             </MudButton>
         </div>
@@ -93,8 +93,13 @@
     [Parameter, EditorRequired]
     public DateTimeOffset ObservedAtUtc { get; set; }
 
-    private static string GetExecutionHref(string instanceId) =>
-        $"/job-scheduler/executions?instanceId={Uri.EscapeDataString(instanceId)}";
+    /// <summary>
+    /// Gets the callback that opens durable execution evidence in place.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> ExecutionSelected { get; set; }
+
+    private Task OpenAsync(string instanceId) => ExecutionSelected.InvokeAsync(instanceId);
 
     private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 }

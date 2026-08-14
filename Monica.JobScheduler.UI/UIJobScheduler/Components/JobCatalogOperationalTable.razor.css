@@ -175,7 +175,7 @@
     background-color: var(--mud-palette-info-hover);
 }
 
-.catalog-table__cron code {
+.catalog-table__cron ::deep code {
     overflow: hidden;
     color: inherit;
     font-family: var(--mo-font-family-mono);

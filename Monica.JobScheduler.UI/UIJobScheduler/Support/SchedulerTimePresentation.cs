@@ -33,6 +33,32 @@ internal sealed class SchedulerTimePresentation(
     internal string TimeZoneDisplayName => _timeZone.DisplayName;
 
     /// <summary>
+    /// Gets the UTC instant at which the configured scheduler calendar day begins.
+    /// </summary>
+    /// <remarks>
+    /// A rare daylight-saving transition can skip or repeat midnight. Skipped wall times advance to the first valid
+    /// minute, while repeated wall times select the earliest represented instant so the complete scheduler day remains
+    /// inside the analytics range.
+    /// </remarks>
+    internal DateTimeOffset GetStartOfSchedulerDayUtc(DateTimeOffset value)
+    {
+        var wallTime = DateTime.SpecifyKind(ToSchedulerWallTime(value).Date, DateTimeKind.Unspecified);
+        while (_timeZone.IsInvalidTime(wallTime))
+        {
+            wallTime = wallTime.AddMinutes(1);
+        }
+
+        if (_timeZone.IsAmbiguousTime(wallTime))
+        {
+            return _timeZone.GetAmbiguousTimeOffsets(wallTime)
+                .Select(offset => new DateTimeOffset(wallTime, offset).ToUniversalTime())
+                .Min();
+        }
+
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(wallTime, _timeZone), TimeSpan.Zero);
+    }
+
+    /// <summary>
     /// Formats one durable UTC instant as scheduler-zone wall time with millisecond precision.
     /// </summary>
     internal string FormatTimestamp(DateTimeOffset? value) => value is { } instant
@@ -88,7 +114,7 @@ internal sealed class SchedulerTimePresentation(
     }
 
     /// <summary>
-    /// Formats elapsed time using an adaptive compact unit while retaining two-decimal operational precision.
+    /// Formats elapsed time as milliseconds below one second and decimal seconds otherwise.
     /// </summary>
     internal string FormatDuration(TimeSpan? duration)
     {
@@ -98,21 +124,6 @@ internal sealed class SchedulerTimePresentation(
         }
 
         var value = duration.Value < TimeSpan.Zero ? TimeSpan.Zero : duration.Value;
-        if (value.TotalDays >= 1)
-        {
-            return FormatDurationUnit("Common:Duration:Days", value.TotalDays, "F2");
-        }
-
-        if (value.TotalHours >= 1)
-        {
-            return FormatDurationUnit("Common:Duration:Hours", value.TotalHours, "F2");
-        }
-
-        if (value.TotalMinutes >= 1)
-        {
-            return FormatDurationUnit("Common:Duration:Minutes", value.TotalMinutes, "F2");
-        }
-
         if (value.TotalSeconds >= 1)
         {
             return FormatDurationUnit("Common:Duration:Seconds", value.TotalSeconds, "F2");

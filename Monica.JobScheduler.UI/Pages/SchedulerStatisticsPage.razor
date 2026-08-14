@@ -20,7 +20,9 @@
                 <MudPaper Outlined="true" Class="statistics-page__toolbar pa-3">
                     <div>
                         <MudText Typo="Typo.subtitle1">@L["Analytics:Range:Title"]</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Analytics:Range:Description"]</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Analytics:Range:Description", TimePresentation.TimeZoneId]
+                        </MudText>
                     </div>
                     <MudChipSet T="SchedulerAnalyticsTimeRange"
                                 SelectedValue="@_state.TimeRange"

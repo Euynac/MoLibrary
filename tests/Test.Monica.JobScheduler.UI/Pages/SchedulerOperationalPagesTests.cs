@@ -1,8 +1,10 @@
 using AwesomeAssertions;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Results;
 using Monica.JobScheduler.Models;
+using Monica.JobScheduler.Models.Analytics;
 using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
@@ -264,13 +266,61 @@ public sealed class SchedulerOperationalPagesTests
         }, Xunit.TestContext.Current.CancellationToken);
 
         var cut = context.Render<SchedulerOverviewPage>();
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var originalUri = navigation.Uri;
 
         cut.WaitForAssertion(() =>
         {
             var activity = cut.Find(".recent-panel__event-link");
-            activity.GetAttribute("href").Should().Contain(execution.InstanceId);
+            activity.LocalName.Should().Be("button");
+            activity.HasAttribute("href").Should().BeFalse();
+            activity.GetAttribute("aria-label").Should().Contain(execution.InstanceId);
             cut.FindAll(".recent-panel table").Should().BeEmpty();
         });
+
+        var openTask = cut.Find(".recent-panel__event-link").ClickAsync();
+        context.DialogProvider.WaitForAssertion(() =>
+        {
+            context.DialogProvider.Markup.Should().Contain(execution.InstanceId);
+            navigation.Uri.Should().Be(originalUri);
+        });
+        await context.DialogProvider.FindAll("button")
+            .Single(button => button.TextContent.Contains("Common:Close", StringComparison.Ordinal))
+            .ClickAsync();
+        await openTask;
+    }
+
+    [Fact]
+    public async Task RecentActivity_WhenDetailsClose_ShouldRefreshTheOwningOverview()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        var execution = await context.Store.EnqueueAsync(new JobEnqueueRequest
+        {
+            SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
+            InstanceId = "overview-refresh-after-detail-0001",
+            JobKey = context.TriggeredDefinition.Declaration.JobKey,
+            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
+            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            JobArgs = "{}"
+        }, Xunit.TestContext.Current.CancellationToken);
+        var refreshCount = 0;
+        var cut = context.Render<RecentExecutionsPanel>(parameters => parameters
+            .Add(component => component.Executions, [execution])
+            .Add(component => component.OnRefresh, () => refreshCount++));
+
+        var openTask = cut.Find(".recent-panel__event-link").ClickAsync();
+        context.DialogProvider.WaitForAssertion(() =>
+        {
+            context.DialogProvider.Markup.Should().Contain(execution.InstanceId);
+            refreshCount.Should().Be(0);
+        });
+
+        await context.DialogProvider.FindAll("button")
+            .Single(button => button.TextContent.Contains("Common:Close", StringComparison.Ordinal))
+            .ClickAsync();
+        await openTask;
+
+        refreshCount.Should().Be(1);
     }
 
     [Fact]
@@ -285,9 +335,180 @@ public sealed class SchedulerOperationalPagesTests
             cut.Markup.Should().Contain("Analytics:Metrics:Reliability");
             cut.Markup.Should().Contain("Analytics:Trend:Title");
             cut.Markup.Should().Contain("Analytics:Duration:Title");
-            cut.Markup.Should().Contain("Analytics:Rankings:Title");
-            cut.Markup.Should().Contain("analytics-dashboard__bars");
+            cut.Markup.Should().Contain("Analytics:Rankings:Volume");
+            cut.Markup.Should().Contain("Analytics:Rankings:Failures");
+            cut.Markup.Should().Contain("Analytics:Trend:Total");
+            cut.FindAll(".analytics-dashboard__chart-bar").Should().NotBeEmpty();
         });
+
+        var lineButton = cut.FindAll(".analytics-dashboard__chart-toggle button")
+            .Single(button => button.TextContent.Contains("Analytics:Trend:Lines", StringComparison.Ordinal));
+        await lineButton.ClickAsync();
+
+        cut.FindAll(".analytics-dashboard__chart-line").Should().HaveCount(4);
+        cut.FindAll(".analytics-dashboard__chart-toggle button")
+            .Single(button => button.TextContent.Contains("Analytics:Trend:Lines", StringComparison.Ordinal))
+            .GetAttribute("aria-pressed").Should().Be("true");
+    }
+
+    [Fact]
+    public async Task StatisticsRankings_ShouldLeadWithDurableTitleAndRetainJobKeyNavigation()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        var jobKey = context.TriggeredDefinition.Declaration.JobKey;
+        var jobName = context.TriggeredDefinition.Declaration.JobName;
+        var rank = new JobExecutionAnalyticsJobRank
+        {
+            JobName = jobName,
+            JobKey = jobKey,
+            SucceededCount = 7,
+            FailedCount = 2
+        };
+        var start = new DateTimeOffset(2026, 8, 14, 0, 0, 0, TimeSpan.Zero);
+        var snapshot = new JobExecutionAnalyticsSnapshot
+        {
+            StartTimeUtc = start,
+            EndTimeUtc = start.AddHours(1),
+            BucketSize = JobExecutionAnalyticsBucketSize.Hour,
+            StateTotals = Enum.GetValues<JobExecutionState>()
+                .ToDictionary(static state => state, static _ => 0L),
+            CompletedTerminalCount = 9,
+            Duration = new JobExecutionDurationStatistics(),
+            Trend =
+            [
+                new JobExecutionAnalyticsBucket
+                {
+                    StartTimeUtc = start,
+                    EndTimeUtc = start.AddHours(1),
+                    SucceededCount = 7,
+                    FailedCount = 2
+                }
+            ],
+            TopJobsByVolume = [rank],
+            TopJobsByFailures = [rank],
+            SlowestExecutions = []
+        };
+
+        var cut = context.Render<SchedulerAnalyticsDashboard>(parameters => parameters
+            .Add(component => component.Snapshot, snapshot));
+
+        var rankingLinks = cut.FindAll(".analytics-dashboard__ranking a");
+        rankingLinks.Should().HaveCount(2);
+        rankingLinks.Should().OnlyContain(link =>
+            link.QuerySelector("strong")!.TextContent == jobName
+            && link.QuerySelector("code")!.TextContent == jobKey
+            && link.GetAttribute("href")!.Contains(Uri.EscapeDataString(jobKey), StringComparison.Ordinal));
+        rankingLinks.Should().OnlyContain(link =>
+            link.GetAttribute("aria-label")!.Contains(jobName, StringComparison.Ordinal)
+            && link.QuerySelector("progress")!.GetAttribute("aria-hidden") == "true");
+        rankingLinks[0].GetAttribute("aria-label").Should().Contain("9");
+        rankingLinks[1].GetAttribute("aria-label").Should().Contain("2");
+        cut.Find(".analytics-dashboard__outcome-totals [data-state='total'] dd")
+            .TextContent.Should().Be("9");
+    }
+
+    [Fact]
+    public async Task StatisticsRankings_WhenFailuresAreEmpty_ShouldDescribeTheHealthyFailureWindow()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        var start = new DateTimeOffset(2026, 8, 14, 0, 0, 0, TimeSpan.Zero);
+        var snapshot = new JobExecutionAnalyticsSnapshot
+        {
+            StartTimeUtc = start,
+            EndTimeUtc = start.AddHours(1),
+            BucketSize = JobExecutionAnalyticsBucketSize.Hour,
+            StateTotals = Enum.GetValues<JobExecutionState>()
+                .ToDictionary(static state => state, static _ => 0L),
+            CompletedTerminalCount = 1,
+            Duration = new JobExecutionDurationStatistics(),
+            Trend =
+            [
+                new JobExecutionAnalyticsBucket
+                {
+                    StartTimeUtc = start,
+                    EndTimeUtc = start.AddHours(1),
+                    SucceededCount = 1
+                }
+            ],
+            TopJobsByVolume =
+            [
+                new JobExecutionAnalyticsJobRank
+                {
+                    JobName = context.TriggeredDefinition.Declaration.JobName,
+                    JobKey = context.TriggeredDefinition.Declaration.JobKey,
+                    SucceededCount = 1
+                }
+            ],
+            TopJobsByFailures = [],
+            SlowestExecutions = []
+        };
+
+        var cut = context.Render<SchedulerAnalyticsDashboard>(parameters => parameters
+            .Add(component => component.Snapshot, snapshot));
+
+        cut.Find(".analytics-dashboard__ranking-panel[data-tone='error'] .analytics-dashboard__ranking-empty")
+            .TextContent.Should().Be("Analytics:Rankings:FailuresEmpty");
+    }
+
+    [Fact]
+    public async Task AnalyticsSlowExecution_ShouldOpenDetailsInPlace()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        var execution = await context.Store.EnqueueAsync(new JobEnqueueRequest
+        {
+            SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
+            InstanceId = "analytics-slow-execution-0001",
+            JobKey = context.TriggeredDefinition.Declaration.JobKey,
+            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
+            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            JobArgs = "{}"
+        }, Xunit.TestContext.Current.CancellationToken);
+        var completedAtUtc = new DateTimeOffset(2026, 8, 14, 2, 0, 0, TimeSpan.Zero);
+        var snapshot = new JobExecutionAnalyticsSnapshot
+        {
+            StartTimeUtc = completedAtUtc.AddHours(-1),
+            EndTimeUtc = completedAtUtc,
+            BucketSize = JobExecutionAnalyticsBucketSize.Hour,
+            StateTotals = Enum.GetValues<JobExecutionState>()
+                .ToDictionary(static state => state, static _ => 0L),
+            Duration = new JobExecutionDurationStatistics(),
+            Trend = [],
+            TopJobsByVolume = [],
+            TopJobsByFailures = [],
+            SlowestExecutions =
+            [
+                new JobExecutionAnalyticsSlowExecution
+                {
+                    InstanceId = execution.InstanceId,
+                    JobName = execution.Template.JobName,
+                    JobKey = execution.Template.Revision.JobKey,
+                    State = JobExecutionState.Succeeded,
+                    StartedAtUtc = completedAtUtc.AddSeconds(-4),
+                    CompletedAtUtc = completedAtUtc
+                }
+            ]
+        };
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var originalUri = navigation.Uri;
+        var cut = context.Render<SchedulerAnalyticsDashboard>(parameters => parameters
+            .Add(component => component.Snapshot, snapshot));
+
+        var activity = cut.Find(".analytics-dashboard__slow-list > button");
+        activity.HasAttribute("href").Should().BeFalse();
+        activity.GetAttribute("aria-label").Should().Contain(execution.InstanceId);
+        activity.GetAttribute("aria-label").Should().Contain("4");
+        activity.TextContent.Should().Contain(execution.Template.JobName);
+        activity.TextContent.Should().Contain(execution.Template.Revision.JobKey);
+        await activity.ClickAsync();
+
+        context.DialogProvider.WaitForAssertion(() =>
+        {
+            context.DialogProvider.Markup.Should().Contain(execution.InstanceId);
+            navigation.Uri.Should().Be(originalUri);
+        });
+        await context.DialogProvider.FindAll("button")
+            .Single(button => button.TextContent.Contains("Common:Close", StringComparison.Ordinal))
+            .ClickAsync();
     }
 
     [Fact]
@@ -416,7 +637,9 @@ public sealed class SchedulerOperationalPagesTests
         provider.WaitForAssertion(() =>
         {
             provider.Markup.Should().Contain(execution.InstanceId);
-            provider.Markup.Should().Contain("ExecutionDetail:Identity");
+            provider.Find(".execution-detail__viewport").Should().NotBeNull();
+            provider.Find(".execution-detail-hero").Should().NotBeNull();
+            provider.FindAll(".execution-evidence__panel").Should().HaveCount(5);
             provider.Markup.Should().Contain("ExecutionDetail:PolicySnapshot");
             provider.Markup.Should().Contain("ExecutionDetail:Timing");
             provider.Markup.Should().Contain("ExecutionDetail:LeaseLosses");

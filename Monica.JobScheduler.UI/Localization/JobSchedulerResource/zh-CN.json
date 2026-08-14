@@ -36,7 +36,7 @@
       },
       "Statistics": {
         "Title": "调度统计分析",
-        "Description": "在有界 UTC 时间范围内度量可靠率、调度达成率、吞吐量、耗时分位数与工作负载集中度。"
+        "Description": "在有界调度时区范围内度量可靠率、调度达成率、吞吐量、耗时分位数与工作负载集中度。"
       }
     }
   },
@@ -59,9 +59,6 @@
     "NotAvailable": "暂无",
     "RunningDuration": "已运行 {0}",
     "Duration": {
-      "Days": "{0} 天",
-      "Hours": "{0} 小时",
-      "Minutes": "{0} 分钟",
       "Seconds": "{0} 秒",
       "Milliseconds": "{0} 毫秒"
     }
@@ -77,6 +74,14 @@
   "JobTypes": {
     "Recurring": "周期作业",
     "Triggered": "触发作业"
+  },
+  "ExecutionOrigins": {
+    "Triggered": "触发准入",
+    "RecurringSchedule": "周期调度",
+    "RecurringRunNow": "运维立即执行"
+  },
+  "ExecutionSkipReasons": {
+    "RecurringCapacityUnavailable": "该执行时点没有可用的未完成执行容量。"
   },
   "Overview": {
     "PageTitle": "任务调度 · 总览",
@@ -319,10 +324,25 @@
     "Header": {
       "NoCompatibleWorker": "没有兼容工作节点",
       "EvidenceAriaLabel": "当前作业运行证据",
-      "CompatibleWorkers": "兼容工作节点",
       "ActiveExecutions": "活动执行",
       "QueuedExecutions": "排队中",
-      "RunningExecutions": "执行中"
+      "RunningExecutions": "执行中",
+      "CompatibleWorkers": "兼容工作节点"
+    },
+    "Activity": {
+      "Eyebrow": "实时执行证据",
+      "Title": "执行活动",
+      "Description": "当前逻辑作业的最新运行实例与最近失败证据。",
+      "Bounded": "每组显示最新 {0} 条",
+      "RunningTitle": "正在运行",
+      "RunningDescription": "当前有界的活动工作节点租约。",
+      "RunningLoadFailed": "正在运行的实例刷新失败：{0}",
+      "RunningEmpty": "当前没有正在运行的实例。",
+      "FailuresTitle": "最近失败",
+      "FailuresDescription": "在 30 天健康窗口内创建的最新失败执行。",
+      "FailuresLoadFailed": "最近失败实例刷新失败：{0}",
+      "FailuresEmpty": "未发现最近失败的实例。",
+      "OpenDetails": "打开执行 {0} 的详情"
     },
     "Schedule": {
       "Title": "周期调度",
@@ -356,19 +376,27 @@
       "Owner": "目录所有者",
       "ArgumentsKey": "参数契约",
       "MaxConcurrency": "最大并发数",
+      "MaxConcurrencyHelp": "限制并发工作节点租约；周期实例物化也将其作为排队与运行实例的重叠上限。",
       "RetryCount": "允许重试次数",
+      "RetryCountHelp": "首次尝试失败后允许的额外重试次数。",
       "ExecutionTimeout": "执行超时",
+      "ExecutionTimeoutHelp": "单次执行尝试允许的最长持续时间。",
       "DeclarationDefault": "代码默认状态",
       "PolicyTitle": "运维策略",
       "EffectiveState": "生效状态",
       "PolicyUpdated": "策略更新时间",
       "PolicyStamp": "并发标识",
+      "PolicyStampHelp": "乐观并发令牌；策略更新必须匹配当前值，并在成功后获得新值。",
       "RevisionTitle": "发布与版本身份",
       "SchedulerScope": "调度范围",
       "Release": "目录发布",
+      "ReleaseHelp": "提供当前生效声明的不可变目录发布。",
       "ActivationEpoch": "激活纪元",
+      "ActivationEpochHelp": "此发布成为活动执行契约时分配的单调递增纪元。",
       "WorkerRevision": "工作节点版本",
-      "JobRevision": "作业版本"
+      "WorkerRevisionHelp": "兼容工作节点认领此作业前必须声明的精确可执行修订。",
+      "JobRevision": "作业版本",
+      "JobRevisionHelp": "新执行实例所捕获的不可变声明内容标识。"
     },
     "LatestExecution": {
       "Title": "最近执行",
@@ -381,8 +409,15 @@
       "Description": "分别度量执行可靠率、调度达成率、终态分布与执行耗时。",
       "Window": "最近 30 天",
       "ReliabilityHelp": "基于 {0} 次成功或失败执行",
+      "ReliabilityFormulaHelp": "成功完成数除以成功与失败完成数之和；跳过和取消的执行不计入该指标。",
       "FulfillmentHelp": "基于 {0} 个已完成调度结果",
+      "FulfillmentFormulaHelp": "已交付到工作节点的周期调度时点（无论成功或失败）除以已交付与已跳过时点之和；触发准入和运维立即执行不计入该指标。",
+      "TriggeredFulfillmentNotApplicable": "触发作业没有需要达成的自动调度。",
       "OutcomeAriaLabel": "所选时间范围内创建的作业执行结果",
+      "CohortTotal": "入组执行",
+      "TerminalDispositions": "终态处置",
+      "ExecutedCompletions": "已执行完成",
+      "DurationSamples": "耗时样本",
       "CohortNote": "结果卡片统计时间窗内创建的执行；可靠率与耗时统计时间窗内完成的执行。",
       "LoadFailed": "无法刷新作业健康分析：{0}"
     }
@@ -458,8 +493,8 @@
     "ObservedAt": "分析观测时间：{0}",
     "Range": {
       "Title": "分析时间范围",
-      "Description": "完成指标采用固定 UTC 区间，并由数据库执行有界聚合。",
-      "TodayUtc": "今天（UTC）",
+      "Description": "日历范围采用调度时区 {0}，并由数据库执行有界聚合。",
+      "Today": "今天",
       "Last24Hours": "最近 24 小时",
       "Last7Days": "最近 7 天",
       "Last30Days": "最近 30 天"
@@ -477,35 +512,50 @@
     "Trend": {
       "Eyebrow": "完成脉搏",
       "Title": "执行结果趋势",
-      "Description": "按固定 UTC 区间展示成功、失败与跳过的完成数量。",
+      "Description": "按所选时间范围展示完成结果，并统一呈现为调度时区时间。",
       "LegendAriaLabel": "结果趋势图例",
       "ChartAriaLabel": "调度完成结果趋势图",
+      "ViewAriaLabel": "结果趋势图展示方式",
+      "Bars": "柱状图",
+      "Lines": "折线图",
+      "TotalsAriaLabel": "完成结果汇总",
+      "Total": "总执行",
       "BucketTooltip": "{0}：成功 {1}，失败 {2}，跳过 {3}，取消 {4}"
     },
     "Duration": {
+      "Eyebrow": "耗时档案",
       "Title": "终态执行耗时",
       "Description": "从最近一次执行开始到终态完成；未占用工作节点的跳过记录不进入分布。",
+      "Samples": "{0} 个样本",
+      "PercentilesAriaLabel": "执行耗时分位数",
       "Minimum": "最短",
       "Average": "平均",
       "P50": "P50",
+      "P50Description": "半数执行不超过此耗时",
       "P90": "P90",
+      "P90Description": "九成执行不超过此耗时",
       "P95": "P95",
+      "P95Description": "尾部耗时阈值",
       "P99": "P99",
+      "P99Description": "极端尾部耗时阈值",
       "Maximum": "最长"
     },
     "Rankings": {
-      "Title": "工作负载集中度",
-      "Description": "对照终态吞吐量，定位产生失败或调度跳过的作业。",
-      "Volume": "终态吞吐",
-      "Failures": "失败关注",
-      "Skips": "调度跳过",
-      "Empty": "该时间范围内没有完成的作业活动。",
-      "OutcomeSummary": "共 {0} · 失败 {1} · 跳过 {2}"
+      "Eyebrow": "工作负载集中度",
+      "Volume": "执行次数排行",
+      "VolumeDescription": "该时间范围内终态完成次数最多的作业。",
+      "Failures": "失败次数排行",
+      "FailuresDescription": "该时间范围内产生失败完成最多的作业。",
+      "TopTen": "TOP 10",
+      "OpenJobWithMetric": "第 {0} 名：打开 {1}；{2}：{3}（{4}）",
+      "VolumeEmpty": "该时间范围内没有完成的作业活动。",
+      "FailuresEmpty": "该时间范围内没有失败执行。"
     },
     "Slowest": {
-      "Title": "最慢执行",
-      "Description": "耗时最长的终态执行，可直接打开其持久化证据。",
-      "Empty": "该时间范围内没有可度量耗时的终态执行。"
+      "Top": "最慢执行 · TOP 10",
+      "Description": "每个作业耗时最长的一条终态执行，可直接打开其持久化证据。",
+      "Empty": "该时间范围内没有可度量耗时的终态执行。",
+      "OpenDetails": "第 {0} 名：检查 {1} 的执行实例 {2}；{3}；完成于 {4}；耗时 {5}"
     },
     "CohortNote": "状态总数统计时间窗内创建的执行；结果、吞吐量、趋势、排名与耗时统计时间窗内完成的执行。"
   },
@@ -549,6 +599,7 @@
     },
     "Actions": {
       "Details": "检查执行",
+      "OpenDetailsFor": "检查 {0} 的执行实例 {1}",
       "Cancel": "请求取消",
       "Apply": "应用筛选",
       "Reset": "重置"
@@ -565,6 +616,7 @@
   },
   "ExecutionDetail": {
     "Title": "执行证据",
+    "Eyebrow": "持久化执行 / 证据",
     "NotFound": "该执行已不存在。",
     "State": "状态",
     "Job": "作业键",
@@ -572,6 +624,7 @@
     "Release": "目录发布",
     "Activation": "激活纪元",
     "Attempts": "执行 / 重试次数",
+    "Origin": "准入方式",
     "Available": "可执行时间",
     "Worker": "执行节点",
     "Revision": "精确执行身份",
@@ -594,12 +647,15 @@
     "Started": "开始时间",
     "Completed": "完成时间",
     "Duration": "耗时",
+    "ScheduledOccurrence": "计划执行时点",
     "CancellationRequested": "请求取消时间",
     "Runtime": "租约与恢复",
     "LeaseLosses": "已恢复租约丢失次数",
     "LeaseExpires": "租约到期时间",
     "NoArguments": "没有捕获序列化参数。",
+    "SkipReason": "跳过原因",
     "HistoryCount": "保留 {0} 条记录",
+    "HistoryDescription": "持久化状态变更、工作节点日志与运维取消证据。",
     "EmptyHistory": "没有可用的保留历史记录。",
     "CancellationPending": "协作取消请求自 {0} 起等待处理。",
     "Copied": "诊断信息已复制到剪贴板。",

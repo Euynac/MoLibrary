@@ -118,12 +118,8 @@
                     {
                         <div class="catalog-table__schedule">
                             <span class="catalog-table__cron">
-                                <code>@declaration.CronExpression</code>
-                                <MudTooltip Text="@GetCronDescription(context)" Placement="Placement.Top" Arrow="true">
-                                    <MudIconButton Icon="@Icons.Material.Outlined.Info"
-                                                   Size="Size.Small"
-                                                   aria-label="@GetCronDescription(context)" />
-                                </MudTooltip>
+                                <CronDescriptionBadge Expression="@(declaration.CronExpression!)"
+                                                      Description="@GetCronDescription(context)" />
                             </span>
                         </div>
                     }

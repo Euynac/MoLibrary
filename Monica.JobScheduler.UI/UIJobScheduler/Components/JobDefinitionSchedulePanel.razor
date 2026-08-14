@@ -59,7 +59,10 @@
         <dl class="job-schedule-panel__facts">
             <div class="job-schedule-panel__fact job-schedule-panel__fact--wide">
                 <dt>@L["JobDetail:Schedule:CronExpression"]</dt>
-                <dd><code>@Declaration.CronExpression</code></dd>
+                <dd>
+                    <CronDescriptionBadge Expression="@(Declaration.CronExpression!)"
+                                          ResolveDescription="true" />
+                </dd>
             </div>
             <div>
                 <dt>@L["JobDetail:Schedule:TimeZone"]</dt>

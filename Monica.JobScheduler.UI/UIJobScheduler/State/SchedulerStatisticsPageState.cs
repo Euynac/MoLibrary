@@ -2,18 +2,19 @@ using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models.Analytics;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.State;
 
 /// <summary>
-/// Defines the bounded UTC ranges available from the scheduler statistics workspace.
+/// Defines the bounded ranges available from the scheduler statistics workspace.
 /// </summary>
 public enum SchedulerAnalyticsTimeRange
 {
     /// <summary>
-    /// Includes the current UTC calendar day.
+    /// Includes the current calendar day in the configured scheduler timezone.
     /// </summary>
-    TodayUtc,
+    Today,
 
     /// <summary>
     /// Includes the rolling previous 24 hours.
@@ -37,12 +38,13 @@ public enum SchedulerAnalyticsTimeRange
 internal sealed class SchedulerStatisticsPageStateFactory(
     JobSchedulerFacade facade,
     IJobSchedulerUiAccess access,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    SchedulerTimePresentation timePresentation)
 {
     /// <summary>
     /// Creates a fresh cross-job analytics session.
     /// </summary>
-    public SchedulerStatisticsPageState Create() => new(facade, access, timeProvider);
+    public SchedulerStatisticsPageState Create() => new(facade, access, timeProvider, timePresentation);
 }
 
 /// <summary>
@@ -53,6 +55,7 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
     private readonly JobSchedulerFacade _facade;
     private readonly IJobSchedulerUiAccess _access;
     private readonly TimeProvider _timeProvider;
+    private readonly SchedulerTimePresentation _timePresentation;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private int _disposed;
@@ -60,11 +63,13 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
     internal SchedulerStatisticsPageState(
         JobSchedulerFacade facade,
         IJobSchedulerUiAccess access,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        SchedulerTimePresentation timePresentation)
     {
         _facade = facade;
         _access = access;
         _timeProvider = timeProvider;
+        _timePresentation = timePresentation;
     }
 
     /// <summary>
@@ -152,7 +157,9 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
             }
 
             var now = _timeProvider.GetUtcNow();
-            var result = await _facade.GetExecutionAnalyticsAsync(CreateQuery(requestedRange, now), cancellationToken);
+            var result = await _facade.GetExecutionAnalyticsAsync(
+                CreateQuery(requestedRange, now, _timePresentation),
+                cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (result.IsFailed(out var error, out var snapshot))
             {
@@ -184,16 +191,18 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
     /// <summary>
     /// Creates the server-bounded analytics query for one UI preset.
     /// </summary>
-    public static JobExecutionAnalyticsQuery CreateQuery(
+    internal static JobExecutionAnalyticsQuery CreateQuery(
         SchedulerAnalyticsTimeRange range,
         DateTimeOffset now,
+        SchedulerTimePresentation timePresentation,
         string? jobKey = null)
     {
+        ArgumentNullException.ThrowIfNull(timePresentation);
         var end = now.ToUniversalTime();
         var (start, bucketSize) = range switch
         {
-            SchedulerAnalyticsTimeRange.TodayUtc =>
-                (new DateTimeOffset(end.UtcDateTime.Date, TimeSpan.Zero), JobExecutionAnalyticsBucketSize.Hour),
+            SchedulerAnalyticsTimeRange.Today =>
+                (timePresentation.GetStartOfSchedulerDayUtc(end), JobExecutionAnalyticsBucketSize.Hour),
             SchedulerAnalyticsTimeRange.Last24Hours =>
                 (end.AddHours(-24), JobExecutionAnalyticsBucketSize.Hour),
             SchedulerAnalyticsTimeRange.Last7Days =>
@@ -205,7 +214,7 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
 
         if (start >= end)
         {
-            start = end.AddHours(-1);
+            end = start.AddTicks(1);
         }
 
         return new JobExecutionAnalyticsQuery
@@ -214,8 +223,8 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
             EndTimeUtc = end,
             BucketSize = bucketSize,
             JobKey = jobKey,
-            TopJobLimit = 8,
-            SlowestExecutionLimit = 8
+            TopJobLimit = 10,
+            SlowestExecutionLimit = 10
         };
     }
 

@@ -6,8 +6,17 @@
 
 <section class="execution-history" aria-labelledby="execution-history-heading">
     <div class="execution-history__heading">
-        <MudText Typo="Typo.subtitle1" id="execution-history-heading">@L["ExecutionDetail:History"]</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ExecutionDetail:HistoryCount", Entries.Count]</MudText>
+        <div>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h3" id="execution-history-heading">
+                @L["ExecutionDetail:History"]
+            </MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @L["ExecutionDetail:HistoryDescription"]
+            </MudText>
+        </div>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+            @L["ExecutionDetail:HistoryCount", Entries.Count]
+        </MudChip>
     </div>
     @if (Entries.Count == 0)
     {
@@ -95,12 +104,7 @@
         JobExecutionHistoryKind.Cancellation => Icons.Material.Filled.CancelScheduleSend,
         _ => entry.NewState switch
         {
-            JobExecutionState.Queued => Icons.Material.Filled.Schedule,
-            JobExecutionState.Running => Icons.Material.Filled.PlayArrow,
-            JobExecutionState.Succeeded => Icons.Material.Filled.Check,
-            JobExecutionState.Failed => Icons.Material.Filled.ErrorOutline,
-            JobExecutionState.Cancelled => Icons.Material.Filled.Block,
-            JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
+            { } state => ExecutionUiPresentation.GetStateIcon(state),
             _ => Icons.Material.Filled.Circle
         }
     };

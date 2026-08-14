@@ -1,4 +1,6 @@
 .execution-flow {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     min-width: 0;
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
@@ -22,8 +24,9 @@
 
 .execution-flow__body {
     display: grid;
-    grid-template-columns: minmax(10.5rem, 0.8fr) minmax(11rem, 1.2fr);
+    grid-template-columns: minmax(10.5rem, 13rem) minmax(11rem, 18rem);
     align-items: center;
+    place-content: center;
     gap: 16px;
     min-width: 0;
     padding: clamp(16px, 2vw, 24px);
@@ -119,7 +122,7 @@
     min-width: 0;
     padding: 8px 9px;
     border: 1px solid transparent;
-    border-radius: 7px;
+    border-radius: 8px;
     color: inherit;
     text-decoration: none;
     transition: border-color 140ms ease, background-color 140ms ease;

@@ -8,6 +8,18 @@
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
     background-color: var(--mud-palette-surface);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.job-latest-panel:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
+    box-shadow: var(--mud-elevation-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .job-latest-panel {
+        transition-duration: 0.01ms;
+    }
 }
 
 .job-latest-panel__heading,

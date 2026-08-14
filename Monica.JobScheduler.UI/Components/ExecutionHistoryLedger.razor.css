@@ -8,11 +8,18 @@
 
 .execution-history__heading {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    padding: 0.875rem 1rem;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--mud-palette-lines-default);
+    background-color: var(--mud-palette-background-gray);
+}
+
+.execution-history__heading > div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
 }
 
 .execution-history__empty {

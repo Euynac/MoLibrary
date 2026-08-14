@@ -1,5 +1,6 @@
 using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
+using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
@@ -7,8 +8,40 @@ using Monica.JobScheduler.Models.Analytics;
 using Microsoft.Extensions.Localization;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.State;
+
+/// <summary>
+/// Carries one bounded execution stream together with its authoritative filtered total and recoverable load error.
+/// </summary>
+public sealed record JobExecutionActivitySlice
+{
+    /// <summary>
+    /// Gets an empty successful stream.
+    /// </summary>
+    public static JobExecutionActivitySlice Empty { get; } = new();
+
+    /// <summary>
+    /// Gets the maximum number of newest executions requested and rendered for this stream.
+    /// </summary>
+    public int ItemLimit { get; init; } = 5;
+
+    /// <summary>
+    /// Gets the newest bounded executions rendered by the detail page.
+    /// </summary>
+    public IReadOnlyList<JobExecutionInstance> Items { get; init; } = [];
+
+    /// <summary>
+    /// Gets the authoritative number of executions matching the stream query.
+    /// </summary>
+    public int TotalCount { get; init; }
+
+    /// <summary>
+    /// Gets the latest recoverable query error while preserving previously accepted evidence.
+    /// </summary>
+    public string? Error { get; init; }
+}
 
 /// <summary>
 /// Creates component-owned job-definition detail sessions from circuit-scoped dependencies.
@@ -17,13 +50,14 @@ internal sealed class JobDefinitionDetailPageStateFactory(
     JobSchedulerFacade facade,
     IJobSchedulerUiAccess access,
     TimeProvider timeProvider,
+    SchedulerTimePresentation timePresentation,
     IStringLocalizer<JobSchedulerResource> localizer)
 {
     /// <summary>
     /// Creates a fresh detail state owned by one rendered route instance.
     /// </summary>
     public JobDefinitionDetailPageState Create(string jobKey) =>
-        new(facade, access, timeProvider, localizer, jobKey);
+        new(facade, access, timeProvider, timePresentation, localizer, jobKey);
 }
 
 /// <summary>
@@ -34,6 +68,7 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     private readonly JobSchedulerFacade _facade;
     private readonly IJobSchedulerUiAccess _access;
     private readonly TimeProvider _timeProvider;
+    private readonly SchedulerTimePresentation _timePresentation;
     private readonly IStringLocalizer<JobSchedulerResource> _localizer;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
@@ -44,6 +79,7 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
         JobSchedulerFacade facade,
         IJobSchedulerUiAccess access,
         TimeProvider timeProvider,
+        SchedulerTimePresentation timePresentation,
         IStringLocalizer<JobSchedulerResource> localizer,
         string jobKey)
     {
@@ -51,6 +87,7 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
         _facade = facade;
         _access = access;
         _timeProvider = timeProvider;
+        _timePresentation = timePresentation;
         _localizer = localizer;
         JobKey = jobKey;
     }
@@ -74,6 +111,16 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     /// Gets the latest 30-day bounded health projection for this job.
     /// </summary>
     public JobExecutionAnalyticsSnapshot? Analytics { get; private set; }
+
+    /// <summary>
+    /// Gets the newest bounded set of currently running executions for this logical job.
+    /// </summary>
+    public JobExecutionActivitySlice RunningActivity { get; private set; } = JobExecutionActivitySlice.Empty;
+
+    /// <summary>
+    /// Gets the newest bounded failed executions created within the health analytics window.
+    /// </summary>
+    public JobExecutionActivitySlice RecentFailureActivity { get; private set; } = JobExecutionActivitySlice.Empty;
 
     /// <summary>
     /// Gets whether the first access check completed.
@@ -140,6 +187,8 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             {
                 Summary = null;
                 Analytics = null;
+                RunningActivity = JobExecutionActivitySlice.Empty;
+                RecentFailureActivity = JobExecutionActivitySlice.Empty;
                 IsNotFound = false;
                 Error = null;
                 AnalyticsError = null;
@@ -149,13 +198,27 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
 
             var now = _timeProvider.GetUtcNow();
             var summaryTask = _facade.GetOperationalSummaryAsync(JobKey, cancellationToken);
-            var analyticsTask = _facade.GetExecutionAnalyticsAsync(
-                SchedulerStatisticsPageState.CreateQuery(
-                    SchedulerAnalyticsTimeRange.Last30Days,
-                    now,
-                    JobKey),
+            var analyticsQuery = SchedulerStatisticsPageState.CreateQuery(
+                SchedulerAnalyticsTimeRange.Last30Days,
+                now,
+                _timePresentation,
+                JobKey);
+            var analyticsTask = _facade.GetExecutionAnalyticsAsync(analyticsQuery, cancellationToken);
+            var runningTask = QueryExecutionsAsync(
+                JobExecutionState.Running,
+                JobExecutionSortField.StartedAtUtc,
+                null,
+                null,
+                RunningActivity.ItemLimit,
                 cancellationToken);
-            await Task.WhenAll(summaryTask, analyticsTask);
+            var failuresTask = QueryExecutionsAsync(
+                JobExecutionState.Failed,
+                JobExecutionSortField.CompletedAtUtc,
+                analyticsQuery.StartTimeUtc,
+                analyticsQuery.EndTimeUtc.AddTicks(-1),
+                RecentFailureActivity.ItemLimit,
+                cancellationToken);
+            await Task.WhenAll(summaryTask, analyticsTask, runningTask, failuresTask);
             cancellationToken.ThrowIfCancellationRequested();
             var summaryResult = await summaryTask;
             if (summaryResult.IsFailed(out var error, out var summary))
@@ -177,6 +240,9 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
                 Analytics = analytics;
                 AnalyticsError = null;
             }
+
+            RunningActivity = AcceptExecutionEvidence(await runningTask, RunningActivity);
+            RecentFailureActivity = AcceptExecutionEvidence(await failuresTask, RecentFailureActivity);
 
             ObservedAtUtc = now;
         }
@@ -351,6 +417,43 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     }
 
     private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private Task<Res<QueryResult<JobExecutionInstance>>> QueryExecutionsAsync(
+        JobExecutionState state,
+        JobExecutionSortField sortField,
+        DateTimeOffset? createdAfterUtc,
+        DateTimeOffset? createdBeforeUtc,
+        int itemLimit,
+        CancellationToken cancellationToken) =>
+        _facade.QueryExecutionsAsync(new JobExecutionQuery
+        {
+            SchedulerScopeKey = string.Empty,
+            JobKey = JobKey,
+            States = [state],
+            CreatedAfterUtc = createdAfterUtc,
+            CreatedBeforeUtc = createdBeforeUtc,
+            SortField = sortField,
+            SortDescending = true,
+            PageNumber = 1,
+            PageSize = itemLimit
+        }, cancellationToken);
+
+    private static JobExecutionActivitySlice AcceptExecutionEvidence(
+        Res<QueryResult<JobExecutionInstance>> result,
+        JobExecutionActivitySlice current)
+    {
+        if (result.IsFailed(out var error, out var page))
+        {
+            return current with { Error = error.Message };
+        }
+
+        return new JobExecutionActivitySlice
+        {
+            Items = page.Items,
+            TotalCount = page.TotalCount,
+            ItemLimit = current.ItemLimit
+        };
+    }
 
     private async Task NotifyChangedAsync()
     {

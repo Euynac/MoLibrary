@@ -36,7 +36,7 @@
       },
       "Statistics": {
         "Title": "Scheduler analytics",
-        "Description": "Measure reliability, schedule fulfillment, throughput, duration percentiles, and workload concentration over bounded UTC windows."
+        "Description": "Measure reliability, schedule fulfillment, throughput, duration percentiles, and workload concentration over bounded scheduler-time windows."
       }
     }
   },
@@ -59,9 +59,6 @@
     "NotAvailable": "Not available",
     "RunningDuration": "{0} and running",
     "Duration": {
-      "Days": "{0} d",
-      "Hours": "{0} h",
-      "Minutes": "{0} min",
       "Seconds": "{0} s",
       "Milliseconds": "{0} ms"
     }
@@ -77,6 +74,14 @@
   "JobTypes": {
     "Recurring": "Recurring",
     "Triggered": "Triggered"
+  },
+  "ExecutionOrigins": {
+    "Triggered": "Triggered admission",
+    "RecurringSchedule": "Recurring schedule",
+    "RecurringRunNow": "Operator run now"
+  },
+  "ExecutionSkipReasons": {
+    "RecurringCapacityUnavailable": "Outstanding execution capacity was unavailable at this occurrence."
   },
   "Overview": {
     "PageTitle": "Job Scheduler · Overview",
@@ -319,10 +324,25 @@
     "Header": {
       "NoCompatibleWorker": "No compatible worker",
       "EvidenceAriaLabel": "Current job operational evidence",
-      "CompatibleWorkers": "Compatible workers",
       "ActiveExecutions": "Active executions",
-      "QueuedExecutions": "Queued",
-      "RunningExecutions": "Running"
+      "QueuedExecutions": "Queued executions",
+      "RunningExecutions": "Running executions",
+      "CompatibleWorkers": "Compatible workers"
+    },
+    "Activity": {
+      "Eyebrow": "LIVE EXECUTION EVIDENCE",
+      "Title": "Execution activity",
+      "Description": "Newest running work and recent failures for this logical job.",
+      "Bounded": "Newest {0} shown per stream",
+      "RunningTitle": "Running now",
+      "RunningDescription": "Bounded active worker leases.",
+      "RunningLoadFailed": "Running executions could not be refreshed: {0}",
+      "RunningEmpty": "No execution is currently running.",
+      "FailuresTitle": "Recent failures",
+      "FailuresDescription": "Newest failed executions created during the 30-day health window.",
+      "FailuresLoadFailed": "Recent failures could not be refreshed: {0}",
+      "FailuresEmpty": "No recent failed execution was found.",
+      "OpenDetails": "Open execution details for {0}"
     },
     "Schedule": {
       "Title": "Recurring schedule",
@@ -356,19 +376,27 @@
       "Owner": "Catalog owner",
       "ArgumentsKey": "Arguments contract",
       "MaxConcurrency": "Maximum concurrency",
+      "MaxConcurrencyHelp": "Caps concurrent worker leases; recurring materialization also uses it as the queued-and-running overlap limit.",
       "RetryCount": "Allowed retries",
+      "RetryCountHelp": "Additional failed attempts allowed after the first attempt.",
       "ExecutionTimeout": "Execution timeout",
+      "ExecutionTimeoutHelp": "Maximum duration allowed for one execution attempt.",
       "DeclarationDefault": "Code default state",
       "PolicyTitle": "Operator policy",
       "EffectiveState": "Effective state",
       "PolicyUpdated": "Policy updated",
       "PolicyStamp": "Concurrency stamp",
+      "PolicyStampHelp": "Optimistic-concurrency token; policy updates must match it and receive a new stamp.",
       "RevisionTitle": "Release and revision identity",
       "SchedulerScope": "Scheduler scope",
       "Release": "Catalog release",
+      "ReleaseHelp": "Immutable catalog release that supplied this active declaration.",
       "ActivationEpoch": "Activation epoch",
+      "ActivationEpochHelp": "Monotonic epoch assigned when this release became the active execution contract.",
       "WorkerRevision": "Worker revision",
-      "JobRevision": "Job revision"
+      "WorkerRevisionHelp": "Exact executable revision a compatible worker must advertise before it can claim this job.",
+      "JobRevision": "Job revision",
+      "JobRevisionHelp": "Content identity of the immutable declaration captured by new executions."
     },
     "LatestExecution": {
       "Title": "Latest execution",
@@ -381,8 +409,15 @@
       "Description": "Reliability, schedule delivery, terminal outcomes, and attempt duration are measured independently.",
       "Window": "Last 30 days",
       "ReliabilityHelp": "{0} successful or failed run(s)",
+      "ReliabilityFormulaHelp": "Successful completions divided by successful plus failed completions; skipped and cancelled executions are excluded.",
       "FulfillmentHelp": "{0} completed schedule disposition(s)",
+      "FulfillmentFormulaHelp": "Recurring schedule occurrences delivered to a worker, whether successful or failed, divided by delivered plus skipped occurrences. Triggered and operator run-now admissions are excluded.",
+      "TriggeredFulfillmentNotApplicable": "Triggered jobs have no automatic schedule to fulfill.",
       "OutcomeAriaLabel": "Job execution outcomes created in the selected window",
+      "CohortTotal": "Created cohort",
+      "TerminalDispositions": "Terminal dispositions",
+      "ExecutedCompletions": "Executed completions",
+      "DurationSamples": "Duration samples",
       "CohortNote": "Outcome tiles describe executions created in the window; reliability and duration use executions completed in the window.",
       "LoadFailed": "Job health analytics could not be refreshed: {0}"
     }
@@ -458,8 +493,8 @@
     "ObservedAt": "Analytics observed {0}",
     "Range": {
       "Title": "Analysis window",
-      "Description": "Completion metrics use fixed UTC intervals and bounded database aggregation.",
-      "TodayUtc": "Today (UTC)",
+      "Description": "Calendar presets use scheduler timezone {0}; database aggregation remains bounded.",
+      "Today": "Today",
       "Last24Hours": "Last 24 hours",
       "Last7Days": "Last 7 days",
       "Last30Days": "Last 30 days"
@@ -477,35 +512,50 @@
     "Trend": {
       "Eyebrow": "COMPLETION PULSE",
       "Title": "Outcome trend",
-      "Description": "Successful, failed, and skipped completions by fixed UTC bucket.",
+      "Description": "Completed outcomes across the selected range, presented in scheduler time.",
       "LegendAriaLabel": "Outcome chart legend",
       "ChartAriaLabel": "Scheduler completion outcome trend",
+      "ViewAriaLabel": "Outcome chart display",
+      "Bars": "Bars",
+      "Lines": "Lines",
+      "TotalsAriaLabel": "Completed outcome totals",
+      "Total": "Total executions",
       "BucketTooltip": "{0}: {1} succeeded, {2} failed, {3} skipped, {4} cancelled"
     },
     "Duration": {
+      "Eyebrow": "LATENCY DOSSIER",
       "Title": "Terminal-attempt duration",
       "Description": "Measured from the latest attempt start to terminal completion; skips never enter this distribution.",
+      "Samples": "{0} samples",
+      "PercentilesAriaLabel": "Execution duration percentiles",
       "Minimum": "Minimum",
       "Average": "Average",
       "P50": "P50",
+      "P50Description": "Half completed at or below",
       "P90": "P90",
+      "P90Description": "Nine in ten completed at or below",
       "P95": "P95",
+      "P95Description": "Tail-latency threshold",
       "P99": "P99",
+      "P99Description": "Extreme-tail threshold",
       "Maximum": "Maximum"
     },
     "Rankings": {
-      "Title": "Workload concentration",
-      "Description": "Compare terminal volume with the jobs producing failures or skipped schedules.",
-      "Volume": "Terminal volume",
-      "Failures": "Failure attention",
-      "Skips": "Schedule skips",
-      "Empty": "No terminal job activity completed in this window.",
-      "OutcomeSummary": "{0} total · {1} failed · {2} skipped"
+      "Eyebrow": "WORKLOAD CONCENTRATION",
+      "Volume": "Execution count ranking",
+      "VolumeDescription": "Jobs with the most terminal completions in this window.",
+      "Failures": "Failure count ranking",
+      "FailuresDescription": "Jobs producing the most failed completions in this window.",
+      "TopTen": "Top 10",
+      "OpenJobWithMetric": "Rank {0}: open {1}; {2}: {3} ({4})",
+      "VolumeEmpty": "No terminal job activity completed in this window.",
+      "FailuresEmpty": "No failed executions completed in this window."
     },
     "Slowest": {
-      "Title": "Slowest executions",
-      "Description": "Longest measured terminal attempts, linked back to their durable evidence.",
-      "Empty": "No measured terminal attempts completed in this window."
+      "Top": "Slowest executions · Top 10",
+      "Description": "The slowest measured terminal attempt for each job, linked back to its durable evidence.",
+      "Empty": "No measured terminal attempts completed in this window.",
+      "OpenDetails": "Rank {0}: inspect {1}, instance {2}; {3}; completed {4}; duration {5}"
     },
     "CohortNote": "State totals describe executions created in the window. Outcomes, throughput, trends, rankings, and durations describe executions completed in the window."
   },
@@ -549,6 +599,7 @@
     },
     "Actions": {
       "Details": "Inspect execution",
+      "OpenDetailsFor": "Inspect execution for {0}, instance {1}",
       "Cancel": "Request cancellation",
       "Apply": "Apply filters",
       "Reset": "Reset"
@@ -565,6 +616,7 @@
   },
   "ExecutionDetail": {
     "Title": "Execution evidence",
+    "Eyebrow": "DURABLE EXECUTION / EVIDENCE",
     "NotFound": "The execution no longer exists.",
     "State": "State",
     "Job": "Job key",
@@ -572,6 +624,7 @@
     "Release": "Catalog release",
     "Activation": "Activation epoch",
     "Attempts": "Attempts / retries",
+    "Origin": "Admission",
     "Available": "Available at",
     "Worker": "Running worker",
     "Revision": "Exact executable identity",
@@ -594,12 +647,15 @@
     "Started": "Started at",
     "Completed": "Completed at",
     "Duration": "Duration",
+    "ScheduledOccurrence": "Scheduled occurrence",
     "CancellationRequested": "Cancellation requested",
     "Runtime": "Lease and recovery",
     "LeaseLosses": "Recovered lease losses",
     "LeaseExpires": "Lease expires",
     "NoArguments": "No serialized arguments were captured.",
+    "SkipReason": "Skip reason",
     "HistoryCount": "{0} retained entries",
+    "HistoryDescription": "Durable state transitions, worker logs, and operator cancellation evidence.",
     "EmptyHistory": "No retained history entries are available.",
     "CancellationPending": "A cooperative cancellation request has been pending since {0}.",
     "Copied": "Diagnostics copied to the clipboard.",

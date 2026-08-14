@@ -41,7 +41,15 @@ public sealed partial class InMemoryJobSchedulerStore
                 .ToArray();
             var succeededCount = CountState(completions, JobExecutionState.Succeeded);
             var failedCount = CountState(completions, JobExecutionState.Failed);
-            var skippedCount = CountState(completions, JobExecutionState.Skipped);
+            var recurringScheduleDispositions = completions.Where(static execution =>
+                    execution.Origin == JobExecutionOrigin.RecurringSchedule
+                    && execution.State is (JobExecutionState.Succeeded
+                        or JobExecutionState.Failed
+                        or JobExecutionState.Skipped))
+                .ToArray();
+            var recurringScheduleDispositionCount = recurringScheduleDispositions.LongLength;
+            var fulfilledRecurringScheduleCount = recurringScheduleDispositions.LongCount(static execution =>
+                execution.State is (JobExecutionState.Succeeded or JobExecutionState.Failed));
             var executed = completions.Where(static execution => execution.StartedAtUtc is not null).ToArray();
             var measurableExecutions = executed
                 .Where(static execution => execution.CompletedAtUtc >= execution.StartedAtUtc)
@@ -63,9 +71,10 @@ public sealed partial class InMemoryJobSchedulerStore
                 ExecutedTerminalCount = executed.LongLength,
                 ExecutedThroughputPerHour = executed.LongLength / hours,
                 Reliability = JobExecutionAnalyticsMath.Ratio(succeededCount, succeededCount + failedCount),
-                SkipRate = JobExecutionAnalyticsMath.Ratio(
-                    skippedCount,
-                    succeededCount + failedCount + skippedCount),
+                RecurringScheduleDispositionCount = recurringScheduleDispositionCount,
+                RecurringScheduleFulfillment = JobExecutionAnalyticsMath.Ratio(
+                    fulfilledRecurringScheduleCount,
+                    recurringScheduleDispositionCount),
                 Duration = CreateDurationStatistics(durationTicks),
                 Trend = CreateTrend(range, completions),
                 TopJobsByVolume = CreateJobRanking(
@@ -78,12 +87,15 @@ public sealed partial class InMemoryJobSchedulerStore
                     query.TopJobLimit,
                     static item => item.FailedCount,
                     requirePositiveMetric: true),
-                TopJobsBySkips = CreateJobRanking(
-                    completions,
-                    query.TopJobLimit,
-                    static item => item.SkippedCount,
-                    requirePositiveMetric: true),
                 SlowestExecutions = measurableExecutions
+                    .GroupBy(
+                        static execution => execution.Template.Revision.JobKey,
+                        StringComparer.Ordinal)
+                    .Select(static group => group
+                        .OrderByDescending(static execution =>
+                            execution.CompletedAtUtc!.Value - execution.StartedAtUtc!.Value)
+                        .ThenBy(static execution => execution.InstanceId, StringComparer.Ordinal)
+                        .First())
                     .OrderByDescending(static execution =>
                         execution.CompletedAtUtc!.Value - execution.StartedAtUtc!.Value)
                     .ThenBy(static execution => execution.InstanceId, StringComparer.Ordinal)
@@ -91,6 +103,7 @@ public sealed partial class InMemoryJobSchedulerStore
                     .Select(static execution => new JobExecutionAnalyticsSlowExecution
                     {
                         InstanceId = execution.InstanceId,
+                        JobName = execution.Template.JobName,
                         JobKey = execution.Template.Revision.JobKey,
                         State = execution.State,
                         StartedAtUtc = execution.StartedAtUtc!.Value,
@@ -169,6 +182,11 @@ public sealed partial class InMemoryJobSchedulerStore
             .GroupBy(static execution => execution.Template.Revision.JobKey, StringComparer.Ordinal)
             .Select(group => new JobExecutionAnalyticsJobRank
             {
+                JobName = group
+                    .OrderByDescending(static execution => execution.CompletedAtUtc)
+                    .ThenBy(static execution => execution.InstanceId, StringComparer.Ordinal)
+                    .First()
+                    .Template.JobName,
                 JobKey = group.Key,
                 SucceededCount = CountState(group, JobExecutionState.Succeeded),
                 FailedCount = CountState(group, JobExecutionState.Failed),

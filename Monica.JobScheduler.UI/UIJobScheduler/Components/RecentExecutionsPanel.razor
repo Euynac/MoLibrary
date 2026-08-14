@@ -1,8 +1,12 @@
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
 
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject TimeProvider TimeProvider
 @inject SchedulerTimePresentation TimePresentation
+@inject IDialogService DialogService
+
+@implements IDisposable
 
 <section class="recent-panel" aria-labelledby="recent-panel-title">
     <header class="recent-panel__heading">
@@ -31,16 +35,18 @@
         <ol class="recent-panel__timeline">
             @foreach (var execution in Executions)
             {
+                var jobTitle = JobSchedulerUiPresentation.GetJobDisplayName(execution.Template);
                 <li class="recent-panel__event" data-state="@execution.State.ToString().ToLowerInvariant()">
-                    <a class="recent-panel__event-link" href="@GetExecutionHref(execution.InstanceId)">
+                    <button type="button"
+                            class="recent-panel__event-link"
+                            aria-label="@L["Executions:Actions:OpenDetailsFor", jobTitle, execution.InstanceId]"
+                            @onclick="@(() => OpenExecutionAsync(execution.InstanceId))">
                         <span class="recent-panel__marker" aria-hidden="true">
-                            <MudIcon Icon="@GetStateIcon(execution.State)" Size="Size.Small" />
+                            <MudIcon Icon="@ExecutionUiPresentation.GetStateIcon(execution.State)" Size="Size.Small" />
                         </span>
                         <span class="recent-panel__event-copy">
                             <span class="recent-panel__event-heading">
-                                <strong title="@JobSchedulerUiPresentation.GetJobDisplayName(execution.Template)">
-                                    @JobSchedulerUiPresentation.GetJobDisplayName(execution.Template)
-                                </strong>
+                                <strong title="@jobTitle">@jobTitle</strong>
                                 <span class="recent-panel__state">@L[$"ExecutionStates:{execution.State}"]</span>
                             </span>
                             <code title="@execution.Template.Revision.JobKey">@execution.Template.Revision.JobKey</code>
@@ -55,7 +61,7 @@
                         <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
                                  Size="Size.Small"
                                  Class="recent-panel__chevron" />
-                    </a>
+                    </button>
                 </li>
             }
         </ol>
@@ -81,17 +87,16 @@
     [Parameter]
     public EventCallback OnRefresh { get; set; }
 
-    private static string GetExecutionHref(string instanceId) =>
-        $"/job-scheduler/executions?instanceId={Uri.EscapeDataString(instanceId)}";
+    private bool _disposed;
 
-    private static string GetStateIcon(JobExecutionState state) => state switch
+    private async Task OpenExecutionAsync(string instanceId)
     {
-        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
-        JobExecutionState.Running => Icons.Material.Filled.PlayArrow,
-        JobExecutionState.Succeeded => Icons.Material.Filled.Check,
-        JobExecutionState.Failed => Icons.Material.Filled.PriorityHigh,
-        JobExecutionState.Cancelled => Icons.Material.Filled.Close,
-        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
-        _ => Icons.Material.Filled.Circle
-    };
+        await ExecutionDetailDialogLauncher.ShowAsync(DialogService, L, instanceId);
+        if (!_disposed)
+        {
+            await OnRefresh.InvokeAsync();
+        }
+    }
+
+    public void Dispose() => _disposed = true;
 }

@@ -28,7 +28,7 @@ public sealed class SchedulerTimePresentationTests
     }
 
     [Fact]
-    public void Duration_ShouldUseAdaptiveCompactLocalizedUnits()
+    public void Duration_ShouldUseMillisecondsBelowOneSecondAndSecondsOtherwise()
     {
         var presentation = CreatePresentation(CreateFixedTimeZone());
 
@@ -37,11 +37,11 @@ public sealed class SchedulerTimePresentationTests
         presentation.FormatDuration(TimeSpan.FromSeconds(1.234)).Should().Be(
             $"Common:Duration:Seconds [{1.234D.ToString("F2", CultureInfo.CurrentCulture)}]");
         presentation.FormatDuration(TimeSpan.FromSeconds(90)).Should().Be(
-            $"Common:Duration:Minutes [{1.5D.ToString("F2", CultureInfo.CurrentCulture)}]");
+            $"Common:Duration:Seconds [{90D.ToString("F2", CultureInfo.CurrentCulture)}]");
         presentation.FormatDuration(TimeSpan.FromHours(2.5)).Should().Be(
-            $"Common:Duration:Hours [{2.5D.ToString("F2", CultureInfo.CurrentCulture)}]");
+            $"Common:Duration:Seconds [{TimeSpan.FromHours(2.5).TotalSeconds.ToString("F2", CultureInfo.CurrentCulture)}]");
         presentation.FormatDuration(TimeSpan.FromDays(2)).Should().Be(
-            $"Common:Duration:Days [{2D.ToString("F2", CultureInfo.CurrentCulture)}]");
+            $"Common:Duration:Seconds [{TimeSpan.FromDays(2).TotalSeconds.ToString("F2", CultureInfo.CurrentCulture)}]");
         presentation.FormatDuration(null).Should().Be("—");
     }
 
@@ -55,6 +55,58 @@ public sealed class SchedulerTimePresentationTests
 
         utc.Should().Be(new DateTimeOffset(2026, 8, 14, 1, 30, 15, 250, TimeSpan.Zero));
         presentation.ToSchedulerWallTime(utc).Should().Be(wallTime);
+    }
+
+    [Fact]
+    public void GetStartOfSchedulerDayUtc_WhenTimezoneIsFixedUtcPlusEight_ShouldReturnSchedulerMidnight()
+    {
+        var presentation = CreatePresentation(CreateFixedTimeZone());
+
+        var start = presentation.GetStartOfSchedulerDayUtc(
+            new DateTimeOffset(2026, 8, 14, 4, 15, 0, TimeSpan.Zero));
+
+        start.Should().Be(new DateTimeOffset(2026, 8, 13, 16, 0, 0, TimeSpan.Zero));
+        presentation.ToSchedulerWallTime(start).Should().Be(
+            new DateTime(2026, 8, 14, 0, 0, 0, DateTimeKind.Unspecified));
+    }
+
+    [Fact]
+    public void GetStartOfSchedulerDayUtc_WhenSchedulerDayStartsBeforeDaylightSavingTransition_ShouldUseMidnightOffset()
+    {
+        var presentation = CreatePresentation(CreateDaylightSavingTimeZone());
+
+        var start = presentation.GetStartOfSchedulerDayUtc(
+            new DateTimeOffset(2026, 3, 8, 16, 0, 0, TimeSpan.Zero));
+
+        start.Should().Be(new DateTimeOffset(2026, 3, 8, 5, 0, 0, TimeSpan.Zero));
+        presentation.ToSchedulerWallTime(start).Should().Be(
+            new DateTime(2026, 3, 8, 0, 0, 0, DateTimeKind.Unspecified));
+    }
+
+    [Fact]
+    public void GetStartOfSchedulerDayUtc_WhenMidnightDoesNotExist_ShouldAdvanceToFirstValidWallTime()
+    {
+        var presentation = CreatePresentation(CreateMidnightTransitionTimeZone());
+
+        var start = presentation.GetStartOfSchedulerDayUtc(
+            new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero));
+
+        start.Should().Be(new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero));
+        presentation.ToSchedulerWallTime(start).Should().Be(
+            new DateTime(2026, 3, 1, 1, 0, 0, DateTimeKind.Unspecified));
+    }
+
+    [Fact]
+    public void GetStartOfSchedulerDayUtc_WhenMidnightRepeats_ShouldSelectEarliestRepresentedInstant()
+    {
+        var presentation = CreatePresentation(CreateMidnightTransitionTimeZone());
+
+        var start = presentation.GetStartOfSchedulerDayUtc(
+            new DateTimeOffset(2026, 11, 1, 12, 0, 0, TimeSpan.Zero));
+
+        start.Should().Be(new DateTimeOffset(2026, 10, 31, 23, 0, 0, TimeSpan.Zero));
+        presentation.ToSchedulerWallTime(start).Should().Be(
+            new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Unspecified));
     }
 
     [Fact]
@@ -126,6 +178,31 @@ public sealed class SchedulerTimePresentationTests
             "Scheduler daylight test time",
             "Scheduler standard test time",
             "Scheduler daylight test time",
+            [adjustment]);
+    }
+
+    private static TimeZoneInfo CreateMidnightTransitionTimeZone()
+    {
+        var daylightStart = TimeZoneInfo.TransitionTime.CreateFixedDateRule(
+            new DateTime(1, 1, 1, 0, 0, 0),
+            3,
+            1);
+        var daylightEnd = TimeZoneInfo.TransitionTime.CreateFixedDateRule(
+            new DateTime(1, 1, 1, 1, 0, 0),
+            11,
+            1);
+        var adjustment = TimeZoneInfo.AdjustmentRule.CreateAdjustmentRule(
+            new DateTime(2026, 1, 1),
+            new DateTime(2026, 12, 31),
+            TimeSpan.FromHours(1),
+            daylightStart,
+            daylightEnd);
+        return TimeZoneInfo.CreateCustomTimeZone(
+            "Scheduler/Test-Midnight-DST",
+            TimeSpan.Zero,
+            "Scheduler midnight-transition test time",
+            "Scheduler midnight-transition standard time",
+            "Scheduler midnight-transition daylight time",
             [adjustment]);
     }
 }

@@ -18,7 +18,15 @@
 
     <div class="job-health__score-grid">
         <article class="job-health__score" data-tone="success">
-            <span>@L["Analytics:Metrics:Reliability"]</span>
+            <span class="job-health__score-label">
+                <MudIcon Icon="@Icons.Material.Filled.Verified" Size="Size.Small" />
+                @L["Analytics:Metrics:Reliability"]
+                <MudTooltip Text="@L["JobDetail:Health:ReliabilityFormulaHelp"]" Placement="Placement.Top" Arrow="true">
+                    <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                   Size="Size.Small"
+                                   aria-label="@L["JobDetail:Health:ReliabilityFormulaHelp"]" />
+                </MudTooltip>
+            </span>
             <strong>@FormatRatio(Snapshot.Reliability, HasReliabilitySample)</strong>
             <MudProgressLinear Value="@(Snapshot.Reliability * 100D)"
                                Color="Color.Success"
@@ -27,27 +35,80 @@
             <small>@L["JobDetail:Health:ReliabilityHelp", DecidedExecutionCount]</small>
         </article>
         <article class="job-health__score" data-tone="info">
-            <span>@L["Analytics:Metrics:ScheduleFulfillment"]</span>
-            <strong>@FormatRatio(ScheduleFulfillment, HasScheduleSample)</strong>
-            <MudProgressLinear Value="@(ScheduleFulfillment * 100D)"
-                               Color="Color.Info"
-                               Rounded="true"
-                               Size="Size.Small" />
-            <small>@L["JobDetail:Health:FulfillmentHelp", ScheduleDispositionCount]</small>
+            <span class="job-health__score-label">
+                <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Small" />
+                @L["Analytics:Metrics:ScheduleFulfillment"]
+                <MudTooltip Text="@L["JobDetail:Health:FulfillmentFormulaHelp"]" Placement="Placement.Top" Arrow="true">
+                    <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                                   Size="Size.Small"
+                                   aria-label="@L["JobDetail:Health:FulfillmentFormulaHelp"]" />
+                </MudTooltip>
+            </span>
+            <strong>@FormatScheduleFulfillment()</strong>
+            @if (IsRecurring)
+            {
+                <MudProgressLinear Value="@(Snapshot.RecurringScheduleFulfillment * 100D)"
+                                   Color="Color.Info"
+                                   Rounded="true"
+                                   Size="Size.Small" />
+                <small>@L["JobDetail:Health:FulfillmentHelp", Snapshot.RecurringScheduleDispositionCount]</small>
+            }
+            else
+            {
+                <small>@L["JobDetail:Health:TriggeredFulfillmentNotApplicable"]</small>
+            }
+        </article>
+        <article class="job-health__score" data-tone="primary">
+            <span class="job-health__score-label">
+                <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" />
+                @L["Analytics:Metrics:Throughput"]
+            </span>
+            <strong>@Snapshot.ExecutedThroughputPerHour.ToString("N2", CultureInfo.CurrentCulture)</strong>
+            <small>@L["Analytics:Metrics:PerHour"]</small>
         </article>
     </div>
 
     <div class="job-health__outcomes" aria-label="@L["JobDetail:Health:OutcomeAriaLabel"]">
         @foreach (var state in OutcomeStates)
         {
-            <div data-state="@state.ToString().ToLowerInvariant()">
+            <article data-state="@state.ToString().ToLowerInvariant()">
+                <span class="job-health__outcome-icon" aria-hidden="true">
+                    <MudIcon Icon="@GetStateIcon(state)" Size="Size.Small" />
+                </span>
                 <span>@L[$"ExecutionStates:{state}"]</span>
                 <strong>@Snapshot.StateTotals.GetValueOrDefault(state).ToString("N0", CultureInfo.CurrentCulture)</strong>
-            </div>
+            </article>
         }
     </div>
 
+    <dl class="job-health__statistics">
+        <div>
+            <dt>@L["JobDetail:Health:CohortTotal"]</dt>
+            <dd>@CohortTotal.ToString("N0", CultureInfo.CurrentCulture)</dd>
+        </div>
+        <div>
+            <dt>@L["JobDetail:Health:TerminalDispositions"]</dt>
+            <dd>@Snapshot.CompletedTerminalCount.ToString("N0", CultureInfo.CurrentCulture)</dd>
+        </div>
+        <div>
+            <dt>@L["JobDetail:Health:ExecutedCompletions"]</dt>
+            <dd>@Snapshot.ExecutedTerminalCount.ToString("N0", CultureInfo.CurrentCulture)</dd>
+        </div>
+        <div>
+            <dt>@L["JobDetail:Health:DurationSamples"]</dt>
+            <dd>@Snapshot.Duration.Count.ToString("N0", CultureInfo.CurrentCulture)</dd>
+        </div>
+    </dl>
+
     <dl class="job-health__duration">
+        <div>
+            <dt>@L["Analytics:Duration:Minimum"]</dt>
+            <dd>@FormatDuration(Snapshot.Duration.Minimum)</dd>
+        </div>
+        <div>
+            <dt>@L["Analytics:Duration:Average"]</dt>
+            <dd>@FormatDuration(Snapshot.Duration.Average)</dd>
+        </div>
         <div>
             <dt>@L["Analytics:Duration:P50"]</dt>
             <dd>@FormatDuration(Snapshot.Duration.P50)</dd>
@@ -75,10 +136,12 @@
 @code {
     private static readonly JobExecutionState[] OutcomeStates =
     [
+        JobExecutionState.Queued,
+        JobExecutionState.Running,
         JobExecutionState.Succeeded,
         JobExecutionState.Failed,
-        JobExecutionState.Skipped,
-        JobExecutionState.Cancelled
+        JobExecutionState.Cancelled,
+        JobExecutionState.Skipped
     ];
 
     /// <summary>
@@ -87,20 +150,41 @@
     [Parameter, EditorRequired]
     public JobExecutionAnalyticsSnapshot Snapshot { get; set; } = null!;
 
+    /// <summary>
+    /// Gets whether the selected definition is recurring or explicitly triggered.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobType DefinitionType { get; set; }
+
     private long SucceededCount => Snapshot.Trend.Sum(static bucket => bucket.SucceededCount);
     private long FailedCount => Snapshot.Trend.Sum(static bucket => bucket.FailedCount);
-    private long SkippedCount => Snapshot.Trend.Sum(static bucket => bucket.SkippedCount);
     private long DecidedExecutionCount => SucceededCount + FailedCount;
-    private long ScheduleDispositionCount => DecidedExecutionCount + SkippedCount;
     private bool HasReliabilitySample => DecidedExecutionCount > 0;
-    private bool HasScheduleSample => ScheduleDispositionCount > 0;
-    private double ScheduleFulfillment => HasScheduleSample ? 1D - Snapshot.SkipRate : 0D;
+    private bool IsRecurring => DefinitionType == JobType.Recurring;
+    private long CohortTotal => Snapshot.StateTotals.Values.Sum();
 
     private static string FormatRatio(double value, bool hasSample) => hasSample
         ? value.ToString("P1", CultureInfo.CurrentCulture)
         : "—";
 
+    private string FormatScheduleFulfillment() => IsRecurring
+        ? FormatRatio(
+            Snapshot.RecurringScheduleFulfillment,
+            Snapshot.RecurringScheduleDispositionCount > 0)
+        : L["Common:NotAvailable"];
+
     private string FormatDuration(TimeSpan? duration) => duration is { } value
         ? TimePresentation.FormatDuration(value)
         : L["Common:NotAvailable"];
+
+    private static string GetStateIcon(JobExecutionState state) => state switch
+    {
+        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
+        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
+        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
+        JobExecutionState.Failed => Icons.Material.Filled.Error,
+        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
+        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
+        _ => Icons.Material.Filled.Help
+    };
 }

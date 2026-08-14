@@ -37,7 +37,9 @@ public sealed class SchedulerTimeAndTitlePresentationTests
             activity.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobName);
             activity.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobKey);
             activity.TextContent.Should().Contain("2026-08-14 09:02:03.456");
-            activity.GetAttribute("href").Should().Contain(execution.InstanceId);
+            activity.LocalName.Should().Be("button");
+            activity.HasAttribute("href").Should().BeFalse();
+            activity.TextContent.Should().Contain(execution.InstanceId[..18]);
         });
     }
 
@@ -82,9 +84,18 @@ public sealed class SchedulerTimeAndTitlePresentationTests
 
         context.DialogProvider.WaitForAssertion(() =>
         {
-            var title = context.DialogProvider.Find(".execution-detail__title");
-            title.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobName);
-            title.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobKey);
+            var dialogTitle = context.DialogProvider.Find(".execution-detail__dialog-title");
+            dialogTitle.TextContent.Should().NotContain(context.TriggeredDefinition.Declaration.JobKey);
+            dialogTitle.TextContent.Should().NotContain(execution.InstanceId);
+            var identity = context.DialogProvider.Find(".execution-detail-hero__identity");
+            identity.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobName);
+            identity.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobKey);
+            var identifierLabels = identity.QuerySelectorAll(".execution-detail-hero__identifiers dt")
+                .Select(element => element.TextContent);
+            identifierLabels.Should().Contain("ExecutionDetail:Job");
+            identifierLabels.Should().Contain("ExecutionDetail:Instance");
+            context.DialogProvider.Find(".execution-detail-hero__state").TextContent.Should()
+                .Contain("ExecutionDetail:State");
             context.DialogProvider.Markup.Should().Contain("2026-08-14 09:02:03.456");
         });
     }

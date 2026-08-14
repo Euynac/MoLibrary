@@ -5,149 +5,155 @@
 @inject SchedulerTimePresentation TimePresentation
 
 <div class="execution-evidence">
-    <section class="execution-evidence__section" aria-labelledby="execution-identity-heading">
-        <MudText Typo="Typo.subtitle1" id="execution-identity-heading">@L["ExecutionDetail:Identity"]</MudText>
-        <dl class="execution-evidence__facts">
-            <div>
-                <dt>@L["ExecutionDetail:Instance"]</dt>
-                <dd><code>@Execution.InstanceId</code></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:State"]</dt>
-                <dd>
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                             Color="@JobSchedulerUiPresentation.GetStateColor(Execution.State)">
-                        @L[$"ExecutionStates:{Execution.State}"]
-                    </MudChip>
-                </dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Scope"]</dt>
-                <dd><code>@Execution.Template.Revision.SchedulerScopeKey</code></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Job"]</dt>
-                <dd class="execution-evidence__job">
-                    <strong>@JobSchedulerUiPresentation.GetJobDisplayName(Execution.Template)</strong>
-                    <code>@Execution.Template.Revision.JobKey</code>
-                </dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:JobType"]</dt>
-                <dd>@L[$"JobTypes:{Execution.Template.JobType}"]</dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:ArgumentsType"]</dt>
-                <dd><code>@(Execution.Template.JobArgsKey ?? "—")</code></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Owner"]</dt>
-                <dd><code>@Execution.Template.Revision.OwnerKey</code></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Release"]</dt>
-                <dd><code>@Execution.Template.Revision.CatalogReleaseId</code></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Activation"]</dt>
-                <dd>@Execution.Template.Revision.ActivationEpoch</dd>
-            </div>
-        </dl>
-    </section>
+    <div class="execution-evidence__grid execution-evidence__grid--operational">
+        <section class="execution-evidence__panel" aria-labelledby="execution-timing-heading">
+            <header class="execution-evidence__heading">
+                <span><MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /></span>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h3" id="execution-timing-heading">
+                    @L["ExecutionDetail:Timing"]
+                </MudText>
+            </header>
+            <dl class="execution-evidence__facts">
+                <div>
+                    <dt>@L["ExecutionDetail:Created"]</dt>
+                    <dd><time>@TimePresentation.FormatTimestamp(Execution.CreatedAtUtc)</time></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:Available"]</dt>
+                    <dd><time>@TimePresentation.FormatTimestamp(Execution.AvailableAtUtc)</time></dd>
+                </div>
+                @if (Execution.RecurringOccurrenceUtc is { } recurringOccurrenceUtc)
+                {
+                    <div>
+                        <dt>@L["ExecutionDetail:ScheduledOccurrence"]</dt>
+                        <dd><time>@TimePresentation.FormatTimestamp(recurringOccurrenceUtc)</time></dd>
+                    </div>
+                }
+                <div>
+                    <dt>@L["ExecutionDetail:Started"]</dt>
+                    <dd><time>@TimePresentation.FormatTimestamp(Execution.StartedAtUtc)</time></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:Completed"]</dt>
+                    <dd><time>@TimePresentation.FormatTimestamp(Execution.CompletedAtUtc)</time></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:CancellationRequested"]</dt>
+                    <dd><time>@TimePresentation.FormatTimestamp(Execution.CancellationRequestedAtUtc)</time></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:Observed"]</dt>
+                    <dd><time>@TimePresentation.FormatTimestamp(ObservedAtUtc)</time></dd>
+                </div>
+            </dl>
+        </section>
 
-    <section class="execution-evidence__section" aria-labelledby="execution-policy-heading">
-        <MudText Typo="Typo.subtitle1" id="execution-policy-heading">@L["ExecutionDetail:PolicySnapshot"]</MudText>
-        <dl class="execution-evidence__facts execution-evidence__facts--policy">
-            <div>
-                <dt>@L["ExecutionDetail:MaxConcurrency"]</dt>
-                <dd>@Execution.Template.MaxConcurrency</dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:RetryCount"]</dt>
-                <dd>@Execution.Template.RetryCount</dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Timeout"]</dt>
-                <dd><code>@TimePresentation.FormatDuration(Execution.Template.MaxExecutionTimeout)</code></dd>
-            </div>
-        </dl>
-    </section>
+        <section class="execution-evidence__panel" aria-labelledby="execution-runtime-heading">
+            <header class="execution-evidence__heading">
+                <span><MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" /></span>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h3" id="execution-runtime-heading">
+                    @L["ExecutionDetail:Runtime"]
+                </MudText>
+            </header>
+            <dl class="execution-evidence__facts">
+                <div>
+                    <dt>@L["ExecutionDetail:Worker"]</dt>
+                    <dd><code>@(Execution.RunningWorkerInstanceId ?? "—")</code></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:Attempts"]</dt>
+                    <dd>@Execution.ExecutionAttempt / @Execution.RetryAttempt</dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:LeaseLosses"]</dt>
+                    <dd>@Execution.LeaseLossCount</dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:LeaseExpires"]</dt>
+                    <dd><time>@TimePresentation.FormatTimestamp(Execution.LeaseExpiresAtUtc)</time></dd>
+                </div>
+            </dl>
+        </section>
+    </div>
 
-    <section class="execution-evidence__section" aria-labelledby="execution-timing-heading">
-        <MudText Typo="Typo.subtitle1" id="execution-timing-heading">@L["ExecutionDetail:Timing"]</MudText>
-        <dl class="execution-evidence__facts execution-evidence__facts--timing">
-            <div>
-                <dt>@L["ExecutionDetail:Created"]</dt>
-                <dd><time>@TimePresentation.FormatTimestamp(Execution.CreatedAtUtc)</time></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Available"]</dt>
-                <dd><time>@TimePresentation.FormatTimestamp(Execution.AvailableAtUtc)</time></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Started"]</dt>
-                <dd><time>@TimePresentation.FormatTimestamp(Execution.StartedAtUtc)</time></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Completed"]</dt>
-                <dd><time>@TimePresentation.FormatTimestamp(Execution.CompletedAtUtc)</time></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Duration"]</dt>
-                <dd><code>@TimePresentation.FormatExecutionDuration(Execution, ObservedAtUtc)</code></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:CancellationRequested"]</dt>
-                <dd><time>@TimePresentation.FormatTimestamp(Execution.CancellationRequestedAtUtc)</time></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Observed"]</dt>
-                <dd><time>@TimePresentation.FormatTimestamp(ObservedAtUtc)</time></dd>
-            </div>
-        </dl>
-    </section>
+    <div class="execution-evidence__grid execution-evidence__grid--contract">
+        <section class="execution-evidence__panel" aria-labelledby="execution-policy-heading">
+            <header class="execution-evidence__heading">
+                <span><MudIcon Icon="@Icons.Material.Filled.Policy" Size="Size.Small" /></span>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h3" id="execution-policy-heading">
+                    @L["ExecutionDetail:PolicySnapshot"]
+                </MudText>
+            </header>
+            <dl class="execution-evidence__facts">
+                <div>
+                    <dt>@L["ExecutionDetail:MaxConcurrency"]</dt>
+                    <dd>@Execution.Template.MaxConcurrency</dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:RetryCount"]</dt>
+                    <dd>@Execution.Template.RetryCount</dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:Timeout"]</dt>
+                    <dd><code>@TimePresentation.FormatDuration(Execution.Template.MaxExecutionTimeout)</code></dd>
+                </div>
+            </dl>
+        </section>
 
-    <section class="execution-evidence__section" aria-labelledby="execution-runtime-heading">
-        <MudText Typo="Typo.subtitle1" id="execution-runtime-heading">@L["ExecutionDetail:Runtime"]</MudText>
-        <dl class="execution-evidence__facts execution-evidence__facts--compact">
-            <div>
-                <dt>@L["ExecutionDetail:Attempts"]</dt>
-                <dd>@Execution.ExecutionAttempt / @Execution.RetryAttempt</dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:LeaseLosses"]</dt>
-                <dd>@Execution.LeaseLossCount</dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:LeaseExpires"]</dt>
-                <dd><time>@TimePresentation.FormatTimestamp(Execution.LeaseExpiresAtUtc)</time></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:Worker"]</dt>
-                <dd><code>@(Execution.RunningWorkerInstanceId ?? "—")</code></dd>
-            </div>
-        </dl>
-    </section>
+        <section class="execution-evidence__panel" aria-labelledby="execution-revision-heading">
+            <header class="execution-evidence__heading">
+                <span><MudIcon Icon="@Icons.Material.Filled.Fingerprint" Size="Size.Small" /></span>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h3" id="execution-revision-heading">
+                    @L["ExecutionDetail:Revision"]
+                </MudText>
+            </header>
+            <dl class="execution-evidence__facts">
+                <div>
+                    <dt>@L["ExecutionDetail:Scope"]</dt>
+                    <dd><code>@Execution.Template.Revision.SchedulerScopeKey</code></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:JobType"]</dt>
+                    <dd>@L[$"JobTypes:{Execution.Template.JobType}"]</dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:ArgumentsType"]</dt>
+                    <dd><code>@(Execution.Template.JobArgsKey ?? "—")</code></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:Owner"]</dt>
+                    <dd><code>@Execution.Template.Revision.OwnerKey</code></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:Release"]</dt>
+                    <dd><code>@Execution.Template.Revision.CatalogReleaseId</code></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:Activation"]</dt>
+                    <dd>@Execution.Template.Revision.ActivationEpoch</dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:WorkerRevision"]</dt>
+                    <dd><code>@Execution.Template.Revision.WorkerRevisionId</code></dd>
+                </div>
+                <div>
+                    <dt>@L["ExecutionDetail:JobRevision"]</dt>
+                    <dd><code>@Execution.Template.Revision.JobRevisionId</code></dd>
+                </div>
+            </dl>
+        </section>
+    </div>
 
-    <section class="execution-evidence__section" aria-labelledby="execution-revision-heading">
-        <MudText Typo="Typo.subtitle1" id="execution-revision-heading">@L["ExecutionDetail:Revision"]</MudText>
-        <dl class="execution-evidence__facts">
-            <div>
-                <dt>@L["ExecutionDetail:WorkerRevision"]</dt>
-                <dd><code>@Execution.Template.Revision.WorkerRevisionId</code></dd>
-            </div>
-            <div>
-                <dt>@L["ExecutionDetail:JobRevision"]</dt>
-                <dd><code>@Execution.Template.Revision.JobRevisionId</code></dd>
-            </div>
-        </dl>
-    </section>
-
-    <section class="execution-evidence__section" aria-labelledby="execution-arguments-heading">
-        <MudText Typo="Typo.subtitle1" id="execution-arguments-heading">@L["ExecutionDetail:Arguments"]</MudText>
+    <section class="execution-evidence__panel" aria-labelledby="execution-arguments-heading">
+        <header class="execution-evidence__heading">
+            <span><MudIcon Icon="@Icons.Material.Filled.DataObject" Size="Size.Small" /></span>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h3" id="execution-arguments-heading">
+                @L["ExecutionDetail:Arguments"]
+            </MudText>
+        </header>
         @if (string.IsNullOrWhiteSpace(Execution.JobArgs))
         {
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ExecutionDetail:NoArguments"]</MudText>
+            <div class="execution-evidence__empty">@L["ExecutionDetail:NoArguments"]</div>
         }
         else
         {

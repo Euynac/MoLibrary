@@ -79,14 +79,21 @@
 
                         @if (state.Analytics is { } analytics)
                         {
-                            <JobHealthPanel Snapshot="@analytics" />
+                            <JobHealthPanel Snapshot="@analytics"
+                                            DefinitionType="@summary.Definition.Declaration.JobType" />
                         }
+
+                        <JobExecutionActivityPanel Running="@state.RunningActivity"
+                                                   Failures="@state.RecentFailureActivity"
+                                                   ObservedAtUtc="@(state.ObservedAtUtc ?? TimeProvider.GetUtcNow())"
+                                                   ExecutionSelected="OpenExecutionDetailsAsync" />
 
                         <div class="job-detail-page__evidence-grid">
                             <JobDefinitionSchedulePanel Summary="@summary"
                                                         OnInspectSchedule="OpenScheduleInspectorAsync" />
                             <JobDefinitionLatestExecutionPanel Execution="@summary.LatestExecution"
-                                                               ObservedAtUtc="@(state.ObservedAtUtc ?? TimeProvider.GetUtcNow())" />
+                                                               ObservedAtUtc="@(state.ObservedAtUtc ?? TimeProvider.GetUtcNow())"
+                                                               ExecutionSelected="OpenExecutionDetailsAsync" />
                         </div>
 
                         <JobDefinitionContractPanel Definition="@summary.Definition" />

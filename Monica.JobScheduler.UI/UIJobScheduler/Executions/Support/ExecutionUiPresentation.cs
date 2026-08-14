@@ -75,4 +75,15 @@ internal static class ExecutionUiPresentation
         LogLevel.Error or LogLevel.Critical => Color.Error,
         _ => Color.Default
     };
+
+    internal static string GetStateIcon(JobExecutionState state) => state switch
+    {
+        JobExecutionState.Queued => Icons.Material.Filled.Schedule,
+        JobExecutionState.Running => Icons.Material.Filled.PlayCircle,
+        JobExecutionState.Succeeded => Icons.Material.Filled.CheckCircle,
+        JobExecutionState.Failed => Icons.Material.Filled.Error,
+        JobExecutionState.Cancelled => Icons.Material.Filled.Cancel,
+        JobExecutionState.Skipped => Icons.Material.Filled.SkipNext,
+        _ => Icons.Material.Filled.Circle
+    };
 }

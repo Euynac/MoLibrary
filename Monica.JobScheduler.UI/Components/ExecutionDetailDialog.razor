@@ -17,70 +17,65 @@
 
 <MudDialog>
     <TitleContent>
-        <div class="execution-detail__title">
-            <MudText Typo="Typo.h6">
-                @(DetailState.Execution is { } execution
-                    ? JobSchedulerUiPresentation.GetJobDisplayName(execution.Template)
-                    : L["ExecutionDetail:Title"])
-            </MudText>
-            @if (DetailState.Execution is { } titleExecution)
-            {
-                <code title="@titleExecution.Template.Revision.JobKey">@titleExecution.Template.Revision.JobKey</code>
-            }
-            <code title="@InstanceId">@InstanceId</code>
+        <div class="execution-detail__dialog-title">
+            <MudIcon Icon="@Icons.Material.Filled.FactCheck" Color="Color.Primary" />
+            <MudText Typo="Typo.h6" HtmlTag="h1">@L["ExecutionDetail:Title"]</MudText>
         </div>
     </TitleContent>
     <DialogContent>
-        @if (DetailState.IsLoading && DetailState.Execution is null)
-        {
-            <div class="execution-detail__loading">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
-            </div>
-        }
-        else if (DetailState.AccessChecked && !DetailState.IsAuthorized)
-        {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                @L["Access:DeniedDescription"]
-            </MudAlert>
-        }
-        else if (DetailState.Error is not null && DetailState.Execution is null)
-        {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@DetailState.Error</MudAlert>
-        }
-        else if (DetailState.IsNotFound)
-        {
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                @L["ExecutionDetail:NotFound"]
-            </MudAlert>
-        }
-        else if (DetailState.Execution is { } execution)
-        {
-            <div class="execution-detail">
-                @if (DetailState.IsLoading)
-                {
-                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-                }
+        <div class="execution-detail__viewport">
+            @if (DetailState.IsLoading && DetailState.Execution is null)
+            {
+                <div class="execution-detail__loading">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                </div>
+            }
+            else if (DetailState.AccessChecked && !DetailState.IsAuthorized)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @L["Access:DeniedDescription"]
+                </MudAlert>
+            }
+            else if (DetailState.Error is not null && DetailState.Execution is null)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@DetailState.Error</MudAlert>
+            }
+            else if (DetailState.IsNotFound)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                    @L["ExecutionDetail:NotFound"]
+                </MudAlert>
+            }
+            else if (DetailState.Execution is { } execution)
+            {
+                var observedAtUtc = DetailState.ObservedAtUtc ?? TimeProvider.GetUtcNow();
+                <div class="execution-detail">
+                    @if (DetailState.IsLoading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                    }
 
-                @if (DetailState.Error is not null)
-                {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                        @DetailState.Error
-                    </MudAlert>
-                }
+                    @if (DetailState.Error is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                            @DetailState.Error
+                        </MudAlert>
+                    }
 
-                @if (execution.CancellationRequestedAtUtc.HasValue && !execution.IsTerminal)
-                {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                        @L["ExecutionDetail:CancellationPending", TimePresentation.FormatTimestamp(execution.CancellationRequestedAtUtc)]
-                    </MudAlert>
-                }
+                    @if (execution.CancellationRequestedAtUtc.HasValue && !execution.IsTerminal)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                            @L["ExecutionDetail:CancellationPending", TimePresentation.FormatTimestamp(execution.CancellationRequestedAtUtc)]
+                        </MudAlert>
+                    }
 
-                <ExecutionEvidenceFacts Execution="@execution"
-                                        ObservedAtUtc="@(DetailState.ObservedAtUtc ?? TimeProvider.GetUtcNow())" />
-                <ExecutionHistoryLedger Entries="@execution.History" />
-            </div>
-        }
+                    <ExecutionDetailHero Execution="@execution" ObservedAtUtc="@observedAtUtc" />
+                    <ExecutionEvidenceFacts Execution="@execution" ObservedAtUtc="@observedAtUtc" />
+                    <ExecutionHistoryLedger Entries="@execution.History" />
+                </div>
+            }
+        </div>
     </DialogContent>
     <DialogActions>
         <div class="execution-detail__actions">

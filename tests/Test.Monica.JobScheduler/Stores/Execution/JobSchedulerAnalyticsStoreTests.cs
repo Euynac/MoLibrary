@@ -83,7 +83,8 @@ public sealed class JobSchedulerAnalyticsStoreTests
         snapshot.ExecutedTerminalCount.Should().Be(3);
         snapshot.ExecutedThroughputPerHour.Should().Be(0.75);
         snapshot.Reliability.Should().BeApproximately(2D / 3D, 0.000001);
-        snapshot.SkipRate.Should().Be(0);
+        snapshot.RecurringScheduleDispositionCount.Should().Be(0);
+        snapshot.RecurringScheduleFulfillment.Should().Be(0);
         snapshot.Duration.Count.Should().Be(3);
         snapshot.Duration.Minimum.Should().Be(TimeSpan.FromMinutes(20));
         snapshot.Duration.Average.Should().BeCloseTo(TimeSpan.FromMinutes(130D / 3D), TimeSpan.FromTicks(1));
@@ -98,12 +99,154 @@ public sealed class JobSchedulerAnalyticsStoreTests
         snapshot.Trend[1].CompletedTerminalCount.Should().Be(0);
         snapshot.Trend[2].SucceededCount.Should().Be(1);
         snapshot.Trend[2].CancelledCount.Should().Be(1);
+        snapshot.Trend.Sum(static bucket => bucket.CompletedTerminalCount)
+            .Should().Be(snapshot.CompletedTerminalCount);
         snapshot.TopJobsByVolume.Select(static item => item.JobKey).Should().Equal("jobs.alpha", "jobs.beta");
-        snapshot.TopJobsByFailures.Should().ContainSingle().Which.JobKey.Should().Be("jobs.alpha");
-        snapshot.TopJobsBySkips.Should().BeEmpty();
-        snapshot.SlowestExecutions.Should().HaveCount(3);
+        snapshot.TopJobsByVolume.Select(static item => item.JobName)
+            .Should().Equal("Alpha analytics job", "Beta analytics job");
+        var failedRanking = snapshot.TopJobsByFailures.Should().ContainSingle().Which;
+        failedRanking.JobKey.Should().Be("jobs.alpha");
+        failedRanking.JobName.Should().Be("Alpha analytics job");
+        snapshot.SlowestExecutions.Should().HaveCount(2);
+        snapshot.SlowestExecutions.Select(static item => item.JobKey).Should().OnlyHaveUniqueItems();
         snapshot.SlowestExecutions[0].InstanceId.Should().Be("succeeded-beta");
+        snapshot.SlowestExecutions[0].JobName.Should().Be("Beta analytics job");
         snapshot.SlowestExecutions[0].Duration.Should().Be(TimeSpan.FromMinutes(70));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Analytics_WhenAJobIsRenamed_ShouldAggregateByKeyAndPreserveExecutionTitles(bool useEfCore)
+    {
+        await using var fixture = await AnalyticsStoreFixture.CreateAsync(
+            useEfCore,
+            RANGE_START,
+            TestContext.Current.CancellationToken);
+        var originalDefinitions = await fixture.ActivateReleaseAsync(
+            "analytics-release-v1",
+            "analytics-v1",
+            1,
+            [AnalyticsStoreFixture.CreateDeclaration("jobs.alpha", "Original alpha name")],
+            TestContext.Current.CancellationToken);
+        var originalCapability = await fixture.Store.RegisterWorkerCapabilityAsync(new WorkerCapabilityRegistration
+        {
+            SchedulerScopeKey = fixture.Scope,
+            OwnerKey = "analytics-owner",
+            WorkerRevisionId = "analytics-v1",
+            WorkerInstanceId = "analytics-worker-v1",
+            JobRevisionIds = originalDefinitions.Values.Select(static item => item.JobRevisionId).ToArray()
+        }, TimeSpan.FromHours(12), TestContext.Current.CancellationToken);
+        await fixture.EnqueueAsync(originalDefinitions["jobs.alpha"], "alpha-before-rename");
+        var originalLease = await fixture.ClaimOneAsync(originalCapability);
+        fixture.Time.Advance(TimeSpan.FromMinutes(2));
+        await fixture.CompleteAsync(originalLease, JobAttemptOutcome.Succeeded);
+
+        var renamedDefinitions = await fixture.ActivateReleaseAsync(
+            "analytics-release-v2",
+            "analytics-v2",
+            2,
+            [AnalyticsStoreFixture.CreateDeclaration("jobs.alpha", "Renamed alpha job")],
+            TestContext.Current.CancellationToken);
+        var renamedCapability = await fixture.Store.RegisterWorkerCapabilityAsync(new WorkerCapabilityRegistration
+        {
+            SchedulerScopeKey = fixture.Scope,
+            OwnerKey = "analytics-owner",
+            WorkerRevisionId = "analytics-v2",
+            WorkerInstanceId = "analytics-worker-v2",
+            JobRevisionIds = renamedDefinitions.Values.Select(static item => item.JobRevisionId).ToArray()
+        }, TimeSpan.FromHours(12), TestContext.Current.CancellationToken);
+        await fixture.EnqueueAsync(renamedDefinitions["jobs.alpha"], "alpha-after-rename");
+        var renamedLease = await fixture.ClaimOneAsync(renamedCapability);
+        fixture.Time.Advance(TimeSpan.FromMinutes(1));
+        await fixture.CompleteAsync(renamedLease, JobAttemptOutcome.Succeeded);
+
+        var snapshot = await fixture.Store.GetExecutionAnalyticsAsync(
+            fixture.Scope,
+            new JobExecutionAnalyticsQuery
+            {
+                StartTimeUtc = RANGE_START,
+                EndTimeUtc = fixture.Time.GetUtcNow().AddSeconds(1),
+                BucketSize = JobExecutionAnalyticsBucketSize.Hour,
+                TopJobLimit = 10,
+                SlowestExecutionLimit = 10
+            },
+            TestContext.Current.CancellationToken);
+
+        var ranking = snapshot.TopJobsByVolume.Should().ContainSingle().Which;
+        ranking.JobKey.Should().Be("jobs.alpha");
+        ranking.JobName.Should().Be("Renamed alpha job");
+        ranking.CompletedTerminalCount.Should().Be(2);
+        var slowest = snapshot.SlowestExecutions.Should().ContainSingle().Which;
+        slowest.InstanceId.Should().Be("alpha-before-rename");
+        slowest.JobName.Should().Be("Original alpha name");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Analytics_SlowestExecutions_ShouldSelectAndLimitDistinctJobs(bool useEfCore)
+    {
+        await using var fixture = await AnalyticsStoreFixture.CreateAsync(
+            useEfCore,
+            RANGE_START,
+            TestContext.Current.CancellationToken);
+        var declarations = Enumerable.Range(0, 11)
+            .Select(index => AnalyticsStoreFixture.CreateDeclaration(
+                $"jobs.ranking.{index:00}",
+                $"Ranking job {index:00}"))
+            .ToArray();
+        var definitions = await fixture.ActivateReleaseAsync(
+            "slowest-distinct-release",
+            "slowest-distinct-v1",
+            1,
+            declarations,
+            TestContext.Current.CancellationToken);
+        var capability = await fixture.Store.RegisterWorkerCapabilityAsync(new WorkerCapabilityRegistration
+        {
+            SchedulerScopeKey = fixture.Scope,
+            OwnerKey = "analytics-owner",
+            WorkerRevisionId = "slowest-distinct-v1",
+            WorkerInstanceId = "slowest-distinct-worker",
+            JobRevisionIds = definitions.Values.Select(static item => item.JobRevisionId).ToArray()
+        }, TimeSpan.FromHours(12), TestContext.Current.CancellationToken);
+
+        for (var index = 0; index < declarations.Length; index++)
+        {
+            var declaration = declarations[index];
+            await fixture.EnqueueAsync(definitions[declaration.JobKey], $"slowest-{index:00}");
+            var lease = await fixture.ClaimOneAsync(capability);
+            var durationSeconds = index == 9 ? 11 : index + 1;
+            fixture.Time.Advance(TimeSpan.FromSeconds(durationSeconds));
+            await fixture.CompleteAsync(lease, JobAttemptOutcome.Succeeded);
+        }
+
+        await fixture.EnqueueAsync(definitions["jobs.ranking.10"], "slowest-10-tied-duplicate");
+        var duplicateLease = await fixture.ClaimOneAsync(capability);
+        fixture.Time.Advance(TimeSpan.FromSeconds(11));
+        await fixture.CompleteAsync(duplicateLease, JobAttemptOutcome.Succeeded);
+
+        var snapshot = await fixture.Store.GetExecutionAnalyticsAsync(
+            fixture.Scope,
+            new JobExecutionAnalyticsQuery
+            {
+                StartTimeUtc = RANGE_START,
+                EndTimeUtc = fixture.Time.GetUtcNow().AddSeconds(1),
+                BucketSize = JobExecutionAnalyticsBucketSize.Hour,
+                SlowestExecutionLimit = 10
+            },
+            TestContext.Current.CancellationToken);
+
+        snapshot.SlowestExecutions.Should().HaveCount(10);
+        snapshot.SlowestExecutions.Select(static item => item.JobKey).Should().OnlyHaveUniqueItems();
+        snapshot.SlowestExecutions.Select(static item => item.Duration).Should().Equal(
+            new[] { 11, 11, 9, 8, 7, 6, 5, 4, 3, 2 }
+                .Select(static seconds => TimeSpan.FromSeconds(seconds)));
+        snapshot.SlowestExecutions.Take(2).Select(static item => item.InstanceId)
+            .Should().Equal("slowest-09", "slowest-10");
+        snapshot.SlowestExecutions.Should().NotContain(item => item.JobKey == "jobs.ranking.00");
+        snapshot.SlowestExecutions.Single(item => item.JobKey == "jobs.ranking.10")
+            .InstanceId.Should().Be("slowest-10");
     }
 
     [Theory]
@@ -139,7 +282,8 @@ public sealed class JobSchedulerAnalyticsStoreTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Analytics_WhenRecurringCapacitySkipsAnOccurrence_ShouldReportSkipSeparately(bool useEfCore)
+    public async Task Analytics_WhenRecurringOutcomesAndOtherOriginsComplete_ShouldMeasureOnlyScheduleDelivery(
+        bool useEfCore)
     {
         await using var fixture = await AnalyticsStoreFixture.CreateAsync(
             useEfCore,
@@ -185,6 +329,63 @@ public sealed class JobSchedulerAnalyticsStoreTests
             },
             TestContext.Current.CancellationToken);
 
+        var capability = await fixture.Store.RegisterWorkerCapabilityAsync(new WorkerCapabilityRegistration
+        {
+            SchedulerScopeKey = fixture.Scope,
+            OwnerKey = recurring.OwnerId,
+            WorkerRevisionId = recurring.WorkerRevisionId,
+            WorkerInstanceId = "recurring-analytics-worker",
+            JobRevisionIds = [recurring.JobRevisionId]
+        }, TimeSpan.FromHours(12), TestContext.Current.CancellationToken);
+        var firstLease = await fixture.ClaimOneAsync(capability);
+        fixture.Time.Advance(TimeSpan.FromSeconds(10));
+        await fixture.CompleteAsync(firstLease, JobAttemptOutcome.Succeeded);
+
+        var runNow = await fixture.Store.RunRecurringNowAsync(new JobRecurringRunNowCommand
+        {
+            SchedulerScopeKey = fixture.Scope,
+            InstanceId = "recurring-run-now",
+            JobKey = recurring.Declaration.JobKey,
+            ExpectedOwnerId = recurring.OwnerId,
+            ExpectedJobRevisionId = recurring.JobRevisionId
+        }, TestContext.Current.CancellationToken);
+        var runNowLease = await fixture.ClaimOneAsync(capability);
+        fixture.Time.Advance(TimeSpan.FromSeconds(10));
+        await fixture.CompleteAsync(runNowLease, JobAttemptOutcome.Succeeded);
+
+        var cancelledOccurrence = skipped.Cursor!.NextOccurrenceUtc!.Value;
+        fixture.Time.Advance(cancelledOccurrence - fixture.Time.GetUtcNow());
+        var cancelled = await fixture.Store.TryMaterializeRecurringOccurrenceAsync(
+            new RecurringOccurrenceMaterialization
+            {
+                CursorKey = skipped.Cursor.Key,
+                ExpectedVersion = skipped.Cursor.Version,
+                ExpectedOccurrenceUtc = cancelledOccurrence,
+                NextOccurrenceUtc = cancelledOccurrence.AddMinutes(1),
+                InstanceId = "recurring-cancelled"
+            },
+            TestContext.Current.CancellationToken);
+        var cancellation = await fixture.Store.RequestCancellationAsync(
+            fixture.Scope,
+            cancelled.Execution!.InstanceId,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var failedOccurrence = cancelled.Cursor!.NextOccurrenceUtc!.Value;
+        fixture.Time.Advance(failedOccurrence - fixture.Time.GetUtcNow());
+        var failed = await fixture.Store.TryMaterializeRecurringOccurrenceAsync(
+            new RecurringOccurrenceMaterialization
+            {
+                CursorKey = cancelled.Cursor.Key,
+                ExpectedVersion = cancelled.Cursor.Version,
+                ExpectedOccurrenceUtc = failedOccurrence,
+                NextOccurrenceUtc = failedOccurrence.AddMinutes(1),
+                InstanceId = "recurring-failed"
+            },
+            TestContext.Current.CancellationToken);
+        var failedLease = await fixture.ClaimOneAsync(capability);
+        fixture.Time.Advance(TimeSpan.FromSeconds(10));
+        await fixture.CompleteAsync(failedLease, JobAttemptOutcome.Failed);
+
         var snapshot = await fixture.Store.GetExecutionAnalyticsAsync(
             fixture.Scope,
             new JobExecutionAnalyticsQuery
@@ -196,16 +397,25 @@ public sealed class JobSchedulerAnalyticsStoreTests
             TestContext.Current.CancellationToken);
 
         first.Execution!.State.Should().Be(JobExecutionState.Queued);
+        first.Execution.Origin.Should().Be(JobExecutionOrigin.RecurringSchedule);
         skipped.Execution!.State.Should().Be(JobExecutionState.Skipped);
-        snapshot.StateTotals[JobExecutionState.Queued].Should().Be(1);
+        skipped.Execution.Origin.Should().Be(JobExecutionOrigin.RecurringSchedule);
+        runNow.Origin.Should().Be(JobExecutionOrigin.RecurringRunNow);
+        cancellation.Execution!.State.Should().Be(JobExecutionState.Cancelled);
+        cancellation.Execution.Origin.Should().Be(JobExecutionOrigin.RecurringSchedule);
+        failed.Execution!.Origin.Should().Be(JobExecutionOrigin.RecurringSchedule);
+        snapshot.StateTotals[JobExecutionState.Succeeded].Should().Be(2);
+        snapshot.StateTotals[JobExecutionState.Failed].Should().Be(1);
+        snapshot.StateTotals[JobExecutionState.Cancelled].Should().Be(1);
         snapshot.StateTotals[JobExecutionState.Skipped].Should().Be(1);
-        snapshot.CompletedTerminalCount.Should().Be(1);
-        snapshot.ExecutedTerminalCount.Should().Be(0);
-        snapshot.Reliability.Should().Be(0);
-        snapshot.SkipRate.Should().Be(1);
-        snapshot.Duration.Count.Should().Be(0);
-        snapshot.TopJobsBySkips.Should().ContainSingle().Which.SkippedCount.Should().Be(1);
-        snapshot.SlowestExecutions.Should().BeEmpty();
+        snapshot.CompletedTerminalCount.Should().Be(5);
+        snapshot.ExecutedTerminalCount.Should().Be(3);
+        snapshot.Reliability.Should().BeApproximately(2D / 3D, 0.000001);
+        snapshot.RecurringScheduleDispositionCount.Should().Be(3);
+        snapshot.RecurringScheduleFulfillment.Should().BeApproximately(2D / 3D, 0.000001);
+        snapshot.Duration.Count.Should().Be(3);
+        snapshot.SlowestExecutions.Should().ContainSingle()
+            .Which.InstanceId.Should().Be("recurring-failed");
     }
 
     [Fact]
@@ -293,22 +503,40 @@ public sealed class JobSchedulerAnalyticsStoreTests
         internal async Task<IReadOnlyDictionary<string, ActiveJobDefinition>> ActivateAsync(
             CancellationToken cancellationToken)
         {
+            return await ActivateReleaseAsync(
+                "analytics-release",
+                "analytics-v1",
+                1,
+                [
+                    CreateDeclaration("jobs.alpha", "Alpha analytics job"),
+                    CreateDeclaration("jobs.beta", "Beta analytics job")
+                ],
+                cancellationToken);
+        }
+
+        internal async Task<IReadOnlyDictionary<string, ActiveJobDefinition>> ActivateReleaseAsync(
+            string releaseId,
+            string workerRevisionId,
+            long deploymentGeneration,
+            IReadOnlyList<JobDeclaration> declarations,
+            CancellationToken cancellationToken)
+        {
             await Store.StageReleaseAsync(
                 new JobCatalogReleaseStage(
                     new JobCatalogReleaseManifest(
                         Scope,
-                        "analytics-release",
-                        [new JobCatalogOwnerManifest("analytics-owner", "analytics-v1")]),
-                    1),
+                        releaseId,
+                        [new JobCatalogOwnerManifest("analytics-owner", workerRevisionId)]),
+                    deploymentGeneration),
                 cancellationToken);
             await Store.PublishOwnerSnapshotAsync(new JobOwnerCatalogSnapshot(
                 Scope,
-                "analytics-release",
+                releaseId,
                 "analytics-owner",
-                "analytics-v1",
-                [CreateDeclaration("jobs.alpha"), CreateDeclaration("jobs.beta")]),
+                workerRevisionId,
+                declarations),
                 cancellationToken);
-            await Store.TryActivateReleaseAsync(Scope, "analytics-release", cancellationToken);
+            await Store.TryActivateReleaseAsync(Scope, releaseId, cancellationToken);
             return (await Store.GetActiveCatalogAsync(Scope, cancellationToken))!.Definitions
                 .ToDictionary(static item => item.Declaration.JobKey, StringComparer.Ordinal);
         }
@@ -384,11 +612,11 @@ public sealed class JobSchedulerAnalyticsStoreTests
             }
         }
 
-        private static JobDeclaration CreateDeclaration(string jobKey) => new()
+        internal static JobDeclaration CreateDeclaration(string jobKey, string jobName) => new()
         {
             JobKey = jobKey,
             JobArgsKey = $"{jobKey}.Args",
-            JobName = jobKey,
+            JobName = jobName,
             JobType = JobType.Triggered,
             MaxConcurrency = 1,
             RetryCount = 0,

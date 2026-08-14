@@ -1,8 +1,15 @@
 @using System.Globalization
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
 
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject SchedulerTimePresentation TimePresentation
+@inject IDialogService DialogService
+
+@{
+    var trendSeries = TrendSeries;
+    var maximumSeriesValue = GetMaximumSeriesValue();
+}
 
 <div class="analytics-dashboard">
     <section class="analytics-dashboard__pulse" aria-label="@L["Analytics:Metrics:AriaLabel"]">
@@ -26,8 +33,10 @@
             <span class="analytics-dashboard__metric-icon"><MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /></span>
             <div>
                 <span>@L["Analytics:Metrics:ScheduleFulfillment"]</span>
-                <strong>@FormatRatio(ScheduleFulfillment, ScheduleDispositionCount > 0)</strong>
-                <small>@L["Analytics:Metrics:ScheduledDispositions", ScheduleDispositionCount]</small>
+                <strong>@FormatRatio(
+                    Snapshot.RecurringScheduleFulfillment,
+                    Snapshot.RecurringScheduleDispositionCount > 0)</strong>
+                <small>@L["Analytics:Metrics:ScheduledDispositions", Snapshot.RecurringScheduleDispositionCount]</small>
             </div>
         </article>
         <article data-tone="warning">
@@ -41,101 +50,153 @@
     </section>
 
     <section class="analytics-dashboard__trend" aria-labelledby="analytics-trend-heading">
-        <header class="analytics-dashboard__section-heading">
+        <header class="analytics-dashboard__section-heading analytics-dashboard__trend-heading">
             <div>
                 <MudText Typo="Typo.overline" Color="Color.Primary">@L["Analytics:Trend:Eyebrow"]</MudText>
                 <MudText Typo="Typo.h6" HtmlTag="h2" id="analytics-trend-heading">@L["Analytics:Trend:Title"]</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Trend:Description"]</MudText>
             </div>
-            <div class="analytics-dashboard__legend" aria-label="@L["Analytics:Trend:LegendAriaLabel"]">
-                <span data-state="succeeded">@L["ExecutionStates:Succeeded"]</span>
-                <span data-state="failed">@L["ExecutionStates:Failed"]</span>
-                <span data-state="skipped">@L["ExecutionStates:Skipped"]</span>
+            <div class="analytics-dashboard__trend-tools">
+                <div class="analytics-dashboard__chart-toggle"
+                     role="group"
+                     aria-label="@L["Analytics:Trend:ViewAriaLabel"]">
+                    <button type="button"
+                            class="@GetChartModeClass(AnalyticsChartMode.Bars)"
+                            aria-pressed="@GetAriaPressed(AnalyticsChartMode.Bars)"
+                            @onclick="@(() => _chartMode = AnalyticsChartMode.Bars)">
+                        <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Small" />
+                        <span>@L["Analytics:Trend:Bars"]</span>
+                    </button>
+                    <button type="button"
+                            class="@GetChartModeClass(AnalyticsChartMode.Lines)"
+                            aria-pressed="@GetAriaPressed(AnalyticsChartMode.Lines)"
+                            @onclick="@(() => _chartMode = AnalyticsChartMode.Lines)">
+                        <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Small" />
+                        <span>@L["Analytics:Trend:Lines"]</span>
+                    </button>
+                </div>
+                <div class="analytics-dashboard__legend" aria-label="@L["Analytics:Trend:LegendAriaLabel"]">
+                    @foreach (var series in trendSeries)
+                    {
+                        <span data-state="@series.State">@series.Label</span>
+                    }
+                </div>
             </div>
         </header>
 
-        <div class="analytics-dashboard__bars" role="img" aria-label="@L["Analytics:Trend:ChartAriaLabel"]">
-            @foreach (var bucket in SampledTrend)
+        <div class="analytics-dashboard__chart" role="img" aria-label="@L["Analytics:Trend:ChartAriaLabel"]">
+            <svg class="analytics-dashboard__chart-svg"
+                 viewBox="0 0 1000 260"
+                 preserveAspectRatio="none"
+                 aria-hidden="true"
+                 focusable="false">
+                @foreach (var y in ChartGridLines)
+                {
+                    <line class="analytics-dashboard__chart-grid" x1="20" x2="980" y1="@y" y2="@y" />
+                }
+
+                @if (_chartMode == AnalyticsChartMode.Bars)
+                {
+                    @for (var bucketIndex = 0; bucketIndex < Snapshot.Trend.Count; bucketIndex++)
+                    {
+                        var bucket = Snapshot.Trend[bucketIndex];
+                        @for (var seriesIndex = 0; seriesIndex < trendSeries.Count; seriesIndex++)
+                        {
+                            var series = trendSeries[seriesIndex];
+                            var value = series.GetValue(bucket);
+                            <rect class="analytics-dashboard__chart-bar"
+                                  data-state="@series.State"
+                                  x="@GetBarX(bucketIndex, seriesIndex)"
+                                  y="@GetChartY(value, maximumSeriesValue)"
+                                  width="@GetBarWidth()"
+                                  height="@GetChartHeight(value, maximumSeriesValue)"
+                                  rx="2">
+                                <title>@GetBucketTooltip(bucket)</title>
+                            </rect>
+                        }
+                    }
+                }
+                else
+                {
+                    @foreach (var series in trendSeries)
+                    {
+                        <polyline class="analytics-dashboard__chart-line"
+                                  data-state="@series.State"
+                                  points="@GetLinePoints(series, maximumSeriesValue)" />
+                        @for (var bucketIndex = 0; bucketIndex < Snapshot.Trend.Count; bucketIndex++)
+                        {
+                            var bucket = Snapshot.Trend[bucketIndex];
+                            <circle class="analytics-dashboard__chart-point"
+                                    data-state="@series.State"
+                                    cx="@GetPointX(bucketIndex)"
+                                    cy="@GetChartY(series.GetValue(bucket), maximumSeriesValue)"
+                                    r="3">
+                                <title>@GetBucketTooltip(bucket)</title>
+                            </circle>
+                        }
+                    }
+                }
+            </svg>
+            <div class="analytics-dashboard__chart-axis" aria-hidden="true">
+                @for (var index = 0; index < Snapshot.Trend.Count; index++)
+                {
+                    <time class="@(ShouldShowAxisLabel(index) ? "is-visible" : null)">
+                        @FormatBucketLabel(Snapshot.Trend[index].StartTimeUtc)
+                    </time>
+                }
+            </div>
+        </div>
+
+        <dl class="analytics-dashboard__outcome-totals" aria-label="@L["Analytics:Trend:TotalsAriaLabel"]">
+            @foreach (var total in OutcomeTotals)
             {
-                <div class="analytics-dashboard__bar-column" title="@GetBucketTooltip(bucket)">
-                    <div class="analytics-dashboard__bar-stack">
-                        <span data-state="skipped" style="@GetHeight(bucket.SkippedCount)"></span>
-                        <span data-state="failed" style="@GetHeight(bucket.FailedCount)"></span>
-                        <span data-state="succeeded" style="@GetHeight(bucket.SucceededCount)"></span>
-                    </div>
-                    <time>@FormatBucketLabel(bucket.StartTimeUtc)</time>
+                <div data-state="@total.State">
+                    <dt>@total.Label</dt>
+                    <dd>@total.Value.ToString("N0", CultureInfo.CurrentCulture)</dd>
                 </div>
             }
-        </div>
+        </dl>
     </section>
 
-    <div class="analytics-dashboard__analysis-grid">
-        <section class="analytics-dashboard__panel" aria-labelledby="duration-heading">
-            <header class="analytics-dashboard__section-heading">
-                <div>
-                    <MudText Typo="Typo.h6" HtmlTag="h2" id="duration-heading">@L["Analytics:Duration:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Duration:Description"]</MudText>
-                </div>
-            </header>
-            <dl class="analytics-dashboard__duration-grid">
-                @foreach (var metric in DurationMetrics)
-                {
-                    <div>
-                        <dt>@metric.Label</dt>
-                        <dd>@FormatDuration(metric.Value)</dd>
-                    </div>
-                }
-            </dl>
-        </section>
-
-        <section class="analytics-dashboard__panel" aria-labelledby="ranking-heading">
-            <header class="analytics-dashboard__section-heading">
-                <div>
-                    <MudText Typo="Typo.h6" HtmlTag="h2" id="ranking-heading">@L["Analytics:Rankings:Title"]</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Rankings:Description"]</MudText>
-                </div>
-            </header>
-            <div class="analytics-dashboard__ranking-groups">
-                @foreach (var group in RankingGroups)
-                {
-                    <section class="analytics-dashboard__ranking-group" data-tone="@group.Tone">
-                        <h3>
-                            <span>@group.Label</span>
-                            <b>@group.Items.Count</b>
-                        </h3>
-                        @if (group.Items.Count == 0)
-                        {
-                            <div class="analytics-dashboard__ranking-empty">@L["Analytics:Rankings:Empty"]</div>
-                        }
-                        else
-                        {
-                            <ol class="analytics-dashboard__ranking">
-                                @foreach (var item in group.Items)
-                                {
-                                    <li>
-                                        <a href="@GetJobHref(item.JobKey)">
-                                            <strong title="@item.JobKey">@item.JobKey</strong>
-                                            <span>@L["Analytics:Rankings:OutcomeSummary", item.CompletedTerminalCount, item.FailedCount, item.SkippedCount]</span>
-                                        </a>
-                                        <span class="analytics-dashboard__rank-value">@group.GetValue(item)</span>
-                                    </li>
-                                }
-                            </ol>
-                        }
-                    </section>
-                }
-            </div>
-        </section>
-    </div>
-
-    <section class="analytics-dashboard__panel" aria-labelledby="slowest-heading">
+    <section class="analytics-dashboard__panel analytics-dashboard__latency" aria-labelledby="duration-heading">
         <header class="analytics-dashboard__section-heading">
             <div>
-                <MudText Typo="Typo.h6" HtmlTag="h2" id="slowest-heading">@L["Analytics:Slowest:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Slowest:Description"]</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Warning">@L["Analytics:Duration:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6" HtmlTag="h2" id="duration-heading">@L["Analytics:Duration:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Analytics:Duration:Description"]</MudText>
             </div>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Snapshot.SlowestExecutions.Count</MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                @L["Analytics:Duration:Samples", Snapshot.Duration.Count]
+            </MudChip>
         </header>
+
+        <dl class="analytics-dashboard__percentiles" aria-label="@L["Analytics:Duration:PercentilesAriaLabel"]">
+            @foreach (var metric in PercentileMetrics)
+            {
+                <div data-percentile="@metric.Key">
+                    <dt>@metric.Label</dt>
+                    <dd>@FormatDuration(metric.Value)</dd>
+                    <small>@metric.Description</small>
+                </div>
+            }
+        </dl>
+
+        <dl class="analytics-dashboard__duration-summary">
+            @foreach (var metric in DurationSummary)
+            {
+                <div>
+                    <dt><MudIcon Icon="@metric.Icon" Size="Size.Small" /> @metric.Label</dt>
+                    <dd>@FormatDuration(metric.Value)</dd>
+                </div>
+            }
+        </dl>
+
+        <div class="analytics-dashboard__slow-heading">
+            <div>
+                <h3>@L["Analytics:Slowest:Top"]</h3>
+                <p>@L["Analytics:Slowest:Description"]</p>
+            </div>
+        </div>
         @if (Snapshot.SlowestExecutions.Count == 0)
         {
             <div class="analytics-dashboard__empty">@L["Analytics:Slowest:Empty"]</div>
@@ -143,24 +204,96 @@
         else
         {
             <div class="analytics-dashboard__slow-list">
-                @foreach (var execution in Snapshot.SlowestExecutions)
+                @for (var index = 0; index < Snapshot.SlowestExecutions.Count; index++)
                 {
-                    <a href="@GetExecutionHref(execution.InstanceId)">
-                        <span class="analytics-dashboard__slow-icon">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" />
+                    var execution = Snapshot.SlowestExecutions[index];
+                    <button type="button"
+                            aria-label="@L[
+                                "Analytics:Slowest:OpenDetails",
+                                index + 1,
+                                execution.JobName,
+                                execution.InstanceId,
+                                L[$"ExecutionStates:{execution.State}"],
+                                TimePresentation.FormatTimestamp(execution.CompletedAtUtc),
+                                FormatDuration(execution.Duration)]"
+                            @onclick="@(() => OpenExecutionAsync(execution.InstanceId))">
+                        <span class="analytics-dashboard__slow-rank">@(index + 1)</span>
+                        <span class="analytics-dashboard__slow-copy">
+                            <strong title="@execution.JobName">@execution.JobName</strong>
+                            <code title="@execution.JobKey">@execution.JobKey</code>
+                            <small title="@execution.InstanceId">@execution.InstanceId</small>
                         </span>
-                        <span>
-                            <strong title="@execution.JobKey">@execution.JobKey</strong>
-                            <code title="@execution.InstanceId">@execution.InstanceId</code>
+                        <span class="analytics-dashboard__slow-state" data-state="@GetStateName(execution.State)">
+                            @L[$"ExecutionStates:{execution.State}"]
                         </span>
-                        <time datetime="@execution.CompletedAtUtc.ToString("O")">@TimePresentation.FormatTimestamp(execution.CompletedAtUtc)</time>
+                        <time datetime="@execution.CompletedAtUtc.ToString("O")">
+                            @TimePresentation.FormatTimestamp(execution.CompletedAtUtc)
+                        </time>
                         <b>@FormatDuration(execution.Duration)</b>
-                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
-                    </a>
+                        <span class="analytics-dashboard__slow-chevron">
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                        </span>
+                    </button>
                 }
             </div>
         }
     </section>
+
+    <div class="analytics-dashboard__ranking-grid">
+        @foreach (var group in RankingGroups)
+        {
+            <section class="analytics-dashboard__panel analytics-dashboard__ranking-panel"
+                     data-tone="@group.Tone"
+                     aria-labelledby="@group.HeadingId">
+                <header class="analytics-dashboard__section-heading">
+                    <div>
+                        <MudText Typo="Typo.overline" Color="@group.Color">@L["Analytics:Rankings:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h6" HtmlTag="h2" id="@group.HeadingId">@group.Label</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@group.Description</MudText>
+                    </div>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["Analytics:Rankings:TopTen"]</MudChip>
+                </header>
+                @if (group.Items.Count == 0)
+                {
+                    <div class="analytics-dashboard__ranking-empty">@group.EmptyLabel</div>
+                }
+                else
+                {
+                    <ol class="analytics-dashboard__ranking">
+                        @for (var index = 0; index < group.Items.Count; index++)
+                        {
+                            var item = group.Items[index];
+                            var value = group.GetValue(item);
+                            <li>
+                                <a href="@GetJobHref(item.JobKey)"
+                                   aria-label="@L[
+                                       "Analytics:Rankings:OpenJobWithMetric",
+                                       index + 1,
+                                       item.JobName,
+                                       group.Label,
+                                       value,
+                                       FormatShare(value, group.TotalValue)]">
+                                    <span class="analytics-dashboard__rank-number" data-rank="@(index + 1)">@(index + 1)</span>
+                                    <span class="analytics-dashboard__rank-copy">
+                                        <strong title="@item.JobName">@item.JobName</strong>
+                                        <code title="@item.JobKey">@item.JobKey</code>
+                                        <progress aria-hidden="true"
+                                                  max="@Math.Max(1, group.MaximumValue)"
+                                                  value="@value">@value</progress>
+                                    </span>
+                                    <span class="analytics-dashboard__rank-metric">
+                                        <b>@value.ToString("N0", CultureInfo.CurrentCulture)</b>
+                                        <small>@FormatShare(value, group.TotalValue)</small>
+                                    </span>
+                                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                                </a>
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+        }
+    </div>
 
     <footer class="analytics-dashboard__cohort-note">
         <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
@@ -169,73 +302,144 @@
 </div>
 
 @code {
+    private const double CHART_LEFT = 20D;
+    private const double CHART_WIDTH = 960D;
+    private const double CHART_TOP = 10D;
+    private const double CHART_HEIGHT = 230D;
+    private const int TREND_SERIES_COUNT = 4;
+    private static readonly int[] ChartGridLines = [10, 67, 125, 182, 240];
+
     /// <summary>
     /// Gets the bounded analytics snapshot rendered by this dashboard.
     /// </summary>
     [Parameter, EditorRequired]
     public JobExecutionAnalyticsSnapshot Snapshot { get; set; } = null!;
 
+    private AnalyticsChartMode _chartMode = AnalyticsChartMode.Bars;
+
     private long SucceededCount => Snapshot.Trend.Sum(static bucket => bucket.SucceededCount);
     private long FailedCount => Snapshot.Trend.Sum(static bucket => bucket.FailedCount);
     private long SkippedCount => Snapshot.Trend.Sum(static bucket => bucket.SkippedCount);
+    private long CancelledCount => Snapshot.Trend.Sum(static bucket => bucket.CancelledCount);
     private long DecidedCount => SucceededCount + FailedCount;
-    private long ScheduleDispositionCount => DecidedCount + SkippedCount;
-    private double ScheduleFulfillment => ScheduleDispositionCount == 0 ? 0D : 1D - Snapshot.SkipRate;
-    private long MaximumBucketValue => Math.Max(
+    private long GetMaximumSeriesValue() => Math.Max(
         1,
         Snapshot.Trend.Count == 0
             ? 1
-            : Snapshot.Trend.Max(static bucket => bucket.CompletedTerminalCount));
+            : Snapshot.Trend.Max(static bucket => Math.Max(
+                Math.Max(bucket.SucceededCount, bucket.FailedCount),
+                Math.Max(bucket.SkippedCount, bucket.CancelledCount))));
 
-    private IReadOnlyList<JobExecutionAnalyticsBucket> SampledTrend
-    {
-        get
-        {
-            const int maximumBars = 32;
-            if (Snapshot.Trend.Count <= maximumBars)
-            {
-                return Snapshot.Trend;
-            }
-
-            var step = Math.Max(1, (int)Math.Ceiling(Snapshot.Trend.Count / (double)maximumBars));
-            return Snapshot.Trend
-                .Where((_, index) => index % step == 0 || index == Snapshot.Trend.Count - 1)
-                .ToArray();
-        }
-    }
-
-    private IReadOnlyList<(string Label, TimeSpan? Value)> DurationMetrics =>
+    private IReadOnlyList<AnalyticsTrendSeries> TrendSeries =>
     [
-        (L["Analytics:Duration:Minimum"], Snapshot.Duration.Minimum),
-        (L["Analytics:Duration:Average"], Snapshot.Duration.Average),
-        (L["Analytics:Duration:P50"], Snapshot.Duration.P50),
-        (L["Analytics:Duration:P90"], Snapshot.Duration.P90),
-        (L["Analytics:Duration:P95"], Snapshot.Duration.P95),
-        (L["Analytics:Duration:P99"], Snapshot.Duration.P99),
-        (L["Analytics:Duration:Maximum"], Snapshot.Duration.Maximum)
+        new("succeeded", L["ExecutionStates:Succeeded"], static bucket => bucket.SucceededCount),
+        new("failed", L["ExecutionStates:Failed"], static bucket => bucket.FailedCount),
+        new("skipped", L["ExecutionStates:Skipped"], static bucket => bucket.SkippedCount),
+        new("cancelled", L["ExecutionStates:Cancelled"], static bucket => bucket.CancelledCount)
+    ];
+
+    private IReadOnlyList<AnalyticsOutcomeTotal> OutcomeTotals =>
+    [
+        new("total", L["Analytics:Trend:Total"], Snapshot.CompletedTerminalCount),
+        new("succeeded", L["ExecutionStates:Succeeded"], SucceededCount),
+        new("failed", L["ExecutionStates:Failed"], FailedCount),
+        new("skipped", L["ExecutionStates:Skipped"], SkippedCount),
+        new("cancelled", L["ExecutionStates:Cancelled"], CancelledCount)
+    ];
+
+    private IReadOnlyList<AnalyticsDurationMetric> PercentileMetrics =>
+    [
+        new("p50", L["Analytics:Duration:P50"], L["Analytics:Duration:P50Description"], Snapshot.Duration.P50),
+        new("p90", L["Analytics:Duration:P90"], L["Analytics:Duration:P90Description"], Snapshot.Duration.P90),
+        new("p95", L["Analytics:Duration:P95"], L["Analytics:Duration:P95Description"], Snapshot.Duration.P95),
+        new("p99", L["Analytics:Duration:P99"], L["Analytics:Duration:P99Description"], Snapshot.Duration.P99)
+    ];
+
+    private IReadOnlyList<AnalyticsDurationSummary> DurationSummary =>
+    [
+        new(L["Analytics:Duration:Average"], Icons.Material.Filled.Timer, Snapshot.Duration.Average),
+        new(L["Analytics:Duration:Minimum"], Icons.Material.Filled.Speed, Snapshot.Duration.Minimum),
+        new(L["Analytics:Duration:Maximum"], Icons.Material.Filled.Timelapse, Snapshot.Duration.Maximum)
     ];
 
     private IReadOnlyList<AnalyticsRankingGroup> RankingGroups =>
     [
-        new(
+        AnalyticsRankingGroup.Create(
+            "analytics-volume-heading",
             L["Analytics:Rankings:Volume"],
+            L["Analytics:Rankings:VolumeDescription"],
             Snapshot.TopJobsByVolume,
             static item => item.CompletedTerminalCount,
-            "primary"),
-        new(
+            Snapshot.CompletedTerminalCount,
+            L["Analytics:Rankings:VolumeEmpty"],
+            "primary",
+            Color.Primary),
+        AnalyticsRankingGroup.Create(
+            "analytics-failures-heading",
             L["Analytics:Rankings:Failures"],
+            L["Analytics:Rankings:FailuresDescription"],
             Snapshot.TopJobsByFailures,
             static item => item.FailedCount,
-            "error"),
-        new(
-            L["Analytics:Rankings:Skips"],
-            Snapshot.TopJobsBySkips,
-            static item => item.SkippedCount,
-            "warning")
+            FailedCount,
+            L["Analytics:Rankings:FailuresEmpty"],
+            "error",
+            Color.Error)
     ];
 
-    private string GetHeight(long value) => FormattableString.Invariant(
-        $"height: {Math.Max(value > 0 ? 4D : 0D, value / (double)MaximumBucketValue * 100D):0.##}%");
+    private string GetChartModeClass(AnalyticsChartMode mode) =>
+        _chartMode == mode ? "is-active" : string.Empty;
+
+    private string GetAriaPressed(AnalyticsChartMode mode) =>
+        _chartMode == mode ? "true" : "false";
+
+    private string GetBarX(int bucketIndex, int seriesIndex)
+    {
+        var bucketWidth = CHART_WIDTH / Math.Max(1, Snapshot.Trend.Count);
+        var width = GetBarWidthValue();
+        var groupWidth = width * TREND_SERIES_COUNT;
+        var x = CHART_LEFT + (bucketIndex * bucketWidth) + ((bucketWidth - groupWidth) / 2D) + (seriesIndex * width);
+        return FormatSvgNumber(x);
+    }
+
+    private string GetBarWidth() => FormatSvgNumber(GetBarWidthValue());
+
+    private double GetBarWidthValue()
+    {
+        var bucketWidth = CHART_WIDTH / Math.Max(1, Snapshot.Trend.Count);
+        return Math.Max(1.5D, Math.Min(14D, bucketWidth / (TREND_SERIES_COUNT + 1D)));
+    }
+
+    private string GetPointX(int bucketIndex)
+    {
+        if (Snapshot.Trend.Count <= 1)
+        {
+            return FormatSvgNumber(CHART_LEFT + (CHART_WIDTH / 2D));
+        }
+
+        return FormatSvgNumber(CHART_LEFT + (bucketIndex * CHART_WIDTH / (Snapshot.Trend.Count - 1D)));
+    }
+
+    private static string GetChartY(long value, long maximumSeriesValue) => FormatSvgNumber(
+        CHART_TOP + CHART_HEIGHT - (Math.Max(0, value) / (double)maximumSeriesValue * CHART_HEIGHT));
+
+    private static string GetChartHeight(long value, long maximumSeriesValue) => FormatSvgNumber(
+        Math.Max(value > 0 ? 2D : 0D, Math.Max(0, value) / (double)maximumSeriesValue * CHART_HEIGHT));
+
+    private string GetLinePoints(AnalyticsTrendSeries series, long maximumSeriesValue) => string.Join(
+        " ",
+        Snapshot.Trend.Select((bucket, index) =>
+            $"{GetPointX(index)},{GetChartY(series.GetValue(bucket), maximumSeriesValue)}"));
+
+    private bool ShouldShowAxisLabel(int index)
+    {
+        if (Snapshot.Trend.Count <= 8 || index == 0 || index == Snapshot.Trend.Count - 1)
+        {
+            return true;
+        }
+
+        var interval = Math.Max(1, (int)Math.Ceiling(Snapshot.Trend.Count / 6D));
+        return index % interval == 0;
+    }
 
     private string GetBucketTooltip(JobExecutionAnalyticsBucket bucket) => L[
         "Analytics:Trend:BucketTooltip",
@@ -256,15 +460,72 @@
         ? L["Common:NotAvailable"]
         : TimePresentation.FormatDuration(duration);
 
+    private static string FormatShare(long value, long total) => total <= 0
+        ? "—"
+        : (value / (double)total).ToString("P1", CultureInfo.CurrentCulture);
+
+    private static string FormatSvgNumber(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+
     private static string GetJobHref(string jobKey) =>
         $"/job-scheduler/catalog/{Uri.EscapeDataString(jobKey)}";
 
-    private static string GetExecutionHref(string instanceId) =>
-        $"/job-scheduler/executions?instanceId={Uri.EscapeDataString(instanceId)}";
+    private static string GetStateName(JobExecutionState state) => state.ToString().ToLowerInvariant();
+
+    private Task OpenExecutionAsync(string instanceId) =>
+        ExecutionDetailDialogLauncher.OpenAsync(DialogService, L, instanceId);
+
+    private enum AnalyticsChartMode
+    {
+        Bars,
+        Lines
+    }
+
+    private sealed record AnalyticsTrendSeries(
+        string State,
+        string Label,
+        Func<JobExecutionAnalyticsBucket, long> GetValue);
+
+    private sealed record AnalyticsOutcomeTotal(string State, string Label, long Value);
+
+    private sealed record AnalyticsDurationMetric(
+        string Key,
+        string Label,
+        string Description,
+        TimeSpan? Value);
+
+    private sealed record AnalyticsDurationSummary(string Label, string Icon, TimeSpan? Value);
 
     private sealed record AnalyticsRankingGroup(
+        string HeadingId,
         string Label,
+        string Description,
         IReadOnlyList<JobExecutionAnalyticsJobRank> Items,
         Func<JobExecutionAnalyticsJobRank, long> GetValue,
-        string Tone);
+        long TotalValue,
+        long MaximumValue,
+        string EmptyLabel,
+        string Tone,
+        Color Color)
+    {
+        internal static AnalyticsRankingGroup Create(
+            string headingId,
+            string label,
+            string description,
+            IReadOnlyList<JobExecutionAnalyticsJobRank> items,
+            Func<JobExecutionAnalyticsJobRank, long> getValue,
+            long totalValue,
+            string emptyLabel,
+            string tone,
+            Color color) => new(
+                headingId,
+                label,
+                description,
+                items,
+                getValue,
+                totalValue,
+                items.Count == 0 ? 1 : items.Max(getValue),
+                emptyLabel,
+                tone,
+                color);
+    }
 }

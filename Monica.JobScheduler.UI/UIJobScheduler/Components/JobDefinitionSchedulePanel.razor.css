@@ -8,6 +8,18 @@
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
     background-color: var(--mud-palette-surface);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.job-schedule-panel:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
+    box-shadow: var(--mud-elevation-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .job-schedule-panel {
+        transition-duration: 0.01ms;
+    }
 }
 
 .job-schedule-panel__heading,
@@ -26,9 +38,9 @@
 .job-schedule-panel__next {
     align-items: center;
     padding: 14px 16px;
-    border-left: 3px solid var(--mud-palette-primary);
-    border-radius: 6px;
-    background-color: var(--mud-palette-background-gray);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 22%, var(--mud-palette-lines-default));
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface));
 }
 
 .job-schedule-panel__next > div {
@@ -82,7 +94,7 @@
     font-size: 0.84rem;
 }
 
-.job-schedule-panel__facts code {
+.job-schedule-panel__facts ::deep code {
     font-family: var(--mo-font-family-mono);
     font-size: 0.8rem;
 }

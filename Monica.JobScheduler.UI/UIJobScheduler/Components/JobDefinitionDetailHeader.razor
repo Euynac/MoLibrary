@@ -43,7 +43,14 @@
                 }
             </div>
 
-            <MudText Typo="Typo.h5" HtmlTag="h2">@Definition.Declaration.JobName</MudText>
+            <div class="job-detail-header__title-row">
+                <span class="job-detail-header__symbol" aria-hidden="true">
+                    <MudIcon Icon="@(Definition.Declaration.JobType == JobType.Recurring
+                                        ? Icons.Material.Filled.Update
+                                        : Icons.Material.Filled.Bolt)" />
+                </span>
+                <MudText Typo="Typo.h5" HtmlTag="h2">@Definition.Declaration.JobName</MudText>
+            </div>
             @if (!string.IsNullOrWhiteSpace(Definition.Declaration.Description))
             {
                 <MudText Typo="Typo.body1" Color="Color.Secondary" Class="job-detail-header__description">
@@ -112,21 +119,35 @@
     </div>
 
     <dl class="job-detail-header__evidence" aria-label="@L["JobDetail:Header:EvidenceAriaLabel"]">
-        <div class="@GetWorkerMetricClass()">
-            <dt>@L["JobDetail:Header:CompatibleWorkers"]</dt>
-            <dd>@Summary.CompatibleWorkerCount</dd>
-        </div>
-        <div>
-            <dt>@L["JobDetail:Header:ActiveExecutions"]</dt>
+        <div class="job-detail-header__metric" data-metric="active">
+            <dt>
+                <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.PendingActions" Size="Size.Small" /></span>
+                <span>@L["JobDetail:Header:ActiveExecutions"]</span>
+            </dt>
             <dd>@Summary.ActiveExecutionCount</dd>
         </div>
-        <div>
-            <dt>@L["JobDetail:Header:QueuedExecutions"]</dt>
+        <div class="job-detail-header__metric" data-metric="queued" data-tone="info">
+            <dt>
+                <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Size="Size.Small" /></span>
+                <span>@L["JobDetail:Header:QueuedExecutions"]</span>
+            </dt>
             <dd>@Summary.QueuedExecutionCount</dd>
         </div>
-        <div>
-            <dt>@L["JobDetail:Header:RunningExecutions"]</dt>
+        <div class="job-detail-header__metric" data-metric="running" data-tone="secondary">
+            <dt>
+                <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.PlayCircle" Size="Size.Small" /></span>
+                <span>@L["JobDetail:Header:RunningExecutions"]</span>
+            </dt>
             <dd>@Summary.RunningExecutionCount</dd>
+        </div>
+        <div class="job-detail-header__metric"
+             data-metric="workers"
+             data-tone="@(Summary.HasCompatibleWorker ? "success" : "error")">
+            <dt>
+                <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Small" /></span>
+                <span>@L["JobDetail:Header:CompatibleWorkers"]</span>
+            </dt>
+            <dd>@Summary.CompatibleWorkerCount</dd>
         </div>
     </dl>
 </header>
@@ -200,7 +221,4 @@
             ? L["Catalog:Actions:Resume"]
             : L["Catalog:Actions:Pause"];
 
-    private string GetWorkerMetricClass() => Summary.HasCompatibleWorker
-        ? "job-detail-header__metric"
-        : "job-detail-header__metric job-detail-header__metric--attention";
 }
