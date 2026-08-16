@@ -1,3 +1,4 @@
+@using Markdig
 @using MudBlazor.Utilities
 @using Markdig.Syntax.Inlines
 @inject IMoMarkdownAssetResolver AssetResolver
@@ -6,6 +7,7 @@
     <MarkdownThemeSync />
     <MoMudMarkdown Value="@Value"
                    SourceType="@SourceType"
+                   MarkdownPipeline="@ResolvedMarkdownPipeline"
                    Props="@_resolvedProps"
                    Styling="@_resolvedStyling"
                    HasTableOfContents="@HasTableOfContents"
@@ -45,6 +47,12 @@
     [Parameter]
     public bool EnableMermaid { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets whether Markdig must treat raw HTML as plain Markdown text instead of renderable markup.
+    /// </summary>
+    [Parameter]
+    public bool DisableHtml { get; set; }
+
     [Parameter]
     public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
 
@@ -57,10 +65,17 @@
     private MudMarkdownProps _resolvedProps = new();
     private MudMarkdownStyling _resolvedStyling = new();
 
+    private static readonly MarkdownPipeline HtmlDisabledPipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .DisableHtml()
+        .Build();
+
     private string HostClass => new CssBuilder("mo-markdown-host")
         .AddClass($"mo-markdown-style-{NormalizeCssSegment(StyleKey)}")
         .AddClass(Class)
         .Build();
+
+    private MarkdownPipeline? ResolvedMarkdownPipeline => DisableHtml ? HtmlDisabledPipeline : null;
 
     protected override void OnParametersSet()
     {
