@@ -229,7 +229,7 @@
                 : L["Catalog:Batch:ResumeMessage", selectedCount],
             yesText: disabled ? L["Catalog:Actions:PauseSelected"] : L["Catalog:Actions:ResumeSelected"],
             cancelText: L["Common:Cancel"],
-            options: DialogOptions);
+            options: SmallDialogOptions);
         if (confirmed != true || _disposed || _state != state)
         {
             return;
@@ -313,7 +313,7 @@
         {
             { dialog => dialog.Definition, summary.Definition }
         };
-        var dialog = await DialogService.ShowAsync<JobTriggerDialog>(L["Trigger:Title"], parameters, DialogOptions);
+        var dialog = await DialogService.ShowAsync<JobTriggerDialog>(L["Trigger:Title"], parameters, SmallDialogOptions);
         var result = await dialog.Result;
         if (_disposed || _state != state)
         {
@@ -361,7 +361,7 @@
         }
     }
 
-    private static DialogOptions DialogOptions { get; } = new()
+    private static DialogOptions SmallDialogOptions { get; } = new()
     {
         CloseButton = true,
         CloseOnEscapeKey = true,

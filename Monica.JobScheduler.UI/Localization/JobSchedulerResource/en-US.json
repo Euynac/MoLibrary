@@ -259,7 +259,8 @@
     },
     "Cron": {
       "Unavailable": "Description unavailable",
-      "Parsing": "Reading schedule…"
+      "Parsing": "Reading schedule…",
+      "ConfiguredTimeZone": "Deployment-configured timezone (read only)"
     },
     "Triggered": {
       "Ready": "Ready for operator admission",
@@ -298,17 +299,199 @@
     }
   },
   "Policy": {
-    "Title": "Operator policy",
-    "ImmutableNotice": "Name, cron, timezone, concurrency, retry, timeout, and execution identity are declared by code and cannot be edited here. Disabling blocks new admission and recurring materialization; queued or running executions must be cancelled separately.",
+    "Title": "Operational policy workbench",
+    "ImmutableNotice": "Job key, job type, argument contract, owner, release, worker revision, job revision, and configured timezone remain deployment-owned. Policy changes affect future admission; queued and running executions preserve their captured configuration.",
     "DisabledOverride": "Execution state override",
     "InheritDefault": "Inherit code default",
     "ForceEnabled": "Force enabled",
     "ForceDisabled": "Force disabled",
     "MaxRecords": "Maximum retained executions",
-    "MaxRecordsHelp": "Leave empty for no record-count limit.",
+    "MaxRecordsHelp": "Leave empty to inherit 100. Set zero to disable count-based retention.",
     "MaxDays": "Maximum retention age (days)",
-    "MaxDaysHelp": "Leave empty for no age limit.",
-    "Saved": "Operator policy saved."
+    "MaxDaysHelp": "Leave empty to inherit no age limit.",
+    "Saved": "Operational policy saved.",
+    "UnsavedChanges": "Unsaved operator changes",
+    "NoChanges": "No policy changes",
+    "DriftWarning": "This sticky policy was reviewed against job revision {0}; the active release now uses {1}. Review the effective values before saving.",
+    "Provenance": {
+      "Declared": "Declared default",
+      "Override": "Operator override",
+      "Effective": "Effective value",
+      "Help": "Each row separates the immutable release default from operator intent and the behavior the scheduler will apply."
+    },
+    "Sections": {
+      "General": "General",
+      "GeneralHelp": "Control admission state and operator-facing job identity.",
+      "Schedule": "Schedule",
+      "ScheduleHelp": "Edit recurring cadence and boundaries in the configured deployment timezone.",
+      "Execution": "Execution",
+      "ExecutionHelp": "Control capacity and the retry/timeout snapshot captured by newly admitted work.",
+      "Retention": "Retention",
+      "RetentionHelp": "Bound terminal execution history by count and age."
+    },
+    "Fields": {
+      "Enabled": "Enabled state",
+      "DisplayName": "Display name",
+      "Description": "Description",
+      "DescriptionMode": "Description intent",
+      "MaxConcurrency": "Maximum concurrency",
+      "RetryCount": "Retry count",
+      "ExecutionTimeout": "Execution timeout",
+      "Hours": "Hours",
+      "Minutes": "Minutes",
+      "Seconds": "Seconds",
+      "MaxRecords": "Retained execution count",
+      "MaxDays": "Retention age (days)"
+    },
+    "Identity": {
+      "ArgumentContract": "Argument contract",
+      "ReviewedRevision": "Reviewed job revision",
+      "PolicyRevision": "Policy revision",
+      "UpdatedAt": "Policy updated (UTC)",
+      "Release": "Catalog release",
+      "WorkerRevision": "Worker revision",
+      "JobType": "Job type"
+    },
+    "DescriptionModes": {
+      "Inherit": "Inherit declared description",
+      "Clear": "Clear description",
+      "Value": "Use operator description"
+    },
+    "BoundaryModes": {
+      "Inherit": "Inherit declared boundary",
+      "None": "No boundary",
+      "Value": "Use operator boundary"
+    },
+    "Actions": {
+      "ResetField": "Reset this field to its declared default",
+      "ResetAll": "Reset all overrides",
+      "Override": "Add override"
+    },
+    "Values": {
+      "Enabled": "Enabled",
+      "Disabled": "Disabled",
+      "NoLimit": "No limit",
+      "Days": "{0} days",
+      "ReviewOutdated": "Review outdated"
+    },
+    "Validation": {
+      "DisplayNameRequired": "Enter a display name within the supported length, or reset the field to inherit its declared value.",
+      "DescriptionRequired": "Enter a description within the supported length, choose Clear, or inherit the declared value.",
+      "Timeout": "Enter a positive timeout within the supported duration range."
+    },
+    "Conflict": {
+      "DraftsPreserved": "Another operator or release changed the policy baseline ({0} → {1}). Your unsaved edits are preserved while untouched fields adopt the latest policy; review before retrying.",
+      "ReloadFailed": "The policy changed, but the latest operational baseline could not be loaded. Close and reopen the workbench before retrying.",
+      "SameField": "The latest policy changed at least one field that you also edited. Your draft wins on those fields; review the declared, override, and effective columns before retrying.",
+      "ScheduleTypeChanged": "The job changed from recurring to triggered while this Cron draft was open. The hidden draft has not been submitted. Discard only that schedule intent before saving the remaining edits.",
+      "DiscardScheduleDraft": "Discard schedule draft"
+    },
+    "Execution": {
+      "ProspectiveNotice": "Maximum concurrency governs new claims immediately without cancelling active work. Retry and timeout changes are captured only by newly admitted executions.",
+      "SubsecondPrecisionPreserved": "This existing timeout includes sub-second precision. Those fractional ticks are preserved when the whole-second fields are edited."
+    },
+    "Retention": {
+      "ZeroUnlimited": "Zero disables count-based retention."
+    },
+    "Schedule": {
+      "CronTitle": "Cadence contract",
+      "CronDescription": "The cadence band is a prospective view of the exact Cronos runtime contract.",
+      "Format": "Expression shape",
+      "FiveFields": "5 fields",
+      "SixFields": "6 fields with seconds",
+      "CronExpression": "Cron expression override",
+      "CronInputHelp": "A blank edited value is invalid. Use Reset to inherit the declared expression.",
+      "CronTooLong": "The Cron expression cannot exceed {0} characters.",
+      "ParsedFields": "Parsed Cron fields",
+      "ConfiguredTimeZone": "Configured timezone",
+      "TimeZoneLockedHelp": "Timezone is deployment configured and intentionally cannot be edited here.",
+      "StartBoundary": "Start boundary",
+      "EndBoundary": "End boundary",
+      "BoundaryMode": "Boundary intent",
+      "BoundaryDate": "Schedule-local date",
+      "BoundaryTime": "Schedule-local time",
+      "BoundaryValidationError": "Complete both boundary fields and choose a valid wall time in the configured timezone.",
+      "AmbiguousBoundary": "This wall time occurs twice during daylight-saving fallback. The earlier UTC instant is used deterministically.",
+      "BoundaryFailures": {
+        "Incomplete": "Choose both a date and a time.",
+        "InvalidLocalTime": "This wall time does not exist because the configured timezone advances its clock."
+      },
+      "ValidationError": "The expression is not accepted by the scheduler runtime.",
+      "DescriptionLoading": "Building a localized description…",
+      "DescriptionUnavailable": "A localized description is unavailable; runtime validation and preview remain authoritative.",
+      "NonZeroSecondsConversion": "This six-field expression has a non-zero seconds field. Correct it manually before switching to five fields so cadence is not silently changed.",
+      "InvalidConversion": "The current expression is invalid and cannot be converted.",
+      "AuthoritativeNext": "Authoritative next occurrence at load",
+      "AuthoritativeObservedAt": "Loaded from authoritative state observed at {0}",
+      "ProposedNext": "Proposed next occurrence",
+      "PreviewSuspended": "Suspended by effective policy",
+      "PreviewSuspendedDescription": "No occurrence will be scheduled while the effective policy is paused.",
+      "ProspectiveWarning": "Saving replaces the recurring cursor transactionally and schedules only the next occurrence strictly after database current time. Missed occurrences are never backfilled.",
+      "SimpleSettings": {
+        "Title": "Simple schedule builder",
+        "Mode": "Schedule pattern",
+        "Apply": "Apply to Cron override",
+        "Modes": {
+          "EveryMinute": "Every minute",
+          "EveryHour": "Every hour",
+          "EveryDay": "Every day at a selected time",
+          "EveryWeek": "Every week on a selected weekday and time",
+          "EveryMonth": "Every month on a selected day and time",
+          "Custom": "Custom fields"
+        }
+      },
+      "Fields": {
+        "Second": "Second",
+        "Minute": "Minute",
+        "Hour": "Hour",
+        "DayOfMonth": "Day of month",
+        "Month": "Month",
+        "DayOfWeek": "Day of week"
+      },
+      "Weekdays": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "Preview": {
+        "AriaLabel": "Next five prospective schedule occurrences",
+        "Sequence": "#",
+        "ConfiguredTime": "Configured-timezone time",
+        "Utc": "UTC timestamp"
+      },
+      "Syntax": {
+        "Title": "Cronos syntax guide",
+        "RuntimeContract": "Field order is minute, hour, day of month, month, day of week; six-field mode prepends seconds.",
+        "FieldTable": "Cron field ranges and special characters",
+        "Field": "Field",
+        "Range": "Allowed range",
+        "Characters": "Special characters",
+        "Names": "Months accept JAN–DEC and weekdays accept SUN–SAT, case-insensitively.",
+        "ReversedRanges": "Reversed ranges wrap across the field boundary, such as FRI-MON or 22-2.",
+        "Steps": "A step applies within its base range; */15 starts at the field minimum and advances by 15.",
+        "DayMatching": "When both day-of-month and day-of-week are constrained, Cronos requires both fields to match.",
+        "Tokens": {
+          "Star": "All allowed values",
+          "Comma": "List of values",
+          "Hyphen": "Inclusive range, including reversed ranges",
+          "Slash": "Step through a range",
+          "Question": "Any value for day-of-month or day-of-week",
+          "Last": "Last day of month or last named weekday",
+          "Weekday": "Nearest weekday to a day-of-month",
+          "Hash": "Nth weekday of the month"
+        },
+        "Examples": {
+          "EveryFiveMinutes": "Every five minutes",
+          "EveryDayNoon": "Every day at noon",
+          "WeekdaysNine": "Every weekday at 09:00",
+          "MonthlyFirst": "At midnight on the first day of every month"
+        }
+      }
+    }
   },
   "JobDetail": {
     "PageTitle": "Job Scheduler · Job details",
@@ -318,9 +501,8 @@
     "ObservedAt": "Operational evidence observed {0}",
     "Actions": {
       "BackToCatalog": "Back to catalog",
-      "InspectSchedule": "Inspect schedule"
+      "InspectSchedule": "Edit schedule policy"
     },
-    "Common": { "Unlimited": "Unlimited" },
     "Header": {
       "NoCompatibleWorker": "No compatible worker",
       "EvidenceAriaLabel": "Current job operational evidence",
@@ -396,7 +578,8 @@
       "WorkerRevision": "Worker revision",
       "WorkerRevisionHelp": "Exact executable revision a compatible worker must advertise before it can claim this job.",
       "JobRevision": "Job revision",
-      "JobRevisionHelp": "Content identity of the immutable declaration captured by new executions."
+      "JobRevisionHelp": "Content identity of the immutable declaration captured by new executions.",
+      "OverrideEffective": "Override: {0} · Effective: {1}"
     },
     "LatestExecution": {
       "Title": "Latest execution",
@@ -428,40 +611,6 @@
     "Scheduled": "Scheduled",
     "Suspended": "Suspended",
     "Exhausted": "Exhausted"
-  },
-  "CronInspector": {
-    "Title": "Schedule inspector",
-    "ImmutableNotice": "This schedule belongs to the immutable release declaration. Change it in code and deploy a new catalog release; the inspector never mutates release history.",
-    "TimeZone": "Timezone",
-    "StartBoundary": "Start boundary",
-    "EndBoundary": "End boundary",
-    "OperationalNext": "Durable next occurrence",
-    "ResetDraft": "Reset draft",
-    "Expression": {
-      "Title": "Cron contract",
-      "Description": "Six-field expressions include seconds; five-field expressions begin with minutes.",
-      "Draft": "Cron expression draft",
-      "DraftHelp": "Edit locally to validate and preview. The draft is not persisted; publish a new catalog release to change the immutable schedule."
-    },
-    "Fields": {
-      "AriaLabel": "Cron expression fields",
-      "Second": "Second",
-      "Minute": "Minute",
-      "Hour": "Hour",
-      "Day": "Day",
-      "Month": "Month",
-      "Weekday": "Weekday"
-    },
-    "Preview": {
-      "Title": "Upcoming declaration occurrences",
-      "Description": "Calculated strictly after {0}; the durable cursor remains authoritative.",
-      "Unavailable": "This host cannot evaluate the declared Cron expression or timezone.",
-      "Empty": "No future occurrence remains within the declaration boundaries.",
-      "AriaLabel": "Upcoming schedule occurrences",
-      "Sequence": "#",
-      "ScheduleTime": "Schedule-local time",
-      "SchedulerTime": "Scheduler time"
-    }
   },
   "Trigger": {
     "Title": "Admit execution",

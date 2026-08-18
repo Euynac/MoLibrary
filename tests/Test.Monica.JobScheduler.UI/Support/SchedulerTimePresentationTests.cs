@@ -136,6 +136,7 @@ public sealed class SchedulerTimePresentationTests
                 JobRevisionId = "sha256:job",
                 JobKey = "Sample.Jobs.GenerateReport"
             },
+            AppliedPolicyRevision = "0123456789abcdef0123456789abcdef",
             JobName = "Generate report"
         };
 

@@ -47,7 +47,11 @@ public sealed class JobSchedulerNativeTableTests
         var schedule = table.QuerySelector(".catalog-table__schedule");
         schedule.Should().NotBeNull();
         schedule!.TextContent.Should().Contain("0 */5 * * * *");
-        schedule.TextContent.Should().NotContain("UTC");
+        schedule.TextContent.Should().Contain("UTC");
+        var timezone = schedule.QuerySelector(".catalog-table__timezone");
+        timezone.Should().NotBeNull();
+        timezone!.GetAttribute("aria-label").Should().Be("Catalog:Cron:ConfiguredTimeZone");
+        timezone.QuerySelector("input, button, [role='combobox']").Should().BeNull();
         schedule.TextContent.Should().NotContain("Catalog:Cron:Parsing");
         table.QuerySelector("time.catalog-table__next-run")
             .Should().NotBeNull();
@@ -75,11 +79,7 @@ public sealed class JobSchedulerNativeTableTests
     [Fact]
     public async Task CatalogNextRun_ShouldUseSchedulerTimeAndKeepRelativeTimingInTheTooltip()
     {
-        var timeZone = TimeZoneInfo.CreateCustomTimeZone(
-            "Catalog/Test+08",
-            TimeSpan.FromHours(8),
-            "Catalog test time",
-            "Catalog test time");
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai");
         await using var context = new JobSchedulerUiTestContext(
             schedulerTimeZone: timeZone,
             timeProvider: new FixedTimeProvider(CATALOG_NOW));

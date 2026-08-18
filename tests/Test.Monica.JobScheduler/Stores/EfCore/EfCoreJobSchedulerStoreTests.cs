@@ -320,8 +320,11 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             "job-a",
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = 20,
+                Overrides = definition.Policy.Overrides with
+                {
+                    DisabledOverride = true,
+                    MaxRetainedHistoryRecords = 20
+                },
                 ExpectedConcurrencyStamp = definition.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
@@ -329,7 +332,7 @@ public sealed partial class EfCoreJobSchedulerStoreTests
 
         activation.Status.Should().Be(JobCatalogActivationStatus.Activated);
         definition.WorkerRevisionId.Should().Be("revision-1");
-        changed.DisabledOverride.Should().BeTrue();
+        changed.Overrides.DisabledOverride.Should().BeTrue();
         version.ChangeEpoch.Should().Be(2);
         version.DesiredReleaseId.Should().Be("release-1");
     }
@@ -349,8 +352,11 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             first.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = 20,
+                Overrides = first.Policy.Overrides with
+                {
+                    DisabledOverride = true,
+                    MaxRetainedHistoryRecords = 20
+                },
                 ExpectedConcurrencyStamp = first.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
@@ -371,12 +377,18 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             TestContext.Current.CancellationToken))!.Definitions.Single();
 
         moved.OwnerId.Should().Be(replacementOwner);
-        moved.Policy.Should().Be(firstPolicy);
+        AssertStickyPolicyState(moved.Policy, firstPolicy);
+        moved.Policy.ConcurrencyStamp.Should().NotBe(firstPolicy.ConcurrencyStamp);
+        moved.IsPolicyReviewOutdated.Should().BeTrue();
         await store.Invoking(candidate => candidate.UpdatePolicyAsync(
                 fixture.Scope,
                 first.OwnerId,
                 first.Declaration.JobKey,
-                new JobPolicyChange { ExpectedConcurrencyStamp = moved.Policy.ConcurrencyStamp },
+                new JobPolicyChange
+                {
+                    Overrides = moved.Policy.Overrides,
+                    ExpectedConcurrencyStamp = moved.Policy.ConcurrencyStamp
+                },
                 TestContext.Current.CancellationToken))
             .Should().ThrowAsync<JobCatalogNotFoundException>();
 
@@ -386,11 +398,19 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             moved.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = false,
-                MaxRetainedHistoryRecords = 12,
+                Overrides = moved.Policy.Overrides with
+                {
+                    DisabledOverride = false,
+                    MaxRetainedHistoryRecords = 12
+                },
                 ExpectedConcurrencyStamp = moved.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
+        (await store.GetActiveDefinitionAsync(
+                fixture.Scope,
+                moved.Declaration.JobKey,
+                TestContext.Current.CancellationToken))!
+            .IsPolicyReviewOutdated.Should().BeFalse();
         const string emptyOwner = "worker-c";
         await store.StageReleaseAsync(
             new JobCatalogReleaseStage(CreateManifest("release-3", "revision-3", emptyOwner), 3),
@@ -415,7 +435,8 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             TestContext.Current.CancellationToken))!.Definitions.Single();
 
         restored.OwnerId.Should().Be(first.OwnerId);
-        restored.Policy.Should().Be(replacementPolicy);
+        AssertStickyPolicyState(restored.Policy, replacementPolicy);
+        restored.Policy.ConcurrencyStamp.Should().NotBe(replacementPolicy.ConcurrencyStamp);
     }
 
     [Fact]
@@ -913,16 +934,19 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = active.Policy.MaxRetainedHistoryRecords,
-                MaxRetentionDays = active.Policy.MaxRetentionDays,
+                Overrides = active.Policy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
         version = await store.GetCatalogVersionAsync(fixture.Scope, TestContext.Current.CancellationToken);
+        var disabledDefinition = (await store.GetActiveCatalogAsync(
+            fixture.Scope,
+            TestContext.Current.CancellationToken))!.Definitions.Single();
         var operatorAndDebugSuspended = await fixture.SecondStore.SynchronizeRecurringScheduleAsync(
             synchronization with
             {
+                Template = disabledDefinition.CreateExecutionTemplate(),
+                Schedule = disabledDefinition.EffectiveConfiguration.Schedule!,
                 ChangeEpoch = version.ChangeEpoch,
                 SuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode
             },
@@ -933,16 +957,19 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = false,
-                MaxRetainedHistoryRecords = disabledPolicy.MaxRetainedHistoryRecords,
-                MaxRetentionDays = disabledPolicy.MaxRetentionDays,
+                Overrides = disabledPolicy.Overrides with { DisabledOverride = false },
                 ExpectedConcurrencyStamp = disabledPolicy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
         version = await store.GetCatalogVersionAsync(fixture.Scope, TestContext.Current.CancellationToken);
+        var enabledDefinition = (await store.GetActiveCatalogAsync(
+            fixture.Scope,
+            TestContext.Current.CancellationToken))!.Definitions.Single();
         var operatorReasonCleared = await fixture.SecondStore.SynchronizeRecurringScheduleAsync(
             synchronization with
             {
+                Template = enabledDefinition.CreateExecutionTemplate(),
+                Schedule = enabledDefinition.EffectiveConfiguration.Schedule!,
                 ChangeEpoch = version.ChangeEpoch,
                 SuspensionReasons = JobRecurringScheduleSuspensionReason.OperatorPolicy
                                     | JobRecurringScheduleSuspensionReason.DebugMode
@@ -1152,9 +1179,7 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = active.Policy.MaxRetainedHistoryRecords,
-                MaxRetentionDays = active.Policy.MaxRetentionDays,
+                Overrides = active.Policy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
@@ -1250,7 +1275,7 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                MaxRetainedHistoryRecords = 50,
+                Overrides = active.Policy.Overrides with { MaxRetainedHistoryRecords = 50 },
                 ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
@@ -1264,8 +1289,7 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = 50,
+                Overrides = retentionPolicy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = retentionPolicy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
@@ -1280,8 +1304,7 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = false,
-                MaxRetainedHistoryRecords = 50,
+                Overrides = disabledPolicy.Overrides with { DisabledOverride = false },
                 ExpectedConcurrencyStamp = disabledPolicy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
@@ -1441,7 +1464,7 @@ public sealed partial class EfCoreJobSchedulerStoreTests
             definition.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
+                Overrides = definition.Policy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = definition.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);

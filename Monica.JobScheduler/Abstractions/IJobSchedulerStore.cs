@@ -10,6 +10,22 @@ namespace Monica.JobScheduler.Abstractions;
 public interface IJobSchedulerStore : IJobCatalogStore, IJobExecutionStore, IJobSchedulerAnalyticsStore
 {
     /// <summary>
+    /// Atomically updates operator policy and any existing recurring cursor after verifying the current active owner.
+    /// </summary>
+    /// <remarks>
+    /// Policy identity is <paramref name="schedulerScopeKey"/> plus <paramref name="jobKey"/> and survives owner
+    /// transfers and release reactivation. <paramref name="ownerId"/> is an optimistic active-catalog fence only.
+    /// Schedule replacement and resume calculate the next occurrence strictly after the store's authoritative current
+    /// time; queued and running execution snapshots remain unchanged.
+    /// </remarks>
+    Task<JobPolicy> UpdatePolicyAsync(
+        string schedulerScopeKey,
+        string ownerId,
+        string jobKey,
+        JobPolicyChange change,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the operational projection for one exact active logical job key.
     /// </summary>
     /// <param name="schedulerScopeKey">The scheduler scope containing the active catalog.</param>

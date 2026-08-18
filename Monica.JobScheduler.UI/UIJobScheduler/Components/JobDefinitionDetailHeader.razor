@@ -49,12 +49,12 @@
                                         ? Icons.Material.Filled.Update
                                         : Icons.Material.Filled.Bolt)" />
                 </span>
-                <MudText Typo="Typo.h5" HtmlTag="h2">@Definition.Declaration.JobName</MudText>
+                <MudText Typo="Typo.h5" HtmlTag="h2">@Definition.EffectiveConfiguration.JobName</MudText>
             </div>
-            @if (!string.IsNullOrWhiteSpace(Definition.Declaration.Description))
+            @if (!string.IsNullOrWhiteSpace(Definition.EffectiveConfiguration.Description))
             {
                 <MudText Typo="Typo.body1" Color="Color.Secondary" Class="job-detail-header__description">
-                    @Definition.Declaration.Description
+                    @Definition.EffectiveConfiguration.Description
                 </MudText>
             }
             <code title="@Definition.Declaration.JobKey">@Definition.Declaration.JobKey</code>

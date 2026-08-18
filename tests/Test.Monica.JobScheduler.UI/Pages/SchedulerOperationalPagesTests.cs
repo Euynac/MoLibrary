@@ -531,7 +531,7 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
-    public async Task CronInspector_ShouldSupportLocalDraftValidationWithoutMutatingTheCatalog()
+    public async Task PolicyWorkbench_ShouldPreserveInvalidCronDraftWithoutMutatingTheCatalog()
     {
         await using var context = new JobSchedulerUiTestContext();
         var summary = (await context.Store.GetOperationalSummaryAsync(
@@ -539,49 +539,101 @@ public sealed class SchedulerOperationalPagesTests
             context.RecurringDefinition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken))!;
         var dialogService = context.Services.GetRequiredService<IDialogService>();
-        await dialogService.ShowAsync<CronScheduleInspectorDialog>(
-            "Cron",
-            new DialogParameters<CronScheduleInspectorDialog>
+        await dialogService.ShowAsync<JobPolicyDialog>(
+            "Policy",
+            new DialogParameters<JobPolicyDialog>
             {
                 { dialog => dialog.Definition, context.RecurringDefinition },
-                { dialog => dialog.OperationalSummary, summary }
+                { dialog => dialog.OperationalSummary, summary },
+                { dialog => dialog.ObservedAtUtc, DateTimeOffset.UtcNow }
             });
 
         var provider = context.DialogProvider;
         provider.WaitForAssertion(() =>
         {
-            provider.Markup.Should().Contain("CronInspector:Expression:Draft");
-            provider.Markup.Should().Contain("CronInspector:Preview:ScheduleTime");
+            provider.Markup.Should().Contain("Policy:Schedule:CronExpression");
+            provider.Markup.Should().Contain("Policy:Schedule:Preview:ConfiguredTime");
             provider.Markup.Should().Contain(context.RecurringDefinition.Declaration.CronExpression);
         });
-        provider.FindAll("input").First().Input("not-a-cron");
-        provider.WaitForAssertion(() => provider.Markup.Should().Contain("CronInspector:Preview:Unavailable"));
+        provider.Find("input[aria-label='Policy:Schedule:CronExpression']").Input("not-a-cron");
+        provider.WaitForAssertion(() =>
+        {
+            provider.Markup.Should().Contain("Policy:Schedule:ValidationError");
+            provider.Find("input[aria-label='Policy:Schedule:CronExpression']")
+                .GetAttribute("value").Should().Be("not-a-cron");
+        });
 
         var persisted = await context.Store.GetActiveDefinitionAsync(
             JobSchedulerUiTestContext.SCOPE,
             context.RecurringDefinition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken);
         persisted!.Declaration.CronExpression.Should().Be("0 */5 * * * *");
+        persisted.Policy.Overrides.ScheduleOverride.Should().BeNull();
     }
 
     [Fact]
-    public async Task PolicyDialog_ShouldExposeOnlyOperatorOwnedFields()
+    public async Task PolicyWorkbench_ShouldExposeOperationalFieldsAndKeepTimezoneReadOnly()
     {
         await using var context = new JobSchedulerUiTestContext();
 
         var dialogService = context.Services.GetRequiredService<IDialogService>();
         var parameters = new DialogParameters<JobPolicyDialog>
         {
-            { dialog => dialog.Definition, context.TriggeredDefinition }
+            { dialog => dialog.Definition, context.RecurringDefinition }
         };
         await dialogService.ShowAsync<JobPolicyDialog>("Policy", parameters);
 
         var provider = context.DialogProvider;
-        provider.WaitForAssertion(() => provider.Markup.Should().Contain("Policy:DisabledOverride"));
-        provider.Markup.Should().Contain("Policy:MaxRecords");
-        provider.Markup.Should().Contain("Policy:MaxDays");
-        provider.Markup.Should().NotContain("CronExpression");
-        provider.Markup.Should().NotContain("MaxConcurrency");
+        provider.WaitForAssertion(() => provider.Markup.Should().Contain("Policy:Schedule:CronExpression"));
+        provider.Markup.Should().Contain("Policy:Fields:Enabled");
+        provider.Markup.Should().Contain("Policy:Fields:DisplayName");
+        provider.Markup.Should().Contain("Policy:Fields:MaxConcurrency");
+        provider.Markup.Should().Contain("Policy:Fields:RetryCount");
+        provider.Markup.Should().Contain("Policy:Fields:ExecutionTimeout");
+        provider.Markup.Should().Contain("Policy:Fields:MaxRecords");
+        provider.Markup.Should().Contain("Policy:Fields:MaxDays");
+        provider.Find(".schedule-editor__timezone code").TextContent.Should().Be("UTC");
+        provider.FindAll(".schedule-editor__timezone input, .schedule-editor__timezone button, .schedule-editor__timezone [role='combobox']")
+            .Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PolicyWorkbench_WhenEffectivePolicyIsPaused_ShouldSuppressProspectiveOccurrences()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await context.Store.UpdatePolicyAsync(
+            JobSchedulerUiTestContext.SCOPE,
+            context.RecurringDefinition.OwnerId,
+            context.RecurringDefinition.Declaration.JobKey,
+            new()
+            {
+                Overrides = context.RecurringDefinition.Policy.Overrides with { DisabledOverride = true },
+                ExpectedConcurrencyStamp = context.RecurringDefinition.Policy.ConcurrencyStamp
+            },
+            Xunit.TestContext.Current.CancellationToken);
+        var summary = (await context.Store.GetOperationalSummaryAsync(
+            JobSchedulerUiTestContext.SCOPE,
+            context.RecurringDefinition.Declaration.JobKey,
+            Xunit.TestContext.Current.CancellationToken))!;
+        var dialogService = context.Services.GetRequiredService<IDialogService>();
+
+        await dialogService.ShowAsync<JobPolicyDialog>(
+            "Policy",
+            new DialogParameters<JobPolicyDialog>
+            {
+                { dialog => dialog.Definition, summary.Definition },
+                { dialog => dialog.OperationalSummary, summary }
+            });
+
+        var provider = context.DialogProvider;
+        provider.WaitForAssertion(() =>
+        {
+            provider.Find(".schedule-editor__prospective").TextContent.Should()
+                .Contain("Policy:Schedule:PreviewSuspended");
+            var preview = provider.Find(".schedule-editor__preview-scroll tbody");
+            preview.TextContent.Should().Contain("Policy:Schedule:PreviewSuspendedDescription");
+            preview.QuerySelectorAll("code").Should().BeEmpty();
+        });
     }
 
     [Fact]
@@ -595,6 +647,8 @@ public sealed class SchedulerOperationalPagesTests
             {
                 { dialog => dialog.Definition, context.TriggeredDefinition }
             });
+        context.DialogProvider.WaitForElement("input[aria-label='Policy:Fields:DisplayName']")
+            .Input("Operator draft");
         context.Access.IsAuthorized = false;
 
         var provider = context.DialogProvider;
@@ -609,6 +663,38 @@ public sealed class SchedulerOperationalPagesTests
             context.TriggeredDefinition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken);
         definition!.Policy.ConcurrencyStamp.Should().Be(context.TriggeredDefinition.Policy.ConcurrencyStamp);
+    }
+
+    [Fact]
+    public async Task PolicyDialog_WhenClosedDuringAuthorization_ShouldCancelAndJoinSaveWithoutMutation()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        context.Access.BlockAuthorization();
+        var dialogService = context.Services.GetRequiredService<IDialogService>();
+        var dialog = await dialogService.ShowAsync<JobPolicyDialog>(
+            "Policy",
+            new DialogParameters<JobPolicyDialog>
+            {
+                { policyDialog => policyDialog.Definition, context.TriggeredDefinition }
+            });
+        var provider = context.DialogProvider;
+        provider.WaitForElement("input[aria-label='Policy:Fields:DisplayName']")
+            .Input("Operator draft");
+        var save = provider.FindAll("button")
+            .Single(button => button.TextContent.Contains("Common:Save", StringComparison.Ordinal));
+
+        var saveTask = save.ClickAsync();
+        await context.Access.AuthorizationStarted.WaitAsync(Xunit.TestContext.Current.CancellationToken);
+        await provider.InvokeAsync(() => dialog.Close());
+        await saveTask.WaitAsync(Xunit.TestContext.Current.CancellationToken);
+        provider.WaitForAssertion(() => provider.FindComponents<JobPolicyDialog>().Should().BeEmpty());
+
+        var definition = await context.Store.GetActiveDefinitionAsync(
+            JobSchedulerUiTestContext.SCOPE,
+            context.TriggeredDefinition.Declaration.JobKey,
+            Xunit.TestContext.Current.CancellationToken);
+        definition!.Policy.ConcurrencyStamp.Should().Be(context.TriggeredDefinition.Policy.ConcurrencyStamp);
+        definition.Policy.Overrides.DisplayNameOverride.Should().BeNull();
     }
 
     [Fact]
@@ -737,17 +823,18 @@ public sealed class SchedulerOperationalPagesTests
         var catalog = await context.Store.GetActiveCatalogAsync(
             JobSchedulerUiTestContext.SCOPE,
             Xunit.TestContext.Current.CancellationToken);
+        var definition = await context.Store.GetActiveDefinitionAsync(
+            JobSchedulerUiTestContext.SCOPE,
+            context.RecurringDefinition.Declaration.JobKey,
+            Xunit.TestContext.Current.CancellationToken)
+            ?? throw new InvalidOperationException("The recurring test definition is no longer active.");
+        var schedule = definition.EffectiveConfiguration.Schedule
+                       ?? throw new InvalidOperationException("The recurring test definition has no effective schedule.");
         await context.Store.SynchronizeRecurringScheduleAsync(
             new RecurringScheduleSynchronization
             {
-                Template = context.RecurringDefinition.CreateExecutionTemplate(),
-                Schedule = new RecurringScheduleDefinition
-                {
-                    CronExpression = context.RecurringDefinition.Declaration.CronExpression!,
-                    TimeZoneId = context.RecurringDefinition.Declaration.TimeZoneId!,
-                    StartTimeUtc = context.RecurringDefinition.Declaration.StartTimeUtc,
-                    EndTimeUtc = context.RecurringDefinition.Declaration.EndTimeUtc
-                },
+                Template = definition.CreateExecutionTemplate(),
+                Schedule = schedule,
                 ChangeEpoch = catalog!.Version.ChangeEpoch,
                 SuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode
             },

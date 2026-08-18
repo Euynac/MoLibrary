@@ -46,10 +46,10 @@ internal sealed class JobPolicyEntity
 {
     public string SchedulerScopeKey { get; set; } = string.Empty;
     public string JobKey { get; set; } = string.Empty;
-    public bool? DisabledOverride { get; set; }
-    public int? MaxRetainedHistoryRecords { get; set; }
-    public int? MaxRetentionDays { get; set; }
+    public string OverridesJson { get; set; } = string.Empty;
     public string ConcurrencyStamp { get; set; } = string.Empty;
+    public string? ReviewedAgainstJobRevisionId { get; set; }
+    public long? RecurringScheduleEffectiveFromUtcTicks { get; set; }
     public long UpdatedAtUtcTicks { get; set; }
     public Guid ConcurrencyToken { get; set; }
 }
@@ -102,13 +102,15 @@ internal sealed class JobExecutionHistoryEntity
     public JobExecutionEntity Execution { get; set; } = null!;
 }
 
-// A gate belongs to the scope-wide logical job. Owner and revision remain execution-routing identities only; including
-// them here would let a replacement owner overlap work that is still cooperatively stopping after catalog cutover.
+// A gate belongs to the scope-wide logical job and owns both its live lease count and current admission capacity.
+// Owner and revision remain execution-routing identities only; including them here would let a replacement owner
+// overlap work that is still cooperatively stopping after catalog cutover.
 internal sealed class JobExecutionGateEntity
 {
     public string SchedulerScopeKey { get; set; } = string.Empty;
     public string JobKey { get; set; } = string.Empty;
     public int ActiveCount { get; set; }
+    public int MaxConcurrency { get; set; }
     public Guid ConcurrencyToken { get; set; }
 }
 
@@ -131,6 +133,7 @@ internal sealed class JobRecurringCursorEntity
     public string JobRevisionId { get; set; } = string.Empty;
     public string TemplateJson { get; set; } = string.Empty;
     public string ScheduleJson { get; set; } = string.Empty;
+    public string AppliedPolicyRevision { get; set; } = string.Empty;
     public long? NextOccurrenceUtcTicks { get; set; }
     public long CursorVersion { get; set; }
     public long UpdatedAtUtcTicks { get; set; }

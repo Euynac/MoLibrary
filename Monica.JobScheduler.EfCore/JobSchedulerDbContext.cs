@@ -72,7 +72,9 @@ public sealed class JobSchedulerDbContext(
             entity.HasKey(item => new { item.SchedulerScopeKey, item.JobKey });
             entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
             entity.Property(item => item.JobKey).HasMaxLength(JobSchedulerIdentity.JOB_KEY_MAX_LENGTH);
+            entity.Property(item => item.OverridesJson).HasColumnType("text");
             entity.Property(item => item.ConcurrencyStamp).HasMaxLength(32);
+            entity.Property(item => item.ReviewedAgainstJobRevisionId).HasMaxLength(JobSchedulerIdentity.HASH_LENGTH);
             entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
         });
     }
@@ -161,6 +163,7 @@ public sealed class JobSchedulerDbContext(
             entity.Property(item => item.JobRevisionId).HasMaxLength(JobSchedulerIdentity.HASH_LENGTH);
             entity.Property(item => item.TemplateJson).HasColumnType("text");
             entity.Property(item => item.ScheduleJson).HasColumnType("text");
+            entity.Property(item => item.AppliedPolicyRevision).HasMaxLength(32);
             entity.Property(item => item.SuspensionReasons).HasConversion<int>();
             entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
             entity.HasIndex(item => new { item.SchedulerScopeKey, item.ActivationEpoch, item.NextOccurrenceUtcTicks });

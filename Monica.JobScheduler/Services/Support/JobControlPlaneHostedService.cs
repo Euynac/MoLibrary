@@ -134,14 +134,9 @@ internal sealed class JobControlPlaneHostedService(
         foreach (var definition in catalog.Definitions.Where(static definition =>
                      definition.Declaration.JobType == JobType.Recurring))
         {
-            var declaration = definition.Declaration;
-            var schedule = new RecurringScheduleDefinition
-            {
-                CronExpression = declaration.CronExpression!,
-                TimeZoneId = declaration.TimeZoneId!,
-                StartTimeUtc = declaration.StartTimeUtc,
-                EndTimeUtc = declaration.EndTimeUtc
-            };
+            var schedule = definition.EffectiveConfiguration.Schedule
+                           ?? throw new InvalidOperationException(
+                               $"Recurring job '{definition.Declaration.JobKey}' has no effective schedule.");
             await store.SynchronizeRecurringScheduleAsync(new RecurringScheduleSynchronization
             {
                 Template = definition.CreateExecutionTemplate(),
@@ -224,8 +219,8 @@ internal sealed class JobControlPlaneHostedService(
             static definition => definition.Declaration.JobKey,
             static definition => new JobHistoryRetentionPolicy
             {
-                MaxRecords = definition.Policy.MaxRetainedHistoryRecords ?? 0,
-                MaxDays = definition.Policy.MaxRetentionDays
+                MaxRecords = definition.EffectiveConfiguration.MaxRetainedHistoryRecords,
+                MaxDays = definition.EffectiveConfiguration.MaxRetentionDays
             },
             StringComparer.Ordinal);
         var candidates = await store.GetExecutionCleanupCandidatesAsync(

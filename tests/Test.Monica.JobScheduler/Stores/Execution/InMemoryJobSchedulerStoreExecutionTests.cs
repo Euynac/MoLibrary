@@ -990,19 +990,19 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = active.Policy.MaxRetainedHistoryRecords,
-                MaxRetentionDays = active.Policy.MaxRetentionDays,
+                Overrides = active.Policy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
         version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
         var operatorAndDebugSuspended = await store.SynchronizeRecurringScheduleAsync(
-            synchronization with
-            {
-                ChangeEpoch = version.ChangeEpoch,
-                SuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode
-            },
+            CreateCurrentSynchronization(
+                await store.GetActiveDefinitionAsync(
+                    SCOPE,
+                    active.Declaration.JobKey,
+                    TestContext.Current.CancellationToken),
+                version.ChangeEpoch,
+                JobRecurringScheduleSuspensionReason.DebugMode),
             TestContext.Current.CancellationToken);
         _ = await store.UpdatePolicyAsync(
             SCOPE,
@@ -1010,20 +1010,20 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = false,
-                MaxRetainedHistoryRecords = disabledPolicy.MaxRetainedHistoryRecords,
-                MaxRetentionDays = disabledPolicy.MaxRetentionDays,
+                Overrides = disabledPolicy.Overrides with { DisabledOverride = false },
                 ExpectedConcurrencyStamp = disabledPolicy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
         version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
         var operatorReasonCleared = await store.SynchronizeRecurringScheduleAsync(
-            synchronization with
-            {
-                ChangeEpoch = version.ChangeEpoch,
-                SuspensionReasons = JobRecurringScheduleSuspensionReason.OperatorPolicy
-                                    | JobRecurringScheduleSuspensionReason.DebugMode
-            },
+            CreateCurrentSynchronization(
+                await store.GetActiveDefinitionAsync(
+                    SCOPE,
+                    active.Declaration.JobKey,
+                    TestContext.Current.CancellationToken),
+                version.ChangeEpoch,
+                JobRecurringScheduleSuspensionReason.OperatorPolicy
+                | JobRecurringScheduleSuspensionReason.DebugMode),
             TestContext.Current.CancellationToken);
 
         callerPolicyReasonCleared.Cursor!.SuspensionReasons
@@ -1239,9 +1239,7 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = active.Policy.MaxRetainedHistoryRecords,
-                MaxRetentionDays = active.Policy.MaxRetentionDays,
+                Overrides = active.Policy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
@@ -1334,13 +1332,18 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                MaxRetainedHistoryRecords = 50,
+                Overrides = active.Policy.Overrides with { MaxRetainedHistoryRecords = 50 },
                 ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
         version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
         var preserved = await store.SynchronizeRecurringScheduleAsync(
-            synchronization with { ChangeEpoch = version.ChangeEpoch },
+            CreateCurrentSynchronization(
+                await store.GetActiveDefinitionAsync(
+                    SCOPE,
+                    active.Declaration.JobKey,
+                    TestContext.Current.CancellationToken),
+                version.ChangeEpoch),
             TestContext.Current.CancellationToken);
         var disabledPolicy = await store.UpdatePolicyAsync(
             SCOPE,
@@ -1348,14 +1351,18 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = 50,
+                Overrides = retentionPolicy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = retentionPolicy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
         version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
         var suspended = await store.SynchronizeRecurringScheduleAsync(
-            synchronization with { ChangeEpoch = version.ChangeEpoch },
+            CreateCurrentSynchronization(
+                await store.GetActiveDefinitionAsync(
+                    SCOPE,
+                    active.Declaration.JobKey,
+                    TestContext.Current.CancellationToken),
+                version.ChangeEpoch),
             TestContext.Current.CancellationToken);
         time.Advance(TimeSpan.FromMinutes(5));
         _ = await store.UpdatePolicyAsync(
@@ -1364,14 +1371,18 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
             active.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = false,
-                MaxRetainedHistoryRecords = 50,
+                Overrides = disabledPolicy.Overrides with { DisabledOverride = false },
                 ExpectedConcurrencyStamp = disabledPolicy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken);
         version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
         var resumed = await store.SynchronizeRecurringScheduleAsync(
-            synchronization with { ChangeEpoch = version.ChangeEpoch },
+            CreateCurrentSynchronization(
+                await store.GetActiveDefinitionAsync(
+                    SCOPE,
+                    active.Declaration.JobKey,
+                    TestContext.Current.CancellationToken),
+                version.ChangeEpoch),
             TestContext.Current.CancellationToken);
 
         created.Cursor!.NextOccurrenceUtc.Should().Be(START_TIME.AddMinutes(1).AddSeconds(-3));
@@ -1382,6 +1393,261 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
         resumed.Cursor!.IsSuspended.Should().BeFalse();
         resumed.Cursor.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.None);
         resumed.Cursor.NextOccurrenceUtc.Should().Be(START_TIME.AddMinutes(16).AddSeconds(-3));
+    }
+
+    [Fact]
+    public async Task UpdatePolicyAsync_WhenScheduleChanges_ShouldAtomicallyFenceOldCursorWithoutBackfill()
+    {
+        var time = new ManualTimeProvider(START_TIME);
+        var store = new InMemoryJobSchedulerStore(time);
+        var active = await ActivateRecurringDefinitionAsync(store, TestContext.Current.CancellationToken);
+        var version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var originalSynchronization = CreateCurrentSynchronization(active, version.ChangeEpoch);
+        var original = await store.SynchronizeRecurringScheduleAsync(
+            originalSynchronization,
+            TestContext.Current.CancellationToken);
+        var staleCursor = original.Cursor!;
+        time.Advance(TimeSpan.FromMinutes(10));
+
+        var policy = await store.UpdatePolicyAsync(
+            SCOPE,
+            active.OwnerId,
+            active.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                Overrides = active.Policy.Overrides with
+                {
+                    ScheduleOverride = new JobScheduleOverride
+                    {
+                        CronExpression = " 0 */5 * * * * ",
+                        StartTimeUtc = new JobScheduleBoundaryOverride
+                        {
+                            Value = START_TIME.AddMinutes(11).ToOffset(TimeSpan.FromHours(8))
+                        },
+                        EndTimeUtc = new JobScheduleBoundaryOverride { Value = null }
+                    }
+                },
+                ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var current = (await store.GetActiveDefinitionAsync(
+            SCOPE,
+            active.Declaration.JobKey,
+            TestContext.Current.CancellationToken))!;
+        var staleSynchronization = await store.SynchronizeRecurringScheduleAsync(
+            originalSynchronization with { ChangeEpoch = version.ChangeEpoch },
+            TestContext.Current.CancellationToken);
+        var currentSynchronization = await store.SynchronizeRecurringScheduleAsync(
+            CreateCurrentSynchronization(current, version.ChangeEpoch),
+            TestContext.Current.CancellationToken);
+        var cursor = currentSynchronization.Cursor!;
+        var staleMaterialization = await store.TryMaterializeRecurringOccurrenceAsync(
+            new RecurringOccurrenceMaterialization
+            {
+                CursorKey = staleCursor.Key,
+                ExpectedVersion = staleCursor.Version,
+                ExpectedOccurrenceUtc = staleCursor.NextOccurrenceUtc!.Value,
+                NextOccurrenceUtc = staleCursor.NextOccurrenceUtc.Value.AddMinutes(1),
+                InstanceId = "stale-policy-occurrence"
+            },
+            TestContext.Current.CancellationToken);
+        var dueBeforeProspectiveOccurrence = await store.GetDueRecurringSchedulesAsync(
+            SCOPE,
+            10,
+            TestContext.Current.CancellationToken);
+
+        staleSynchronization.Status.Should().Be(RecurringScheduleSynchronizationStatus.StaleChangeEpoch);
+        currentSynchronization.Status.Should().Be(RecurringScheduleSynchronizationStatus.Unchanged);
+        cursor.NextOccurrenceUtc.Should().Be(new DateTimeOffset(2026, 8, 13, 1, 15, 0, TimeSpan.Zero));
+        cursor.Schedule.CronExpression.Should().Be("0 */5 * * * *");
+        cursor.Schedule.TimeZoneId.Should().Be(active.Declaration.TimeZoneId);
+        cursor.Schedule.StartTimeUtc.Should().Be(START_TIME.AddMinutes(11));
+        cursor.Schedule.EndTimeUtc.Should().BeNull();
+        cursor.AppliedPolicyRevision.Should().Be(policy.ConcurrencyStamp);
+        cursor.Template.AppliedPolicyRevision.Should().Be(policy.ConcurrencyStamp);
+        staleMaterialization.Status.Should().Be(RecurringMaterializationStatus.StaleCursor);
+        staleMaterialization.Cursor!.NextOccurrenceUtc.Should().Be(cursor.NextOccurrenceUtc);
+        dueBeforeProspectiveOccurrence.Should().BeEmpty();
+        (await store.QueryExecutionsAsync(
+            new JobExecutionQuery { SchedulerScopeKey = SCOPE },
+            TestContext.Current.CancellationToken)).Items.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpdatePolicyAsync_WhenScheduleChangesBeforeFirstSync_ShouldStartAfterPolicySave()
+    {
+        var time = new ManualTimeProvider(START_TIME);
+        var store = new InMemoryJobSchedulerStore(time);
+        var active = await ActivateRecurringDefinitionAsync(store, TestContext.Current.CancellationToken);
+        time.Advance(TimeSpan.FromMinutes(10));
+
+        var policy = await store.UpdatePolicyAsync(
+            SCOPE,
+            active.OwnerId,
+            active.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                Overrides = active.Policy.Overrides with
+                {
+                    ScheduleOverride = new JobScheduleOverride { CronExpression = "0 */5 * * * *" }
+                },
+                ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        var version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var current = await store.GetActiveDefinitionAsync(
+            SCOPE,
+            active.Declaration.JobKey,
+            TestContext.Current.CancellationToken);
+        var synchronized = await store.SynchronizeRecurringScheduleAsync(
+            CreateCurrentSynchronization(current, version.ChangeEpoch),
+            TestContext.Current.CancellationToken);
+
+        policy.RecurringScheduleEffectiveFromUtc.Should().Be(time.GetUtcNow());
+        synchronized.Cursor!.NextOccurrenceUtc.Should().Be(
+            new DateTimeOffset(2026, 8, 13, 1, 15, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
+    public async Task UpdatePolicyAsync_WhenCronDiffersOnlyByWhitespace_ShouldCanonicalizeWithoutResettingCadence()
+    {
+        var time = new ManualTimeProvider(START_TIME);
+        var store = new InMemoryJobSchedulerStore(time);
+        var active = await ActivateRecurringDefinitionAsync(store, TestContext.Current.CancellationToken);
+        var version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var created = await store.SynchronizeRecurringScheduleAsync(
+            CreateCurrentSynchronization(active, version.ChangeEpoch),
+            TestContext.Current.CancellationToken);
+        var originalOccurrence = created.Cursor!.NextOccurrenceUtc;
+        time.Advance(TimeSpan.FromMinutes(10));
+
+        var policy = await store.UpdatePolicyAsync(
+            SCOPE,
+            active.OwnerId,
+            active.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                Overrides = active.Policy.Overrides with
+                {
+                    ScheduleOverride = new JobScheduleOverride
+                    {
+                        CronExpression = "  0    *   * * *   *  "
+                    }
+                },
+                ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        version = await store.GetCatalogVersionAsync(SCOPE, TestContext.Current.CancellationToken);
+        var current = await store.GetActiveDefinitionAsync(
+            SCOPE,
+            active.Declaration.JobKey,
+            TestContext.Current.CancellationToken);
+        var synchronized = await store.SynchronizeRecurringScheduleAsync(
+            CreateCurrentSynchronization(current, version.ChangeEpoch),
+            TestContext.Current.CancellationToken);
+
+        policy.Overrides.ScheduleOverride!.CronExpression.Should().Be("0 * * * * *");
+        synchronized.Status.Should().Be(RecurringScheduleSynchronizationStatus.Unchanged);
+        synchronized.Cursor!.NextOccurrenceUtc.Should().Be(originalOccurrence);
+        synchronized.Cursor.Version.Should().Be(created.Cursor.Version + 1);
+    }
+
+    [Fact]
+    public async Task ClaimAsync_WhenConcurrencyPolicyIsLowered_ShouldGovernNewClaimsWithoutMutatingQueuedWork()
+    {
+        var time = new ManualTimeProvider(START_TIME);
+        var store = new InMemoryJobSchedulerStore(time);
+        var active = await ActivateTriggeredDefinitionAsync(
+            store,
+            maxConcurrency: 2,
+            retryCount: 1,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var originalTemplate = active.CreateExecutionTemplate();
+        var firstQueued = await store.EnqueueAsync(
+            CreateEnqueue("policy-running", originalTemplate, START_TIME),
+            TestContext.Current.CancellationToken);
+        var secondQueued = await store.EnqueueAsync(
+            CreateEnqueue("policy-waiting", originalTemplate, START_TIME),
+            TestContext.Current.CancellationToken);
+        var capability = await RegisterWorkerAsync(
+            store,
+            "policy-worker",
+            active.WorkerRevisionId,
+            [active.JobRevisionId],
+            cancellationToken: TestContext.Current.CancellationToken);
+        var running = await ClaimOneAsync(store, capability, TestContext.Current.CancellationToken);
+
+        var policy = await store.UpdatePolicyAsync(
+            SCOPE,
+            active.OwnerId,
+            active.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                Overrides = active.Policy.Overrides with
+                {
+                    DisplayNameOverride = "Policy Alpha",
+                    MaxConcurrencyOverride = 1,
+                    RetryCountOverride = 4,
+                    MaxExecutionTimeoutOverride = TimeSpan.FromMinutes(17)
+                },
+                ExpectedConcurrencyStamp = active.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        var blocked = await ClaimAllAsync(
+            store,
+            capability,
+            2,
+            TestContext.Current.CancellationToken);
+        time.Advance(TimeSpan.FromSeconds(1));
+        var thirdQueued = await store.EnqueueAsync(
+            CreateEnqueue("policy-new", originalTemplate, START_TIME),
+            TestContext.Current.CancellationToken);
+        var renewal = await store.RenewLeaseAsync(
+            running.LeaseKey,
+            TimeSpan.FromMinutes(1),
+            TestContext.Current.CancellationToken);
+        await store.CompleteAttemptAsync(
+            new JobAttemptCompletion
+            {
+                LeaseKey = running.LeaseKey,
+                Outcome = JobAttemptOutcome.Succeeded
+            },
+            TestContext.Current.CancellationToken);
+        var admittedAfterCompletion = await ClaimOneAsync(
+            store,
+            capability,
+            TestContext.Current.CancellationToken);
+        await store.UpdatePolicyAsync(
+            SCOPE,
+            active.OwnerId,
+            active.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                Overrides = policy.Overrides with { MaxConcurrencyOverride = 2 },
+                ExpectedConcurrencyStamp = policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        var admittedAfterRaise = await ClaimOneAsync(
+            store,
+            capability,
+            TestContext.Current.CancellationToken);
+
+        firstQueued.Template.MaxConcurrency.Should().Be(2);
+        secondQueued.Template.MaxConcurrency.Should().Be(2);
+        secondQueued.Template.JobName.Should().Be(active.Declaration.JobName);
+        secondQueued.Template.AppliedPolicyRevision.Should().Be(active.Policy.ConcurrencyStamp);
+        blocked.Should().BeEmpty();
+        renewal.Status.Should().Be(JobLeaseRenewalStatus.Active);
+        thirdQueued.Template.MaxConcurrency.Should().Be(1);
+        thirdQueued.Template.JobName.Should().Be("Policy Alpha");
+        thirdQueued.Template.RetryCount.Should().Be(4);
+        thirdQueued.Template.MaxExecutionTimeout.Should().Be(TimeSpan.FromMinutes(17));
+        thirdQueued.Template.AppliedPolicyRevision.Should().Be(policy.ConcurrencyStamp);
+        admittedAfterCompletion.Execution.InstanceId.Should().Be("policy-waiting");
+        admittedAfterCompletion.Execution.Template.Should().Be(secondQueued.Template);
+        admittedAfterRaise.Execution.InstanceId.Should().Be("policy-new");
+        admittedAfterRaise.Execution.Template.Should().Be(thirdQueued.Template);
     }
 
     [Fact]
@@ -1398,9 +1664,7 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
             Schedule = new RecurringScheduleDefinition
             {
                 CronExpression = "0 * * * * *",
-                TimeZoneId = TimeZoneInfo.Utc.Id,
-                StartTimeUtc = START_TIME.AddDays(-1),
-                EndTimeUtc = START_TIME.AddDays(1)
+                TimeZoneId = TimeZoneInfo.Utc.Id
             },
             ChangeEpoch = version.ChangeEpoch
         }, TestContext.Current.CancellationToken);
@@ -1570,6 +1834,21 @@ public sealed partial class InMemoryJobSchedulerStoreExecutionTests
             MaxCount = maxCount,
             LeaseDuration = leaseDuration ?? TimeSpan.FromMinutes(1)
         }, cancellationToken);
+    }
+
+    private static RecurringScheduleSynchronization CreateCurrentSynchronization(
+        ActiveJobDefinition? definition,
+        long changeEpoch,
+        JobRecurringScheduleSuspensionReason suspensionReasons = JobRecurringScheduleSuspensionReason.None)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        return new RecurringScheduleSynchronization
+        {
+            Template = definition.CreateExecutionTemplate(),
+            Schedule = definition.EffectiveConfiguration.Schedule!,
+            ChangeEpoch = changeEpoch,
+            SuspensionReasons = suspensionReasons
+        };
     }
 
     private static async Task<ActiveJobDefinition> ActivateRecurringDefinitionAsync(

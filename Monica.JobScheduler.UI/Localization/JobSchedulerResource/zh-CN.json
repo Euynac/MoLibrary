@@ -259,7 +259,8 @@
     },
     "Cron": {
       "Unavailable": "无法解析调度含义",
-      "Parsing": "正在解析调度…"
+      "Parsing": "正在解析调度…",
+      "ConfiguredTimeZone": "部署配置的时区（只读）"
     },
     "Triggered": {
       "Ready": "可由运维人员触发",
@@ -298,17 +299,199 @@
     }
   },
   "Policy": {
-    "Title": "运维策略",
-    "ImmutableNotice": "名称、Cron、时区、并发、重试、超时与执行身份由代码声明，无法在此编辑。禁用会阻止新准入和周期实例物化；已排队或正在运行的执行需单独取消。",
+    "Title": "运维策略工作台",
+    "ImmutableNotice": "作业键、作业类型、参数契约、所有者、发布、工作器修订、作业修订和已配置时区始终由部署管理。策略变更影响后续准入；已排队和运行中的执行保留其已捕获配置。",
     "DisabledOverride": "执行状态覆盖",
     "InheritDefault": "继承代码默认值",
     "ForceEnabled": "强制启用",
     "ForceDisabled": "强制禁用",
     "MaxRecords": "最大保留执行数",
-    "MaxRecordsHelp": "留空表示不限制记录数量。",
+    "MaxRecordsHelp": "留空继承 100；设为 0 可禁用按数量保留。",
     "MaxDays": "最大保留天数",
-    "MaxDaysHelp": "留空表示不限制保留时长。",
-    "Saved": "运维策略已保存。"
+    "MaxDaysHelp": "留空继承不限制保留时长。",
+    "Saved": "运维策略已保存。",
+    "UnsavedChanges": "存在未保存的运维变更",
+    "NoChanges": "没有策略变更",
+    "DriftWarning": "此粘性策略上次针对作业修订 {0} 审核，当前发布已使用 {1}。保存前请检查生效值。",
+    "Provenance": {
+      "Declared": "声明默认值",
+      "Override": "运维覆盖值",
+      "Effective": "生效值",
+      "Help": "每一行都分别展示不可变发布默认值、运维意图以及调度器将采用的实际行为。"
+    },
+    "Sections": {
+      "General": "常规",
+      "GeneralHelp": "控制准入状态和面向运维人员的作业信息。",
+      "Schedule": "调度",
+      "ScheduleHelp": "在部署已配置的时区中编辑周期节奏和边界。",
+      "Execution": "执行",
+      "ExecutionHelp": "控制容量以及新准入执行捕获的重试和超时快照。",
+      "Retention": "保留",
+      "RetentionHelp": "按数量和时长限制终态执行历史。"
+    },
+    "Fields": {
+      "Enabled": "启用状态",
+      "DisplayName": "显示名称",
+      "Description": "描述",
+      "DescriptionMode": "描述意图",
+      "MaxConcurrency": "最大并发数",
+      "RetryCount": "重试次数",
+      "ExecutionTimeout": "执行超时",
+      "Hours": "小时",
+      "Minutes": "分钟",
+      "Seconds": "秒",
+      "MaxRecords": "保留执行数量",
+      "MaxDays": "保留时长（天）"
+    },
+    "Identity": {
+      "ArgumentContract": "参数契约",
+      "ReviewedRevision": "已审核作业修订",
+      "PolicyRevision": "策略修订",
+      "UpdatedAt": "策略更新时间（UTC）",
+      "Release": "目录发布",
+      "WorkerRevision": "工作节点修订",
+      "JobType": "作业类型"
+    },
+    "DescriptionModes": {
+      "Inherit": "继承声明描述",
+      "Clear": "清空描述",
+      "Value": "使用运维描述"
+    },
+    "BoundaryModes": {
+      "Inherit": "继承声明边界",
+      "None": "不设边界",
+      "Value": "使用运维边界"
+    },
+    "Actions": {
+      "ResetField": "将此字段重置为声明默认值",
+      "ResetAll": "重置全部覆盖值",
+      "Override": "添加覆盖值"
+    },
+    "Values": {
+      "Enabled": "已启用",
+      "Disabled": "已禁用",
+      "NoLimit": "不限制",
+      "Days": "{0} 天",
+      "ReviewOutdated": "审核已过期"
+    },
+    "Validation": {
+      "DisplayNameRequired": "请输入长度符合限制的显示名称，或重置该字段以继承声明值。",
+      "DescriptionRequired": "请输入长度符合限制的说明、选择清空，或继承声明值。",
+      "Timeout": "请输入大于 0 且在支持范围内的执行超时。"
+    },
+    "Conflict": {
+      "DraftsPreserved": "另一位运维人员或新发布更改了策略基线（{0} → {1}）。未保存的编辑会保留，未触及字段会采用最新策略；请检查后再重试。",
+      "ReloadFailed": "策略已发生变化，但无法加载最新运维基线。请关闭并重新打开工作台后重试。",
+      "SameField": "最新策略至少修改了您也编辑过的字段；这些字段将保留您的草稿。重试前请检查声明值、覆盖值和生效值三列。",
+      "ScheduleTypeChanged": "此 Cron 草稿打开期间，作业已从周期型变为触发型。隐藏草稿尚未提交；请仅丢弃该调度意图，再保存其余编辑。",
+      "DiscardScheduleDraft": "丢弃调度草稿"
+    },
+    "Execution": {
+      "ProspectiveNotice": "最大并发数会立即约束新领取，但不会取消活动执行。重试和超时变更仅由新准入的执行捕获。",
+      "SubsecondPrecisionPreserved": "现有超时值包含亚秒精度；编辑整秒字段时将保留这些小数刻度。"
+    },
+    "Retention": {
+      "ZeroUnlimited": "设为 0 可禁用按数量保留。"
+    },
+    "Schedule": {
+      "CronTitle": "周期节奏契约",
+      "CronDescription": "节奏区域以前瞻方式展示与 Cronos 运行时完全一致的契约。",
+      "Format": "表达式格式",
+      "FiveFields": "5 字段",
+      "SixFields": "含秒的 6 字段",
+      "CronExpression": "Cron 表达式覆盖值",
+      "CronInputHelp": "编辑后的空值无效；请使用“重置”继承声明表达式。",
+      "CronTooLong": "Cron 表达式不能超过 {0} 个字符。",
+      "ParsedFields": "已解析 Cron 字段",
+      "ConfiguredTimeZone": "已配置时区",
+      "TimeZoneLockedHelp": "时区由部署配置，特意不允许在此编辑。",
+      "StartBoundary": "开始边界",
+      "EndBoundary": "结束边界",
+      "BoundaryMode": "边界意图",
+      "BoundaryDate": "调度本地日期",
+      "BoundaryTime": "调度本地时间",
+      "BoundaryValidationError": "请完整选择日期和时间，并确保该墙上时间在已配置时区中有效。",
+      "AmbiguousBoundary": "夏令时回退会使此墙上时间出现两次；系统会确定性地采用较早的 UTC 时点。",
+      "BoundaryFailures": {
+        "Incomplete": "请同时选择日期和时间。",
+        "InvalidLocalTime": "已配置时区的时钟在此处向前跳变，因此该墙上时间不存在。"
+      },
+      "ValidationError": "调度器运行时不接受此表达式。",
+      "DescriptionLoading": "正在生成本地化描述…",
+      "DescriptionUnavailable": "暂时无法生成本地化描述；运行时校验和预览仍是权威结果。",
+      "NonZeroSecondsConversion": "此六字段表达式的秒字段不是 0。切换为五字段前请手动修正，避免静默改变执行节奏。",
+      "InvalidConversion": "当前表达式无效，无法进行格式转换。",
+      "AuthoritativeNext": "加载时的权威下次执行时点",
+      "AuthoritativeObservedAt": "加载自观测于 {0} 的权威状态",
+      "ProposedNext": "拟议下次执行时点",
+      "PreviewSuspended": "已由生效策略暂停",
+      "PreviewSuspendedDescription": "生效策略暂停期间不会调度新的执行时点。",
+      "ProspectiveWarning": "保存会在同一事务中替换周期游标，并且只调度严格晚于数据库当前时间的下一个时点；绝不补跑错过的时点。",
+      "SimpleSettings": {
+        "Title": "简易调度设置",
+        "Mode": "调度模式",
+        "Apply": "应用为 Cron 覆盖值",
+        "Modes": {
+          "EveryMinute": "每分钟",
+          "EveryHour": "每小时",
+          "EveryDay": "每天指定时间",
+          "EveryWeek": "每周指定星期和时间",
+          "EveryMonth": "每月指定日期和时间",
+          "Custom": "自定义字段"
+        }
+      },
+      "Fields": {
+        "Second": "秒",
+        "Minute": "分",
+        "Hour": "时",
+        "DayOfMonth": "月内日期",
+        "Month": "月",
+        "DayOfWeek": "星期"
+      },
+      "Weekdays": {
+        "0": "星期日",
+        "1": "星期一",
+        "2": "星期二",
+        "3": "星期三",
+        "4": "星期四",
+        "5": "星期五",
+        "6": "星期六"
+      },
+      "Preview": {
+        "AriaLabel": "后续五个拟议调度时点",
+        "Sequence": "序号",
+        "ConfiguredTime": "已配置时区时间",
+        "Utc": "UTC 时间戳"
+      },
+      "Syntax": {
+        "Title": "Cronos 语法说明",
+        "RuntimeContract": "字段顺序为分、时、月内日期、月、星期；六字段格式在最前面增加秒。",
+        "FieldTable": "Cron 字段范围和特殊字符",
+        "Field": "字段",
+        "Range": "允许范围",
+        "Characters": "特殊字符",
+        "Names": "月份可使用 JAN–DEC，星期可使用 SUN–SAT，且不区分大小写。",
+        "ReversedRanges": "反向范围会跨越字段边界循环，例如 FRI-MON 或 22-2。",
+        "Steps": "步长在基础范围内生效；*/15 从字段最小值开始，每次增加 15。",
+        "DayMatching": "当月内日期和星期都受约束时，Cronos 要求两个字段同时匹配。",
+        "Tokens": {
+          "Star": "全部允许值",
+          "Comma": "值列表",
+          "Hyphen": "闭区间，包括反向范围",
+          "Slash": "按步长遍历范围",
+          "Question": "月内日期或星期的任意值",
+          "Last": "月末或最后一个指定星期",
+          "Weekday": "距离指定月内日期最近的工作日",
+          "Hash": "当月第 N 个指定星期"
+        },
+        "Examples": {
+          "EveryFiveMinutes": "每五分钟",
+          "EveryDayNoon": "每天中午",
+          "WeekdaysNine": "每个工作日上午 09:00",
+          "MonthlyFirst": "每月第一天零点"
+        }
+      }
+    }
   },
   "JobDetail": {
     "PageTitle": "任务调度 · 作业详情",
@@ -318,9 +501,8 @@
     "ObservedAt": "运行证据观测时间：{0}",
     "Actions": {
       "BackToCatalog": "返回作业目录",
-      "InspectSchedule": "检查调度"
+      "InspectSchedule": "编辑调度策略"
     },
-    "Common": { "Unlimited": "不限制" },
     "Header": {
       "NoCompatibleWorker": "没有兼容工作节点",
       "EvidenceAriaLabel": "当前作业运行证据",
@@ -396,7 +578,8 @@
       "WorkerRevision": "工作节点版本",
       "WorkerRevisionHelp": "兼容工作节点认领此作业前必须声明的精确可执行修订。",
       "JobRevision": "作业版本",
-      "JobRevisionHelp": "新执行实例所捕获的不可变声明内容标识。"
+      "JobRevisionHelp": "新执行实例所捕获的不可变声明内容标识。",
+      "OverrideEffective": "覆盖值：{0} · 生效值：{1}"
     },
     "LatestExecution": {
       "Title": "最近执行",
@@ -428,40 +611,6 @@
     "Scheduled": "已调度",
     "Suspended": "已暂停",
     "Exhausted": "已结束"
-  },
-  "CronInspector": {
-    "Title": "调度检查器",
-    "ImmutableNotice": "此调度属于不可变发布声明。请在代码中修改并部署新的目录发布；检查器不会篡改发布历史。",
-    "TimeZone": "时区",
-    "StartBoundary": "开始边界",
-    "EndBoundary": "结束边界",
-    "OperationalNext": "持久化下次执行时点",
-    "ResetDraft": "重置草稿",
-    "Expression": {
-      "Title": "Cron 契约",
-      "Description": "六字段表达式包含秒，五字段表达式从分钟开始。",
-      "Draft": "Cron 表达式草稿",
-      "DraftHelp": "可在本地编辑、校验和预览；草稿不会持久化。要修改不可变调度，请发布新的目录版本。"
-    },
-    "Fields": {
-      "AriaLabel": "Cron 表达式字段",
-      "Second": "秒",
-      "Minute": "分",
-      "Hour": "时",
-      "Day": "日",
-      "Month": "月",
-      "Weekday": "星期"
-    },
-    "Preview": {
-      "Title": "后续声明执行时点",
-      "Description": "严格从 {0} 之后计算；持久化游标仍是权威来源。",
-      "Unavailable": "当前主机无法计算声明的 Cron 表达式或时区。",
-      "Empty": "声明边界内已没有未来执行时点。",
-      "AriaLabel": "后续调度执行时点",
-      "Sequence": "序号",
-      "ScheduleTime": "调度本地时间",
-      "SchedulerTime": "调度时区时间"
-    }
   },
   "Trigger": {
     "Title": "准入执行",

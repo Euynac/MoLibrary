@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Catalog;
@@ -69,9 +70,7 @@ public sealed class JobSchedulerFacadeTests
             fixture.Definition.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = fixture.Definition.Policy.MaxRetainedHistoryRecords,
-                MaxRetentionDays = fixture.Definition.Policy.MaxRetentionDays,
+                Overrides = fixture.Definition.Policy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = fixture.Definition.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken)).ShouldSucceed();
@@ -163,9 +162,17 @@ public sealed class JobSchedulerFacadeTests
             fixture.Definition.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = 25,
-                MaxRetentionDays = 7,
+                Overrides = new JobPolicyOverrides
+                {
+                    DisabledOverride = true,
+                    DisplayNameOverride = "Operator report",
+                    DescriptionOverride = new JobDescriptionOverride { Value = null },
+                    MaxConcurrencyOverride = 4,
+                    RetryCountOverride = 3,
+                    MaxExecutionTimeoutOverride = TimeSpan.FromMinutes(20),
+                    MaxRetainedHistoryRecords = 25,
+                    MaxRetentionDays = 7
+                },
                 ExpectedConcurrencyStamp = fixture.Definition.Policy.ConcurrencyStamp
             },
             TestContext.Current.CancellationToken)).ShouldSucceed()!;
@@ -173,10 +180,16 @@ public sealed class JobSchedulerFacadeTests
             fixture.Definition.Declaration.JobKey,
             TestContext.Current.CancellationToken)).ShouldSucceed();
 
-        policy.DisabledOverride.Should().BeTrue();
+        policy.Overrides.DisabledOverride.Should().BeTrue();
         definition.Should().NotBeNull();
         definition!.Declaration.Should().Be(originalDeclaration);
         definition.IsDisabled.Should().BeTrue();
+        definition.EffectiveConfiguration.JobName.Should().Be("Operator report");
+        definition.EffectiveConfiguration.Description.Should().BeNull();
+        definition.EffectiveConfiguration.MaxConcurrency.Should().Be(4);
+        definition.EffectiveConfiguration.RetryCount.Should().Be(3);
+        definition.EffectiveConfiguration.MaxExecutionTimeout.Should().Be(TimeSpan.FromMinutes(20));
+        policy.ReviewedAgainstJobRevisionId.Should().Be(definition.JobRevisionId);
     }
 
     [Fact]
@@ -192,18 +205,14 @@ public sealed class JobSchedulerFacadeTests
                 {
                     OwnerId = fixture.Definition.OwnerId,
                     JobKey = fixture.Definition.Declaration.JobKey,
-                    DisabledOverride = true,
-                    MaxRetainedHistoryRecords = fixture.Definition.Policy.MaxRetainedHistoryRecords,
-                    MaxRetentionDays = fixture.Definition.Policy.MaxRetentionDays,
+                    Overrides = fixture.Definition.Policy.Overrides with { DisabledOverride = true },
                     ExpectedConcurrencyStamp = fixture.Definition.Policy.ConcurrencyStamp
                 },
                 new JobPolicyBatchUpdateItem
                 {
                     OwnerId = "missing-owner",
                     JobKey = "Jobs.Missing",
-                    DisabledOverride = true,
-                    MaxRetainedHistoryRecords = 100,
-                    MaxRetentionDays = null,
+                    Overrides = new JobPolicyOverrides { DisabledOverride = true },
                     ExpectedConcurrencyStamp = "missing-stamp"
                 }
             ]
@@ -211,10 +220,44 @@ public sealed class JobSchedulerFacadeTests
 
         batch.SucceededCount.Should().Be(1);
         batch.FailedCount.Should().Be(1);
-        batch.Items[0].Policy!.DisabledOverride.Should().BeTrue();
+        batch.Items[0].Policy!.Overrides.DisabledOverride.Should().BeTrue();
         batch.Items[0].Error.Should().BeNull();
+        batch.Items[0].FailureStatus.Should().BeNull();
         batch.Items[1].Policy.Should().BeNull();
         batch.Items[1].Error.Should().NotBeNullOrWhiteSpace();
+        batch.Items[1].FailureStatus.Should().Be(ResStatus.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdatePolicyAsync_WhenPolicyRevisionIsStale_ShouldReturnConflictAndPreserveFirstWrite()
+    {
+        var fixture = await CreateFixtureAsync();
+        var first = await fixture.Facade.UpdatePolicyAsync(
+            fixture.Definition.OwnerId,
+            fixture.Definition.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                Overrides = fixture.Definition.Policy.Overrides with { DisplayNameOverride = "First write" },
+                ExpectedConcurrencyStamp = fixture.Definition.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        var conflict = await fixture.Facade.UpdatePolicyAsync(
+            fixture.Definition.OwnerId,
+            fixture.Definition.Declaration.JobKey,
+            new JobPolicyChange
+            {
+                Overrides = fixture.Definition.Policy.Overrides with { DisplayNameOverride = "Stale write" },
+                ExpectedConcurrencyStamp = fixture.Definition.Policy.ConcurrencyStamp
+            },
+            TestContext.Current.CancellationToken);
+        var current = (await fixture.Facade.GetDefinitionAsync(
+            fixture.Definition.Declaration.JobKey,
+            TestContext.Current.CancellationToken)).ShouldSucceed();
+
+        first.Status.Should().Be(ResStatus.Ok);
+        conflict.Status.Should().Be(ResStatus.Conflict);
+        conflict.Data.Should().BeNull();
+        current!.EffectiveConfiguration.JobName.Should().Be("First write");
     }
 
     private static async Task<Fixture> CreateFixtureAsync(JobType jobType = JobType.Triggered)

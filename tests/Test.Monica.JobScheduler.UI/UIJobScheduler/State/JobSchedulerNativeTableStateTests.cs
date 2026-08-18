@@ -233,9 +233,7 @@ public sealed class JobSchedulerNativeTableStateTests
             staleDefinition.Declaration.JobKey,
             new JobPolicyChange
             {
-                DisabledOverride = true,
-                MaxRetainedHistoryRecords = staleDefinition.Policy.MaxRetainedHistoryRecords,
-                MaxRetentionDays = staleDefinition.Policy.MaxRetentionDays,
+                Overrides = staleDefinition.Policy.Overrides with { DisabledOverride = true },
                 ExpectedConcurrencyStamp = staleDefinition.Policy.ConcurrencyStamp
             },
             Xunit.TestContext.Current.CancellationToken);

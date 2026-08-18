@@ -1,3 +1,4 @@
+using Monica.Core.Results;
 using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
 
@@ -123,19 +124,9 @@ public sealed record JobPolicyBatchUpdateItem
     public required string JobKey { get; init; }
 
     /// <summary>
-    /// Gets the replacement disabled override. <see langword="null"/> restores the declaration default.
+    /// Gets the complete replacement override set.
     /// </summary>
-    public required bool? DisabledOverride { get; init; }
-
-    /// <summary>
-    /// Gets the replacement retained-history count, or <see langword="null"/> for no count limit.
-    /// </summary>
-    public required int? MaxRetainedHistoryRecords { get; init; }
-
-    /// <summary>
-    /// Gets the replacement retention age in days, or <see langword="null"/> for no age limit.
-    /// </summary>
-    public required int? MaxRetentionDays { get; init; }
+    public required JobPolicyOverrides Overrides { get; init; }
 
     /// <summary>
     /// Gets the policy concurrency stamp observed by the caller.
@@ -144,9 +135,7 @@ public sealed record JobPolicyBatchUpdateItem
 
     internal JobPolicyChange ToChange() => new()
     {
-        DisabledOverride = DisabledOverride,
-        MaxRetainedHistoryRecords = MaxRetainedHistoryRecords,
-        MaxRetentionDays = MaxRetentionDays,
+        Overrides = Overrides,
         ExpectedConcurrencyStamp = ExpectedConcurrencyStamp
     };
 }
@@ -191,6 +180,12 @@ public sealed record JobPolicyBatchUpdateItemResult
     /// Gets the failure detail when the item failed validation, lookup, or optimistic concurrency.
     /// </summary>
     public string? Error { get; init; }
+
+    /// <summary>
+    /// Gets the structured failure status when this item failed. Conflict identifies an optimistic-concurrency miss,
+    /// not-found identifies a stale active-catalog target, and bad-request identifies invalid overrides.
+    /// </summary>
+    public ResStatus? FailureStatus { get; init; }
 
     /// <summary>
     /// Gets whether this item completed successfully.

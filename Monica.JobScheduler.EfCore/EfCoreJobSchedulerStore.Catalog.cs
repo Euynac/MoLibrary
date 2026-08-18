@@ -393,7 +393,7 @@ public sealed partial class EfCoreJobSchedulerStore
         ValidateIdentity(ownerId, nameof(ownerId));
         JobSchedulerIdentity.ValidateJobKey(jobKey, nameof(jobKey));
         ArgumentNullException.ThrowIfNull(change);
-        ValidatePolicy(change.MaxRetainedHistoryRecords, change.MaxRetentionDays);
+        ArgumentNullException.ThrowIfNull(change.Overrides);
         return WriteAsync(async (dbContext, token) =>
         {
             var scope = await GetScopeAsync(dbContext, schedulerScopeKey, token);
@@ -405,8 +405,14 @@ public sealed partial class EfCoreJobSchedulerStore
             var release = await GetReleaseAsync(dbContext, schedulerScopeKey, scope.ActiveReleaseId, token);
             var payload = Deserialize<CatalogReleasePayload>(release.PayloadJson);
             if (!payload.OwnerSnapshots.TryGetValue(ownerId, out var ownerSnapshot)
-                || ownerSnapshot is null
-                || !ownerSnapshot.Declarations.Any(item => string.Equals(item.JobKey, jobKey, StringComparison.Ordinal)))
+                || ownerSnapshot is null)
+            {
+                throw new JobCatalogNotFoundException(
+                    $"Active job '{ownerId}/{jobKey}' was not found in scope '{schedulerScopeKey}'.");
+            }
+            var declaration = ownerSnapshot.Declarations.SingleOrDefault(item =>
+                string.Equals(item.JobKey, jobKey, StringComparison.Ordinal));
+            if (declaration is null)
             {
                 throw new JobCatalogNotFoundException(
                     $"Active job '{ownerId}/{jobKey}' was not found in scope '{schedulerScopeKey}'.");
@@ -420,17 +426,113 @@ public sealed partial class EfCoreJobSchedulerStore
             {
                 throw new JobPolicyConcurrencyException(jobKey);
             }
+            var currentPolicy = ToPolicy(policy);
+            var normalizedOverrides = change.Overrides.Normalize();
+            normalizedOverrides.Validate(declaration, currentPolicy.Overrides);
 
-            policy.DisabledOverride = change.DisabledOverride;
-            policy.MaxRetainedHistoryRecords = change.MaxRetainedHistoryRecords;
-            policy.MaxRetentionDays = change.MaxRetentionDays;
+            var jobRevisionId = JobCatalogHash.ComputeJobRevision(
+                ownerSnapshot.OwnerId,
+                ownerSnapshot.WorkerRevisionId,
+                declaration);
+            var now = await GetUtcNowAsync(dbContext, token);
+            policy.OverridesJson = Serialize(normalizedOverrides);
             policy.ConcurrencyStamp = NewToken();
-            policy.UpdatedAtUtcTicks = ToTicks(await GetUtcNowAsync(dbContext, token));
+            policy.ReviewedAgainstJobRevisionId = jobRevisionId;
+            policy.RecurringScheduleEffectiveFromUtcTicks = ToTicks(
+                currentPolicy.ResolveRecurringScheduleEffectiveFromUtc(declaration, normalizedOverrides, now));
+            policy.UpdatedAtUtcTicks = ToTicks(now);
             policy.ConcurrencyToken = NewVersion();
             scope.ChangeEpoch++;
             scope.ConcurrencyToken = NewVersion();
-            return ToPolicy(policy);
+            var updatedPolicy = ToPolicy(policy);
+            var updatedDefinition = new ActiveJobDefinition
+            {
+                SchedulerScopeKey = scope.SchedulerScopeKey,
+                ReleaseId = release.ReleaseId,
+                ActivationEpoch = scope.ActivationEpoch,
+                OwnerId = ownerSnapshot.OwnerId,
+                WorkerRevisionId = ownerSnapshot.WorkerRevisionId,
+                Declaration = declaration,
+                Policy = updatedPolicy
+            };
+            await ApplyPolicyToExecutionGateAsync(dbContext, updatedDefinition, token);
+            await ApplyPolicyToRecurringCursorAsync(
+                dbContext,
+                scope,
+                updatedDefinition,
+                now,
+                token);
+            return updatedPolicy;
         }, cancellationToken);
+    }
+
+    private static async Task ApplyPolicyToExecutionGateAsync(
+        JobSchedulerDbContext dbContext,
+        ActiveJobDefinition definition,
+        CancellationToken cancellationToken)
+    {
+        var gate = await dbContext.ExecutionGates.SingleAsync(
+            item => item.SchedulerScopeKey == definition.SchedulerScopeKey
+                    && item.JobKey == definition.Declaration.JobKey,
+            cancellationToken);
+        gate.MaxConcurrency = definition.EffectiveConfiguration.MaxConcurrency;
+        gate.ConcurrencyToken = NewVersion();
+    }
+
+    private async Task ApplyPolicyToRecurringCursorAsync(
+        JobSchedulerDbContext dbContext,
+        JobCatalogScopeEntity scope,
+        ActiveJobDefinition definition,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (definition.Declaration.JobType != JobType.Recurring)
+        {
+            return;
+        }
+        var cursor = await dbContext.RecurringCursors.SingleOrDefaultAsync(
+            item => item.SchedulerScopeKey == scope.SchedulerScopeKey
+                    && item.ActivationEpoch == scope.ActivationEpoch
+                    && item.JobRevisionId == definition.JobRevisionId,
+            cancellationToken);
+        if (cursor is null)
+        {
+            return;
+        }
+
+        var effective = definition.EffectiveConfiguration;
+        var schedule = effective.Schedule
+            ?? throw new InvalidOperationException(
+                $"Recurring job '{definition.JobRevisionId}' did not resolve an effective schedule.");
+        var previousSchedule = Deserialize<RecurringScheduleDefinition>(cursor.ScheduleJson);
+        var previousReasons = cursor.SuspensionReasons;
+        var nextReasons = effective.IsDisabled
+            ? previousReasons | JobRecurringScheduleSuspensionReason.OperatorPolicy
+            : previousReasons & ~JobRecurringScheduleSuspensionReason.OperatorPolicy;
+        var scheduleChanged = previousSchedule != schedule;
+        var resumed = previousReasons != JobRecurringScheduleSuspensionReason.None
+                      && nextReasons == JobRecurringScheduleSuspensionReason.None;
+        var template = definition.CreateExecutionTemplate();
+
+        cursor.TemplateJson = Serialize(template);
+        cursor.ScheduleJson = Serialize(schedule);
+        cursor.AppliedPolicyRevision = definition.Policy.ConcurrencyStamp;
+        cursor.SuspensionReasons = nextReasons;
+        if (nextReasons != JobRecurringScheduleSuspensionReason.None)
+        {
+            cursor.NextOccurrenceUtcTicks = null;
+        }
+        else if (scheduleChanged || resumed)
+        {
+            // A policy change is prospective. Replacing or resuming a schedule starts strictly after database current
+            // time and never replays occurrences suppressed by the previous policy.
+            cursor.NextOccurrenceUtcTicks = ToTicks(schedule.GetNextOccurrence(now));
+        }
+
+        cursor.LastSynchronizedChangeEpoch = scope.ChangeEpoch;
+        cursor.CursorVersion++;
+        cursor.UpdatedAtUtcTicks = ToTicks(now);
+        cursor.ConcurrencyToken = NewVersion();
     }
 
     private async Task<JobCatalogActivation> ActivateAsync(
@@ -441,26 +543,117 @@ public sealed partial class EfCoreJobSchedulerStore
         bool explicitReactivation,
         CancellationToken cancellationToken)
     {
-        var jobKeys = payload.OwnerSnapshots.Values.OfType<JobOwnerCatalogSnapshot>()
-            .SelectMany(static snapshot => snapshot.Declarations)
-            .Select(static declaration => declaration.JobKey)
+        var declaredJobs = payload.OwnerSnapshots.Values.OfType<JobOwnerCatalogSnapshot>()
+            .SelectMany(snapshot => snapshot.Declarations.Select(declaration => new
+            {
+                Declaration = declaration,
+                declaration.JobKey,
+                JobRevisionId = JobCatalogHash.ComputeJobRevision(
+                    snapshot.OwnerId,
+                    snapshot.WorkerRevisionId,
+                    declaration)
+            }))
             .ToArray();
-        var existingPolicies = await dbContext.JobPolicies
+        var existingPolicyEntities = await dbContext.JobPolicies
             .Where(item => item.SchedulerScopeKey == scope.SchedulerScopeKey)
-            .Select(static item => item.JobKey)
             .ToArrayAsync(cancellationToken);
+        var policyEntitiesByJobKey = existingPolicyEntities.ToDictionary(
+            static item => item.JobKey,
+            StringComparer.Ordinal);
+        var previousJobRevisions = await GetActiveJobRevisionMapAsync(
+            dbContext,
+            scope,
+            cancellationToken);
+        var policiesByJobKey = new Dictionary<string, JobPolicy>(StringComparer.Ordinal);
+        var maxConcurrencyByJobKey = new Dictionary<string, int>(StringComparer.Ordinal);
         var now = await GetUtcNowAsync(dbContext, cancellationToken);
-        foreach (var jobKey in jobKeys.Except(existingPolicies, StringComparer.Ordinal))
+        foreach (var declaredJob in declaredJobs)
         {
+            JobPolicy policy;
+            if (policyEntitiesByJobKey.TryGetValue(declaredJob.JobKey, out var existingPolicyEntity))
+            {
+                policy = ToPolicy(existingPolicyEntity);
+            }
+            else
+            {
+                policy = new JobPolicy
+                {
+                    Overrides = new JobPolicyOverrides(),
+                    ConcurrencyStamp = NewToken(),
+                    ReviewedAgainstJobRevisionId = declaredJob.JobRevisionId,
+                    RecurringScheduleEffectiveFromUtc = null,
+                    UpdatedAtUtc = now
+                };
+            }
+
+            try
+            {
+                policy.Overrides.Validate(declaredJob.Declaration, policy.Overrides);
+            }
+            catch (ArgumentException exception)
+            {
+                throw new JobCatalogConflictException(
+                    $"Sticky policy for job '{declaredJob.JobKey}' is incompatible with release "
+                    + $"'{release.ReleaseId}': {exception.Message}");
+            }
+
+            policiesByJobKey.Add(declaredJob.JobKey, policy);
+            maxConcurrencyByJobKey.Add(
+                declaredJob.JobKey,
+                policy.Overrides.Resolve(declaredJob.Declaration).MaxConcurrency);
+        }
+
+        // Validation above is intentionally side-effect free. Only after every sticky policy is known to be valid do
+        // we persist new policies and rotate fences for incoming code revisions within this serializable cutover.
+        foreach (var declaredJob in declaredJobs)
+        {
+            var policy = policiesByJobKey[declaredJob.JobKey];
+            if (policyEntitiesByJobKey.TryGetValue(declaredJob.JobKey, out var existingPolicyEntity))
+            {
+                if (!previousJobRevisions.TryGetValue(declaredJob.JobKey, out var previousJobRevision)
+                    || !string.Equals(previousJobRevision, declaredJob.JobRevisionId, StringComparison.Ordinal))
+                {
+                    existingPolicyEntity.ConcurrencyStamp = NewToken();
+                }
+
+                continue;
+            }
+
             dbContext.JobPolicies.Add(new JobPolicyEntity
             {
                 SchedulerScopeKey = scope.SchedulerScopeKey,
-                JobKey = jobKey,
-                MaxRetainedHistoryRecords = 100,
-                ConcurrencyStamp = NewToken(),
-                UpdatedAtUtcTicks = ToTicks(now),
+                JobKey = declaredJob.JobKey,
+                OverridesJson = Serialize(policy.Overrides),
+                ConcurrencyStamp = policy.ConcurrencyStamp,
+                ReviewedAgainstJobRevisionId = policy.ReviewedAgainstJobRevisionId,
+                RecurringScheduleEffectiveFromUtcTicks = ToTicks(policy.RecurringScheduleEffectiveFromUtc),
+                UpdatedAtUtcTicks = ToTicks(policy.UpdatedAtUtc),
                 ConcurrencyToken = NewVersion()
             });
+        }
+
+        var jobKeys = declaredJobs.Select(static item => item.JobKey).ToArray();
+        var gatesByJobKey = (await dbContext.ExecutionGates
+                .Where(item => item.SchedulerScopeKey == scope.SchedulerScopeKey
+                               && jobKeys.Contains(item.JobKey))
+                .ToArrayAsync(cancellationToken))
+            .ToDictionary(static item => item.JobKey, StringComparer.Ordinal);
+        foreach (var declaredJob in declaredJobs)
+        {
+            if (!gatesByJobKey.TryGetValue(declaredJob.JobKey, out var gate))
+            {
+                gate = new JobExecutionGateEntity
+                {
+                    SchedulerScopeKey = scope.SchedulerScopeKey,
+                    JobKey = declaredJob.JobKey,
+                    ConcurrencyToken = NewVersion()
+                };
+                dbContext.ExecutionGates.Add(gate);
+                gatesByJobKey.Add(declaredJob.JobKey, gate);
+            }
+
+            gate.MaxConcurrency = maxConcurrencyByJobKey[declaredJob.JobKey];
+            gate.ConcurrencyToken = NewVersion();
         }
 
         var nextActivationEpoch = scope.ActivationEpoch + 1;
@@ -515,6 +708,34 @@ public sealed partial class EfCoreJobSchedulerStore
         };
         dbContext.CatalogActivations.Add(entity);
         return ToActivation(entity);
+    }
+
+    private async Task<Dictionary<string, string>> GetActiveJobRevisionMapAsync(
+        JobSchedulerDbContext dbContext,
+        JobCatalogScopeEntity scope,
+        CancellationToken cancellationToken)
+    {
+        if (scope.ActiveReleaseId is null)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        var activeRelease = await dbContext.CatalogReleases.AsNoTracking().SingleAsync(
+            item => item.SchedulerScopeKey == scope.SchedulerScopeKey
+                    && item.ReleaseId == scope.ActiveReleaseId,
+            cancellationToken);
+        var activePayload = Deserialize<CatalogReleasePayload>(activeRelease.PayloadJson);
+        return activePayload.OwnerSnapshots.Values
+            .OfType<JobOwnerCatalogSnapshot>()
+            .SelectMany(snapshot => snapshot.Declarations.Select(declaration => new
+            {
+                declaration.JobKey,
+                JobRevisionId = JobCatalogHash.ComputeJobRevision(
+                    snapshot.OwnerId,
+                    snapshot.WorkerRevisionId,
+                    declaration)
+            }))
+            .ToDictionary(static item => item.JobKey, static item => item.JobRevisionId, StringComparer.Ordinal);
     }
 
     private static async Task<JobCatalogScopeEntity> GetScopeAsync(
@@ -594,10 +815,10 @@ public sealed partial class EfCoreJobSchedulerStore
 
     private static JobPolicy ToPolicy(JobPolicyEntity entity) => new()
     {
-        DisabledOverride = entity.DisabledOverride,
-        MaxRetainedHistoryRecords = entity.MaxRetainedHistoryRecords,
-        MaxRetentionDays = entity.MaxRetentionDays,
+        Overrides = Deserialize<JobPolicyOverrides>(entity.OverridesJson).Normalize(),
         ConcurrencyStamp = entity.ConcurrencyStamp,
+        ReviewedAgainstJobRevisionId = entity.ReviewedAgainstJobRevisionId,
+        RecurringScheduleEffectiveFromUtc = FromTicks(entity.RecurringScheduleEffectiveFromUtcTicks),
         UpdatedAtUtc = FromTicks(entity.UpdatedAtUtcTicks)
     };
 
@@ -638,11 +859,8 @@ public sealed partial class EfCoreJobSchedulerStore
         ValidateIdentity(snapshot.OwnerId, nameof(snapshot.OwnerId));
         ValidateIdentity(snapshot.WorkerRevisionId, nameof(snapshot.WorkerRevisionId));
         ArgumentNullException.ThrowIfNull(snapshot.Declarations);
-        var declarations = snapshot.Declarations.Select(static item => item with
-            {
-                StartTimeUtc = item.StartTimeUtc?.ToUniversalTime(),
-                EndTimeUtc = item.EndTimeUtc?.ToUniversalTime()
-            })
+        var declarations = snapshot.Declarations
+            .Select(static item => item.NormalizeAndValidate())
             .OrderBy(static item => item.JobKey, StringComparer.Ordinal)
             .ToArray();
         var duplicate = declarations.GroupBy(static item => item.JobKey, StringComparer.Ordinal)
@@ -651,11 +869,6 @@ public sealed partial class EfCoreJobSchedulerStore
         {
             throw new ArgumentException($"Job '{duplicate.Key}' appears more than once in the owner snapshot.", nameof(snapshot));
         }
-        foreach (var declaration in declarations)
-        {
-            ValidateDeclaration(declaration);
-        }
-
         return new JobOwnerCatalogSnapshot(
             snapshot.SchedulerScopeKey,
             snapshot.ReleaseId,
@@ -664,63 +877,4 @@ public sealed partial class EfCoreJobSchedulerStore
             declarations);
     }
 
-    private static void ValidateDeclaration(JobDeclaration declaration)
-    {
-        ArgumentNullException.ThrowIfNull(declaration);
-        JobSchedulerIdentity.ValidateJobKey(declaration.JobKey, nameof(declaration.JobKey));
-        ValidateIdentity(declaration.JobName, nameof(declaration.JobName));
-        if (!Enum.IsDefined(declaration.JobType))
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(declaration.JobType),
-                declaration.JobType,
-                "Unsupported job type.");
-        }
-        if (declaration.MaxConcurrency < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(declaration.MaxConcurrency));
-        }
-        if (declaration.RetryCount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(declaration.RetryCount));
-        }
-        if (declaration.MaxExecutionTimeout <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(declaration.MaxExecutionTimeout));
-        }
-        if (declaration.JobType == JobType.Triggered)
-        {
-            if (string.IsNullOrWhiteSpace(declaration.JobArgsKey))
-            {
-                throw new ArgumentException("Triggered jobs must declare an argument identity.", nameof(declaration));
-            }
-
-            JobSchedulerIdentity.ValidateStandard(declaration.JobArgsKey, nameof(declaration.JobArgsKey));
-        }
-        else
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(declaration.CronExpression);
-            ArgumentException.ThrowIfNullOrWhiteSpace(declaration.TimeZoneId);
-            _ = CronHelper.Parse(declaration.CronExpression);
-            _ = TimeZoneInfo.FindSystemTimeZoneById(declaration.TimeZoneId);
-            if (declaration.StartTimeUtc is { } start
-                && declaration.EndTimeUtc is { } end
-                && end < start)
-            {
-                throw new ArgumentException("Recurring job end time cannot precede its start time.");
-            }
-        }
-    }
-
-    private static void ValidatePolicy(int? maxRecords, int? maxDays)
-    {
-        if (maxRecords is < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxRecords));
-        }
-        if (maxDays is < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxDays));
-        }
-    }
 }

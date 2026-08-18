@@ -26,7 +26,7 @@ public enum JobRecurringScheduleSuspensionReason
 }
 
 /// <summary>
-/// Captures the code-owned recurring schedule needed to calculate occurrences after a scheduler restart.
+/// Captures the effective recurring schedule needed to calculate occurrences after a scheduler restart.
 /// </summary>
 /// <remarks>
 /// Cron evaluation uses the persisted timezone identifier. The optional boundaries are absolute UTC instants, so a
@@ -35,7 +35,7 @@ public enum JobRecurringScheduleSuspensionReason
 public sealed record RecurringScheduleDefinition
 {
     /// <summary>
-    /// Gets the code-owned cron expression.
+    /// Gets the effective code-declared or operator-overridden Cron expression.
     /// </summary>
     public required string CronExpression { get; init; }
 
@@ -81,7 +81,17 @@ public sealed record RecurringScheduleDefinition
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(CronExpression);
         ArgumentException.ThrowIfNullOrWhiteSpace(TimeZoneId);
-        _ = CronHelper.Parse(CronExpression);
+        try
+        {
+            _ = CronHelper.Parse(CronExpression);
+        }
+        catch (Exception exception)
+        {
+            throw new ArgumentException(
+                $"Recurring schedule Cron expression '{CronExpression}' is invalid.",
+                nameof(CronExpression),
+                exception);
+        }
         try
         {
             _ = TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
@@ -159,12 +169,12 @@ public sealed record RecurringScheduleSynchronization
         | JobRecurringScheduleSuspensionReason.DebugMode;
 
     /// <summary>
-    /// Gets the recurring job's immutable execution template.
+    /// Gets the recurring job's current effective execution template for future occurrences.
     /// </summary>
     public required JobExecutionTemplate Template { get; init; }
 
     /// <summary>
-    /// Gets the code-owned cron expression and optional execution boundaries.
+    /// Gets the effective Cron expression and optional execution boundaries. Its timezone remains declaration-owned.
     /// </summary>
     public required RecurringScheduleDefinition Schedule { get; init; }
 
@@ -283,14 +293,20 @@ public sealed record RecurringScheduleCursor
     public required RecurringScheduleCursorKey Key { get; init; }
 
     /// <summary>
-    /// Gets the immutable execution template used for each materialized occurrence.
+    /// Gets the effective execution template used for future materialized occurrences. Policy updates replace this
+    /// snapshot without mutating executions already queued or running.
     /// </summary>
     public required JobExecutionTemplate Template { get; init; }
 
     /// <summary>
-    /// Gets the code-owned schedule used to calculate the next occurrence.
+    /// Gets the effective schedule used to calculate the next occurrence.
     /// </summary>
     public required RecurringScheduleDefinition Schedule { get; init; }
+
+    /// <summary>
+    /// Gets the policy revision applied to the cursor schedule and future execution template.
+    /// </summary>
+    public required string AppliedPolicyRevision { get; init; }
 
     /// <summary>
     /// Gets the next occurrence in UTC, or <see langword="null"/> when no future occurrence exists.

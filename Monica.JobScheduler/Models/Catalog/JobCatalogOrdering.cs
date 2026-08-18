@@ -16,7 +16,7 @@ internal static class JobCatalogOrdering
         {
             JobCatalogSortField.JobName => Order(
                 definitions,
-                static definition => definition.Declaration.JobName,
+                static definition => definition.EffectiveConfiguration.JobName,
                 query.SortDescending,
                 StringComparer.OrdinalIgnoreCase),
             JobCatalogSortField.JobKey => Order(

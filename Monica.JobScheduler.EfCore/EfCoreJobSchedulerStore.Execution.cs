@@ -606,16 +606,10 @@ public sealed partial class EfCoreJobSchedulerStore
 
                 if (!gatesByJobKey.TryGetValue(execution.JobKey, out var gate))
                 {
-                    gate = new JobExecutionGateEntity
-                    {
-                        SchedulerScopeKey = execution.SchedulerScopeKey,
-                        JobKey = execution.JobKey,
-                        ConcurrencyToken = NewVersion()
-                    };
-                    dbContext.ExecutionGates.Add(gate);
-                    gatesByJobKey.Add(execution.JobKey, gate);
+                    throw new InvalidOperationException(
+                        $"Execution gate '{execution.JobKey}' was not initialized by catalog activation.");
                 }
-                if (gate.ActiveCount >= Deserialize<JobExecutionTemplate>(execution.TemplateJson).MaxConcurrency)
+                if (gate.ActiveCount >= gate.MaxConcurrency)
                 {
                     continue;
                 }

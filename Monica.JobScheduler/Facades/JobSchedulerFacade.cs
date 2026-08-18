@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.JobScheduler.Abstractions;
+using Monica.JobScheduler.Exceptions.Catalog;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Analytics;
 using Monica.JobScheduler.Models.Catalog;
@@ -158,9 +159,9 @@ public sealed class JobSchedulerFacade(
         string jobKey,
         JobPolicyChange change,
         CancellationToken cancellationToken = default) =>
-        ExecuteAsync(
+        ExecutePolicyUpdateAsync(
             () => store.UpdatePolicyAsync(_schedulerScopeKey, ownerId, jobKey, change, cancellationToken),
-            "update job policy",
+            jobKey,
             cancellationToken);
 
     /// <summary>
@@ -329,7 +330,8 @@ public sealed class JobSchedulerFacade(
                 {
                     OwnerId = item.OwnerId,
                     JobKey = item.JobKey,
-                    Error = exception.GetMessageRecursively()
+                    Error = exception.GetMessageRecursively(),
+                    FailureStatus = ResolvePolicyFailureStatus(exception)
                 });
             }
         }
@@ -398,4 +400,49 @@ public sealed class JobSchedulerFacade(
             return Res.Fail($"Failed to {operation}: {exception.GetMessageRecursively()}");
         }
     }
+
+    private async Task<Res<JobPolicy>> ExecutePolicyUpdateAsync(
+        Func<Task<JobPolicy>> action,
+        string jobKey,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Res.Ok(await action());
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (JobPolicyConcurrencyException exception)
+        {
+            logger.LogWarning(exception, "Policy update for job {JobKey} lost optimistic concurrency.", jobKey);
+            return new Res<JobPolicy>(exception.GetMessageRecursively(), ResStatus.Conflict);
+        }
+        catch (JobCatalogNotFoundException exception)
+        {
+            logger.LogWarning(exception, "Policy update target {JobKey} was not found.", jobKey);
+            return new Res<JobPolicy>(exception.GetMessageRecursively(), ResStatus.NotFound);
+        }
+        catch (ArgumentException exception)
+        {
+            logger.LogWarning(exception, "Policy update for job {JobKey} failed validation.", jobKey);
+            return new Res<JobPolicy>(exception.GetMessageRecursively(), ResStatus.BadRequest);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to update policy for job {JobKey}.", jobKey);
+            return new Res<JobPolicy>(
+                $"Failed to update job policy: {exception.GetMessageRecursively()}",
+                ResStatus.InternalError);
+        }
+    }
+
+    private static ResStatus ResolvePolicyFailureStatus(Exception exception) => exception switch
+    {
+        JobPolicyConcurrencyException => ResStatus.Conflict,
+        JobCatalogNotFoundException => ResStatus.NotFound,
+        ArgumentException => ResStatus.BadRequest,
+        _ => ResStatus.InternalError
+    };
 }

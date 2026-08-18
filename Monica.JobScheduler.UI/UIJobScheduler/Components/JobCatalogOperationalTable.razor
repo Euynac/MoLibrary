@@ -65,6 +65,7 @@
                 @{
                     var definition = context.Definition;
                     var declaration = definition.Declaration;
+                    var effective = definition.EffectiveConfiguration;
                 }
                 <MudTd DataLabel="@L["Catalog:Selection:SelectAll"]">
                     <div class="catalog-table__selection" @onclick:stopPropagation="true">
@@ -75,7 +76,7 @@
                                          ValueChanged="@(_ => SelectionToggled.InvokeAsync(context))"
                                          Dense="true"
                                          Color="Color.Primary"
-                                         aria-label="@L["Catalog:Selection:SelectJob", declaration.JobName]" />
+                                         aria-label="@L["Catalog:Selection:SelectJob", effective.JobName]" />
                         }
                         else
                         {
@@ -87,10 +88,10 @@
                 </MudTd>
                 <MudTd Class="catalog-table__definition-cell" DataLabel="@L["Catalog:Columns:Definition"]">
                     <div class="catalog-table__identity" title="@declaration.JobKey">
-                        <strong>@declaration.JobName</strong>
-                        @if (!string.IsNullOrWhiteSpace(declaration.Description))
+                        <strong>@effective.JobName</strong>
+                        @if (!string.IsNullOrWhiteSpace(effective.Description))
                         {
-                            <span>@declaration.Description</span>
+                            <span>@effective.Description</span>
                         }
                         <code>@declaration.JobKey</code>
                     </div>
@@ -118,8 +119,14 @@
                     {
                         <div class="catalog-table__schedule">
                             <span class="catalog-table__cron">
-                                <CronDescriptionBadge Expression="@(declaration.CronExpression!)"
+                                <CronDescriptionBadge Expression="@effective.Schedule!.CronExpression"
                                                       Description="@GetCronDescription(context)" />
+                            </span>
+                            <span class="catalog-table__timezone"
+                                  title="@L["Catalog:Cron:ConfiguredTimeZone"]"
+                                  aria-label="@L["Catalog:Cron:ConfiguredTimeZone"]">
+                                <MudIcon Icon="@Icons.Material.Filled.LockClock" Size="Size.Small" />
+                                <code>@effective.Schedule.TimeZoneId</code>
                             </span>
                         </div>
                     }

@@ -35,6 +35,21 @@ public sealed record JobCatalogReleaseStage(
 public sealed record JobDeclaration
 {
     /// <summary>
+    /// Maximum persisted length of a display name.
+    /// </summary>
+    public const int JOB_NAME_MAX_LENGTH = 128;
+
+    /// <summary>
+    /// Maximum persisted length of an optional description.
+    /// </summary>
+    public const int DESCRIPTION_MAX_LENGTH = 4_000;
+
+    /// <summary>
+    /// Maximum persisted length of a Cron expression.
+    /// </summary>
+    public const int CRON_EXPRESSION_MAX_LENGTH = 512;
+
+    /// <summary>
     /// Gets the scope-wide logical identity. One release cannot declare the same key under multiple owners, and a
     /// concurrency gate continues across owner and revision changes for this key.
     /// </summary>
@@ -55,6 +70,91 @@ public sealed record JobDeclaration
     public string? TimeZoneId { get; init; }
     public DateTimeOffset? StartTimeUtc { get; init; }
     public DateTimeOffset? EndTimeUtc { get; init; }
+
+    internal JobDeclaration NormalizeAndValidate()
+    {
+        var normalized = this with
+        {
+            JobName = JobName?.Trim() ?? string.Empty,
+            Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(),
+            CronExpression = CronExpression is null
+                ? null
+                : JobScheduleOverride.NormalizeCronExpression(CronExpression),
+            TimeZoneId = TimeZoneId?.Trim(),
+            StartTimeUtc = StartTimeUtc?.ToUniversalTime(),
+            EndTimeUtc = EndTimeUtc?.ToUniversalTime()
+        };
+        normalized.Validate();
+        return normalized;
+    }
+
+    internal void Validate()
+    {
+        JobSchedulerIdentity.ValidateJobKey(JobKey, nameof(JobKey));
+        if (string.IsNullOrWhiteSpace(JobName) || JobName.Length > JOB_NAME_MAX_LENGTH)
+        {
+            throw new ArgumentException(
+                $"Job name must contain between 1 and {JOB_NAME_MAX_LENGTH} characters.",
+                nameof(JobName));
+        }
+
+        if (Description?.Length > DESCRIPTION_MAX_LENGTH)
+        {
+            throw new ArgumentException(
+                $"Job description cannot exceed {DESCRIPTION_MAX_LENGTH} characters.",
+                nameof(Description));
+        }
+
+        if (!Enum.IsDefined(JobType))
+        {
+            throw new ArgumentOutOfRangeException(nameof(JobType), JobType, "Unsupported job type.");
+        }
+
+        if (MaxConcurrency < 1)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaxConcurrency),
+                MaxConcurrency,
+                "Maximum concurrency must be greater than zero.");
+        }
+
+        if (RetryCount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(RetryCount), RetryCount, "Retry count cannot be negative.");
+        }
+
+        if (MaxExecutionTimeout <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaxExecutionTimeout),
+                MaxExecutionTimeout,
+                "Execution timeout must be greater than zero.");
+        }
+
+        if (JobType == JobType.Triggered)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(JobArgsKey);
+            JobSchedulerIdentity.ValidateStandard(JobArgsKey, nameof(JobArgsKey));
+            return;
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(CronExpression);
+        if (CronExpression.Length > CRON_EXPRESSION_MAX_LENGTH)
+        {
+            throw new ArgumentException(
+                $"Cron expression cannot exceed {CRON_EXPRESSION_MAX_LENGTH} characters.",
+                nameof(CronExpression));
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(TimeZoneId);
+        new RecurringScheduleDefinition
+        {
+            CronExpression = CronExpression,
+            TimeZoneId = TimeZoneId,
+            StartTimeUtc = StartTimeUtc,
+            EndTimeUtc = EndTimeUtc
+        }.Validate();
+    }
 }
 
 /// <summary>
@@ -74,30 +174,6 @@ public sealed record JobOwnerCatalogSnapshot(
 }
 
 /// <summary>
-/// Holds operator-owned behavior for one scope-wide logical job independently of immutable code declarations and
-/// the worker owner currently responsible for that job.
-/// </summary>
-public sealed record JobPolicy
-{
-    public bool? DisabledOverride { get; init; }
-    public int? MaxRetainedHistoryRecords { get; init; } = 100;
-    public int? MaxRetentionDays { get; init; }
-    public required string ConcurrencyStamp { get; init; }
-    public DateTimeOffset UpdatedAtUtc { get; init; }
-}
-
-/// <summary>
-/// Replaces operator-owned policy fields when the supplied concurrency stamp is current.
-/// </summary>
-public sealed record JobPolicyChange
-{
-    public bool? DisabledOverride { get; init; }
-    public int? MaxRetainedHistoryRecords { get; init; } = 100;
-    public int? MaxRetentionDays { get; init; }
-    public required string ExpectedConcurrencyStamp { get; init; }
-}
-
-/// <summary>
 /// Projects an active immutable declaration together with its independent operator policy.
 /// </summary>
 public sealed record ActiveJobDefinition
@@ -110,13 +186,32 @@ public sealed record ActiveJobDefinition
     public required JobDeclaration Declaration { get; init; }
     public required JobPolicy Policy { get; init; }
     public string JobRevisionId => JobCatalogHash.ComputeJobRevision(OwnerId, WorkerRevisionId, Declaration);
-    public bool IsDisabled => Policy.DisabledOverride ?? Declaration.IsDisabledByDefault;
 
     /// <summary>
-    /// Captures the exact active declaration as a durable execution template.
+    /// Gets the operator-visible configuration produced from the immutable declaration and sticky policy overrides.
+    /// </summary>
+    public EffectiveJobConfiguration EffectiveConfiguration => Policy.Overrides.Resolve(Declaration);
+
+    /// <summary>
+    /// Gets whether the persisted policy overrides were last reviewed against an earlier immutable job revision.
+    /// Policies without overrides never report drift.
+    /// </summary>
+    public bool IsPolicyReviewOutdated =>
+        Policy.Overrides.HasAnyOverride
+        && !string.Equals(Policy.ReviewedAgainstJobRevisionId, JobRevisionId, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Gets whether the effective operator policy prevents new automatic or triggered admission.
+    /// </summary>
+    public bool IsDisabled => EffectiveConfiguration.IsDisabled;
+
+    /// <summary>
+    /// Captures the exact effective configuration as a durable execution template. Later retry, timeout, display, or
+    /// schedule policy edits do not change work that has already entered the queue.
     /// </summary>
     public JobExecutionTemplate CreateExecutionTemplate()
     {
+        var effective = EffectiveConfiguration;
         return new JobExecutionTemplate
         {
             Revision = new JobRevisionIdentity
@@ -129,12 +224,13 @@ public sealed record ActiveJobDefinition
                 JobRevisionId = JobRevisionId,
                 JobKey = Declaration.JobKey
             },
-            JobName = Declaration.JobName,
+            AppliedPolicyRevision = Policy.ConcurrencyStamp,
+            JobName = effective.JobName,
             JobType = Declaration.JobType,
             JobArgsKey = Declaration.JobArgsKey,
-            MaxConcurrency = Declaration.MaxConcurrency,
-            RetryCount = Declaration.RetryCount,
-            MaxExecutionTimeout = Declaration.MaxExecutionTimeout
+            MaxConcurrency = effective.MaxConcurrency,
+            RetryCount = effective.RetryCount,
+            MaxExecutionTimeout = effective.MaxExecutionTimeout
         };
     }
 }

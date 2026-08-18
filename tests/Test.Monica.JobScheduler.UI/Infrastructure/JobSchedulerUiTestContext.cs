@@ -35,8 +35,9 @@ public sealed class JobSchedulerUiTestContext : BunitContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         var schedulerClock = timeProvider ?? TimeProvider.System;
+        var configuredTimeZone = schedulerTimeZone ?? TimeZoneInfo.Utc;
         Store = new InMemoryJobSchedulerStore(schedulerClock);
-        SeedStore();
+        SeedStore(configuredTimeZone);
 
         var schedulerOptions = new ModuleJobSchedulerOption
         {
@@ -44,7 +45,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
             CatalogReleaseId = "release-1",
             DeploymentGeneration = 1,
             Role = JobSchedulerRole.ControlPlane,
-            CronTimeZone = schedulerTimeZone ?? TimeZoneInfo.Utc
+            CronTimeZone = configuredTimeZone
         };
         var facade = new JobSchedulerFacade(
             Store,
@@ -85,7 +86,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
 
     public ActiveJobDefinition RecurringDefinition { get; private set; } = null!;
 
-    private void SeedStore()
+    private void SeedStore(TimeZoneInfo configuredTimeZone)
     {
         var manifest = new JobCatalogReleaseManifest(
             SCOPE,
@@ -104,7 +105,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
                     JobName = "Recurring cleanup",
                     JobType = JobType.Recurring,
                     CronExpression = "0 */5 * * * *",
-                    TimeZoneId = "UTC",
+                    TimeZoneId = configuredTimeZone.Id,
                     MaxConcurrency = 1
                 },
                 new JobDeclaration

@@ -48,17 +48,4 @@ public interface IJobCatalogStore
         JobCatalogQuery query,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Updates the policy owned by the scope-wide logical job after verifying its current active owner.
-    /// </summary>
-    /// <remarks>
-    /// Policy identity is <paramref name="schedulerScopeKey"/> plus <paramref name="jobKey"/> and survives owner
-    /// transfers and release reactivation. <paramref name="ownerId"/> is an optimistic active-catalog fence only.
-    /// </remarks>
-    Task<JobPolicy> UpdatePolicyAsync(
-        string schedulerScopeKey,
-        string ownerId,
-        string jobKey,
-        JobPolicyChange change,
-        CancellationToken cancellationToken = default);
 }

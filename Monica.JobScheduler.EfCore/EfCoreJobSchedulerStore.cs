@@ -49,7 +49,10 @@ public sealed partial class EfCoreJobSchedulerStore(
                 || providerName.Contains("Gauss", StringComparison.OrdinalIgnoreCase)))
         {
             var databaseTime = await dbContext.Database
-                .SqlQuery<DateTime>($"SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AS \"Value\"")
+                // CURRENT_TIMESTAMP is fixed at transaction start on PostgreSQL-family providers. Policy schedule
+                // replacement needs wall-clock database time after any lock wait so its prospective cursor cannot
+                // admit an occurrence that became historical while the transaction was waiting.
+                .SqlQuery<DateTime>($"SELECT (clock_timestamp() AT TIME ZONE 'UTC') AS \"Value\"")
                 .SingleAsync(cancellationToken);
             return new DateTimeOffset(DateTime.SpecifyKind(databaseTime, DateTimeKind.Utc));
         }

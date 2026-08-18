@@ -13,7 +13,7 @@ namespace Monica.JobScheduler.Providers;
 public sealed partial class InMemoryJobSchedulerStore
 {
     private readonly Dictionary<ExecutionKey, StoredExecution> _executionInstances = [];
-    private readonly Dictionary<ExecutionGateKey, int> _executionGateCounts = [];
+    private readonly Dictionary<ExecutionGateKey, StoredExecutionGate> _executionGates = [];
     private readonly Dictionary<WorkerCapabilityKey, StoredWorkerCapability> _workerCapabilityLeases = [];
     private readonly Dictionary<RecurringCursorStorageKey, StoredRecurringCursor> _recurringCursors = [];
 
@@ -541,13 +541,18 @@ public sealed partial class InMemoryJobSchedulerStore
                 }
 
                 var gateKey = GetExecutionGateKey(execution.Template.Revision);
-                var activeCount = _executionGateCounts.GetValueOrDefault(gateKey);
-                if (activeCount >= execution.Template.MaxConcurrency)
+                if (!_executionGates.TryGetValue(gateKey, out var gate))
+                {
+                    throw new InvalidOperationException(
+                        $"Active job '{execution.Template.Revision.JobKey}' has no concurrency-gate projection.");
+                }
+
+                if (gate.ActiveCount >= gate.MaxConcurrency)
                 {
                     continue;
                 }
 
-                _executionGateCounts[gateKey] = activeCount + 1;
+                gate.ActiveCount++;
                 execution.State = JobExecutionState.Running;
                 execution.StartedAtUtc = now;
                 execution.CompletedAtUtc = null;
@@ -876,17 +881,34 @@ public sealed partial class InMemoryJobSchedulerStore
                     $"Catalog change epoch {synchronization.ChangeEpoch} has not been committed.");
             }
 
+            var activeDefinition = ResolveActiveDefinitionUnsafe(
+                revision.SchedulerScopeKey,
+                revision.JobKey,
+                revision.OwnerKey,
+                revision.JobRevisionId);
+            var activeSchedule = activeDefinition.EffectiveConfiguration.Schedule;
+            if (synchronization.Template != activeDefinition.CreateExecutionTemplate()
+                || activeSchedule is null
+                || synchronization.Schedule != activeSchedule)
+            {
+                return Task.FromResult(new RecurringScheduleSynchronizationResult
+                {
+                    Status = RecurringScheduleSynchronizationStatus.StaleChangeEpoch,
+                    Cursor = existing is null ? null : ToSnapshot(existing)
+                });
+            }
+
             var suspensionReasons = synchronization.ResolveSuspensionReasons(
-                IsActiveJobDisabledUnsafe(revision));
+                activeDefinition.IsDisabled);
             if (existing is not null)
             {
-                if (existing.Template != synchronization.Template || existing.Schedule != synchronization.Schedule)
-                {
-                    throw new InvalidOperationException(
-                        $"Recurring cursor '{revision.JobRevisionId}' was synchronized with a different execution template.");
-                }
-
                 if (existing.LastSynchronizedChangeEpoch == synchronization.ChangeEpoch
+                    && existing.Template == synchronization.Template
+                    && existing.Schedule == synchronization.Schedule
+                    && string.Equals(
+                        existing.AppliedPolicyRevision,
+                        synchronization.Template.AppliedPolicyRevision,
+                        StringComparison.Ordinal)
                     && existing.SuspensionReasons == suspensionReasons)
                 {
                     return Task.FromResult(new RecurringScheduleSynchronizationResult
@@ -897,14 +919,22 @@ public sealed partial class InMemoryJobSchedulerStore
                 }
 
                 var now = UtcNow;
-                if (existing.SuspensionReasons != suspensionReasons)
+                var scheduleChanged = existing.Schedule != synchronization.Schedule;
+                var resumed = existing.IsSuspended
+                              && suspensionReasons == JobRecurringScheduleSuspensionReason.None;
+                existing.Template = synchronization.Template;
+                existing.Schedule = synchronization.Schedule;
+                existing.AppliedPolicyRevision = synchronization.Template.AppliedPolicyRevision;
+                if (suspensionReasons != JobRecurringScheduleSuspensionReason.None)
                 {
-                    existing.SuspensionReasons = suspensionReasons;
-                    existing.NextOccurrenceUtc = suspensionReasons != JobRecurringScheduleSuspensionReason.None
-                        ? null
-                        : synchronization.Schedule.GetNextOccurrence(now);
+                    existing.NextOccurrenceUtc = null;
+                }
+                else if (scheduleChanged || resumed)
+                {
+                    existing.NextOccurrenceUtc = synchronization.Schedule.GetNextOccurrence(now);
                 }
 
+                existing.SuspensionReasons = suspensionReasons;
                 existing.LastSynchronizedChangeEpoch = synchronization.ChangeEpoch;
                 existing.Version++;
                 existing.UpdatedAtUtc = now;
@@ -923,13 +953,18 @@ public sealed partial class InMemoryJobSchedulerStore
                 ?? throw new InvalidOperationException(
                     $"Catalog activation '{revision.ActivationEpoch}' was not found in scope " +
                     $"'{revision.SchedulerScopeKey}'.");
+            var firstOccurrenceBoundary = activeDefinition.Policy.RecurringScheduleEffectiveFromUtc is { } effectiveFrom
+                                          && effectiveFrom > activation.ActivatedAtUtc
+                ? effectiveFrom
+                : activation.ActivatedAtUtc;
             var stored = new StoredRecurringCursor
             {
                 Template = synchronization.Template,
                 Schedule = synchronization.Schedule,
+                AppliedPolicyRevision = synchronization.Template.AppliedPolicyRevision,
                 NextOccurrenceUtc = suspensionReasons != JobRecurringScheduleSuspensionReason.None
                     ? null
-                    : synchronization.Schedule.GetNextOccurrence(activation.ActivatedAtUtc),
+                    : synchronization.Schedule.GetNextOccurrence(firstOccurrenceBoundary),
                 LastSynchronizedChangeEpoch = synchronization.ChangeEpoch,
                 SuspensionReasons = suspensionReasons,
                 Version = 1,
@@ -1012,7 +1047,24 @@ public sealed partial class InMemoryJobSchedulerStore
                 });
             }
 
-            var isSuspendedByOperatorPolicy = IsActiveJobDisabledUnsafe(cursor.Template.Revision);
+            var activeDefinition = ResolveActiveDefinitionUnsafe(
+                cursor.Template.Revision.SchedulerScopeKey,
+                cursor.Template.Revision.JobKey,
+                cursor.Template.Revision.OwnerKey,
+                cursor.Template.Revision.JobRevisionId);
+            if (!string.Equals(
+                    cursor.AppliedPolicyRevision,
+                    activeDefinition.Policy.ConcurrencyStamp,
+                    StringComparison.Ordinal))
+            {
+                return Task.FromResult(new RecurringMaterializationResult
+                {
+                    Status = RecurringMaterializationStatus.StaleCursor,
+                    Cursor = ToSnapshot(cursor)
+                });
+            }
+
+            var isSuspendedByOperatorPolicy = activeDefinition.IsDisabled;
             if (cursor.IsSuspended || isSuspendedByOperatorPolicy)
             {
                 if (isSuspendedByOperatorPolicy)
@@ -1056,7 +1108,8 @@ public sealed partial class InMemoryJobSchedulerStore
                 EnqueueReason = $"Recurring occurrence {expectedOccurrence:O} materialized"
             };
             var outstandingCount = CountOutstandingExecutionsUnsafe(cursor.Template.Revision);
-            JobExecutionSkipReason? skipReason = outstandingCount >= cursor.Template.MaxConcurrency
+            var currentMaxConcurrency = ResolveCurrentMaxConcurrencyUnsafe(cursor.Template.Revision);
+            JobExecutionSkipReason? skipReason = outstandingCount >= currentMaxConcurrency
                 ? JobExecutionSkipReason.RecurringCapacityUnavailable
                 : null;
             var execution = EnqueueCapturedUnsafe(
@@ -1069,7 +1122,7 @@ public sealed partial class InMemoryJobSchedulerStore
                 skipReason is null
                     ? request.EnqueueReason
                     : $"Recurring occurrence {expectedOccurrence:O} skipped because {outstandingCount} outstanding "
-                      + $"execution(s) reached the configured capacity of {cursor.Template.MaxConcurrency}");
+                      + $"execution(s) reached the configured capacity of {currentMaxConcurrency}");
             cursor.NextOccurrenceUtc = materialization.NextOccurrenceUtc is { } next ? NormalizeUtc(next) : null;
             cursor.Version++;
             cursor.UpdatedAtUtc = now;
@@ -1083,7 +1136,7 @@ public sealed partial class InMemoryJobSchedulerStore
         }
     }
 
-    private DateTimeOffset UtcNow => _timeProvider.GetUtcNow();
+    private DateTimeOffset UtcNow => _timeProvider.GetUtcNow().ToUniversalTime();
 
     private JobExecutionTemplate ResolveActiveExecutionTemplateUnsafe(JobEnqueueRequest request)
     {
@@ -1402,21 +1455,13 @@ public sealed partial class InMemoryJobSchedulerStore
     private void ReleaseExecutionGateUnsafe(StoredExecution execution)
     {
         var gateKey = GetExecutionGateKey(execution.Template.Revision);
-        var activeCount = _executionGateCounts.GetValueOrDefault(gateKey);
-        if (activeCount < 1)
+        if (!_executionGates.TryGetValue(gateKey, out var gate) || gate.ActiveCount < 1)
         {
             throw new InvalidOperationException(
                 $"Execution gate '{execution.Template.Revision.JobKey}' has no active lease to release.");
         }
 
-        if (activeCount == 1)
-        {
-            _executionGateCounts.Remove(gateKey);
-        }
-        else
-        {
-            _executionGateCounts[gateKey] = activeCount - 1;
-        }
+        gate.ActiveCount--;
     }
 
     private static void ClearExecutionLeaseUnsafe(StoredExecution execution)
@@ -1439,30 +1484,97 @@ public sealed partial class InMemoryJobSchedulerStore
             key.JobRevisionId));
     }
 
-    private bool IsActiveJobDisabledUnsafe(JobRevisionIdentity revision)
+    private int ResolveCurrentMaxConcurrencyUnsafe(JobRevisionIdentity revision)
     {
-        var scope = _catalogScopes[revision.SchedulerScopeKey];
-        var release = GetRelease(scope, scope.ActiveReleaseId!);
-        if (!release.Owners.TryGetValue(revision.OwnerKey, out var owner)
-            || !string.Equals(
-                owner.Manifest.WorkerRevisionId,
-                revision.WorkerRevisionId,
-                StringComparison.Ordinal))
+        var key = new ExecutionGateKey(revision.SchedulerScopeKey, revision.JobKey);
+        return _executionGates.TryGetValue(key, out var gate)
+            ? gate.MaxConcurrency
+            : throw new InvalidOperationException(
+                $"Active job '{revision.JobKey}' has no concurrency-gate projection.");
+    }
+
+    private void ApplyPolicyToExecutionGateUnsafe(ActiveJobDefinition definition)
+    {
+        var key = new ExecutionGateKey(definition.SchedulerScopeKey, definition.Declaration.JobKey);
+        if (!_executionGates.TryGetValue(key, out var gate))
         {
             throw new InvalidOperationException(
-                $"Active catalog no longer contains worker revision '{revision.OwnerKey}/{revision.WorkerRevisionId}'.");
+                $"Active job '{definition.Declaration.JobKey}' has no concurrency-gate projection.");
         }
 
-        var declaration = owner.Snapshot!.Declarations.SingleOrDefault(candidate =>
-            string.Equals(candidate.JobKey, revision.JobKey, StringComparison.Ordinal)
-            && string.Equals(
-                JobCatalogHash.ComputeJobRevision(owner.Manifest.OwnerId, owner.Manifest.WorkerRevisionId, candidate),
-                revision.JobRevisionId,
-                StringComparison.Ordinal))
-            ?? throw new InvalidOperationException(
-                $"Active catalog no longer contains job revision '{revision.JobRevisionId}'.");
-        var policy = scope.Policies[declaration.JobKey];
-        return policy.DisabledOverride ?? declaration.IsDisabledByDefault;
+        gate.MaxConcurrency = definition.EffectiveConfiguration.MaxConcurrency;
+    }
+
+    private void SynchronizeExecutionGatesForActivationUnsafe(
+        string schedulerScopeKey,
+        CatalogScopeState scope,
+        CatalogReleaseState release)
+    {
+        foreach (var owner in release.Owners.Values)
+        {
+            foreach (var declaration in owner.Snapshot!.Declarations)
+            {
+                var key = new ExecutionGateKey(schedulerScopeKey, declaration.JobKey);
+                if (!_executionGates.TryGetValue(key, out var gate))
+                {
+                    gate = new StoredExecutionGate();
+                    _executionGates.Add(key, gate);
+                }
+
+                gate.MaxConcurrency = scope.Policies[declaration.JobKey].Overrides.Resolve(declaration).MaxConcurrency;
+            }
+        }
+    }
+
+    private void ApplyPolicyToRecurringCursorUnsafe(
+        ActiveJobDefinition definition,
+        long changeEpoch,
+        DateTimeOffset updatedAtUtc)
+    {
+        if (definition.Declaration.JobType != JobType.Recurring)
+        {
+            return;
+        }
+
+        var key = new RecurringCursorStorageKey(
+            definition.SchedulerScopeKey,
+            definition.ActivationEpoch,
+            definition.JobRevisionId);
+        if (!_recurringCursors.TryGetValue(key, out var cursor))
+        {
+            return;
+        }
+
+        var effective = definition.EffectiveConfiguration;
+        var schedule = effective.Schedule
+                       ?? throw new InvalidOperationException(
+                           $"Recurring job '{definition.Declaration.JobKey}' has no effective schedule.");
+        var template = definition.CreateExecutionTemplate();
+        var scheduleChanged = cursor.Schedule != schedule;
+        var wasSuspended = cursor.IsSuspended;
+        var hostSuspensionReasons = cursor.SuspensionReasons
+                                    & ~JobRecurringScheduleSuspensionReason.OperatorPolicy;
+        var suspensionReasons = effective.IsDisabled
+            ? hostSuspensionReasons | JobRecurringScheduleSuspensionReason.OperatorPolicy
+            : hostSuspensionReasons;
+
+        cursor.Template = template;
+        cursor.Schedule = schedule;
+        cursor.AppliedPolicyRevision = template.AppliedPolicyRevision;
+        if (suspensionReasons != JobRecurringScheduleSuspensionReason.None)
+        {
+            cursor.NextOccurrenceUtc = null;
+        }
+        else if (scheduleChanged || wasSuspended)
+        {
+            // A policy schedule replacement and a resume are both prospective: never replay suppressed time.
+            cursor.NextOccurrenceUtc = schedule.GetNextOccurrence(updatedAtUtc);
+        }
+
+        cursor.SuspensionReasons = suspensionReasons;
+        cursor.LastSynchronizedChangeEpoch = changeEpoch;
+        cursor.Version++;
+        cursor.UpdatedAtUtc = updatedAtUtc;
     }
 
     private void ApplyOperatorPolicySuspensionUnsafe(StoredRecurringCursor cursor)
@@ -1644,6 +1756,7 @@ public sealed partial class InMemoryJobSchedulerStore
             },
             Template = cursor.Template,
             Schedule = cursor.Schedule,
+            AppliedPolicyRevision = cursor.AppliedPolicyRevision,
             NextOccurrenceUtc = cursor.NextOccurrenceUtc,
             LastSynchronizedChangeEpoch = cursor.LastSynchronizedChangeEpoch,
             SuspensionReasons = cursor.SuspensionReasons,
@@ -1721,10 +1834,17 @@ public sealed partial class InMemoryJobSchedulerStore
         public DateTimeOffset LeaseExpiresAtUtc { get; set; }
     }
 
+    private sealed class StoredExecutionGate
+    {
+        public int ActiveCount { get; set; }
+        public int MaxConcurrency { get; set; }
+    }
+
     private sealed class StoredRecurringCursor
     {
-        public required JobExecutionTemplate Template { get; init; }
-        public required RecurringScheduleDefinition Schedule { get; init; }
+        public required JobExecutionTemplate Template { get; set; }
+        public required RecurringScheduleDefinition Schedule { get; set; }
+        public required string AppliedPolicyRevision { get; set; }
         public DateTimeOffset? NextOccurrenceUtc { get; set; }
         public long LastSynchronizedChangeEpoch { get; set; }
         public JobRecurringScheduleSuspensionReason SuspensionReasons { get; set; }

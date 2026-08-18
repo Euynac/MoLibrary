@@ -81,6 +81,12 @@ public sealed record JobExecutionTemplate
     public required JobRevisionIdentity Revision { get; init; }
 
     /// <summary>
+    /// Gets the policy revision whose effective values were captured by this execution. A later policy update does
+    /// not mutate queued or running execution snapshots.
+    /// </summary>
+    public required string AppliedPolicyRevision { get; init; }
+
+    /// <summary>
     /// Gets the immutable user-facing job name captured with the execution.
     /// </summary>
     public required string JobName { get; init; }
@@ -116,6 +122,7 @@ public sealed record JobExecutionTemplate
     {
         ArgumentNullException.ThrowIfNull(Revision);
         Revision.Validate();
+        JobSchedulerIdentity.ValidateStandard(AppliedPolicyRevision, nameof(AppliedPolicyRevision));
         JobSchedulerIdentity.ValidateStandard(JobName, nameof(JobName));
 
         if (!Enum.IsDefined(JobType))

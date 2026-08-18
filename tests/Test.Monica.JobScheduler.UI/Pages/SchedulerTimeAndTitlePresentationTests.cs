@@ -133,7 +133,7 @@ public sealed class SchedulerTimeAndTitlePresentationTests
     }
 
     [Fact]
-    public async Task CronInspector_ShouldKeepDraftScheduleTimezoneAndOmitVisibleOffsets()
+    public async Task PolicyWorkbench_ShouldShowConfiguredScheduleTimeAndUtcPreview()
     {
         var clock = new ManualTimeProvider(NOW);
         await using var context = new JobSchedulerUiTestContext(
@@ -145,9 +145,9 @@ public sealed class SchedulerTimeAndTitlePresentationTests
             Xunit.TestContext.Current.CancellationToken);
         var dialogService = context.Services.GetRequiredService<IDialogService>();
 
-        await dialogService.ShowAsync<CronScheduleInspectorDialog>(
-            "Cron",
-            new DialogParameters<CronScheduleInspectorDialog>
+        await dialogService.ShowAsync<JobPolicyDialog>(
+            "Policy",
+            new DialogParameters<JobPolicyDialog>
             {
                 { dialog => dialog.Definition, context.RecurringDefinition },
                 { dialog => dialog.OperationalSummary, summary },
@@ -156,16 +156,30 @@ public sealed class SchedulerTimeAndTitlePresentationTests
 
         context.DialogProvider.WaitForAssertion(() =>
         {
-            context.DialogProvider.Markup.Should().Contain("CronInspector:Preview:SchedulerTime");
+            context.DialogProvider.Markup.Should().Contain("Policy:Schedule:Preview:ConfiguredTime");
             var previewTimes = context.DialogProvider
-                .FindAll(".cron-inspector__preview-scroll tbody code")
+                .FindAll(".schedule-editor__preview-scroll tbody code")
                 .Select(element => element.TextContent.Trim())
                 .ToArray();
-            previewTimes.Should().Contain("2026-08-14 01:05:00.000");
-            previewTimes.Should().Contain("2026-08-14 09:05:00.000");
-            previewTimes.Should().OnlyContain(value =>
-                !value.Contains("+00:00", StringComparison.Ordinal)
-                && !value.Contains("+08:00", StringComparison.Ordinal));
+            previewTimes.Should().Contain("2026-08-14 09:05:00 +08:00");
+            previewTimes.Should().Contain("2026-08-14 01:05:00 UTC");
+        });
+
+        clock.SetUtcNow(NOW.AddHours(2));
+        context.DialogProvider.Find("input[aria-label='Policy:Schedule:CronExpression']")
+            .Input("0 */5 * * * *");
+
+        context.DialogProvider.WaitForAssertion(() =>
+        {
+            var previewTimes = context.DialogProvider
+                .FindAll(".schedule-editor__preview-scroll tbody code")
+                .Select(element => element.TextContent.Trim())
+                .ToArray();
+            previewTimes.Should().Contain("2026-08-14 11:05:00 +08:00");
+            previewTimes.Should().Contain("2026-08-14 03:05:00 UTC");
+            previewTimes.Should().NotContain("2026-08-14 01:05:00 UTC");
+            context.DialogProvider.Find(".schedule-editor__prospective").TextContent.Should()
+                .Contain("Policy:Schedule:AuthoritativeObservedAt");
         });
     }
 
@@ -183,11 +197,8 @@ public sealed class SchedulerTimeAndTitlePresentationTests
         },
         Xunit.TestContext.Current.CancellationToken);
 
-    private static TimeZoneInfo CreateFixedTimeZone() => TimeZoneInfo.CreateCustomTimeZone(
-        "Scheduler/Test+08",
-        TimeSpan.FromHours(8),
-        "Scheduler test time",
-        "Scheduler test time");
+    private static TimeZoneInfo CreateFixedTimeZone() =>
+        TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai");
 
     private sealed class ManualTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {

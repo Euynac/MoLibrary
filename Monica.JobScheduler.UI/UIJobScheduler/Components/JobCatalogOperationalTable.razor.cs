@@ -197,7 +197,7 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
             '\u001f',
             summaries
                 .Where(IsRecurring)
-                .Select(summary => $"{summary.Definition.JobRevisionId}\u001e{summary.Definition.Declaration.CronExpression}"));
+                .Select(summary => $"{GetCronDescriptionKey(summary)}\u001e{summary.Definition.EffectiveConfiguration.Schedule!.CronExpression}"));
         fingerprint = $"{cultureName}\u001d{fingerprint}";
         if (string.Equals(_descriptionFingerprint, fingerprint, StringComparison.Ordinal))
         {
@@ -230,8 +230,8 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         var requests = _visibleSummaries
             .Where(IsRecurring)
             .Select(summary => new CronDescriptionRequest(
-                summary.Definition.JobRevisionId,
-                summary.Definition.Declaration.CronExpression!))
+                GetCronDescriptionKey(summary),
+                summary.Definition.EffectiveConfiguration.Schedule!.CronExpression))
             .ToArray();
         if (requests.Length == 0)
         {
@@ -278,9 +278,12 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
     }
 
     private string GetCronDescription(JobOperationalSummary summary) =>
-        _cronDescriptions.TryGetValue(summary.Definition.JobRevisionId, out var description)
+        _cronDescriptions.TryGetValue(GetCronDescriptionKey(summary), out var description)
             ? description ?? L["Catalog:Cron:Unavailable"]
             : L["Catalog:Cron:Parsing"];
+
+    private static string GetCronDescriptionKey(JobOperationalSummary summary) =>
+        $"{summary.Definition.JobRevisionId}\u001e{summary.Definition.Policy.ConcurrencyStamp}";
 
     private string GetNextRunStatusLabel(JobOperationalSummary summary) => summary.RecurringScheduleStatus switch
     {

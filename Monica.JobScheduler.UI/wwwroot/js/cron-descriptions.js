@@ -32,7 +32,8 @@ export function describeCronExpressions(requests, cultureName) {
         use24HourTimeFormat: true,
         throwExceptionOnParseError: true,
         verbose: false,
-        dayOfWeekStartIndexZero: true
+        dayOfWeekStartIndexZero: true,
+        logicalAndDayFields: true
     };
 
     return (requests ?? []).map(request => {

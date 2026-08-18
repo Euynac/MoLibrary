@@ -19,7 +19,6 @@ using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Providers;
 using Monica.JobScheduler.Services;
 using Monica.JobScheduler.Services.Support;
-using Monica.JobScheduler.Utils;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -338,7 +337,7 @@ public sealed class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
             EndTimeUtc = jobType == JobType.Recurring ? NormalizeBoundary(attribute?.EndTimeBridge) : null
         };
 
-        ValidateDeclaration(declaration);
+        declaration = NormalizeDeclaration(declaration);
         return new LocalJobDefinition
         {
             Declaration = declaration,
@@ -347,72 +346,16 @@ public sealed class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
         };
     }
 
-    private void ValidateDeclaration(JobDeclaration declaration)
+    private static JobDeclaration NormalizeDeclaration(JobDeclaration declaration)
     {
-        JobSchedulerIdentity.ValidateJobKey(declaration.JobKey, nameof(declaration.JobKey));
-        JobSchedulerIdentity.ValidateStandard(declaration.JobName, nameof(declaration.JobName));
-        if (declaration.JobArgsKey is not null)
-        {
-            JobSchedulerIdentity.ValidateStandard(declaration.JobArgsKey, nameof(declaration.JobArgsKey));
-        }
-
-        if (declaration.MaxConcurrency < 1)
-        {
-            throw new JobRegistrationException(
-                $"Job '{declaration.JobKey}' must allow at least one concurrent execution.",
-                declaration.JobKey);
-        }
-
-        if (declaration.RetryCount < 0)
-        {
-            throw new JobRegistrationException(
-                $"Job '{declaration.JobKey}' cannot configure a negative retry count.",
-                declaration.JobKey);
-        }
-
-        if (declaration.MaxExecutionTimeout <= TimeSpan.Zero)
-        {
-            throw new JobRegistrationException(
-                $"Job '{declaration.JobKey}' must configure a positive execution timeout.",
-                declaration.JobKey);
-        }
-
-        if (declaration.JobType != JobType.Recurring)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(declaration.CronExpression))
-        {
-            throw new JobRegistrationException(
-                $"Recurring job '{declaration.JobKey}' must declare a cron schedule.",
-                declaration.JobKey);
-        }
-
-        if (string.IsNullOrWhiteSpace(declaration.TimeZoneId))
-        {
-            throw new JobRegistrationException(
-                $"Recurring job '{declaration.JobKey}' must capture a cron timezone.",
-                declaration.JobKey);
-        }
-
         try
         {
-            _ = CronHelper.Parse(declaration.CronExpression);
-            _ = TimeZoneInfo.FindSystemTimeZoneById(declaration.TimeZoneId);
+            return declaration.NormalizeAndValidate();
         }
         catch (Exception exception)
         {
             throw new JobRegistrationException(
-                $"Recurring job '{declaration.JobKey}' has invalid cron schedule " +
-                $"'{declaration.CronExpression}': {exception.Message}",
-                declaration.JobKey);
-        }
-
-        if (declaration.StartTimeUtc is { } start && declaration.EndTimeUtc is { } end && end < start)
-        {
-            throw new JobRegistrationException(
-                $"Recurring job '{declaration.JobKey}' ends before it starts.",
+                $"Job '{declaration.JobKey}' has an invalid declaration: {exception.Message}",
                 declaration.JobKey);
         }
     }

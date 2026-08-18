@@ -261,9 +261,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
                 definition.Declaration.JobKey,
                 new JobPolicyChange
                 {
-                    DisabledOverride = disabled,
-                    MaxRetainedHistoryRecords = definition.Policy.MaxRetainedHistoryRecords,
-                    MaxRetentionDays = definition.Policy.MaxRetentionDays,
+                    Overrides = definition.Policy.Overrides with { DisabledOverride = disabled },
                     ExpectedConcurrencyStamp = definition.Policy.ConcurrencyStamp
                 },
                 cancellationToken);
@@ -355,9 +353,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
                     {
                         OwnerId = summary.Definition.OwnerId,
                         JobKey = summary.Definition.Declaration.JobKey,
-                        DisabledOverride = disabled,
-                        MaxRetainedHistoryRecords = summary.Definition.Policy.MaxRetainedHistoryRecords,
-                        MaxRetentionDays = summary.Definition.Policy.MaxRetentionDays,
+                        Overrides = summary.Definition.Policy.Overrides with { DisabledOverride = disabled },
                         ExpectedConcurrencyStamp = summary.Definition.Policy.ConcurrencyStamp
                     }).ToArray()
                 },

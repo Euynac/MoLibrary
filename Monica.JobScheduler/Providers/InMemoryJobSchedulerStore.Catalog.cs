@@ -185,7 +185,13 @@ public sealed partial class InMemoryJobSchedulerStore
                     []));
             }
 
-            var activation = Activate(schedulerScopeKey, scope, release, isExplicitReactivation: false);
+            var policies = PreparePoliciesForActivation(scope, release);
+            var activation = Activate(
+                schedulerScopeKey,
+                scope,
+                release,
+                policies,
+                isExplicitReactivation: false);
             return Task.FromResult(new JobCatalogActivationResult(
                 JobCatalogActivationStatus.Activated,
                 CreateVersion(schedulerScopeKey, scope),
@@ -214,11 +220,19 @@ public sealed partial class InMemoryJobSchedulerStore
                     $"Release '{releaseId}' cannot be reactivated before owners [{string.Join(", ", missingOwners)}] publish.");
             }
 
+            // Validate sticky policy against the target declarations before changing even the desired intent.
+            // A rejected explicit rollback must remain a fully atomic no-op.
+            var policies = PreparePoliciesForActivation(scope, release);
             scope.DesiredReleaseId = releaseId;
             scope.DesiredIntentEpoch++;
             scope.PublicationEpoch++;
             return Task.FromResult(CloneActivation(
-                Activate(schedulerScopeKey, scope, release, isExplicitReactivation: true)));
+                Activate(
+                    schedulerScopeKey,
+                    scope,
+                    release,
+                    policies,
+                    isExplicitReactivation: true)));
         }
     }
 
@@ -357,7 +371,7 @@ public sealed partial class InMemoryJobSchedulerStore
         ValidateIdentity(ownerId, nameof(ownerId));
         JobSchedulerIdentity.ValidateJobKey(jobKey, nameof(jobKey));
         ArgumentNullException.ThrowIfNull(change);
-        ValidatePolicy(change.MaxRetainedHistoryRecords, change.MaxRetentionDays);
+        ArgumentNullException.ThrowIfNull(change.Overrides);
         cancellationToken.ThrowIfCancellationRequested();
 
         lock (_gate)
@@ -370,22 +384,36 @@ public sealed partial class InMemoryJobSchedulerStore
                     $"Active job '{ownerId}/{jobKey}' was not found in scope '{schedulerScopeKey}'.");
             }
 
+            var activeDefinition = ProjectActiveDefinitions(schedulerScopeKey, scope)
+                .Single(definition => string.Equals(definition.Declaration.JobKey, jobKey, StringComparison.Ordinal));
+            var normalizedOverrides = change.Overrides.Normalize();
             var current = scope.Policies[jobKey];
             if (!string.Equals(current.ConcurrencyStamp, change.ExpectedConcurrencyStamp, StringComparison.Ordinal))
             {
                 throw new JobPolicyConcurrencyException(jobKey);
             }
+            normalizedOverrides.Validate(activeDefinition.Declaration, current.Overrides);
 
+            var updatedAtUtc = UtcNow;
             var replacement = new JobPolicy
             {
-                DisabledOverride = change.DisabledOverride,
-                MaxRetainedHistoryRecords = change.MaxRetainedHistoryRecords,
-                MaxRetentionDays = change.MaxRetentionDays,
+                Overrides = normalizedOverrides,
                 ConcurrencyStamp = CreateConcurrencyStamp(),
-                UpdatedAtUtc = _timeProvider.GetUtcNow()
+                ReviewedAgainstJobRevisionId = activeDefinition.JobRevisionId,
+                RecurringScheduleEffectiveFromUtc = current.ResolveRecurringScheduleEffectiveFromUtc(
+                    activeDefinition.Declaration,
+                    normalizedOverrides,
+                    updatedAtUtc),
+                UpdatedAtUtc = updatedAtUtc
             };
             scope.Policies[jobKey] = replacement;
             scope.ChangeEpoch++;
+            var updatedDefinition = activeDefinition with { Policy = replacement };
+            ApplyPolicyToExecutionGateUnsafe(updatedDefinition);
+            ApplyPolicyToRecurringCursorUnsafe(
+                updatedDefinition,
+                scope.ChangeEpoch,
+                updatedAtUtc);
             return Task.FromResult(ClonePolicy(replacement));
         }
     }
@@ -394,20 +422,17 @@ public sealed partial class InMemoryJobSchedulerStore
         string schedulerScopeKey,
         CatalogScopeState scope,
         CatalogReleaseState release,
+        IReadOnlyDictionary<string, JobPolicy> policies,
         bool isExplicitReactivation)
     {
-        foreach (var owner in release.Owners.Values)
+        foreach (var (jobKey, policy) in policies)
         {
-            foreach (var declaration in owner.Snapshot!.Declarations)
-            {
-                scope.Policies.TryAdd(
-                    declaration.JobKey,
-                    CreateDefaultPolicy());
-            }
+            scope.Policies[jobKey] = policy;
         }
+        SynchronizeExecutionGatesForActivationUnsafe(schedulerScopeKey, scope, release);
 
         var nextActivationEpoch = scope.ActivationEpoch + 1;
-        var activatedAtUtc = _timeProvider.GetUtcNow();
+        var activatedAtUtc = UtcNow;
         var retirement = RetireSupersededExecutionsUnsafe(
             schedulerScopeKey,
             nextActivationEpoch,
@@ -430,15 +455,81 @@ public sealed partial class InMemoryJobSchedulerStore
         return activation;
     }
 
-    private JobPolicy CreateDefaultPolicy()
+    private Dictionary<string, JobPolicy> PreparePoliciesForActivation(
+        CatalogScopeState scope,
+        CatalogReleaseState release)
+    {
+        var previousJobRevisions = GetActiveJobRevisionMap(scope);
+        var policies = new Dictionary<string, JobPolicy>(StringComparer.Ordinal);
+        foreach (var owner in release.Owners.Values)
+        {
+            foreach (var declaration in owner.Snapshot!.Declarations)
+            {
+                var incomingJobRevision = JobCatalogHash.ComputeJobRevision(
+                    owner.Manifest.OwnerId,
+                    owner.Manifest.WorkerRevisionId,
+                    declaration);
+                var hasStickyPolicy = scope.Policies.TryGetValue(declaration.JobKey, out var policy);
+                policy ??= CreateDefaultPolicy(incomingJobRevision);
+                try
+                {
+                    // Passing the persisted override set as the previous value preserves a dormant recurring schedule
+                    // while the logical job is temporarily triggered, yet still validates it when recurring returns.
+                    policy.Overrides.Validate(declaration, policy.Overrides);
+                }
+                catch (ArgumentException exception)
+                {
+                    throw new JobCatalogConflictException(
+                        $"Sticky policy for job '{declaration.JobKey}' is incompatible with release "
+                        + $"'{release.Manifest.ReleaseId}': {exception.Message}");
+                }
+
+                // A policy editor opened against the previous active code revision must not be able to overwrite
+                // operator changes after cutover. Rotate only the concurrency fence; the sticky policy's review and
+                // scheduling metadata continue to describe the last explicit operator save.
+                if (hasStickyPolicy
+                    && (!previousJobRevisions.TryGetValue(declaration.JobKey, out var previousJobRevision)
+                        || !string.Equals(previousJobRevision, incomingJobRevision, StringComparison.Ordinal)))
+                {
+                    policy = policy with { ConcurrencyStamp = CreateConcurrencyStamp() };
+                }
+
+                policies.Add(declaration.JobKey, policy);
+            }
+        }
+
+        return policies;
+    }
+
+    private static Dictionary<string, string> GetActiveJobRevisionMap(CatalogScopeState scope)
+    {
+        if (scope.ActiveReleaseId is null)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        var release = GetRelease(scope, scope.ActiveReleaseId);
+        return release.Owners.Values
+            .SelectMany(owner => owner.Snapshot!.Declarations.Select(declaration => new
+            {
+                declaration.JobKey,
+                JobRevisionId = JobCatalogHash.ComputeJobRevision(
+                    owner.Manifest.OwnerId,
+                    owner.Manifest.WorkerRevisionId,
+                    declaration)
+            }))
+            .ToDictionary(static item => item.JobKey, static item => item.JobRevisionId, StringComparer.Ordinal);
+    }
+
+    private JobPolicy CreateDefaultPolicy(string reviewedAgainstJobRevisionId)
     {
         return new JobPolicy
         {
-            DisabledOverride = null,
-            MaxRetainedHistoryRecords = 100,
-            MaxRetentionDays = null,
+            Overrides = new JobPolicyOverrides(),
             ConcurrencyStamp = CreateConcurrencyStamp(),
-            UpdatedAtUtc = _timeProvider.GetUtcNow()
+            ReviewedAgainstJobRevisionId = reviewedAgainstJobRevisionId,
+            RecurringScheduleEffectiveFromUtc = null,
+            UpdatedAtUtc = UtcNow
         };
     }
 
@@ -530,7 +621,7 @@ public sealed partial class InMemoryJobSchedulerStore
         ValidateIdentity(snapshot.OwnerId, nameof(snapshot.OwnerId));
         ValidateIdentity(snapshot.WorkerRevisionId, nameof(snapshot.WorkerRevisionId));
         ArgumentNullException.ThrowIfNull(snapshot.Declarations);
-        var declarations = snapshot.Declarations.Select(CloneDeclaration)
+        var declarations = snapshot.Declarations.Select(static declaration => declaration.NormalizeAndValidate())
             .OrderBy(static declaration => declaration.JobKey, StringComparer.Ordinal)
             .ToArray();
         var duplicate = declarations.GroupBy(static declaration => declaration.JobKey, StringComparer.Ordinal)
@@ -538,10 +629,6 @@ public sealed partial class InMemoryJobSchedulerStore
         if (duplicate is not null)
         {
             throw new ArgumentException($"Job '{duplicate.Key}' appears more than once in the owner snapshot.", nameof(snapshot));
-        }
-        foreach (var declaration in declarations)
-        {
-            ValidateDeclaration(declaration);
         }
         return new JobOwnerCatalogSnapshot(
             snapshot.SchedulerScopeKey,
@@ -551,74 +638,12 @@ public sealed partial class InMemoryJobSchedulerStore
             declarations);
     }
 
-    private static void ValidateDeclaration(JobDeclaration declaration)
-    {
-        ArgumentNullException.ThrowIfNull(declaration);
-        JobSchedulerIdentity.ValidateJobKey(declaration.JobKey, nameof(declaration.JobKey));
-        ValidateIdentity(declaration.JobName, nameof(declaration.JobName));
-        if (!Enum.IsDefined(declaration.JobType))
-        {
-            throw new ArgumentOutOfRangeException(nameof(declaration.JobType), declaration.JobType, "Unsupported job type.");
-        }
-
-        if (declaration.MaxConcurrency < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(declaration.MaxConcurrency));
-        }
-        if (declaration.RetryCount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(declaration.RetryCount));
-        }
-        if (declaration.MaxExecutionTimeout <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(declaration.MaxExecutionTimeout));
-        }
-        if (declaration.JobType == JobType.Triggered)
-        {
-            if (string.IsNullOrWhiteSpace(declaration.JobArgsKey))
-            {
-                throw new ArgumentException("Triggered jobs must declare an argument identity.", nameof(declaration));
-            }
-
-            JobSchedulerIdentity.ValidateStandard(declaration.JobArgsKey, nameof(declaration.JobArgsKey));
-        }
-        else
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(declaration.CronExpression);
-            ArgumentException.ThrowIfNullOrWhiteSpace(declaration.TimeZoneId);
-            _ = CronHelper.Parse(declaration.CronExpression);
-            _ = TimeZoneInfo.FindSystemTimeZoneById(declaration.TimeZoneId);
-            if (declaration.StartTimeUtc is { } start
-                && declaration.EndTimeUtc is { } end
-                && end < start)
-            {
-                throw new ArgumentException("Recurring job end time cannot precede its start time.");
-            }
-        }
-    }
-
-    private static void ValidatePolicy(int? maxRecords, int? maxDays)
-    {
-        if (maxRecords is < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxRecords));
-        }
-        if (maxDays is < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxDays));
-        }
-    }
-
     private static void ValidateIdentity(string value, string parameterName)
     {
         JobSchedulerIdentity.ValidateStandard(value, parameterName);
     }
 
-    private static JobDeclaration CloneDeclaration(JobDeclaration source) => source with
-    {
-        StartTimeUtc = source.StartTimeUtc?.ToUniversalTime(),
-        EndTimeUtc = source.EndTimeUtc?.ToUniversalTime()
-    };
+    private static JobDeclaration CloneDeclaration(JobDeclaration source) => source with { };
     private static JobPolicy ClonePolicy(JobPolicy source) => source with { };
     private static JobCatalogActivation CloneActivation(JobCatalogActivation source) => source with { };
     private static JobCatalogVersion CreateVersion(string schedulerScopeKey, CatalogScopeState scope) =>

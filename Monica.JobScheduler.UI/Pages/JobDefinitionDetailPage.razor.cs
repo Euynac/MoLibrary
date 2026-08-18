@@ -51,7 +51,7 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
     private int _stateVersion;
     private bool _disposed;
 
-    private string PageTitleText => PageState?.Summary?.Definition.Declaration.JobName
+    private string PageTitleText => PageState?.Summary?.Definition.EffectiveConfiguration.JobName
                                     ?? L["JobDetail:PageTitle"];
 
     protected override async Task OnParametersSetAsync()
@@ -114,31 +114,7 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
         }
     }
 
-    private async Task OpenScheduleInspectorAsync()
-    {
-        var state = PageState;
-        if (state?.Summary is not { } summary)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<CronScheduleInspectorDialog>
-        {
-            { dialog => dialog.Definition, summary.Definition },
-            { dialog => dialog.OperationalSummary, summary },
-            { dialog => dialog.ObservedAtUtc, state.ObservedAtUtc }
-        };
-        await DialogService.ShowAsync<CronScheduleInspectorDialog>(
-            L["CronInspector:Title"],
-            parameters,
-            new DialogOptions
-            {
-                CloseButton = true,
-                CloseOnEscapeKey = true,
-                FullWidth = true,
-                MaxWidth = MaxWidth.Large
-            });
-    }
+    private Task OpenScheduleInspectorAsync() => OpenPolicyAsync();
 
     private async Task OpenExecutionDetailsAsync(string instanceId)
     {
@@ -165,12 +141,14 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
 
         var parameters = new DialogParameters<JobPolicyDialog>
         {
-            { dialog => dialog.Definition, summary.Definition }
+            { dialog => dialog.Definition, summary.Definition },
+            { dialog => dialog.OperationalSummary, summary },
+            { dialog => dialog.ObservedAtUtc, state.ObservedAtUtc }
         };
         var dialog = await DialogService.ShowAsync<JobPolicyDialog>(
             L["Policy:Title"],
             parameters,
-            SmallDialogOptions);
+            WorkbenchDialogOptions);
         var result = await dialog.Result;
         if (_disposed || PageState != state)
         {
@@ -306,6 +284,14 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
         CloseOnEscapeKey = true,
         FullWidth = true,
         MaxWidth = MaxWidth.Small
+    };
+
+    private static DialogOptions WorkbenchDialogOptions { get; } = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.ExtraLarge
     };
 
     /// <inheritdoc />

@@ -173,7 +173,12 @@ public sealed partial class EfCoreJobSchedulerStore
         {
             definitions = definitions.Where(item =>
                 item.Declaration.JobKey.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase)
-                || item.Declaration.JobName.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase));
+                || item.EffectiveConfiguration.JobName.Contains(
+                    query.SearchText,
+                    StringComparison.OrdinalIgnoreCase)
+                || item.EffectiveConfiguration.Description?.Contains(
+                    query.SearchText,
+                    StringComparison.OrdinalIgnoreCase) == true);
         }
         if (query.JobType is { } jobType)
         {

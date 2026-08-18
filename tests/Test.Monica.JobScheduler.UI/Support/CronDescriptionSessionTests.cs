@@ -11,6 +11,19 @@ public sealed class CronDescriptionSessionTests
         "./_content/Monica.JobScheduler.UI/js/cron-descriptions.js";
 
     [Fact]
+    public void JavascriptModule_ShouldDescribeCronosDayFieldsWithLogicalAndSemantics()
+    {
+        var source = File.ReadAllText(FindRepositoryFile(
+            "Monica.JobScheduler.UI",
+            "wwwroot",
+            "js",
+            "cron-descriptions.js"));
+
+        source.Should().Contain("logicalAndDayFields: true");
+        source.Should().Contain("dayOfWeekStartIndexZero: true");
+    }
+
+    [Fact]
     public async Task DescribeAsync_WhenCallsOverlap_ShouldImportModuleOnce()
     {
         var module = new RecordingCronModule([]);
@@ -138,6 +151,23 @@ public sealed class CronDescriptionSessionTests
     }
 
     private sealed record JsInvocation(string Identifier, object?[] Arguments);
+
+    private static string FindRepositoryFile(params string[] relativeSegments)
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            if (!File.Exists(Path.Combine(directory.FullName, "Monica.slnx")))
+            {
+                continue;
+            }
+
+            return Path.Combine([directory.FullName, .. relativeSegments]);
+        }
+
+        throw new DirectoryNotFoundException("The Monica repository root could not be located.");
+    }
 
     private sealed class ImmediateJsRuntime(IJSObjectReference module) : IJSRuntime
     {
