@@ -124,6 +124,47 @@ public sealed class ModuleSeederTests
         snapshot.Seeders.Should().ContainSingle().Which.Status.Should().Be(SeederStatus.Cancelled);
     }
 
+    [Fact]
+    public async Task SeederBackgroundService_WhenStoppedWithoutEverStarting_ShouldPublishCancelledState()
+    {
+        // BackgroundService dispatches ExecuteAsync through Task.Run, so a stop that wins the race
+        // before the queued work item starts must still publish a cancelled run via the stop pipeline.
+        var options = new ModuleSeederOption();
+        var graph = SeederGraph.Create([typeof(PendingHostSeeder)], options);
+        var state = new SeederState(graph, TimeProvider.System);
+        await using var provider = new ServiceCollection()
+            .AddScoped<IExecutionPipeline, PassThroughExecutionPipeline>()
+            .BuildServiceProvider();
+        using var lifetime = new PendingHostApplicationLifetime();
+        var scheduler = new SeederScheduler(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            graph,
+            state,
+            new ImmediateRetryDelay(),
+            Options.Create(options),
+            NullLogger<SeederScheduler>.Instance);
+        using var service = new SeederBackgroundService(
+            lifetime,
+            scheduler,
+            state,
+            new ObservableInstanceRegistry(Options.Create(new ModuleObservableInstanceOption())),
+            Options.Create(new ModuleHostedServiceOption
+            {
+                DefaultHeartbeatInterval = TimeSpan.Zero
+            }),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<SeederBackgroundService>.Instance);
+
+        await service.StopAsync(TestContext.Current.CancellationToken)
+            .WaitAsync(HANG_GUARD, TestContext.Current.CancellationToken);
+
+        var snapshot = state.GetSnapshot();
+        snapshot.Status.Should().Be(SeederRunStatus.Cancelled);
+        snapshot.StartedAtUtc.Should().BeNull();
+        snapshot.IsCompleted.Should().BeTrue();
+        snapshot.Seeders.Should().ContainSingle().Which.Status.Should().Be(SeederStatus.Cancelled);
+    }
+
     private sealed class SeederTestApplicationFactory : MonicaTestApplicationFactory<SeederBase>
     {
         protected override void ConfigureMonica(IMonicaBuilder builder)
