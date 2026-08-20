@@ -105,51 +105,68 @@ export function scrollToLineIndex(container, lineIndex) {
     }
 }
 
-export function addScrollTopListener(container, dotNetRef, methodName, threshold = 50) {
+export async function addScrollTopListener(container, dotNetRef, methodName, threshold = 50) {
     if (!container || !dotNetRef) {
         return;
     }
 
-    removeScrollListener(container);
+    await removeScrollListener(container);
 
-    let isLoading = false;
-    let lastScrollTop = container.scrollTop;
+    const session = {
+        acceptingCallbacks: true,
+        isLoading: false,
+        lastScrollTop: container.scrollTop,
+        pendingCallbacks: new Set(),
+        handleScroll: null
+    };
 
     const handleScroll = () => {
         const scrollTop = container.scrollTop;
-        const isScrollingUp = scrollTop < lastScrollTop;
-        lastScrollTop = scrollTop;
+        const isScrollingUp = scrollTop < session.lastScrollTop;
+        session.lastScrollTop = scrollTop;
 
-        if (!isScrollingUp || scrollTop > threshold || isLoading) {
+        if (!session.acceptingCallbacks || !isScrollingUp || scrollTop > threshold || session.isLoading) {
             return;
         }
 
-        isLoading = true;
-        dotNetRef.invokeMethodAsync(methodName)
+        session.isLoading = true;
+        const callback = dotNetRef.invokeMethodAsync(methodName)
             .catch(error => {
-                console.error("Error invoking load more:", error);
+                if (session.acceptingCallbacks) {
+                    console.error("Error invoking load more:", error);
+                }
             })
             .finally(() => {
-                isLoading = false;
+                session.isLoading = false;
+                session.pendingCallbacks.delete(callback);
             });
+
+        session.pendingCallbacks.add(callback);
     };
 
+    session.handleScroll = handleScroll;
     container.addEventListener("scroll", handleScroll, { passive: true });
-    scrollListenerMap.set(container, handleScroll);
+    scrollListenerMap.set(container, session);
 }
 
-export function removeScrollListener(container) {
+export async function removeScrollListener(container) {
     if (!container) {
         return;
     }
 
-    const handleScroll = scrollListenerMap.get(container);
-    if (!handleScroll) {
+    const session = scrollListenerMap.get(container);
+    if (!session) {
         return;
     }
 
-    container.removeEventListener("scroll", handleScroll);
-    scrollListenerMap.delete(container);
+    session.acceptingCallbacks = false;
+    container.removeEventListener("scroll", session.handleScroll);
+    if (scrollListenerMap.get(container) === session) {
+        scrollListenerMap.delete(container);
+    }
+
+    await Promise.allSettled([...session.pendingCallbacks]);
+    session.pendingCallbacks.clear();
 }
 
 export function preserveScrollPosition(container, absoluteLineNumber) {

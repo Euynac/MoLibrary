@@ -1,7 +1,206 @@
 {
   "Pages": {
     "DataChannelManage": {
-      "Title": "DataChannel Management"
+      "Title": "Data channel operations"
+    }
+  },
+  "Common": {
+    "Actions": {
+      "Refresh": "Refresh",
+      "Clear": "Clear",
+      "Close": "Close",
+      "Details": "Details"
+    },
+    "Columns": {
+      "Actions": "Actions"
+    },
+    "Values": {
+      "Yes": "Yes",
+      "No": "No",
+      "Empty": "Empty",
+      "None": "None",
+      "Unknown": "Unknown"
+    }
+  },
+  "Console": {
+    "Eyebrow": "Live transport / message operations",
+    "Title": "Data channel operations",
+    "Subtitle": "Trace endpoint flow, pipeline composition, live message evidence, and channel faults from one operational console.",
+    "Actions": {
+      "ExceptionEvidence": "Exception evidence"
+    },
+    "Summary": {
+      "AriaLabel": "Data channel operational summary",
+      "TotalChannels": "Registered channels",
+      "HealthyChannels": "Ready and healthy",
+      "ChannelsWithExceptions": "Channels with faults",
+      "ExceptionHistory": "Historical exceptions"
+    },
+    "Directory": {
+      "Eyebrow": "Transport directory",
+      "Title": "Channel pipelines",
+      "Description": "Follow each ingress-to-egress route and inspect the middleware that transforms or observes its messages.",
+      "ChannelCount": "{0} channels"
+    },
+    "States": {
+      "Loading": "Loading data channel evidence",
+      "LoadingDescription": "Resolving channel state, endpoint metadata, and exception history.",
+      "Empty": "No data channels are registered",
+      "EmptyDescription": "Register a channel pipeline to expose transport and message evidence here."
+    },
+    "Messages": {
+      "LoadChannelsFailed": "Channel state could not be loaded: {0}",
+      "LoadSummaryFailed": "Exception summary could not be loaded: {0}",
+      "LoadSummaryException": "Exception summary failed to load: {0}",
+      "LoadFailed": "Data channel evidence failed to load: {0}",
+      "Refreshed": "Data channel evidence refreshed.",
+      "ReinitializeFailed": "Channel reinitialization failed: {0}",
+      "ReinitializeException": "Channel reinitialization encountered an error: {0}",
+      "ReinitializeSucceeded": "Channel {0} was reinitialized.",
+      "LoadExceptionsFailed": "Channel exceptions could not be loaded: {0}",
+      "LoadExceptionsException": "Channel exception evidence failed to load: {0}",
+      "ClearExceptionsFailed": "Channel exceptions could not be cleared: {0}",
+      "ClearExceptionsException": "Clearing channel exceptions encountered an error: {0}",
+      "ClearExceptionsSucceeded": "Exceptions for channel {0} were cleared."
+    }
+  },
+  "Channel": {
+    "IdentityLabel": "Channel pipeline",
+    "ExceptionCount": "{0} active faults",
+    "Actions": {
+      "OpenMenu": "Open actions for channel {0}",
+      "Reinitialize": "Reinitialize",
+      "ViewExceptions": "View exceptions",
+      "ClearExceptions": "Clear exceptions",
+      "Inspect": "Inspect"
+    },
+    "States": {
+      "Ready": "Ready",
+      "Initializing": "Initializing",
+      "NotInitialized": "Not initialized",
+      "Unavailable": "Unavailable",
+      "Degraded": "Degraded",
+      "Reinitializing": "Reinitializing channel",
+      "ReinitializingDescription": "Endpoint and middleware state is being rebuilt."
+    },
+    "Flow": {
+      "AriaLabel": "Endpoint flow for channel {0}",
+      "Ingress": "Ingress endpoint",
+      "Egress": "Egress endpoint",
+      "MiddlewareCount": "{0} stages"
+    },
+    "Sections": {
+      "EndpointConfiguration": "Endpoint configuration",
+      "Pipeline": "Pipeline middleware ({0})"
+    },
+    "Info": {
+      "ItemCount": "{0} signals"
+    },
+    "Exceptions": {
+      "AriaLabel": "Channel exception evidence",
+      "Active": "{0} active exceptions",
+      "Historical": "{0} exceptions recorded historically"
+    }
+  },
+  "Pipeline": {
+    "ComponentKinds": {
+      "Endpoint": "Endpoint",
+      "Transform": "Transform middleware",
+      "Monitor": "Monitor middleware",
+      "EndpointMiddleware": "Endpoint middleware",
+      "Information": "Evidence provider",
+      "Base": "Middleware",
+      "Unknown": "Unknown component"
+    }
+  },
+  "Metadata": {
+    "ComplexValue": "Structured value",
+    "Empty": "No configuration metadata",
+    "RawData": "Raw data",
+    "Unreadable": "Unreadable",
+    "ArrayData": "Array data",
+    "Value": "Value"
+  },
+  "Debugger": {
+    "DialogTitle": "Message debugger · {0}",
+    "Controls": {
+      "AriaLabel": "Message capture controls"
+    },
+    "Fields": {
+      "FilterKeyword": "Filter keyword",
+      "FilterPlaceholder": "Match message content",
+      "QueueLength": "Capture depth"
+    },
+    "Actions": {
+      "Open": "Open message debugger",
+      "Start": "Start capture",
+      "Stop": "Stop capture"
+    },
+    "States": {
+      "Listening": "Capture running",
+      "Paused": "Capture paused",
+      "NoMessages": "No messages captured",
+      "NoMessagesDescription": "Start capture and wait for traffic that matches the current filter."
+    },
+    "CapturedMessages": "Message stream",
+    "MessageCount": "{0} captured",
+    "MetadataAvailable": "Message includes metadata",
+    "Sources": {
+      "Ingress": "Ingress",
+      "Egress": "Egress"
+    },
+    "Tabs": {
+      "FormattedContent": "Formatted payload",
+      "Metadata": "Metadata"
+    },
+    "Values": {
+      "EmptyMessage": "(empty message)"
+    },
+    "Messages": {
+      "LoadFailed": "Message debugger could not be resolved: {0}",
+      "LoadException": "Message debugger failed to open: {0}"
+    }
+  },
+  "Exceptions": {
+    "States": {
+      "Active": "Active faults",
+      "Healthy": "Healthy"
+    },
+    "Columns": {
+      "ChannelId": "Channel ID",
+      "PipelineId": "Pipeline ID",
+      "Status": "Status",
+      "CurrentCount": "Active",
+      "HistoricalCount": "Historical",
+      "PoolSize": "Pool capacity",
+      "Latest": "Latest exception",
+      "PoolUsage": "Pool usage",
+      "Timestamp": "Timestamp",
+      "SourceType": "Source type",
+      "ExceptionType": "Exception type",
+      "Message": "Message",
+      "Description": "Operational context"
+    },
+    "Summary": {
+      "Title": "Exception evidence",
+      "Subtitle": "Compare active faults, history depth, and per-channel pool pressure.",
+      "AriaLabel": "Exception evidence summary",
+      "ActiveExceptions": "Active exceptions",
+      "DirectoryEyebrow": "Fault inventory",
+      "DirectoryTitle": "Channel exception pressure",
+      "DirectoryCount": "{0} channels",
+      "NoChannels": "No channel exception evidence is available."
+    },
+    "Details": {
+      "DialogTitle": "Exception details · {0}",
+      "Title": "Exception details",
+      "SummaryAriaLabel": "Selected channel exception summary",
+      "InspectorEyebrow": "Selected evidence",
+      "InspectorTitle": "Exception inspector",
+      "SourceDescription": "Source description",
+      "MessageTitle": "Exception message",
+      "StackTraceTitle": "Stack trace",
+      "Empty": "This channel has no retained exception details."
     }
   }
 }

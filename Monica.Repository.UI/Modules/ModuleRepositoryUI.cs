@@ -26,18 +26,7 @@ public static class ModuleRepositoryUIBuilderExtensions
         public ModuleRegistration<ModuleRepositoryUI, ModuleRepositoryUIOption> AddRepositoryUI(
             Action<ModuleRepositoryUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleRepositoryUI, ModuleRepositoryUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<RepositoryUIResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIRepositoryDashboardPage, RepositoryUIResource>(
-                    UIRepositoryDashboardPage.PAGE_URL,
-                    "Pages:RepositoryDashboard:Title",
-                    Icons.Material.Filled.Storage,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 35));
-            return registration;
+            return builder.AddModule<ModuleRepositoryUI, ModuleRepositoryUIOption>(action);
         }
     }
 }
@@ -51,6 +40,17 @@ public sealed class ModuleRepositoryUI : MonicaModule<ModuleRepositoryUIOption>,
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleRepository, ModuleRepositoryOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<RepositoryUIResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIRepositoryDashboardPage, RepositoryUIResource>(
+                    UIRepositoryDashboardPage.PAGE_URL,
+                    "Pages:RepositoryDashboard:Title",
+                    Icons.Material.Filled.Storage,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 35)));
     }
 
     /// <inheritdoc />

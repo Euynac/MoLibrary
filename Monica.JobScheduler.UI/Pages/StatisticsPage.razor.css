@@ -1,6 +1,5 @@
 .statistics-page {
-    padding: 24px;
-    margin: 0 auto;
+    min-width: 0;
 }
 
 .loading-container {
@@ -23,16 +22,4 @@
 
 .statistics-page ::deep .statistics-equal-card > * {
     width: 100%;
-}
-
-@media (max-width: 960px) {
-    .statistics-page {
-        padding: 16px;
-    }
-}
-
-@media (max-width: 600px) {
-    .statistics-page {
-        padding: 12px;
-    }
 }

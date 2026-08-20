@@ -26,7 +26,7 @@ else
 {
     <MudTooltip Text="@KeyInfo.RawValue" Placement="Placement.Top">
         <MudText Typo="Typo.body2"
-                 Style="font-family: monospace; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                 Class="key-value-preview">
             @GetPreviewValue()
         </MudText>
     </MudTooltip>
@@ -41,10 +41,8 @@ else
         if (KeyInfo.RawValue == null) return "";
 
         var value = KeyInfo.RawValue;
-        // Remove line breaks for preview
         value = value.Replace("\n", " ").Replace("\r", "");
 
-        // Truncate values ​​that are too long
         if (value.Length > 100)
         {
             return value[..100] + "...";

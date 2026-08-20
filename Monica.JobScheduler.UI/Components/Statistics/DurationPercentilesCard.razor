@@ -4,7 +4,7 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="percentiles-wrapper">
-    <MudPaper Class="percentiles-card" Elevation="0">
+    <MudPaper Class="percentiles-card mo-self-painted" Elevation="0">
         <div class="card-header">
             <MudText Typo="Typo.h6">@L["Statistics:DurationPercentiles:Title"]</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:DurationPercentiles:Sample"]: @Percentiles.SampleCount</MudText>
@@ -69,10 +69,10 @@
                     <div class="slowest-list">
                         @foreach (var instance in SlowestInstances)
                         {
-                            <div class="slowest-item" @onclick="() => ShowInstanceDetail(instance.InstanceId)">
+                            <button type="button" class="slowest-item" @onclick="() => ShowInstanceDetail(instance.InstanceId)">
                                 <div class="slowest-job-name" title="@instance.JobKey">@instance.JobName</div>
                                 <div class="slowest-duration">@FormatDuration(instance.Duration)</div>
-                            </div>
+                            </button>
                         }
                     </div>
                 </div>

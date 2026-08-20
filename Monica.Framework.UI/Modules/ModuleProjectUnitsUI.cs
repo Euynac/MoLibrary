@@ -21,18 +21,7 @@ public static class ModuleProjectUnitsUIBuilderExtensions
         public ModuleRegistration<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption> AddProjectUnitsUI(
             Action<ModuleProjectUnitsUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<ProjectUnitsResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIProjectUnitsPage, ProjectUnitsResource>(
-                    UIProjectUnitsPage.PAGE_URL,
-                    "Pages:ProjectUnits:Title",
-                    Icons.Material.Filled.Monitor,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 20));
-            return registration;
+            return builder.AddModule<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption>(action);
         }
     }
 }
@@ -46,6 +35,17 @@ public class ModuleProjectUnitsUI : MonicaModule<ModuleProjectUnitsUIOption>, IU
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleProjectUnits, ModuleProjectUnitsOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<ProjectUnitsResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIProjectUnitsPage, ProjectUnitsResource>(
+                    UIProjectUnitsPage.PAGE_URL,
+                    "Pages:ProjectUnits:Title",
+                    Icons.Material.Filled.Monitor,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 20)));
     }
 
     public override void ConfigureServices(ModuleContext<ModuleProjectUnitsUIOption> context)

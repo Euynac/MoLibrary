@@ -1,132 +1,81 @@
 @using Monica.Profiling.MemoryDiagnostics.Models
-<MudGrid Spacing="3">
-    @* Main memory indicators *@
-    <MudItem xs="12" md="6" lg="3">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">工作集</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Primary">
-                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytes(Snapshot?.WorkingSetBytes ?? 0))
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large"/>
+@inject IStringLocalizer<MemoryAnalysisResource> L
+
+<section class="memory-overview">
+    <div class="memory-overview__metrics" aria-label="@L["Overview:MetricsAriaLabel"]">
+        <article class="memory-metric memory-metric--primary">
+            <span class="memory-metric__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Storage" /></span>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:WorkingSet"]</MudText>
+                <MudText Typo="Typo.h5" Color="Color.Primary">@LoadingOr(ProfilingDisplayFormatter.FormatBytes(Snapshot?.WorkingSetBytes ?? 0))</MudText>
             </div>
-        </MudPaper>
-    </MudItem>
-
-    <MudItem xs="12" md="6" lg="3"> 
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">托管堆</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Info">
-                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytes(Snapshot?.GcHeapSizeBytes ?? 0))
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Info" Size="Size.Large"/>
+        </article>
+        <article class="memory-metric memory-metric--info">
+            <span class="memory-metric__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Memory" /></span>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:ManagedHeap"]</MudText>
+                <MudText Typo="Typo.h5" Color="Color.Info">@LoadingOr(ProfilingDisplayFormatter.FormatBytes(Snapshot?.GcHeapSizeBytes ?? 0))</MudText>
             </div>
-        </MudPaper>
-    </MudItem>
-
-    <MudItem xs="12" md="6" lg="3">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">已提交</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Success">
-                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytes(Snapshot?.CommittedBytes ?? 0))
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.Commit" Color="Color.Success" Size="Size.Large"/>
+        </article>
+        <article class="memory-metric memory-metric--success">
+            <span class="memory-metric__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Commit" /></span>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:Committed"]</MudText>
+                <MudText Typo="Typo.h5" Color="Color.Success">@LoadingOr(ProfilingDisplayFormatter.FormatBytes(Snapshot?.CommittedBytes ?? 0))</MudText>
             </div>
-        </MudPaper>
-    </MudItem>
-
-    <MudItem xs="12" md="6" lg="3">
-        <MudPaper Class="pa-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">托管内存</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Warning">
-                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytes(Snapshot?.TotalManagedMemory ?? 0))
-                    </MudText>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.DataUsage" Color="Color.Warning" Size="Size.Large"/>
+        </article>
+        <article class="memory-metric memory-metric--warning">
+            <span class="memory-metric__icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DataUsage" /></span>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Overview:ManagedMemory"]</MudText>
+                <MudText Typo="Typo.h5" Color="Color.Warning">@LoadingOr(ProfilingDisplayFormatter.FormatBytes(Snapshot?.TotalManagedMemory ?? 0))</MudText>
             </div>
-        </MudPaper>
-    </MudItem>
+        </article>
+    </div>
 
-    @* GC collection times *@
-    <MudItem xs="12">
-        <MudPaper Class="pa-4" Elevation="2">
-            <MudText Typo="Typo.h6" Class="mb-3">GC 回收次数</MudText>
-            <MudGrid Spacing="2">
-                <MudItem xs="4">
-                    <div class="text-center">
-                        <MudText Typo="Typo.h4" Color="Color.Primary">@(Snapshot?.Gen0Collections ?? 0)</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Gen 0</MudText>
-                    </div>
-                </MudItem>
-                <MudItem xs="4">
-                    <div class="text-center">
-                        <MudText Typo="Typo.h4" Color="Color.Info">@(Snapshot?.Gen1Collections ?? 0)</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Gen 1</MudText>
-                    </div>
-                </MudItem>
-                <MudItem xs="4">
-                    <div class="text-center">
-                        <MudText Typo="Typo.h4" Color="Color.Warning">@(Snapshot?.Gen2Collections ?? 0)</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Gen 2</MudText>
-                    </div>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
-    </MudItem>
+    <div class="memory-overview__detail-grid">
+        <article class="memory-evidence-panel">
+            <header class="memory-evidence-panel__header">
+                <MudText Typo="Typo.overline" Class="memory-section-eyebrow">@L["Overview:Collections:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6">@L["Overview:Collections:Title"]</MudText>
+            </header>
+            <div class="generation-strip">
+                <div><strong>@(Snapshot?.Gen0Collections ?? 0)</strong><span>Gen 0</span></div>
+                <div><strong>@(Snapshot?.Gen1Collections ?? 0)</strong><span>Gen 1</span></div>
+                <div><strong>@(Snapshot?.Gen2Collections ?? 0)</strong><span>Gen 2</span></div>
+            </div>
+        </article>
 
-    @* GC mode information *@
-    <MudItem xs="12" md="6">
-        <MudPaper Class="pa-4" Elevation="2">
-            <MudText Typo="Typo.h6" Class="mb-3">GC 模式</MudText>
-            <MudStack Spacing="2">
-                <div class="d-flex justify-space-between">
-                    <MudText>GC 类型</MudText>
-                    <MudChip T="string" Size="Size.Small"
-                             Color="@(Snapshot?.IsServerGC == true ? Color.Success : Color.Info)">
-                        @(Snapshot?.IsServerGC == true ? "Server GC" : "Workstation GC")
-                    </MudChip>
+        <article class="memory-evidence-panel">
+            <header class="memory-evidence-panel__header">
+                <MudText Typo="Typo.overline" Class="memory-section-eyebrow">@L["Overview:Configuration:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6">@L["Overview:Configuration:Title"]</MudText>
+            </header>
+            <dl class="memory-definition-list">
+                <div>
+                    <dt>@L["Overview:Configuration:GcType"]</dt>
+                    <dd><MudChip T="string" Size="Size.Small" Color="@(Snapshot?.IsServerGC == true ? Color.Success : Color.Info)">@(Snapshot?.IsServerGC == true ? L["Overview:Configuration:ServerGc"] : L["Overview:Configuration:WorkstationGc"])</MudChip></dd>
                 </div>
-                <div class="d-flex justify-space-between">
-                    <MudText>延迟模式</MudText>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default">
-                        @(Snapshot?.LatencyModeDisplayName ?? "N/A")
-                    </MudChip>
+                <div>
+                    <dt>@L["Overview:Configuration:LatencyMode"]</dt>
+                    <dd>@(Snapshot?.LatencyModeDisplayName ?? L["Common:Unavailable"])</dd>
                 </div>
-            </MudStack>
-        </MudPaper>
-    </MudItem>
-
-    @* snapshot time *@
-    <MudItem xs="12" md="6">
-        <MudPaper Class="pa-4" Elevation="2">
-            <MudText Typo="Typo.h6" Class="mb-3">快照信息</MudText>
-            <MudStack Spacing="2">
-                <div class="d-flex justify-space-between">
-                    <MudText>采集时间</MudText>
-                    <MudText Color="Color.Secondary">
-                        @(Snapshot is null ? "N/A" : ProfilingDisplayFormatter.FormatLocalTime(Snapshot.Timestamp))
-                    </MudText>
+                <div>
+                    <dt>@L["Overview:Snapshot:CapturedAt"]</dt>
+                    <dd class="diagnostic-value">@(Snapshot is null ? L["Common:Unavailable"] : ProfilingDisplayFormatter.FormatLocalTime(Snapshot.Timestamp))</dd>
                 </div>
-                <div class="d-flex justify-space-between">
-                    <MudText>最大代数</MudText>
-                    <MudText Color="Color.Secondary">@GC.MaxGeneration</MudText>
+                <div>
+                    <dt>@L["Overview:Snapshot:MaxGeneration"]</dt>
+                    <dd>@GC.MaxGeneration</dd>
                 </div>
-            </MudStack>
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+            </dl>
+        </article>
+    </div>
+</section>
 
 @code {
-[Parameter] public MemorySnapshot? Snapshot { get; set; }
-[Parameter] public bool IsLoading { get; set; }
+    [Parameter] public MemorySnapshot? Snapshot { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+
+    private string LoadingOr(string value) => IsLoading ? L["Common:LoadingValue"] : value;
 }

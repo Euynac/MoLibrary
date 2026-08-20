@@ -1050,7 +1050,6 @@ def create_module(
 ) -> None:
     dependencies = module_dependencies(package, module, modules_by_key)
     additional_usings: list[str] = []
-    registration_configuration = ""
     module_interfaces: list[str] = []
 
     if module.kind == "web":
@@ -1063,34 +1062,26 @@ def create_module(
         dependencies.extend(
             [
                 "module.Require<global::Monica.Modules.ModuleLocalization, "
-                "global::Monica.Modules.ModuleLocalizationOption>();",
+                "global::Monica.Modules.ModuleLocalizationOption>(\n"
+                f"    static option => option.AddResource<{resource_name}>());",
                 "module.Require<global::Monica.Modules.ModuleShellUI, "
-                "global::Monica.Modules.ModuleShellUIOption>();",
+                "global::Monica.Modules.ModuleShellUIOption>(\n"
+                "    static option => option.ConfigureNavigation(registry =>\n"
+                "    {\n"
+                f"        var category = registry.RegisterLocalizedCategory<{resource_name}>(\n"
+                f"            \"{csharp_escape(module.navigation_category_id)}\",\n"
+                "            \"Navigation:Category\",\n"
+                f"            order: {UI_CATEGORY_ORDER_BASE + ui_index});\n"
+                f"        registry.RegisterLocalizedPage<{page_name}, {resource_name}>(\n"
+                f"            \"{route}\",\n"
+                "            \"Navigation:Title\",\n"
+                "            Icons.Material.Filled.Extension,\n"
+                "            categoryId: category,\n"
+                "            addToNav: true,\n"
+                f"            navOrder: {UI_NAV_ORDER_BASE + ui_index});\n"
+                "    }));",
             ]
         )
-        registration_configuration = textwrap.dedent(
-            f"""
-            registration.Require<global::Monica.Modules.ModuleLocalization,
-                    global::Monica.Modules.ModuleLocalizationOption>()
-                .AddResource<{resource_name}>();
-            registration.Require<global::Monica.Modules.ModuleShellUI,
-                    global::Monica.Modules.ModuleShellUIOption>()
-                .RegisterUIComponents(registry =>
-            {{
-                var category = registry.RegisterLocalizedCategory<{resource_name}>(
-                    "{csharp_escape(module.navigation_category_id)}",
-                    "Navigation:Category",
-                    order: {UI_CATEGORY_ORDER_BASE + ui_index});
-                registry.RegisterLocalizedPage<{page_name}, {resource_name}>(
-                    "{route}",
-                    "Navigation:Title",
-                    Icons.Material.Filled.Extension,
-                    categoryId: category,
-                    addToNav: true,
-                    navOrder: {UI_NAV_ORDER_BASE + ui_index});
-            }});
-            """
-        ).strip()
         additional_usings.extend(
             [
                 f"using {package.package_id}.Localization;",
@@ -1168,9 +1159,7 @@ public static class Module{module.name}BuilderExtensions
         public ModuleRegistration<Module{module.name}, Module{module.name}Option> Add{module.name}(
             Action<Module{module.name}Option>? configure = null)
         {{
-            var registration = builder.AddModule<Module{module.name}, Module{module.name}Option>(configure);
-{textwrap.indent(registration_configuration, '            ') if registration_configuration else ''}
-            return registration;
+            return builder.AddModule<Module{module.name}, Module{module.name}Option>(configure);
         }}
     }}
 }}

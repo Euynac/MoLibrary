@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Localization;
 using Monica.Core.Localization.Abstractions;
-using Monica.Core.Localization.Models.Internal;
+using Monica.Core.Localization.Models;
 using Monica.Core.Localization.Services;
 using Monica.Core.Localization.Services.Support;
 using Monica.Core.Modularity;
@@ -41,7 +41,7 @@ public static class ModuleLocalizationBuilderExtensions
         public ModuleRegistration<ModuleLocalization, ModuleLocalizationOption> AddResource<TResource>()
             where TResource : class, ILocalizationResource
         {
-            return registration.Configure(option => option.AddResource(typeof(TResource)));
+            return registration.Configure(static option => option.AddResource<TResource>());
         }
     }
 }
@@ -51,6 +51,12 @@ public class ModuleLocalization : MonicaModule<ModuleLocalizationOption>, IWebMo
     private readonly LocalizationResourceRegistry _resourceRegistry = new();
     private readonly List<Type> _resourceMarkerTypesDiscoveredFromTypeScan = [];
 
+    /// <inheritdoc />
+    public override void ValidateOptions(ModuleLocalizationOption options, string? profileName)
+    {
+        _ = options.CreateProfile();
+    }
+
     public override void ConfigureApplicationBuilder(WebModuleContext<ModuleLocalizationOption> context)
     {
         context.ApplicationBuilder.UseRequestLocalization();
@@ -59,12 +65,12 @@ public class ModuleLocalization : MonicaModule<ModuleLocalizationOption>, IWebMo
     public override void ConfigureServices(ModuleContext<ModuleLocalizationOption> context)
     {
         var services = context.Services;
-        var runtimeOptions = Option.ToRuntimeOptions();
+        var profile = Option.CreateProfile();
 
         // Add ASP.NET Core localization services
         services.AddLocalization();
         services.TryAddSingleton(_resourceRegistry);
-        services.TryAddSingleton(runtimeOptions);
+        services.AddSingleton(profile);
         services.TryAddSingleton<JsonStringLocalizerFactory>();
         services.TryAddSingleton<ILocalizationCatalog, LocalizationCatalog>();
 
@@ -75,11 +81,11 @@ public class ModuleLocalization : MonicaModule<ModuleLocalizationOption>, IWebMo
         // Configure RequestLocalizationOptions
         services.Configure<RequestLocalizationOptions>(options =>
         {
-            var supportedCultures = runtimeOptions.SupportedCultures
+            var supportedCultures = profile.SupportedCultures
                 .Select(c => new CultureInfo(c))
                 .ToArray();
 
-            options.DefaultRequestCulture = new RequestCulture(runtimeOptions.DefaultCulture);
+            options.DefaultRequestCulture = new RequestCulture(profile.DefaultCulture);
             options.SupportedCultures = supportedCultures;
             options.SupportedUICultures = supportedCultures;
 
@@ -88,7 +94,7 @@ public class ModuleLocalization : MonicaModule<ModuleLocalizationOption>, IWebMo
             [
                 new CookieRequestCultureProvider
                 {
-                    CookieName = Option.CookieName
+                    CookieName = profile.CookieName
                 }
             ];
         });
@@ -119,6 +125,9 @@ public class ModuleLocalization : MonicaModule<ModuleLocalizationOption>, IWebMo
     }
 }
 
+/// <summary>
+/// Configures the host's canonical localization profile and explicitly contributed resource markers.
+/// </summary>
 public class ModuleLocalizationOption : ModuleOptions<ModuleLocalization>
 {
     /// <summary>
@@ -145,23 +154,37 @@ public class ModuleLocalizationOption : ModuleOptions<ModuleLocalization>
     /// </summary>
     public string CookieName { get; set; } = ".AspNetCore.Culture";
 
-    /// <summary>
-    /// Manually registered localization resource marker types.
-    /// Built-in Monica modules should add their resource types through the module registration extension
-    /// instead of relying on host business-type discovery, which is intended for application-owned scanned types.
-    /// </summary>
-    public List<Type> ResourceMarkerTypes { get; set; } = [];
+    internal IReadOnlyList<Type> ResourceMarkerTypes => _resourceMarkerTypes;
 
-    internal void AddResource(Type resourceType)
+    private readonly List<Type> _resourceMarkerTypes = [];
+
+    /// <summary>
+    /// Registers a localization resource marker as part of module composition.
+    /// </summary>
+    /// <typeparam name="TResource">
+    /// The marker whose embedded JSON resources belong to the current host. The marker is registered once even when
+    /// several modules contribute it.
+    /// </typeparam>
+    /// <remarks>
+    /// Call this from a dependency option contribution in <c>Describe</c> when a module intrinsically consumes a
+    /// resource. This keeps direct and transitive module inclusion behavior identical.
+    /// </remarks>
+    public void AddResource<TResource>()
+        where TResource : class, ILocalizationResource
     {
-        if (!ResourceMarkerTypes.Contains(resourceType))
+        var resourceType = typeof(TResource);
+        if (!_resourceMarkerTypes.Contains(resourceType))
         {
-            ResourceMarkerTypes.Add(resourceType);
+            _resourceMarkerTypes.Add(resourceType);
         }
     }
 
-    internal LocalizationRuntimeOptions ToRuntimeOptions()
+    internal LocalizationProfile CreateProfile()
     {
-        return LocalizationRuntimeOptions.Create(DefaultCulture, SupportedCultures);
+        return LocalizationProfile.Create(
+            DefaultCulture,
+            SupportedCultures,
+            CultureDisplayNames,
+            CookieName);
     }
 }

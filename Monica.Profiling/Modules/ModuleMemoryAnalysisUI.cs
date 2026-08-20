@@ -24,18 +24,7 @@ public static class ModuleMemoryAnalysisUIBuilderExtensions
         public ModuleRegistration<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption> AddMemoryAnalysisUI(
             Action<ModuleMemoryAnalysisUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<MemoryAnalysisResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
-                    UIMemoryAnalysisPage.PAGE_URL,
-                    "Pages:MemoryAnalysis:Title",
-                    Icons.Material.Filled.Memory,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 60));
-            return registration;
+            return builder.AddModule<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption>(action);
         }
     }
 
@@ -63,13 +52,30 @@ public class ModuleMemoryAnalysisUI : MonicaModule<ModuleMemoryAnalysisUIOption>
     {
         module.Require<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption>();
         module.Require<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(static option =>
+        {
+            option.AddResource<ProfilingResource>();
+            option.AddResource<MemoryAnalysisResource>();
+        });
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIMemoryAnalysisPage, MemoryAnalysisResource>(
+                    UIMemoryAnalysisPage.PAGE_URL,
+                    "Pages:MemoryAnalysis:Title",
+                    Icons.Material.Filled.Memory,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 60)));
     }
 
     /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleMemoryAnalysisUIOption> context)
     {
-        context.Services.AddScoped<MemoryAnalysisPageState>();
-        context.Services.AddScoped<TypeAllocationPanelState>();
+        context.Services.AddScoped<MemoryAnalysisPageStateFactory>();
+        if (Option.EnableTypeAllocationTab)
+        {
+            context.Services.AddScoped<TypeAllocationPanelStateFactory>();
+        }
     }
 }
 

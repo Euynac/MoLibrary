@@ -21,13 +21,8 @@ public class ModuleUtilities : MonicaModule<ModuleUtilitiesOption>
     /// </summary>
     public override void Describe(ModuleDescriptor module)
     {
-        module.Require<ModuleLocalization, ModuleLocalizationOption>(option =>
-        {
-            if (!option.ResourceMarkerTypes.Contains(typeof(UtilitiesResource)))
-            {
-                option.ResourceMarkerTypes.Add(typeof(UtilitiesResource));
-            }
-        });
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<UtilitiesResource>());
     }
 
     /// <summary>

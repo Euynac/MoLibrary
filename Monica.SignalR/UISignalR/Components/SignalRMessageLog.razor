@@ -1,17 +1,19 @@
 @using Monica.SignalR.UISignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<!-- Message list -->
-<MudPaper Class="pa-4" Elevation="2">
-    <MudText Typo="Typo.h5" Class="mb-3">@L["UISignalR:MessageLog:Title"]</MudText>
-    <MudButton Variant="Variant.Outlined" 
+<MudPaper Class="signalr-message-log" Elevation="0">
+    <div class="signalr-component-header">
+    <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.ReceiptLong" Color="Color.Info" /><MudText Typo="Typo.h6">@L["UISignalR:MessageLog:Title"]</MudText></div>
+    <MudButton Variant="Variant.Outlined"
              Color="Color.Warning" 
              OnClick="ClearMessagesAsync"
-             Class="mb-3">
+             Size="Size.Small">
         <MudIcon Icon="@Icons.Material.Filled.Clear" />
         <MudText Class="ms-2">@L["UISignalR:MessageLog:Clear"]</MudText>
     </MudButton>
+    </div>
     
+    <div class="signalr-message-stream">
     <MudVirtualize Items="Messages" Context="msg" ItemSize="60">
         <div class="d-flex align-center pa-2 @(msg.IsError ? "mud-error-text" : "")">
             <MudIcon Icon="@GetMessageIcon(msg.Type)" 
@@ -31,6 +33,7 @@
         </div>
         <MudDivider />
     </MudVirtualize>
+    </div>
 </MudPaper>
 
 @code {

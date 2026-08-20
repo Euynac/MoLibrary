@@ -9,10 +9,12 @@
     "Header": {
       "Title": "依赖注入",
       "Description": "查看最终的 ServiceCollection，并标记由 Monica 约定注册生成的描述符。",
+      "Eyebrow": "Monica / 运行时组合",
       "Refresh": "刷新",
       "GeneratedAt": "快照生成时间：{0}"
     },
     "Summary": {
+      "AriaLabel": "依赖注入注册摘要",
       "Total": "描述符",
       "AutoRegistered": "自动注册",
       "Keyed": "Keyed",

@@ -1,6 +1,6 @@
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Monica.AI.UI.UIChat.State;
 using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
@@ -12,7 +12,7 @@ public sealed class ModuleAIUITests
     [Fact]
     public void Composition_ShouldRegisterScopedChatWorkspace()
     {
-        var builder = Host.CreateApplicationBuilder();
+        var builder = WebApplication.CreateBuilder();
 
         builder.AddMonica(monica =>
         {
@@ -28,7 +28,7 @@ public sealed class ModuleAIUITests
     [Fact]
     public void UseBrowserChatHistory_WhenRetentionIsInvalid_ShouldRejectConfiguration()
     {
-        var builder = Host.CreateApplicationBuilder();
+        var builder = WebApplication.CreateBuilder();
 
         var configure = () => builder.AddMonica(monica =>
             monica.AddModule<ModuleAIUI, ModuleAIUIOption>()

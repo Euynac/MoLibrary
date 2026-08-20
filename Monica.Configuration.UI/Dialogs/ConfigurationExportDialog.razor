@@ -87,7 +87,8 @@
     [Parameter] public string? DefinitionKey { get; set; }
     [Parameter] public string? DefinitionDisplayName { get; set; }
 
-    private IJSObjectReference? _jsModule;
+    private ConfigurationDownloadInteropSession? _downloadInteropSession;
+    private bool _disposed;
     private bool _includeSensitive;
     private bool _exporting;
     private string? _error;
@@ -106,6 +107,7 @@
 
     protected override void OnInitialized()
     {
+        _downloadInteropSession = new ConfigurationDownloadInteropSession(JSRuntime);
         _exportedBy = UserContext.UserName;
         _environmentName = HostEnvironment.EnvironmentName;
         _systemVersion = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
@@ -114,6 +116,11 @@
 
     private async Task DownloadAsync()
     {
+        if (_disposed || _exporting || _downloadInteropSession is null)
+        {
+            return;
+        }
+
         _exporting = true;
         _error = null;
         ReportProgress(new ConfigurationPackageProgress
@@ -132,25 +139,46 @@
                 EnvironmentName = _environmentName,
                 SystemVersion = _systemVersion
             }, progress);
+            if (_disposed)
+            {
+                return;
+            }
+
             var json = JsonSerializer.Serialize(document, PackageJsonOptions);
-            var module = await GetJsModuleAsync();
-            await module.InvokeVoidAsync("downloadText", BuildFileName(), PACKAGE_CONTENT_TYPE, json);
-            MudDialog.Close(DialogResult.Ok(true));
+            var downloaded = await _downloadInteropSession.DownloadTextAsync(
+                BuildFileName(),
+                PACKAGE_CONTENT_TYPE,
+                json);
+            if (!_disposed && downloaded)
+            {
+                MudDialog.Close(DialogResult.Ok(true));
+            }
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            if (!_disposed)
+            {
+                _error = ex.Message;
+            }
         }
         finally
         {
-            _exporting = false;
+            if (!_disposed)
+            {
+                _exporting = false;
+            }
         }
     }
 
     private void ReportProgress(ConfigurationPackageProgress progress)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _progress = progress;
-        _ = InvokeAsync(StateHasChanged);
+        StateHasChanged();
     }
 
     private string BuildFileName()
@@ -160,14 +188,6 @@
         return $"monica-configuration-{safeScope}-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.json";
     }
 
-    private async Task<IJSObjectReference> GetJsModuleAsync()
-    {
-        _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import",
-            "./_content/Monica.Configuration.UI/js/configuration-ui.js");
-        return _jsModule;
-    }
-
     private void Cancel()
     {
         MudDialog.Cancel();
@@ -175,9 +195,12 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule is not null)
+        _disposed = true;
+        var downloadInteropSession = _downloadInteropSession;
+        _downloadInteropSession = null;
+        if (downloadInteropSession is not null)
         {
-            await _jsModule.DisposeAsync();
+            await downloadInteropSession.DisposeAsync();
         }
     }
 }

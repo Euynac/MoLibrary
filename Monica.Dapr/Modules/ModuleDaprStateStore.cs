@@ -12,6 +12,16 @@ namespace Monica.Modules;
 
 public static class ModuleDaprStateStoreBuilderExtensions
 {
+    /// <summary>
+    /// Selects Dapr as the host's common distributed state store provider.
+    /// </summary>
+    /// <param name="module">The StateStore registration that will use Dapr.</param>
+    /// <param name="action">Optional Dapr state-store configuration.</param>
+    /// <returns>The Dapr StateStore provider registration.</returns>
+    /// <remarks>
+    /// Typed values are serialized by the Dapr SDK with the canonical JSON contract configured for this Monica host.
+    /// Changing that contract can make existing persisted state incompatible.
+    /// </remarks>
     public static ModuleRegistration<ModuleDaprStateStore, ModuleDaprStateStoreOption> UseDaprStateStoreProvider(
         this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         Action<ModuleDaprStateStoreOption>? action = null)
@@ -27,6 +37,9 @@ public static class ModuleDaprStateStoreBuilderExtensions
     /// <param name="serviceKey">The service key that identifies this state store instance.</param>
     /// <param name="configureOptions">Delegate that configures the Dapr state store.</param>
     /// <returns>The same StateStore module registration for chaining.</returns>
+    /// <remarks>
+    /// The service key isolates Dapr store settings, but every keyed store uses the host's canonical JSON contract.
+    /// </remarks>
     public static ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> AddKeyedDaprStateStore(
         this ModuleRegistration<ModuleStateStore, ModuleStateStoreOption> module,
         string serviceKey,

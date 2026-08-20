@@ -12,12 +12,18 @@
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 @implements IAsyncDisposable
 
-<MudCard>
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">@L["ServiceGraph:Title"]</MudText>
-        </CardHeaderContent>
-        <CardHeaderActions>
+<section class="service-discovery-visual">
+    <header class="service-discovery-visual__header">
+        <div class="service-discovery-visual__identity">
+            <span class="service-discovery-visual__icon" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+            </span>
+            <div>
+                <MudText Typo="Typo.h6">@L["ServiceGraph:Title"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ServiceGraph:Description"]</MudText>
+            </div>
+        </div>
+        <div class="service-discovery-visual__actions">
             <MudTooltip Text="@L["ServiceGraph:Tooltips:RefreshData"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
@@ -40,9 +46,9 @@
                                Color="Color.Tertiary"
                                OnClick="ToggleFilterPanel" />
             </MudTooltip>
-        </CardHeaderActions>
-    </MudCardHeader>
-    <MudCardContent>
+        </div>
+    </header>
+    <div class="service-discovery-visual__body">
         @if (_showLayoutPanel)
         {
             <ServiceLayoutPanel CurrentLayout="_currentLayout"
@@ -63,24 +69,24 @@
                                 AllServices="_allServices" />
         }
 
-        <MudPaper Class="visualization-container" Style="position: relative; height: calc(100vh - 400px); overflow: hidden;">
+        <MudPaper Class="visualization-container" Elevation="0" Outlined="true">
             @if (_loading)
             {
                 <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
                     <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
                 </MudOverlay>
             }
-            <div id="service-graph" style="width: 100%; height: 100%;" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
+            <div id="@_graphContainerId" class="service-discovery-visual__canvas" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
         </MudPaper>
-        
-        <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
+
+        <MudPaper Class="service-discovery-visual__legend" Elevation="0" Outlined="true">
             <MudGrid>
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.caption">
                         @L["ServiceGraph:Summary:ShowingServices", _filteredServices.Count, _allServices.Count]
                     </MudText>
                 </MudItem>
-                <MudItem xs="12" sm="6" Class="d-flex justify-end flex-wrap">
+                <MudItem xs="12" sm="6" Class="service-discovery-visual__legend-items">
                     <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle" 
                              Color="Color.Success" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Running"]</MudChip>
                     <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Update" 
@@ -92,8 +98,8 @@
                 </MudItem>
             </MudGrid>
         </MudPaper>
-    </MudCardContent>
-</MudCard>
+    </div>
+</section>
 
 @* Context menu *@
 <MoContextMenu TItem="RegisteredServiceStatus" 
@@ -107,8 +113,15 @@
 
 @code {
     [Parameter] public EventCallback<RegisteredServiceStatus> OnServiceClick { get; set; }
-    
-    private IJSObjectReference? _jsModule;
+
+    private const string JS_MODULE_PATH = "./_content/Monica.ServiceDiscovery/UIServiceDiscovery/serviceGraph.js";
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SemaphoreSlim _interopGate = new(1, 1);
+    private readonly object _disposeSync = new();
+    private readonly string _graphContainerId = $"service-graph-{Guid.NewGuid():N}";
+    private IJSObjectReference? _graphController;
+    private DotNetObjectReference<ServiceVisualization>? _dotNetReference;
+    private Task? _disposeTask;
     private List<RegisteredServiceStatus> _allServices = new();
     private List<RegisteredServiceStatus> _filteredServices = new();
     private bool _loading = false;
@@ -133,35 +146,89 @@
     private double _contextMenuY = 0;
     private RegisteredServiceStatus? _contextMenuService;
     private List<ContextMenuItem<RegisteredServiceStatus>> _contextMenuItems = new();
+    private volatile bool _disposed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", 
-                "./_content/Monica.ServiceDiscovery/UIServiceDiscovery/serviceGraph.js");
-            
-            await InitializeGraph();
-            await LoadServiceDataAsync();
+            return;
+        }
+
+        try
+        {
+            await InitializeGraphAsync();
+            if (!_disposed)
+            {
+                await LoadServiceDataAsync();
+            }
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
         }
     }
 
-    private async Task InitializeGraph()
+    private async Task InitializeGraphAsync()
     {
-        if (_jsModule != null)
+        await _interopGate.WaitAsync(_lifetimeCancellation.Token);
+
+        IJSObjectReference? module = null;
+        IJSObjectReference? graphController = null;
+        DotNetObjectReference<ServiceVisualization>? dotNetReference = null;
+        try
         {
-            var isDarkMode = await JSRuntime.InvokeAsync<bool>("eval", 
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                JS_MODULE_PATH);
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            var isDarkMode = await JSRuntime.InvokeAsync<bool>(
+                "eval",
+                _lifetimeCancellation.Token,
                 "document.documentElement.classList.contains('dark')");
-            
-            await _jsModule.InvokeVoidAsync("initializeGraph", "service-graph", isDarkMode,
-                DotNetObjectReference.Create(this), GetGraphTexts());
+
+            dotNetReference = DotNetObjectReference.Create(this);
+            graphController = await module.InvokeAsync<IJSObjectReference>(
+                "createGraph",
+                _graphContainerId,
+                isDarkMode,
+                dotNetReference,
+                GetGraphTexts());
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            _graphController = graphController;
+            _dotNetReference = dotNetReference;
+            graphController = null;
+            dotNetReference = null;
+        }
+        finally
+        {
+            await DisposeGraphControllerAsync(graphController);
+            dotNetReference?.Dispose();
+            await ReleaseModuleReferenceAsync(module);
+
+            _interopGate.Release();
         }
     }
 
     private async Task LoadServiceDataAsync()
     {
         _loading = true;
-        StateHasChanged();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
 
         try
         {
@@ -184,6 +251,9 @@
                 Snackbar.Add(L["ServiceGraph:Messages:LoadFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Error);
             }
         }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
         catch (Exception ex)
         {
             Snackbar.Add(L["ServiceGraph:Messages:LoadException", ex.Message].Value, Severity.Error);
@@ -191,7 +261,10 @@
         finally
         {
             _loading = false;
-            StateHasChanged();
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
@@ -286,59 +359,43 @@
 
     private async Task UpdateGraph()
     {
-        if (_jsModule != null)
+        await InvokeGraphAsync("updateGraph", PrepareGraphData());
+
+        // Apply current layout settings
+        await SetLayout(_currentLayout);
+        if (_currentLayout == ServiceLayoutType.Force)
         {
-            var graphData = PrepareGraphData();
-            await _jsModule.InvokeVoidAsync("updateGraph", graphData);
-            
-            // Apply current layout settings
-            await SetLayout(_currentLayout);
-            if (_currentLayout == ServiceLayoutType.Force)
-            {
-                await _jsModule.InvokeVoidAsync("setForceDistance", _forceDistance);
-                await _jsModule.InvokeVoidAsync("setForceStrength", _forceStrength);
-            }
+            await InvokeGraphAsync("setForceDistance", _forceDistance);
+            await InvokeGraphAsync("setForceStrength", _forceStrength);
         }
     }
     
     private async Task SetLayout(ServiceLayoutType layoutType)
     {
         _currentLayout = layoutType;
-        if (_jsModule != null)
+        var layoutName = layoutType switch
         {
-            var layoutName = layoutType switch
-            {
-                ServiceLayoutType.Force => "force",
-                ServiceLayoutType.Hierarchy => "hierarchy", 
-                ServiceLayoutType.Circular => "circular",
-                ServiceLayoutType.Grid => "grid",
-                _ => "force"
-            };
-            await _jsModule.InvokeVoidAsync("setLayout", layoutName);
-        }
+            ServiceLayoutType.Force => "force",
+            ServiceLayoutType.Hierarchy => "hierarchy",
+            ServiceLayoutType.Circular => "circular",
+            ServiceLayoutType.Grid => "grid",
+            _ => "force"
+        };
+        await InvokeGraphAsync("setLayout", layoutName);
     }
     
-    private async Task OnLayoutChanged(ServiceLayoutType layoutType)
-    {
-        await SetLayout(layoutType);
-    }
+    private Task OnLayoutChanged(ServiceLayoutType layoutType) => SetLayout(layoutType);
     
     private async Task OnForceDistanceChanged(int value)
     {
         _forceDistance = value;
-        if (_jsModule != null)
-        {
-            await _jsModule.InvokeVoidAsync("setForceDistance", value);
-        }
+        await InvokeGraphAsync("setForceDistance", value);
     }
     
     private async Task OnForceStrengthChanged(int value)
     {
         _forceStrength = value;
-        if (_jsModule != null)
-        {
-            await _jsModule.InvokeVoidAsync("setForceStrength", value);
-        }
+        await InvokeGraphAsync("setForceStrength", value);
     }
 
     private object PrepareGraphData()
@@ -365,6 +422,11 @@
     [JSInvokable]
     public async Task OnNodeClick(string nodeId)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         var service = _allServices.FirstOrDefault(s => s.AppId == nodeId);
         if (service != null && OnServiceClick.HasDelegate)
         {
@@ -375,6 +437,11 @@
     [JSInvokable]
     public void OnNodeRightClick(string nodeId, double x, double y)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _contextMenuService = _allServices.FirstOrDefault(s => s.AppId == nodeId);
         if (_contextMenuService != null)
         {
@@ -398,6 +465,11 @@
     [JSInvokable]
     public void OnSvgBackgroundClick()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (_contextMenuOpen)
         {
             _contextMenuOpen = false;
@@ -427,10 +499,11 @@
         return builder.Build();
     }
     
-    private async Task OnContextMenuItemClick(ContextMenuItem<RegisteredServiceStatus> item)
+    private Task OnContextMenuItemClick(ContextMenuItem<RegisteredServiceStatus> item)
     {
         _contextMenuOpen = false;
         StateHasChanged();
+        return Task.CompletedTask;
     }
     
     private async Task ViewServiceDetailsAsync(RegisteredServiceStatus? service)
@@ -443,9 +516,9 @@
     
     private async Task FocusOnServiceAsync(RegisteredServiceStatus? service)
     {
-        if (_jsModule != null && service != null)
+        if (service != null)
         {
-            await _jsModule.InvokeVoidAsync("focusOnNode", service.AppId);
+            await InvokeGraphAsync("focusOnNode", service.AppId);
         }
     }
     
@@ -498,7 +571,7 @@
     {
         if (service != null)
         {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", service.AppId);
+            await CopyToClipboardAsync(service.AppId);
             Snackbar.Add(L["ServiceGraph:Messages:CopiedServiceId"].Value, Severity.Success);
         }
     }
@@ -507,7 +580,7 @@
     {
         if (service != null)
         {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", service.AppName);
+            await CopyToClipboardAsync(service.AppName);
             Snackbar.Add(L["ServiceGraph:Messages:CopiedServiceName"].Value, Severity.Success);
         }
     }
@@ -540,18 +613,139 @@
 
     private async Task ResetView()
     {
-        if (_jsModule != null)
+        await InvokeGraphAsync("resetView");
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeSync)
         {
-            await _jsModule.InvokeVoidAsync("resetView");
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task DisposeCoreAsync()
     {
-        if (_jsModule != null)
+        _disposed = true;
+        await _lifetimeCancellation.CancelAsync();
+
+        await _interopGate.WaitAsync();
+        try
         {
-            await _jsModule.InvokeVoidAsync("dispose");
-            await _jsModule.DisposeAsync();
+            var graphController = Interlocked.Exchange(ref _graphController, null);
+            var dotNetReference = Interlocked.Exchange(ref _dotNetReference, null);
+
+            await DisposeGraphControllerAsync(graphController);
+            dotNetReference?.Dispose();
+        }
+        finally
+        {
+            _interopGate.Release();
+        }
+
+        // A caller may have observed the pre-disposal state immediately before teardown began and still be
+        // approaching the gate. Keep these lightweight primitives alive so cancellation settles that admission
+        // race without turning an expected lifetime transition into ObjectDisposedException.
+    }
+
+    private async Task InvokeGraphAsync(string identifier, params object?[] arguments)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await _interopGate.WaitAsync(_lifetimeCancellation.Token);
+            try
+            {
+                if (!_disposed && _graphController is not null)
+                {
+                    await _graphController.InvokeVoidAsync(identifier, _lifetimeCancellation.Token, arguments);
+                }
+            }
+            finally
+            {
+                _interopGate.Release();
+            }
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
+        }
+    }
+
+    private async Task CopyToClipboardAsync(string value)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync(
+                "navigator.clipboard.writeText",
+                _lifetimeCancellation.Token,
+                value);
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (JSDisconnectedException) when (_disposed)
+        {
+        }
+    }
+
+    private static async ValueTask DisposeGraphControllerAsync(IJSObjectReference? graphController)
+    {
+        if (graphController is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await graphController.InvokeVoidAsync("dispose");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+
+        try
+        {
+            await graphController.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private static async ValueTask ReleaseModuleReferenceAsync(IJSObjectReference? module)
+    {
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
         }
     }
 }

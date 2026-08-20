@@ -27,18 +27,7 @@ public static class ModuleEventBusKafkaUIBuilderExtensions
         public ModuleRegistration<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption> AddEventBusKafkaUI(
             Action<ModuleEventBusKafkaUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption>(action);
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<EventBusKafkaResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIEventBusKafkaPage, EventBusKafkaResource>(
-                    UIEventBusKafkaPage.PAGE_URL,
-                    "Pages:EventBusKafka:Title",
-                    Icons.Material.Filled.Storage,
-                    BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
-                    navOrder: 38));
-            return registration;
+            return builder.AddModule<ModuleEventBusKafkaUI, ModuleEventBusKafkaUIOption>(action);
         }
     }
 }
@@ -52,6 +41,17 @@ public sealed class ModuleEventBusKafkaUI : MonicaModule<ModuleEventBusKafkaUIOp
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleEventBusKafka, ModuleEventBusKafkaOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<EventBusKafkaResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIEventBusKafkaPage, EventBusKafkaResource>(
+                    UIEventBusKafkaPage.PAGE_URL,
+                    "Pages:EventBusKafka:Title",
+                    Icons.Material.Filled.Storage,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 38)));
     }
 
     /// <inheritdoc />
@@ -60,7 +60,7 @@ public sealed class ModuleEventBusKafkaUI : MonicaModule<ModuleEventBusKafkaUIOp
         var services = context.Services;
         services.AddScoped<EventBusKafkaPageState>();
         services.AddScoped<KafkaPerformancePollingState>();
-        services.AddTransient<KafkaConsumerMetricsPollingState>();
+        services.AddScoped<KafkaConsumerMetricsPollingStateFactory>();
     }
 }
 

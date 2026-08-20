@@ -1,0 +1,7 @@
+.key-value-preview {
+    max-width: 300px;
+    overflow: hidden;
+    font-family: var(--mo-font-family-mono);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

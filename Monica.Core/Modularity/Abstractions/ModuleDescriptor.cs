@@ -29,6 +29,27 @@ public sealed class ModuleDescriptor
     }
 
     /// <summary>
+    /// Declares a feature that must be selected on a directly required dependency.
+    /// </summary>
+    /// <typeparam name="TModule">The directly required dependency module.</typeparam>
+    /// <typeparam name="TOptions">The dependency's option type.</typeparam>
+    /// <param name="featureName">The stable dependency feature name used in validation diagnostics.</param>
+    /// <remarks>
+    /// Call <see cref="Require{TModule,TOptions}(Action{TOptions}?)"/> first. This narrow operation preserves the
+    /// graph-only descriptor boundary while allowing an intrinsic consumer to require a provider capability owned
+    /// by its dependency.
+    /// </remarks>
+    public void RequireDependencyFeature<TModule, TOptions>(string featureName)
+        where TModule : MonicaModule<TOptions>, new()
+        where TOptions : ModuleOptions<TModule>, new()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(featureName);
+        _application.Modules.DescribeRequireDependencyFeature<TModule, TOptions>(
+            _ownerModuleType,
+            featureName);
+    }
+
+    /// <summary>
     /// Adds an ordering relationship without including the target module.
     /// </summary>
     public void AfterIfPresent<TModule, TOptions>()

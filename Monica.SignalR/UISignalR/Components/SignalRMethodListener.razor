@@ -1,9 +1,8 @@
 @using Monica.SignalR.UISignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<!-- Hub method listening -->
-<MudPaper Class="pa-4 mb-4" Elevation="2">
-    <MudText Typo="Typo.h5" Class="mb-3">@L["UISignalR:MethodListener:Title"]</MudText>
+<MudPaper Class="signalr-method-listener" Elevation="0">
+    <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.Hearing" Color="Color.Secondary" /><MudText Typo="Typo.h6">@L["UISignalR:MethodListener:Title"]</MudText></div>
     <MudGrid Class="mb-3">
         <MudItem xs="12">
             <MudButton Variant="Variant.Outlined" 
@@ -23,11 +22,10 @@
     </MudGrid>
     @if (HubMethods.Any())
     {
-        <MudGrid>
+        <div class="signalr-listener-list">
             @foreach (var method in HubMethods)
             {
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Class="pa-2">
+                <div class="signalr-listener-row">
                         <MudCheckBox Value="@method.IsListening" 
                                    Label="@method.DisplayName"
                                    Color="Color.Primary"
@@ -39,10 +37,9 @@
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">
                             @L["UISignalR:MethodListener:ReceivedCount", method.ReceivedCount]
                         </MudText>
-                    </MudCard>
-                </MudItem>
+                </div>
             }
-        </MudGrid>
+        </div>
     }
     else
     {

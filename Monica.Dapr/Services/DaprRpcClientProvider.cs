@@ -6,8 +6,7 @@ using Monica.Modules;
 namespace Monica.Dapr.Services;
 
 public class DaprRpcClientProvider(
-    IOptions<ModuleDaprRpcClientOption> rpcClientOptionAccessor,
-    IOptions<ModuleDaprClientOption> daprClientOptionAccessor) : IRpcHttpClientRegisterProvider
+    IOptions<ModuleDaprRpcClientOption> rpcClientOptionAccessor) : IRpcHttpClientRegisterProvider
 {
     public void ConfigureHttpClientFactoryOptions(HttpClientFactoryOptions options, string appid)
     {
@@ -24,17 +23,6 @@ public class DaprRpcClientProvider(
 
             client.Timeout = rpcClientOptionAccessor.Value.Timeout;
         });
-
-        if (daprClientOptionAccessor.Value.MaxReceiveMessageSize is { } size)
-        {
-            options.HttpMessageHandlerBuilderActions.Add(builder =>
-            {
-                builder.PrimaryHandler = new SocketsHttpHandler
-                {
-                    MaxResponseHeadersLength = size / 1024,
-                };
-            });
-        }
 
         options.HttpMessageHandlerBuilderActions.Add(builder =>
         {

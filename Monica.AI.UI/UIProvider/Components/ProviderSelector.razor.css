@@ -14,6 +14,8 @@
     border-radius: 999px;
     cursor: pointer;
     color: var(--mud-palette-text-primary);
+    min-width: 0;
+    max-width: min(24rem, 50vw);
 }
 
 .provider-selector:hover .provider-trigger {
@@ -22,6 +24,9 @@
 
 .provider-name {
     white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .provider-menu {
@@ -31,7 +36,7 @@
     min-width: 220px;
     background-color: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 16px;
+    border-radius: 12px;
     padding: 8px;
     box-shadow: var(--mud-elevation-4);
     opacity: 0;
@@ -87,5 +92,9 @@
 @media (max-width: 600px) {
     .provider-menu {
         min-width: 180px;
+    }
+
+    .provider-trigger {
+        max-width: min(13rem, calc(100vw - 12rem));
     }
 }

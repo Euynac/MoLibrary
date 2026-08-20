@@ -1,7 +1,53 @@
 {
-  "Pages": {
-    "MemoryAnalysis": {
-      "Title": "Memory Analysis"
+  "Pages": { "MemoryAnalysis": { "Title": "Memory Analysis" } },
+  "Page": {
+    "Eyebrow": "MANAGED MEMORY LAB",
+    "Subtitle": "Correlate process memory, GC behavior, allocation pressure, and diagnostic actions.",
+    "Status": { "Live": "Live sampling", "Paused": "Sampling paused" },
+    "Actions": { "AutoRefresh": "Auto refresh", "Refresh": "Refresh evidence" },
+    "Messages": { "RefreshFailed": "Failed to refresh memory evidence.", "GcFailed": "Garbage collection failed.", "GcCompleted": "{0} collection completed.", "DumpStarting": "Starting GC dump capture…", "OperationFailed": "The diagnostic operation failed.", "DumpCreated": "GC dump created at {0}." }
+  },
+  "Tabs": { "Overview": "Overview", "GcStatistics": "GC evidence", "Trend": "Trends", "Allocation": "Allocations", "Diagnostics": "Diagnostics" },
+  "Overview": {
+    "MetricsAriaLabel": "Memory snapshot summary", "WorkingSet": "Working set", "ManagedHeap": "Managed heap", "Committed": "Committed", "ManagedMemory": "Managed memory",
+    "Collections": { "Eyebrow": "COLLECTION PRESSURE", "Title": "Generation counts" },
+    "Configuration": { "Eyebrow": "RUNTIME CONFIGURATION", "Title": "Collector mode", "GcType": "GC type", "ServerGc": "Server GC", "WorkstationGc": "Workstation GC", "LatencyMode": "Latency mode" },
+    "Snapshot": { "CapturedAt": "Captured", "MaxGeneration": "Maximum generation" }
+  },
+  "Gc": {
+    "LastCollection": { "Eyebrow": "LATEST COLLECTION", "Title": "Collection evidence", "Empty": "No collection details are available." },
+    "Heap": { "Eyebrow": "HEAP COMPOSITION", "Title": "Managed heap" },
+    "SystemMemory": { "Eyebrow": "SYSTEM PRESSURE", "Title": "Memory load", "Unavailable": "System memory-load evidence is unavailable." },
+    "Generations": { "Eyebrow": "GENERATION DELTAS", "Title": "Collection movement", "Empty": "No generation movement was recorded.", "Columns": { "Generation": "Generation", "Before": "Before", "After": "After", "Collected": "Collected" } },
+    "Labels": { "Index": "Index", "Generation": "Generation", "Type": "Type", "PauseDuration": "Pause duration", "TimeShare": "GC time share", "HeapSize": "Heap size", "Fragmentation": "Fragmentation", "Committed": "Committed", "Promoted": "Promoted", "PinnedObjects": "Pinned objects", "FinalizationPending": "Finalization pending", "AvailableMemory": "Available memory", "MemoryLoad": "Memory load", "MemoryLoadShare": "Load share", "HighMemoryThreshold": "High-memory threshold" },
+    "Types": { "Concurrent": "Concurrent", "Compacting": "Compacting", "Blocking": "Blocking" }
+  },
+  "Trend": {
+    "SummaryAriaLabel": "Memory trend summary", "Waiting": "Waiting for enough samples to draw this trend.",
+    "Summary": { "AverageHeap": "Average heap", "MaximumHeap": "Maximum heap", "AverageAllocation": "Average allocation", "Samples": "Samples" },
+    "Heap": { "Eyebrow": "HEAP WINDOW", "Title": "Managed heap trend" }, "Allocation": { "Eyebrow": "ALLOCATION PRESSURE", "Title": "Allocation-rate trend" }, "Generations": { "Eyebrow": "GENERATION MIX", "Title": "Generation size trend" },
+    "Recent": { "Eyebrow": "SAMPLE EVIDENCE", "Title": "Recent memory observations", "Count": "{0} samples", "Empty": "No memory observations have been captured.", "Columns": { "Time": "Captured", "Heap": "Heap", "Allocation": "Allocation rate", "GcTime": "GC time", "Fragmentation": "Fragmentation" } },
+    "Series": { "Size": "Size", "Heap": "Managed heap", "Allocation": "Allocation rate" }
+  },
+  "Allocation": {
+    "Eyebrow": "TYPE ALLOCATION SAMPLER", "Title": "Allocation evidence", "SamplingMode": "Sampling mode", "Collecting": "Collecting · {0}", "SummaryAriaLabel": "Allocation sample summary", "DroppedEvents": "{0} allocation events were dropped during this capture.",
+    "Modes": { "Low": "Low overhead", "High": "High fidelity", "LowWithRate": "Low overhead · 1%", "HighWithRate": "High fidelity · 10%" },
+    "Actions": { "Start": "Start sampling", "Stop": "Stop sampling", "Snapshot": "Heap snapshot", "Snapshotting": "Capturing…", "Refresh": "Refresh", "Reset": "Reset evidence", "ShowShortNames": "Show short type names", "ShowFullNames": "Show full type names" },
+    "Summary": { "UniqueTypes": "Unique types", "Allocations": "Allocations", "Bytes": "Allocated bytes", "Duration": "Capture duration" },
+    "Sources": { "HeapSnapshot": "Heap snapshot captured at {0}.", "Live": "Live allocation sample captured at {0}." },
+    "Ranking": { "Eyebrow": "TYPE RANKING", "Title": "Allocation hot spots", "Limit": "Rows", "Collecting": "Allocation sampling is active; the ranking updates as evidence arrives.", "Empty": "No allocation evidence has been captured.", "Columns": { "Type": "Type", "Instances": "Instances", "TotalSize": "Total size", "AverageSize": "Average size", "Share": "Share" } },
+    "Guidance": { "Title": "Sampling guidance", "Live": { "Title": "Live sampling", "Description": "Use live evidence to identify sustained allocation pressure." }, "Low": { "Title": "Low overhead", "Description": "Suitable for longer observation windows with reduced fidelity." }, "High": { "Title": "High fidelity", "Description": "Use briefly when you need a clearer type distribution." }, "Snapshot": { "Title": "Heap snapshot", "Description": "Capture retained objects when live allocation volume is not enough." } },
+    "Messages": { "LoadFailed": "Failed to load allocation evidence.", "RefreshFailed": "Failed to refresh allocation evidence.", "StartFailed": "Failed to start allocation sampling.", "Started": "Allocation sampling started in {0} mode.", "StopFailed": "Failed to stop allocation sampling.", "Stopped": "Allocation sampling stopped.", "SnapshotStarting": "Capturing a heap snapshot…", "SnapshotFailed": "Heap snapshot capture failed.", "SnapshotCompleted": "Heap snapshot captured {0} unique types.", "ResetFailed": "Failed to reset allocation evidence.", "Reset": "Allocation evidence reset." }
+  },
+  "Diagnostics": {
+    "FullCollection": "Full GC", "ManualGc": { "Eyebrow": "CONTROLLED ACTION", "Title": "Force collection", "Description": "Trigger a collection only when you need to validate a memory-pressure hypothesis.", "Disabled": "Manual collection is disabled by host policy." },
+    "Dump": { "Eyebrow": "FORENSIC CAPTURE", "Title": "Create GC dump", "Description": "Capture managed heap evidence for offline inspection.", "Requirement": "Dump creation may pause the process and requires host file-system access.", "Action": "Create dump", "Disabled": "GC dump creation is disabled by host policy." },
+    "Guidance": {
+      "Eyebrow": "DIAGNOSTIC PLAYBOOK", "Title": "Interpret the evidence",
+      "Signals": { "Title": "Pressure signals", "GrowingHeap": { "Title": "Growing heap", "Description": "A rising post-collection heap can indicate retained references." }, "Gen2": { "Title": "Frequent Gen 2", "Description": "Repeated full collections often signal sustained long-lived pressure." }, "Pinned": { "Title": "Pinned objects", "Description": "Pinned objects can prevent compaction and increase fragmentation." }, "Finalizers": { "Title": "Finalization queue", "Description": "A growing queue can indicate delayed cleanup work." } },
+      "Causes": { "Title": "Common causes", "Events": { "Title": "Event subscriptions", "Description": "Long-lived publishers can retain short-lived subscribers." }, "Statics": { "Title": "Static roots", "Description": "Static collections can keep object graphs alive indefinitely." }, "Caches": { "Title": "Unbounded caches", "Description": "Caches need explicit size or expiration policies." }, "Disposal": { "Title": "Resource ownership", "Description": "Missing disposal can retain native and managed resources." } },
+      "Tools": { "Title": "Analysis tools", "VisualStudio": "Visual Studio profiler", "PerfView": "PerfView", "DotMemory": "dotMemory", "Dotnet": "dotnet-gcdump / dotnet-dump" }
     }
-  }
+  },
+  "Common": { "LoadingValue": "Collecting…", "Milliseconds": "{0} ms", "Unavailable": "—", "Unknown": "Unknown" }
 }

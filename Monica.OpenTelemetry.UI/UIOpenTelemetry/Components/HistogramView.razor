@@ -1,9 +1,8 @@
-@using System.Globalization
 @inject IStringLocalizer<OpenTelemetryUIResource> L
 
 @if (Histogram is not null)
 {
-    <MudPaper Class="histogram-panel" Elevation="0">
+    <MudPaper Class="histogram-panel mo-self-painted" Elevation="0">
         <div class="histogram-summary">
             <div>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Count"]</MudText>
@@ -47,9 +46,9 @@
             {
                 <div class="bucket-row">
                     <div class="bucket-label">@FormatValue(bucket.LowerBound) - @FormatValue(bucket.UpperBound)</div>
-                    <div class="bucket-bar">
-                        <span style="@BuildBucketStyle(bucket.Count)"></span>
-                    </div>
+                    <MudProgressLinear Class="bucket-bar"
+                                       Color="Color.Primary"
+                                       Value="@GetBucketPercentage(bucket.Count)" />
                     <div class="bucket-count">@bucket.Count</div>
                 </div>
             }
@@ -72,11 +71,7 @@
 
     private long MaxBucketCount => Math.Max(1, Histogram?.Buckets.Max(static bucket => bucket.Count) ?? 1);
 
-    private string BuildBucketStyle(long count)
-    {
-        var width = count * 100d / MaxBucketCount;
-        return string.Create(CultureInfo.InvariantCulture, $"width:{width:F2}%;");
-    }
+    private double GetBucketPercentage(long count) => count * 100d / MaxBucketCount;
 
     private string FormatValue(double value)
     {

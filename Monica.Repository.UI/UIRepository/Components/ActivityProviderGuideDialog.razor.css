@@ -34,7 +34,7 @@
     margin: 0;
     padding: 12px;
     min-width: 720px;
-    font-family: "Consolas", "Monaco", "Courier New", monospace;
+    font-family: var(--mo-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
     font-size: 0.8125rem;
     line-height: 1.55;
     white-space: pre;
@@ -56,7 +56,7 @@
 }
 
 .guide-column__name {
-    font-family: "Consolas", "Monaco", "Courier New", monospace;
+    font-family: var(--mo-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
     overflow-wrap: anywhere;
 }
 

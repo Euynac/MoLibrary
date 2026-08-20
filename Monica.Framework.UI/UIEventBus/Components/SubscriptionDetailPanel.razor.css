@@ -1,0 +1,36 @@
+.subscription-detail-wrapper {
+    width: 100%;
+    min-width: 0;
+}
+
+.subscription-detail-wrapper ::deep .mud-card {
+    min-width: 0;
+    border-radius: 12px;
+}
+
+.subscription-detail-wrapper ::deep .subscription-detail__technical,
+.subscription-detail__technical {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--mo-font-family-mono);
+}
+
+.subscription-detail-wrapper ::deep .subscription-detail__timeline-label {
+    font-weight: 600;
+}
+
+.subscription-detail-wrapper ::deep .mud-table-row {
+    transition: background-color 140ms ease;
+}
+
+.subscription-detail-wrapper ::deep .mud-table-row:focus-within {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .subscription-detail-wrapper ::deep .mud-card,
+    .subscription-detail-wrapper ::deep .mud-table-row {
+        transition: none !important;
+    }
+}

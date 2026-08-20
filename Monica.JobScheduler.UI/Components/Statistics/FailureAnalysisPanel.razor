@@ -4,7 +4,7 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="failure-analysis-wrapper">
-    <MudPaper Class="failure-card" Elevation="0">
+    <MudPaper Class="failure-card mo-self-painted" Elevation="0">
         <div class="card-header">
             <div class="header-title">
                 <MudIcon Icon="@Icons.Material.Filled.BugReport" Size="Size.Small" Color="Color.Error" />
@@ -38,7 +38,7 @@
                 <div class="job-failures">
                     @foreach (var job in Analysis.ByJob.Take(5))
                     {
-                        <div class="failure-item" @onclick="() => ViewJob(job.JobKey)">
+                        <button type="button" class="failure-item" @onclick="() => ViewJob(job.JobKey)">
                             <div class="job-info">
                                 <span class="job-name" title="@job.JobKey">@job.JobName</span>
                                 <MudProgressLinear Value="@job.FailureRate"
@@ -50,7 +50,7 @@
                                 <span class="count">@L["Statistics:FailureAnalysis:FailureCount", job.TotalFailureCount]</span>
                                 <span class="rate">@job.FailureRate.ToString("F1")%</span>
                             </div>
-                        </div>
+                        </button>
                     }
                 </div>
             }

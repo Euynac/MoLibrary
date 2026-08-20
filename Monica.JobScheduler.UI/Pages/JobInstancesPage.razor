@@ -14,9 +14,13 @@
 @using Monica.UI.Shell.Support
 
 @using Monica.UI.Shell.State
+@implements IAsyncDisposable
 
-<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">@L["JobInstances:Title"]</MudText>
+<PageTitle>@L["JobInstances:Title"]</PageTitle>
+
+<SchedulerWorkspace Title="@L["Workspace:Pages:Instances:Title"]"
+                    Description="@L["Workspace:Pages:Instances:Description"]">
+<div class="scheduler-page-content">
 
     <div class="job-filter-wrapper mb-4">
         <MudPaper Class="job-filter-surface" Elevation="0" Outlined="true">
@@ -214,7 +218,8 @@
             </MudStack>
         </MudPaper>
     }
-</MudContainer>
+</div>
+</SchedulerWorkspace>
 
 @code {
     public const string PAGE_URL = "/job-scheduler/instances";
@@ -241,21 +246,32 @@
     private int _pageSize = 10;
     private bool _stateLoaded = false;
     private bool _isCleaningUp = false;
+    private readonly BrowserStorageRestoreSession _browserStorageRestore = new();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        return firstRender
+            ? _browserStorageRestore.RunAsync(RestoreTableStateAsync)
+            : Task.CompletedTask;
+    }
+
+    private async Task RestoreTableStateAsync(CancellationToken cancellationToken)
+    {
+        var state = await BrowserStorage.GetTableStateAsync("job-instances");
+        if (cancellationToken.IsCancellationRequested)
         {
-            var state = await BrowserStorage.GetTableStateAsync("job-instances");
-            if (!string.IsNullOrEmpty(state.SortBy))
-            {
-                _sortBy = state.SortBy;
-                _sortDescending = state.SortDescending;
-            }
-            _pageSize = state.PageSize;
-            _stateLoaded = true;
-            await InvokeAsync(StateHasChanged);
+            return;
         }
+
+        if (!string.IsNullOrEmpty(state.SortBy))
+        {
+            _sortBy = state.SortBy;
+            _sortDescending = state.SortDescending;
+        }
+
+        _pageSize = state.PageSize;
+        _stateLoaded = true;
+        StateHasChanged();
     }
 
     protected override void OnInitialized()
@@ -523,4 +539,6 @@
             PageSize: _pageSize
         ));
     }
+
+    public ValueTask DisposeAsync() => _browserStorageRestore.DisposeAsync();
 }

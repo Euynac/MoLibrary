@@ -1,9 +1,8 @@
 @using Monica.StateStore.UI.Models
 @inject IStringLocalizer<StateStoreResource> L
 
-<MudGrid>
-    <MudItem xs="12">
-        <div class="d-flex justify-space-between align-center mb-4">
+<section class="provider-list-panel">
+        <div class="provider-list-panel__header">
             <MudText Typo="Typo.h6">@L["ProviderList:Labels:RegisteredProviders"]</MudText>
             <MudButton Variant="Variant.Outlined"
                        StartIcon="@Icons.Material.Filled.Refresh"
@@ -12,35 +11,30 @@
                 @L["ProviderList:Actions:Refresh"]
             </MudButton>
         </div>
-    </MudItem>
 
     @if (IsLoading)
     {
-        <MudItem xs="12">
-            <div class="d-flex justify-center pa-4">
+            <div class="provider-list-panel__state">
                 <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
             </div>
-        </MudItem>
     }
     else if (!Providers.Any())
     {
-        <MudItem xs="12">
             <MudAlert Severity="Severity.Info">
                 @L["ProviderList:Messages:NoProvidersFound"]
             </MudAlert>
-        </MudItem>
     }
     else
     {
-        @foreach (var provider in Providers)
-        {
-            <MudItem xs="12" md="6" lg="4">
+        <div class="provider-list-panel__rows">
+            @foreach (var provider in Providers)
+            {
                 <StateStoreProviderCard Provider="provider"
                                        OnViewDetailsClicked="HandleViewDetails" />
-            </MudItem>
-        }
+            }
+        </div>
     }
-</MudGrid>
+</section>
 
 <!-- Provider details dialog -->
 <StateStoreProviderDetailDialog IsVisible="_showProviderDetail"

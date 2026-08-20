@@ -1,0 +1,25 @@
+.tab-content ::deep .provider-detail__field-label {
+    font-weight: 600;
+}
+
+.tab-content {
+    min-width: 0;
+}
+
+.tab-content ::deep .mud-paper {
+    min-width: 0;
+    border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+    .tab-content {
+        padding: .75rem !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tab-content ::deep .mud-paper,
+    .tab-content ::deep .mud-tab {
+        transition: none !important;
+    }
+}

@@ -29,15 +29,8 @@
     gap: 16px;
     padding: 20px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 14px;
-    background:
-        linear-gradient(
-            180deg,
-            rgba(var(--mud-palette-primary-rgb), 0.03) 0%,
-            rgba(var(--mud-palette-primary-rgb), 0.01) 100%
-        ),
-        var(--mud-palette-surface);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
 }
 
 .section-heading {

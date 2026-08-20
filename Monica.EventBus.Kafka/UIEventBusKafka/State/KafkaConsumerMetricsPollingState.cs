@@ -8,6 +8,19 @@ using Monica.Modules;
 namespace Monica.EventBus.Kafka.UIEventBusKafka.State;
 
 /// <summary>
+/// Creates dialog-owned Kafka consumer metrics polling sessions.
+/// </summary>
+public sealed class KafkaConsumerMetricsPollingStateFactory(
+    KafkaConsoleFacade facade,
+    IOptions<ModuleEventBusKafkaUIOption> uiOptions)
+{
+    /// <summary>
+    /// Creates an independent polling session whose caller owns disposal.
+    /// </summary>
+    public KafkaConsumerMetricsPollingState Create() => new(facade, uiOptions);
+}
+
+/// <summary>
 /// Owns live sampling for one consumer-group member and partition detail view.
 /// </summary>
 public sealed class KafkaConsumerMetricsPollingState(

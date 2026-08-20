@@ -21,7 +21,7 @@
                             <MudItem xs="12" sm="6">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:SubscriptionId"]</MudText>
-                                    <MudText Typo="Typo.body2" Style="font-family: monospace;">@Subscription.SubscriptionId</MudText>
+                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">@Subscription.SubscriptionId</MudText>
                                 </MudStack>
                             </MudItem>
                             <MudItem xs="12" sm="6">
@@ -35,7 +35,7 @@
                             <MudItem xs="12">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:EventType"]</MudText>
-                                    <MudText Typo="Typo.body2" Style="font-family: monospace;">@Subscription.EventType</MudText>
+                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">@Subscription.EventType</MudText>
                                 </MudStack>
                             </MudItem>
                             <MudItem xs="12" sm="6">
@@ -93,7 +93,7 @@
                                             {
                                                 <MudStack Spacing="1">
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:DeclaringType"]</MudText>
-                                                    <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">
+                                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">
                                                         @Subscription.ActionDeclaringType
                                                     </MudText>
                                                 </MudStack>
@@ -103,7 +103,7 @@
                                             {
                                                 <MudStack Spacing="1">
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:MethodName"]</MudText>
-                                                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">
                                                         @Subscription.ActionMethodName
                                                     </MudText>
                                                 </MudStack>
@@ -113,7 +113,7 @@
                                             {
                                                 <MudStack Spacing="1">
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:MethodSignature"]</MudText>
-                                                    <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">
+                                                    <MudText Typo="Typo.body2" Class="subscription-detail__technical">
                                                         @Subscription.ActionMethodSignature
                                                     </MudText>
                                                 </MudStack>
@@ -130,7 +130,7 @@
                                     }
                                     else
                                     {
-                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">@Subscription.HandlerType</MudText>
+                                        <MudText Typo="Typo.body2" Class="subscription-detail__technical">@Subscription.HandlerType</MudText>
                                     }
                                 </MudStack>
                             </MudItem>
@@ -178,7 +178,7 @@
                             <MudTimelineItem Color="Color.Info" Size="Size.Small">
                                 <ItemContent>
                                     <MudStack Spacing="1">
-                                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:Created"]</MudText>
+                                        <MudText Typo="Typo.body2" Class="subscription-detail__timeline-label">@L["SubscriptionDetail:Timeline:Created"]</MudText>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.CreatedAtDisplay</MudText>
                                     </MudStack>
                                 </ItemContent>
@@ -189,7 +189,7 @@
                                 <MudTimelineItem Color="Color.Success" Size="Size.Small">
                                     <ItemContent>
                                         <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:Activated"]</MudText>
+                                            <MudText Typo="Typo.body2" Class="subscription-detail__timeline-label">@L["SubscriptionDetail:Timeline:Activated"]</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.ActivatedAtDisplay</MudText>
                                         </MudStack>
                                     </ItemContent>
@@ -201,7 +201,7 @@
                                 <MudTimelineItem Color="Color.Warning" Size="Size.Small">
                                     <ItemContent>
                                         <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:Deactivated"]</MudText>
+                                            <MudText Typo="Typo.body2" Class="subscription-detail__timeline-label">@L["SubscriptionDetail:Timeline:Deactivated"]</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.DeactivatedAtDisplay</MudText>
                                         </MudStack>
                                     </ItemContent>
@@ -213,7 +213,7 @@
                                 <MudTimelineItem Color="Color.Success" Size="Size.Small">
                                     <ItemContent>
                                         <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:CurrentState"]</MudText>
+                                            <MudText Typo="Typo.body2" Class="subscription-detail__timeline-label">@L["SubscriptionDetail:Timeline:CurrentState"]</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Success">
                                                 @L["SubscriptionDetail:Timeline:ActiveRunning", L.GetSubscriptionDurationText(Subscription)]
                                             </MudText>
@@ -251,8 +251,8 @@
                                     @foreach (var metadata in Subscription.Metadata)
                                     {
                                         <tr>
-                                            <td style="font-family: monospace;">@metadata.Key</td>
-                                            <td style="font-family: monospace;">@metadata.Value</td>
+                                            <td class="subscription-detail__technical">@metadata.Key</td>
+                                            <td class="subscription-detail__technical">@metadata.Value</td>
                                         </tr>
                                     }
                                 </tbody>

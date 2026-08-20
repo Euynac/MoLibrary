@@ -1,0 +1,42 @@
+/* Shared operational-page geometry. Pages opt in; the shell itself remains edge-to-edge. */
+:root {
+    --mo-page-gutter-inline: clamp(16px, 2vw, 32px);
+    --mo-page-gutter-block: clamp(18px, 2vw, 32px);
+    --mo-page-content-max-width: none;
+    --mo-page-section-gap: clamp(16px, 1.5vw, 24px);
+}
+
+.mo-page-shell {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: var(--mo-page-content-max-width);
+    min-width: 0;
+    margin-inline: auto;
+    padding: var(--mo-page-gutter-block) var(--mo-page-gutter-inline);
+}
+
+.mo-page-shell--full-width {
+    --mo-page-content-max-width: none;
+}
+
+.mo-page-shell--compact {
+    --mo-page-gutter-inline: clamp(12px, 1.5vw, 24px);
+    --mo-page-gutter-block: clamp(14px, 1.5vw, 24px);
+}
+
+.mo-page-shell--edge-to-edge {
+    padding-inline: 0;
+}
+
+.mo-page-stack {
+    display: grid;
+    min-width: 0;
+    gap: var(--mo-page-section-gap);
+}
+
+@media (max-width: 600px) {
+    :root {
+        --mo-page-gutter-inline: 12px;
+        --mo-page-gutter-block: 16px;
+    }
+}

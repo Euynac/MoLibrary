@@ -1,0 +1,68 @@
+.configuration-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-page-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    min-width: 0;
+}
+
+.configuration-page-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-primary-hover);
+    color: var(--mud-palette-primary);
+}
+
+.configuration-page-copy,
+.configuration-page-title-row {
+    min-width: 0;
+}
+
+.configuration-page-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.configuration-page-copy ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.configuration-page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 599.98px) {
+    .configuration-page-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .configuration-page-identity {
+        align-items: flex-start;
+    }
+
+    .configuration-page-actions {
+        justify-content: flex-start;
+    }
+}

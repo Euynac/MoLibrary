@@ -182,36 +182,50 @@
     letter-spacing: 0.14em;
 }
 
-.mo-theme-hermes-teal-light .mud-card,
-.mo-theme-hermes-teal-dark .mud-card,
-.mo-theme-hermes-teal-light .mud-paper[class*="mud-elevation-"],
-.mo-theme-hermes-teal-dark .mud-paper[class*="mud-elevation-"],
-.mo-theme-hermes-teal-light .mud-table-container,
-.mo-theme-hermes-teal-dark .mud-table-container,
-.mo-theme-hermes-teal-light .mud-data-grid,
-.mo-theme-hermes-teal-dark .mud-data-grid,
-.mo-theme-hermes-teal-light .mud-dialog,
-.mo-theme-hermes-teal-dark .mud-dialog,
-.mo-theme-hermes-teal-light .mud-drawer,
-.mo-theme-hermes-teal-dark .mud-drawer,
-.mo-theme-hermes-teal-light .mud-popover,
-.mo-theme-hermes-teal-dark .mud-popover,
-.mo-theme-hermes-teal-light .mud-menu,
-.mo-theme-hermes-teal-dark .mud-menu,
-.mo-theme-hermes-teal-light .mud-tooltip,
-.mo-theme-hermes-teal-dark .mud-tooltip,
-.mo-theme-hermes-teal-light .mud-snackbar,
-.mo-theme-hermes-teal-dark .mud-snackbar {
+.mo-theme-hermes-teal-light .mud-card:not(.mo-self-painted),
+.mo-theme-hermes-teal-dark .mud-card:not(.mo-self-painted),
+.mo-theme-hermes-teal-light .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar),
+.mo-theme-hermes-teal-dark .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar) {
     background: var(--mo-hermes-panel);
     border: 1px solid var(--mo-hermes-border);
     border-radius: 0;
     box-shadow: none;
 }
 
+.mo-theme-hermes-teal-light .mud-table-container,
+.mo-theme-hermes-teal-dark .mud-table-container,
+.mo-theme-hermes-teal-light .mud-data-grid,
+.mo-theme-hermes-teal-dark .mud-data-grid {
+    background: var(--mo-hermes-panel);
+    border: 1px solid var(--mo-hermes-border);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.mo-theme-hermes-teal-light .mud-table-container,
+.mo-theme-hermes-teal-dark .mud-table-container {
+    overflow-x: auto;
+}
+
 .mo-theme-hermes-teal-light .mud-dialog,
 .mo-theme-hermes-teal-dark .mud-dialog,
+.mo-theme-hermes-teal-light .mud-drawer,
+.mo-theme-hermes-teal-dark .mud-drawer {
+    background: var(--mo-hermes-panel-strong);
+    border: 1px solid var(--mo-hermes-border);
+    border-radius: 0;
+}
+
 .mo-theme-hermes-teal-light .mud-popover,
-.mo-theme-hermes-teal-dark .mud-popover,
+.mo-theme-hermes-teal-dark .mud-popover {
+    background: var(--mo-hermes-panel-strong);
+    border: 1px solid var(--mo-hermes-border);
+    border-radius: 0;
+    box-shadow: var(--mo-hermes-shadow);
+}
+
+.mo-theme-hermes-teal-light .mud-dialog,
+.mo-theme-hermes-teal-dark .mud-dialog,
 .mo-theme-hermes-teal-light .mud-snackbar,
 .mo-theme-hermes-teal-dark .mud-snackbar {
     box-shadow: var(--mo-hermes-shadow);

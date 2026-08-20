@@ -15,25 +15,49 @@
 
 <PageTitle>@L["Page:PageTitle"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <MudPaper Class="pa-4 mb-4 event-bus-page-hero">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Large" />
-                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">@L["Page:Header:Title"]</MudText>
-            </MudStack>
-            <MudStack Row="true" Spacing="2">
-                <MudButton StartIcon="@Icons.Material.Filled.Refresh"
-                          Color="Color.Inherit"
-                          Variant="Variant.Outlined"
-                          OnClick="RefreshAsync"
-                          Size="Size.Medium"
-                          Class="event-bus-page-hero-action">
+<div class="event-bus-page">
+<MudContainer MaxWidth="MaxWidth.False" Class="event-bus-page__outer-container">
+    <div class="event-bus-page__container">
+    <header class="event-bus-page__header">
+        <div class="event-bus-page__eyebrow">
+            <span class="event-bus-page__eyebrow-line" aria-hidden="true"></span>
+            <span>@L["Page:Header:Eyebrow"]</span>
+        </div>
+        <div class="event-bus-page__heading-row">
+            <div>
+                <MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Header:Title"]</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="event-bus-page__description">
+                    @L["Page:Header:Description"]
+                </MudText>
+            </div>
+            <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                       Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       OnClick="RefreshAsync"
+                       Disabled="@_loading">
                     @L["Page:Header:Refresh"]
-                </MudButton>
-            </MudStack>
-        </MudStack>
-    </MudPaper>
+            </MudButton>
+        </div>
+    </header>
+
+    <section class="event-bus-page__pulse" aria-label="@L["Page:Summary:AriaLabel"]">
+        <article class="event-bus-pulse event-bus-pulse--primary">
+            <MudIcon Icon="@Icons.Material.Filled.Subscriptions" />
+            <span><small>@L["Page:Summary:Subscriptions"]</small><strong>@(_statistics?.TotalSubscriptions ?? _subscriptions.Count)</strong></span>
+        </article>
+        <article class="event-bus-pulse event-bus-pulse--success">
+            <MudIcon Icon="@Icons.Material.Filled.Bolt" />
+            <span><small>@L["Page:Summary:Active"]</small><strong>@(_statistics?.ActiveSubscriptions ?? 0)</strong></span>
+        </article>
+        <article class="event-bus-pulse event-bus-pulse--info">
+            <MudIcon Icon="@Icons.Material.Filled.Hub" />
+            <span><small>@L["Page:Summary:Providers"]</small><strong>@_providers.Count</strong></span>
+        </article>
+        <article class="event-bus-pulse event-bus-pulse--tertiary">
+            <MudIcon Icon="@Icons.Material.Filled.Update" />
+            <span><small>@L["Page:Summary:RecentChanges"]</small><strong>@_recentChanges.Count</strong></span>
+        </article>
+    </section>
 
     @if (_loading && _subscriptions.Count == 0)
     {
@@ -46,7 +70,7 @@
     {
         <!-- Tabs -->
         <div class="ui-event-bus-tabs">
-            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="ui-event-bus-tab-panels">
+            <MudTabs Elevation="0" Rounded="false" TabPanelsClass="ui-event-bus-tab-panels">
                 <MudTabPanel Text="@L["Page:Tabs:Overview"]" Icon="@Icons.Material.Filled.Dashboard">
                     <SubscriptionStatisticsCard Statistics="_statistics"
                                                OnEventTypeClick="ShowSubscriptionsByEventTypeAsync"
@@ -54,7 +78,7 @@
 
                     @if (_recentChanges.Any())
                     {
-                        <MudPaper Class="pa-4" Elevation="2">
+                        <MudPaper Class="event-bus-recent-changes" Elevation="0" Outlined="true">
                             <MudStack Spacing="2">
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -66,7 +90,7 @@
                                     </MudChip>
                                 </MudStack>
 
-                                <MudList T="string" ReadOnly="true" Dense="true" Style="max-height: 400px; overflow-y: auto;">
+                                <MudList T="string" ReadOnly="true" Dense="true" Class="event-bus-recent-changes__list">
                                     @foreach (var change in _recentChanges.Take(20))
                                     {
                                         <MudListItem T="string">
@@ -119,13 +143,17 @@
             </MudTabs>
         </div>
     }
+    </div>
 </MudContainer>
+</div>
 
 @code {
     public const string PAGE_URL = "/event-bus-monitor";
 
     private bool _loading = true;
-    private CancellationTokenSource _cts = new();
+    private readonly CancellationTokenSource _cts = new();
+    private Task? _monitorTask;
+    private bool _disposed;
 
     // data
     private List<SubscriptionViewModel> _subscriptions = new();
@@ -145,7 +173,12 @@
             await LoadDataAsync();
 
             // Start real-time monitoring
-            _ = ListenToChangesAsync(_cts.Token);
+            if (_disposed)
+            {
+                return;
+            }
+
+            _monitorTask = ListenToChangesAsync(_cts.Token);
 
             StateHasChanged();
         }
@@ -153,6 +186,11 @@
 
     private async Task LoadDataAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _loading = true;
         StateHasChanged();
 
@@ -198,7 +236,10 @@
         finally
         {
             _loading = false;
-            StateHasChanged();
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
@@ -286,6 +327,11 @@
                 await RefreshSubscriptionsAsync();
                 RefreshActiveTestListeners();
 
+                if (_disposed)
+                {
+                    return;
+                }
+
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -295,10 +341,10 @@
         }
         catch (Exception ex)
         {
-            await InvokeAsync(() =>
+            if (!_disposed)
             {
-                Snackbar.Add(L["Page:Messages:RealtimeUpdateFailed", ex.Message], Severity.Error);
-            });
+                await InvokeAsync(() => Snackbar.Add(L["Page:Messages:RealtimeUpdateFailed", ex.Message], Severity.Error));
+            }
         }
     }
 
@@ -462,8 +508,23 @@
 
     public async ValueTask DisposeAsync()
     {
-        _cts?.Cancel();
-        _cts?.Dispose();
-        await Task.CompletedTask;
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        await _cts.CancelAsync();
+        if (_monitorTask is not null)
+        {
+            try
+            {
+                await _monitorTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+        _cts.Dispose();
     }
 }

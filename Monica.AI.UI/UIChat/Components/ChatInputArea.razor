@@ -148,9 +148,8 @@
 
     public string InputText { get; set; } = string.Empty;
     private ElementReference _inputTopRef;
-    private IJSObjectReference? _jsModule;
-    private IJSObjectReference? _keyboardController;
-    private DotNetObjectReference<ChatInputArea>? _dotNetRef;
+    private ChatComposerInteropSession? _interopSession;
+    private bool _disposed;
     private bool _wasSending;
     private string _placeholderText = string.Empty;
     private bool _referencePickerOpen;
@@ -217,16 +216,30 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (_disposed)
         {
-            await InitializeKeyboardControllerAsync();
+            return;
         }
 
-        if (_keyboardController is not null)
+        if (firstRender)
         {
-            await _keyboardController.InvokeVoidAsync("setPickerOpen", ShowReferencePicker);
-            await _keyboardController.InvokeVoidAsync("setDisabled", IsSending);
-            await _keyboardController.InvokeVoidAsync("setValue", InputText, _caretIndex, false, false);
+            _interopSession = new ChatComposerInteropSession(JSRuntime, this);
+            await _interopSession.InitializeAsync(
+                _inputTopRef,
+                InputText,
+                _placeholderText,
+                REFERENCE_ICONS);
+        }
+
+        if (!_disposed && _interopSession is not null)
+        {
+            await _interopSession.SynchronizeAsync(
+                ShowReferencePicker,
+                IsSending,
+                InputText,
+                _caretIndex,
+                focus: false,
+                force: false);
         }
     }
 
@@ -336,32 +349,14 @@
         }
     }
 
-    private async Task InitializeKeyboardControllerAsync()
-    {
-        try
-        {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/Monica.AI.UI/UIChat/Components/ChatInputArea.razor.js");
-
-            _dotNetRef = DotNetObjectReference.Create(this);
-            _keyboardController = await _jsModule.InvokeAsync<IJSObjectReference>(
-                "initComposerKeyboard",
-                _inputTopRef,
-                _dotNetRef,
-                InputText,
-                _placeholderText,
-                REFERENCE_ICONS);
-        }
-        catch (JSException)
-        {
-            // JS interop can fail during prerendering; the composer remains usable without shortcut interception.
-        }
-    }
-
     [JSInvokable]
     public Task HandleComposerInput(string? value, int caretIndex)
     {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
         InputText = value ?? string.Empty;
         _caretIndex = Math.Clamp(caretIndex, 0, InputText.Length);
         UpdateReferencePicker();
@@ -544,39 +539,26 @@
 
     private async Task SyncEditorAsync(bool focus)
     {
-        if (_keyboardController is not null)
+        if (!_disposed && _interopSession is not null)
         {
-            await _keyboardController.InvokeVoidAsync("setValue", InputText, _caretIndex, focus, true);
+            await _interopSession.SynchronizeAsync(
+                ShowReferencePicker,
+                IsSending,
+                InputText,
+                _caretIndex,
+                focus,
+                force: true);
         }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_keyboardController is not null)
+        _disposed = true;
+        var interopSession = _interopSession;
+        _interopSession = null;
+        if (interopSession is not null)
         {
-            try
-            {
-                await _keyboardController.InvokeVoidAsync("dispose");
-                await _keyboardController.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Circuit disconnected, ignore.
-            }
+            await interopSession.DisposeAsync();
         }
-
-        if (_jsModule is not null)
-        {
-            try
-            {
-                await _jsModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Circuit disconnected, ignore.
-            }
-        }
-
-        _dotNetRef?.Dispose();
     }
 }

@@ -6,17 +6,13 @@
 <PageTitle>@L["Page:DocumentTitle"]</PageTitle>
 
 <div class="file-ops-page">
-    <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudContainer MaxWidth="MaxWidth.False" Class="file-ops-page__container">
         <div class="file-ops-page__content">
-            <div class="page-banner">
-                <MudPaper Elevation="0">
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.overline" Class="page-eyebrow">@L["Page:Eyebrow"]</MudText>
-                        <MudText Typo="Typo.h4">@L["Page:Title"]</MudText>
-                        <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
-                    </MudStack>
-                </MudPaper>
-            </div>
+            <header class="file-ops-header">
+                <div class="file-ops-header__eyebrow"><span aria-hidden="true"></span><span>@L["Page:Eyebrow"]</span></div>
+                <MudText Typo="Typo.h3" HtmlTag="h1">@L["Page:Title"]</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="file-ops-header__description">@L["Page:Subtitle"]</MudText>
+            </header>
 
             <FileOpsWorkspace />
         </div>

@@ -5,7 +5,7 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="trend-chart-wrapper">
-    <MudPaper Class="trend-card" Elevation="0">
+    <MudPaper Class="trend-card mo-self-painted" Elevation="0">
         <div class="card-header">
             <MudText Typo="Typo.h6">@L["Statistics:ExecutionTrend:Title"]</MudText>
             <div class="legend">
@@ -76,9 +76,9 @@
         ShowLegend = false,
         ChartPalette =
         [
-            StateColorService.GetStateColorHex(JobState.Succeeded),
-            StateColorService.GetStateColorHex(JobState.Failed),
-            StateColorService.GetStateColorHex(JobState.Skipped)
+            JobStateColorResolver.GetStateColorToken(JobState.Succeeded),
+            JobStateColorResolver.GetStateColorToken(JobState.Failed),
+            JobStateColorResolver.GetStateColorToken(JobState.Skipped)
         ]
     };
 

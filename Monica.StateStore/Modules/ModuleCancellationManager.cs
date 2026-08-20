@@ -25,11 +25,21 @@ public static class ModuleCancellationManagerBuilderExtensions
 }
 
 /// <summary>
-/// Distributed cancellation token manager module
-/// Provide cancellation token management capabilities across microservice instances
+/// Registers process-local or distributed cancellation-token management.
+/// Keyed consumers choose their provider explicitly without inheriting the module-wide default.
 /// </summary>
 public class ModuleCancellationManager : MonicaModule<ModuleCancellationManagerOption>
 {
+    /// <inheritdoc />
+    public override void ValidateOptions(ModuleCancellationManagerOption options, string? profileName)
+    {
+        if (!Enum.IsDefined(options.Mode))
+        {
+            throw new InvalidOperationException(
+                $"Unsupported {nameof(CancellationManagerMode)} value '{options.Mode}'.");
+        }
+    }
+
     /// <summary>
     /// Configure service dependency injection
     /// </summary>
@@ -37,33 +47,48 @@ public class ModuleCancellationManager : MonicaModule<ModuleCancellationManagerO
     public override void ConfigureServices(ModuleContext<ModuleCancellationManagerOption> context)
     {
         var services = context.Services;
-        // Choose the appropriate implementation based on your configuration
-        if (!Option.UseDistributed)
+        switch (Option.Mode)
         {
-            // Register the memory version to cancel the token manager service
-            services.AddSingleton<ICancellationManager, InMemoryCancellationManager>();
-        }
-        else
-        {
-            // Register the distributed cancellation token manager service
-            services.AddSingleton<ICancellationManager>((serviceProvider) =>
-            {
-                var stateStore = serviceProvider.GetRequiredKeyedService<IStateStore>(nameof(ModuleCancellationManager));
-                return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
-            });
+            case CancellationManagerMode.InMemory:
+                services.AddSingleton<ICancellationManager, InMemoryCancellationManager>();
+                break;
+            case CancellationManagerMode.Distributed:
+                services.AddSingleton<ICancellationManager>(serviceProvider =>
+                {
+                    var stateStore = serviceProvider.GetRequiredKeyedService<IStateStore>(nameof(ModuleCancellationManager));
+                    return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
+                });
+                break;
+            default:
+                throw new InvalidOperationException("Cancellation manager mode validation did not run.");
         }
     }
 
-    public override void Describe(ModuleDescriptor module)
+    /// <inheritdoc />
+    public override void DeclareContracts(ModuleContractDescriptor<ModuleCancellationManagerOption> contracts)
     {
+        if (contracts.Options.Mode == CancellationManagerMode.Distributed)
+        {
+            contracts.RequireKeyedService<IStateStore>(nameof(ModuleCancellationManager));
+        }
     }
 }
 
 /// <summary>
-/// Registration extensions for the distributed cancellation-token manager module.
+/// Registration extensions for cancellation-token providers.
 /// </summary>
 public static class ModuleCancellationManagerRegistrationExtensions
 {
+    /// <summary>
+    /// Uses the process-local cancellation implementation. This is the default module-wide mode.
+    /// </summary>
+    /// <param name="module">The CancellationManager registration being configured.</param>
+    public static ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> UseInMemoryCancellation(
+        this ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> module)
+    {
+        return module.Configure(options => options.Mode = CancellationManagerMode.InMemory);
+    }
+
     /// <summary>
     /// Enables the distributed cancellation implementation and its state-store dependency.
     /// </summary>
@@ -71,62 +96,65 @@ public static class ModuleCancellationManagerRegistrationExtensions
     public static ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> UseDistributedCancellation(
         this ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> module)
     {
-        module.Configure(options => options.UseDistributed = true);
+        module.Configure(options => options.Mode = CancellationManagerMode.Distributed);
         module.Require<ModuleStateStore, ModuleStateStoreOption>()
             .AddKeyedCommonStateStore(nameof(ModuleCancellationManager), useDistributed: true);
         return module;
     }
 
     /// <summary>
-    /// Adds a cancellation token manager for the specified key
+    /// Adds a process-local cancellation manager for the specified key.
     /// </summary>
     /// <param name="module">The CancellationManager registration being configured.</param>
-    /// <param name="key">service key</param>
-    /// <param name="useDistributed">Whether to use memory implementation, the default is false</param>
+    /// <param name="key">The keyed-service identifier.</param>
     /// <returns>The current module registration for chaining.</returns>
-    public static ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> AddKeyedCancellationManager(this ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> module, string key, bool useDistributed = false)
+    public static ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> AddKeyedInMemoryCancellationManager(
+        this ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> module,
+        string key)
     {
-        if (useDistributed)
-        {
-            // Using distributed implementation, you need to rely on StateStore
-            module.Require<ModuleStateStore, ModuleStateStoreOption>().AddKeyedCommonStateStore(key, true);
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        module.ConfigureServices(context =>
+            context.Services.AddKeyedSingleton<ICancellationManager, InMemoryCancellationManager>(key));
+        module.RecordKeyedServiceKey(key);
+        return module;
+    }
 
+    /// <summary>
+    /// Adds a distributed cancellation manager for the specified key and binds it to the distributed StateStore
+    /// provider selected for the host.
+    /// </summary>
+    /// <param name="module">The CancellationManager registration being configured.</param>
+    /// <param name="key">The keyed-service identifier.</param>
+    /// <returns>The current module registration for chaining.</returns>
+    public static ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> AddKeyedDistributedCancellationManager(
+        this ModuleRegistration<ModuleCancellationManager, ModuleCancellationManagerOption> module,
+        string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        module.Require<ModuleStateStore, ModuleStateStoreOption>().AddKeyedCommonStateStore(key, true);
         module.ConfigureServices(context =>
         {
             context.Services.AddKeyedSingleton<ICancellationManager>(key, (serviceProvider, _) =>
             {
-                if (!useDistributed)
-                {
-                    // Use memory implementation
-                    return ActivatorUtilities.CreateInstance<InMemoryCancellationManager>(serviceProvider);
-                }
-                else
-                {
-                    // Use distributed implementation
-                    var stateStore = serviceProvider.GetRequiredKeyedService<IStateStore>(key);
-                    return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
-                }
+                var stateStore = serviceProvider.GetRequiredKeyedService<IStateStore>(key);
+                return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
             });
         });
         module.RecordKeyedServiceKey(key);
         return module;
     }
-
-
 }
 
 /// <summary>
-/// Distributed cancellation token manager module configuration options
+/// Configures cancellation-token manager behavior.
 /// </summary>
 public class ModuleCancellationManagerOption : ModuleOptions<ModuleCancellationManager>
 {
     /// <summary>
-    /// Gets whether the distributed implementation was selected through
-    /// <see cref="ModuleCancellationManagerRegistrationExtensions.UseDistributedCancellation"/>.
-    /// The default uses the in-memory implementation.
+    /// Gets the module-wide cancellation implementation. The default is
+    /// <see cref="CancellationManagerMode.InMemory"/>; select distributed mode when cancellation must cross hosts.
     /// </summary>
-    public bool UseDistributed { get; internal set; }
+    public CancellationManagerMode Mode { get; internal set; } = CancellationManagerMode.InMemory;
 
     /// <summary>
     /// Polling interval (milliseconds), default is 1000ms
@@ -146,4 +174,20 @@ public class ModuleCancellationManagerOption : ModuleOptions<ModuleCancellationM
     /// </summary>
     public TimeSpan? StateTtl { get; set; } = TimeSpan.FromHours(24);
 
+}
+
+/// <summary>
+/// Defines the persistence and propagation boundary of a cancellation manager.
+/// </summary>
+public enum CancellationManagerMode
+{
+    /// <summary>
+    /// Keeps cancellation state inside the current process.
+    /// </summary>
+    InMemory,
+
+    /// <summary>
+    /// Persists cancellation state through the host's distributed StateStore provider.
+    /// </summary>
+    Distributed
 }

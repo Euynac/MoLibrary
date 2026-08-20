@@ -1,7 +1,6 @@
 .dashboard-page {
     position: relative;
-    padding: 24px;
-    margin: 0 auto;
+    min-width: 0;
 }
 
 .loading-container {
@@ -19,13 +18,13 @@
     right: 24px;
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: 8px;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--mud-elevation-2);
     z-index: 100;
 }
 
@@ -82,14 +81,8 @@
     }
 }
 
-@media (max-width: 960px) {
-    .dashboard-page {
-        padding: 16px;
-    }
-}
-
-@media (max-width: 600px) {
-    .dashboard-page {
-        padding: 12px;
+@media (prefers-reduced-motion: reduce) {
+    .refresh-indicator ::deep .rotating {
+        animation: none;
     }
 }

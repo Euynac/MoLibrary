@@ -12,10 +12,12 @@ public sealed class MemoryAnalysisPageState(
     MemoryDiagnosticsFacade memoryDiagnosticsFacade,
     RuntimeMetricsFacade runtimeMetricsFacade,
     IOptions<ModuleMemoryAnalysisUIOption> options)
-    : IDisposable
+    : IAsyncDisposable
 {
     private readonly ModuleMemoryAnalysisUIOption _option = options.Value;
-    private Timer? _refreshTimer;
+    private CancellationTokenSource? _refreshCancellation;
+    private Task _refreshLoop = Task.CompletedTask;
+    private bool _disposed;
 
     public event Action? StateChanged;
 
@@ -31,16 +33,21 @@ public sealed class MemoryAnalysisPageState(
 
     public int ActiveTabIndex { get; set; }
 
+    /// <summary>
+    /// Gets the frozen host options used by diagnostics controls on this page.
+    /// </summary>
+    public ModuleMemoryAnalysisUIOption Options => _option;
+
     public bool IsTypeAllocationTabEnabled => _option.EnableTypeAllocationTab;
 
     public async Task<Res> InitializeAsync()
     {
         var result = await RefreshAsync();
-        UpdateAutoRefresh();
+        await UpdateAutoRefreshAsync();
         return result;
     }
 
-    public void SetAutoRefresh(bool value)
+    public async Task SetAutoRefreshAsync(bool value)
     {
         if (AutoRefresh == value)
         {
@@ -48,7 +55,7 @@ public sealed class MemoryAnalysisPageState(
         }
 
         AutoRefresh = value;
-        UpdateAutoRefresh();
+        await UpdateAutoRefreshAsync();
         NotifyStateChanged();
     }
 
@@ -76,9 +83,16 @@ public sealed class MemoryAnalysisPageState(
         return RunAsync(() => memoryDiagnosticsFacade.TriggerGcDumpAsync());
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _refreshTimer?.Dispose();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        await StopRefreshLoopAsync();
+        StateChanged = null;
     }
 
     private Res LoadDashboardData()
@@ -149,22 +163,59 @@ public sealed class MemoryAnalysisPageState(
         }
     }
 
-    private void UpdateAutoRefresh()
+    private async Task UpdateAutoRefreshAsync()
     {
-        _refreshTimer?.Dispose();
-        _refreshTimer = null;
+        await StopRefreshLoopAsync();
 
         if (!AutoRefresh || _option.AutoRefreshIntervalMs <= 0)
         {
             return;
         }
 
-        _refreshTimer = new Timer(
-            async _ => await RefreshAsync(),
-            null,
-            _option.AutoRefreshIntervalMs,
-            _option.AutoRefreshIntervalMs);
+        _refreshCancellation = new CancellationTokenSource();
+        _refreshLoop = RunRefreshLoopAsync(_refreshCancellation.Token);
     }
 
-    private void NotifyStateChanged() => StateChanged?.Invoke();
+    private async Task RunRefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(_option.AutoRefreshIntervalMs));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await RefreshAsync();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task StopRefreshLoopAsync()
+    {
+        var cancellation = _refreshCancellation;
+        _refreshCancellation = null;
+        cancellation?.Cancel();
+
+        try
+        {
+            await _refreshLoop;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            cancellation?.Dispose();
+            _refreshLoop = Task.CompletedTask;
+        }
+    }
+
+    private void NotifyStateChanged()
+    {
+        if (!_disposed)
+        {
+            StateChanged?.Invoke();
+        }
+    }
 }

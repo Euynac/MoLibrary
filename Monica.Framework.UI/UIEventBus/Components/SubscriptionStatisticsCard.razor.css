@@ -1,0 +1,14 @@
+.event-bus-rankings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.event-bus-ranking { display: grid; gap: 1rem; min-width: 0; padding: 1rem; border: 1px solid var(--mud-palette-divider); border-radius: 12px; background: var(--mud-palette-surface); transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.event-bus-ranking:hover { border-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-divider)); box-shadow: 0 12px 28px color-mix(in srgb, var(--mud-palette-primary) 9%, transparent); transform: translateY(-1px); }
+.event-bus-ranking > header { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.event-bus-ranking__icon { display: grid; flex: 0 0 auto; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 8px; }
+.event-bus-ranking__icon--primary { color: var(--mud-palette-primary); background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent); }
+.event-bus-ranking__icon--info { color: var(--mud-palette-info); background: color-mix(in srgb, var(--mud-palette-info) 12%, transparent); }
+.event-bus-ranking__list { display: grid; gap: .25rem; }
+.event-bus-ranking__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; width: 100%; padding: .625rem .75rem; border: 0; border-radius: 8px; color: var(--mud-palette-text-primary); background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background-color 140ms ease, color 140ms ease; }
+.event-bus-ranking__row:hover { color: var(--mud-palette-primary); background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent); }
+.event-bus-ranking__row:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
+.event-bus-ranking__row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .event-bus-rankings { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .event-bus-ranking, .event-bus-ranking__row { transition: none; } .event-bus-ranking:hover { transform: none; } }

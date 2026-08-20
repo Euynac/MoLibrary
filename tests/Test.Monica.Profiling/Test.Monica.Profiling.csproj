@@ -5,11 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Monica.Testing\Monica.Testing.csproj" />
     <ProjectReference Include="..\..\Monica.Profiling\Monica.Profiling.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="bunit" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

@@ -1,13 +1,12 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using Monica.Core.Localization.Models;
 using Monica.Markdown.Abstractions;
 using Monica.Markdown.Facades;
 using Monica.Markdown.Localization;
 using Monica.Markdown.Models;
 using Monica.Markdown.UIMarkdown.State;
-using Monica.Modules;
 using Monica.Testing.Localization;
 using Monica.Tool.Algorithms.Trees;
 using MudBlazor;
@@ -129,7 +128,15 @@ public sealed class MarkdownViewerPageStateTests
             Substitute.For<ISnackbar>(),
             runtime,
             new EchoStringLocalizer<MarkdownResource>(),
-            Options.Create(new ModuleLocalizationOption()));
+            LocalizationProfile.Create(
+                "zh-CN",
+                ["zh-CN", "en-US"],
+                new Dictionary<string, string>
+                {
+                    ["zh-CN"] = "简体中文",
+                    ["en-US"] = "English"
+                },
+                ".AspNetCore.Culture"));
         fixture.State.Attach(fixture.RequestRenderAsync);
         return fixture;
     }

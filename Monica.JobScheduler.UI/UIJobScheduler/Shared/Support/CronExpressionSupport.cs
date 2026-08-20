@@ -108,16 +108,11 @@ public class CronExpressionSupport(
     /// <summary>
     /// Parse expressions into readable localized descriptions using the JavaScript cronstrue library.
     /// </summary>
-    /// <param name="jsModule">JS module reference provided by the component</param>
+    /// <param name="interop">Component-owned cron JavaScript session.</param>
     /// <param name="expression">Cron expression</param>
     /// <param name="format">Expression format</param>
-    public async Task<Res<string>> ParseToDescriptionAsync(IJSObjectReference jsModule, string expression, CronFormat format)
+    internal async Task<Res<string>> ParseToDescriptionAsync(CronInteropSession interop, string expression, CronFormat format)
     {
-        if (jsModule == null)
-        {
-            return Res.Fail(localizer["Services:Errors:JsModuleNotLoaded"]);
-        }
-
         if (string.IsNullOrWhiteSpace(expression))
         {
             return Res.Fail(localizer["Services:Errors:ExpressionEmpty"]);
@@ -125,7 +120,7 @@ public class CronExpressionSupport(
 
         try
         {
-            var result = await jsModule.InvokeAsync<CronParseResult>(
+            var result = await interop.InvokeAsync<CronParseResult>(
                 "parseCronExpression",
                 expression,
                 format == CronFormat.Quartz ? "quartz" : "standard",
@@ -138,6 +133,10 @@ public class CronExpressionSupport(
         catch (JSException jsEx)
         {
             return Res.Fail(localizer["Services:Errors:JsInvokeFailed", jsEx.Message]);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

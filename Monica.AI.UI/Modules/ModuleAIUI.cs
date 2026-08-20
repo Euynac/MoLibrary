@@ -12,6 +12,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.UI.Shell.Models;
+using Monica.UI.Shell.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -30,38 +31,7 @@ public static class ModuleAIUIBuilderExtensions
         public ModuleRegistration<ModuleAIUI, ModuleAIUIOption> AddAIUI(
             Action<ModuleAIUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleAIUI, ModuleAIUIOption>(action);
-            registration.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>();
-            registration.Require<ModuleSkillSystem, ModuleSkillSystemOption>();
-            registration.Require<ModuleMcp, ModuleMcpOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<AIResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>(option => option.EnableMarkdown = true)
-                .RegisterUIComponents(registry =>
-                {
-                    registry.RegisterLocalizedPage<ChatPage, AIResource>(
-                        ChatPage.PAGE_URL,
-                        "Pages:AIChat:Title",
-                        Icons.Material.Filled.SmartToy,
-                        BuiltInNavigationCategoryIds.AI,
-                        addToNav: true,
-                        navOrder: 1);
-                    registry.RegisterLocalizedPage<ProviderManagePage, AIResource>(
-                        ProviderManagePage.PAGE_URL,
-                        "Pages:AIProviderManage:Title",
-                        Icons.Material.Filled.Hub,
-                        BuiltInNavigationCategoryIds.AI,
-                        addToNav: true,
-                        navOrder: 2);
-                    registry.RegisterLocalizedPage<AgentCapabilityManagePage, AIResource>(
-                        AgentCapabilityManagePage.PAGE_URL,
-                        "Pages:AICapabilities:Title",
-                        Icons.Material.Filled.Extension,
-                        BuiltInNavigationCategoryIds.AI,
-                        addToNav: true,
-                        navOrder: 3);
-                });
-            return registration;
+            return builder.AddModule<ModuleAIUI, ModuleAIUIOption>(action);
         }
     }
 
@@ -90,6 +60,7 @@ public static class ModuleAIUIBuilderExtensions
             });
         }
     }
+
 }
 
 /// <summary>
@@ -101,6 +72,41 @@ public class ModuleAIUI : MonicaModule<ModuleAIUIOption>, IUIModule
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleAI, ModuleAIOption>();
+        module.Require<ModuleKnowledgeBase, ModuleKnowledgeBaseOption>();
+        module.Require<ModuleSkillSystem, ModuleSkillSystemOption>();
+        module.Require<ModuleMcp, ModuleMcpOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<AIResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+        {
+            option.EnableMarkdown = true;
+            option.ConfigureNavigation(RegisterNavigation);
+        });
+    }
+
+    private static void RegisterNavigation(INavigationRegistryBuilder registry)
+    {
+        registry.RegisterLocalizedPage<ChatPage, AIResource>(
+            ChatPage.PAGE_URL,
+            "Pages:AIChat:Title",
+            Icons.Material.Filled.SmartToy,
+            BuiltInNavigationCategoryIds.AI,
+            addToNav: true,
+            navOrder: 1);
+        registry.RegisterLocalizedPage<ProviderManagePage, AIResource>(
+            ProviderManagePage.PAGE_URL,
+            "Pages:AIProviderManage:Title",
+            Icons.Material.Filled.Hub,
+            BuiltInNavigationCategoryIds.AI,
+            addToNav: true,
+            navOrder: 2);
+        registry.RegisterLocalizedPage<AgentCapabilityManagePage, AIResource>(
+            AgentCapabilityManagePage.PAGE_URL,
+            "Pages:AICapabilities:Title",
+            Icons.Material.Filled.Extension,
+            BuiltInNavigationCategoryIds.AI,
+            addToNav: true,
+            navOrder: 3);
     }
 
     public override void ConfigureServices(ModuleContext<ModuleAIUIOption> context)

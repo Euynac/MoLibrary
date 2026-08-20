@@ -1,0 +1,24 @@
+.log-line-info-dialog__surface {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    background: var(--mud-palette-background-gray);
+}
+
+.log-line-info-dialog__message {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+    .log-line-info-dialog__surface {
+        padding: .75rem;
+    }
+
+    .log-line-info-dialog__surface ::deep .mud-stack-row {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+}

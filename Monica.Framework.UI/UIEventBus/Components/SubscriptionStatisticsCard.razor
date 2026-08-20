@@ -1,165 +1,67 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @inject IStringLocalizer<EventBusResource> L
 
-@if (Statistics != null)
+@if (Statistics is null)
 {
-    <MudGrid Spacing="3" Class="mb-4">
-        <!-- total card -->
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.h3" Color="Color.Primary">@Statistics.TotalSubscriptions</MudText>
-                        </MudStack>
-                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@L["Statistics:Cards:TotalSubscriptions"]</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Statistics:Cards:ActiveRate", Statistics.ActiveRateDisplay]
-                        </MudText>
-                    </MudStack>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <!-- Active subscription card -->
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
-                            <MudText Typo="Typo.h3" Color="Color.Success">@Statistics.ActiveSubscriptions</MudText>
-                        </MudStack>
-                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@L["Statistics:Cards:ActiveSubscriptions"]</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Statistics:Cards:PendingInactive", Statistics.PendingSubscriptions, Statistics.InactiveSubscriptions]
-                        </MudText>
-                    </MudStack>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <!-- local subscription card -->
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Info" Size="Size.Large" />
-                            <MudText Typo="Typo.h3" Color="Color.Info">@Statistics.LocalSubscriptions</MudText>
-                        </MudStack>
-                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@L["Statistics:Cards:LocalSubscriptions"]</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Statistics:Cards:DistributedCount", Statistics.DistributedSubscriptions]
-                        </MudText>
-                    </MudStack>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <!-- Automatically discover cards -->
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Tertiary" Size="Size.Large" />
-                            <MudText Typo="Typo.h3" Color="Color.Tertiary">@Statistics.AutoDiscoveredCount</MudText>
-                        </MudStack>
-                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@L["Statistics:Cards:AutoDiscovered"]</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @L["Statistics:Cards:AutoDiscoveredRate", Statistics.AutoDiscoveredRateDisplay]
-                        </MudText>
-                    </MudStack>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
-
-    <!-- Top event types and topics -->
-    <MudGrid Spacing="3" Class="mb-4">
-        <MudItem xs="12" md="6">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Event" Color="Color.Primary" />
-                            <MudText Typo="Typo.h6">@L["Statistics:Sections:TopEventTypes"]</MudText>
-                        </MudStack>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    @if (Statistics.TopEventTypes.Any())
-                    {
-                        <MudList T="string" Dense="true">
-                            @foreach (var eventType in Statistics.TopEventTypes)
-                            {
-                                <MudListItem T="string" OnClick="() => OnEventTypeClick.InvokeAsync(eventType.EventType)" Style="cursor: pointer;">
-                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                        <MudTooltip Text="@eventType.EventType">
-                                            <MudText Typo="Typo.body2">@eventType.EventTypeShortName</MudText>
-                                        </MudTooltip>
-                                        <MudChip T="string" Color="Color.Primary" Size="Size.Small">@eventType.Count</MudChip>
-                                    </MudStack>
-                                </MudListItem>
-                            }
-                        </MudList>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:States:Empty"]</MudText>
-                    }
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Topic" Color="Color.Secondary" />
-                            <MudText Typo="Typo.h6">@L["Statistics:Sections:TopTopics"]</MudText>
-                        </MudStack>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    @if (Statistics.TopTopics.Any())
-                    {
-                        <MudList T="string" Dense="true">
-                            @foreach (var topic in Statistics.TopTopics)
-                            {
-                                <MudListItem T="string" OnClick="() => OnTopicClick.InvokeAsync(topic.TopicName)" Style="cursor: pointer;">
-                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                        <MudText Typo="Typo.body2">@topic.TopicName</MudText>
-                                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small">@topic.Count</MudChip>
-                                    </MudStack>
-                                </MudListItem>
-                            }
-                        </MudList>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:States:Empty"]</MudText>
-                    }
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@L["Statistics:States:Loading"]</MudAlert>
 }
 else
 {
-    <MudAlert Severity="Severity.Info">@L["Statistics:States:Loading"]</MudAlert>
+    <section class="event-bus-rankings">
+        <article class="event-bus-ranking">
+            <header>
+                <span class="event-bus-ranking__icon event-bus-ranking__icon--primary"><MudIcon Icon="@Icons.Material.Filled.Event" /></span>
+                <span>
+                    <MudText Typo="Typo.h6">@L["Statistics:Sections:TopEventTypes"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Sections:TopEventTypesDescription"]</MudText>
+                </span>
+            </header>
+            @if (Statistics.TopEventTypes.Any())
+            {
+                <div class="event-bus-ranking__list">
+                    @foreach (var eventType in Statistics.TopEventTypes)
+                    {
+                        <button type="button" class="event-bus-ranking__row" title="@eventType.EventType" @onclick="() => OnEventTypeClick.InvokeAsync(eventType.EventType)">
+                            <span>@eventType.EventTypeShortName</span><strong>@eventType.Count</strong>
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:States:Empty"]</MudText>
+            }
+        </article>
+
+        <article class="event-bus-ranking">
+            <header>
+                <span class="event-bus-ranking__icon event-bus-ranking__icon--info"><MudIcon Icon="@Icons.Material.Filled.Topic" /></span>
+                <span>
+                    <MudText Typo="Typo.h6">@L["Statistics:Sections:TopTopics"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Sections:TopTopicsDescription"]</MudText>
+                </span>
+            </header>
+            @if (Statistics.TopTopics.Any())
+            {
+                <div class="event-bus-ranking__list">
+                    @foreach (var topic in Statistics.TopTopics)
+                    {
+                        <button type="button" class="event-bus-ranking__row" @onclick="() => OnTopicClick.InvokeAsync(topic.TopicName)">
+                            <span>@topic.TopicName</span><strong>@topic.Count</strong>
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:States:Empty"]</MudText>
+            }
+        </article>
+    </section>
 }
 
 @code {
-    [Parameter]
-    public SubscriptionStatistics? Statistics { get; set; }
-
-    [Parameter]
-    public EventCallback<string> OnEventTypeClick { get; set; }
-
-    [Parameter]
-    public EventCallback<string> OnTopicClick { get; set; }
+    [Parameter] public SubscriptionStatistics? Statistics { get; set; }
+    [Parameter] public EventCallback<string> OnEventTypeClick { get; set; }
+    [Parameter] public EventCallback<string> OnTopicClick { get; set; }
 }

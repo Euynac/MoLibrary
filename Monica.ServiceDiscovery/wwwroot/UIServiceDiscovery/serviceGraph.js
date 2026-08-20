@@ -10,8 +10,6 @@ import { ForceLayoutManager } from '../../Monica.UI/js/d3js/d3-force-layout.js';
 import { createLayoutAlgorithms } from '../../Monica.UI/js/d3js/d3-layout-algorithms.js';
 import { createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-interaction.js';
 
-let graphInstance = null;
-
 const ROLE_COLOR_MAP = {
     primary: 'var(--mud-palette-primary)',
     secondary: 'var(--mud-palette-secondary)',
@@ -37,86 +35,6 @@ function resolveRoleColor(role) {
 }
 
 /**
- * Initialization microservice architecture diagram
- * @param {string} containerId - container ID
- * @param {boolean} isDarkMode - whether it is dark mode
- * @param {Object} dotNetRef - .NET object reference
- */
-export function initializeGraph(containerId, isDarkMode = false, dotNetRef = null, texts = {}) {
-    dispose();
-    graphInstance = new ServiceGraph(containerId, { isDarkMode, dotNetRef, texts });
-}
-
-/**
- * Update chart data
- * @param {Object} data - chart data {nodes, links}
- */
-export function updateGraph(data) {
-    if (graphInstance) {
-        graphInstance.updateData(data);
-    }
-}
-
-/**
- * reset view
- */
-export function resetView() {
-    if (graphInstance) {
-        graphInstance.resetView();
-    }
-}
-
-/**
- * Focus on specified node
- * @param {string} nodeId - node ID
- */
-export function focusOnNode(nodeId) {
-    if (graphInstance) {
-        graphInstance.focusOnNode(nodeId);
-    }
-}
-
-/**
- * Set layout type
- * @param {string} layoutType - layout type
- */
-export function setLayout(layoutType) {
-    if (graphInstance) {
-        graphInstance.setLayout(layoutType);
-    }
-}
-
-/**
- * Set force guide distance
- * @param {number} distance - distance value
- */
-export function setForceDistance(distance) {
-    if (graphInstance) {
-        graphInstance.setForceDistance(distance);
-    }
-}
-
-/**
- * Set force guide strength
- * @param {number} strength - strength value
- */
-export function setForceStrength(strength) {
-    if (graphInstance) {
-        graphInstance.setForceStrength(strength);
-    }
-}
-
-/**
- * Destroy chart instance
- */
-export function dispose() {
-    if (graphInstance) {
-        graphInstance.dispose();
-        graphInstance = null;
-    }
-}
-
-/**
  * Microservice architecture diagram class
  */
 class ServiceGraph extends GraphBase {
@@ -131,6 +49,8 @@ class ServiceGraph extends GraphBase {
         this.nodeElements = null;
         this.linkElements = null;
         this.dotNetRef = options.dotNetRef;
+        this.pendingCallbacks = new Set();
+        this.tooltip = null;
         this.animations = new Map(); // 存储动画定时器
         this.currentLayout = 'force';
         this.texts = {
@@ -215,9 +135,7 @@ class ServiceGraph extends GraphBase {
      */
     handleBackgroundClick() {
         // If there is a .NET callback object, notify that the background was clicked
-        if (this.dotNetRef && typeof this.dotNetRef.invokeMethodAsync === 'function') {
-            this.dotNetRef.invokeMethodAsync('OnSvgBackgroundClick');
-        }
+        this.invokeDotNet('OnSvgBackgroundClick');
     }
     
     /**
@@ -235,11 +153,11 @@ class ServiceGraph extends GraphBase {
             const x = event.clientX;
             const y = event.clientY;
             
-            this.dotNetRef.invokeMethodAsync('OnNodeRightClick', node.id, x, y);
+            this.invokeDotNet('OnNodeRightClick', node.id, x, y);
         }
     }
 
-    updateData(data) {
+    updateGraph(data) {
         this.nodes = data.nodes || [];
         this.links = data.links || [];
         
@@ -401,9 +319,7 @@ class ServiceGraph extends GraphBase {
             })
             .on('click', async (event, d) => {
                 event.stopPropagation();
-                if (this.dotNetRef) {
-                    await this.dotNetRef.invokeMethodAsync('OnNodeClick', d.id);
-                }
+                await this.invokeDotNet('OnNodeClick', d.id);
             })
             .on('contextmenu', (event, d) => {
                 event.preventDefault();
@@ -542,10 +458,8 @@ class ServiceGraph extends GraphBase {
     }
 
     showTooltip(event, content) {
-        // Create or update tooltip
-        let tooltip = d3.select('body').select('.service-tooltip');
-        if (tooltip.empty()) {
-            tooltip = d3.select('body')
+        if (!this.tooltip) {
+            this.tooltip = d3.select('body')
                 .append('div')
                 .attr('class', 'service-tooltip')
                 .style('position', 'absolute')
@@ -563,7 +477,7 @@ class ServiceGraph extends GraphBase {
                 .style('opacity', 0);
         }
 
-        tooltip
+        this.tooltip
             .html(content)
             .style('left', (event.pageX + 15) + 'px')
             .style('top', (event.pageY - 10) + 'px')
@@ -573,7 +487,12 @@ class ServiceGraph extends GraphBase {
     }
 
     hideTooltip() {
-        d3.select('.service-tooltip')
+        if (!this.tooltip) {
+            return;
+        }
+
+        this.tooltip
+            .interrupt()
             .transition()
             .duration(200)
             .style('opacity', 0);
@@ -806,15 +725,36 @@ class ServiceGraph extends GraphBase {
         this.forceLayout.updateChargeStrength(strength);
     }
 
-    dispose() {
+    invokeDotNet(methodName, ...args) {
+        const reference = this.dotNetRef;
+        if (!reference || typeof reference.invokeMethodAsync !== 'function') {
+            return Promise.resolve();
+        }
+
+        const callback = reference.invokeMethodAsync(methodName, ...args)
+            .catch(error => {
+                if (this.dotNetRef) {
+                    console.error(`Service graph callback '${methodName}' failed.`, error);
+                }
+            })
+            .finally(() => this.pendingCallbacks.delete(callback));
+
+        this.pendingCallbacks.add(callback);
+        return callback;
+    }
+
+    async dispose() {
+        this.dotNetRef = null;
+
         // Stop all animations
         this.animations.forEach((timerId, nodeId) => {
             clearTimeout(timerId);
         });
         this.animations.clear();
         
-        // Clean tooltip
-        d3.select('.service-tooltip').remove();
+        // Remove only the tooltip owned by this graph mount.
+        this.tooltip?.remove();
+        this.tooltip = null;
         
         // Stop force oriented layout
         if (this.forceLayout) {
@@ -826,5 +766,16 @@ class ServiceGraph extends GraphBase {
         
         // Call dispose of the base class
         super.dispose();
+
+        await Promise.allSettled([...this.pendingCallbacks]);
+        this.pendingCallbacks.clear();
     }
+}
+
+/**
+ * Creates an independently owned graph controller for one component mount.
+ * The caller must invoke dispose() on the returned controller.
+ */
+export function createGraph(containerId, isDarkMode = false, dotNetRef = null, texts = {}) {
+    return new ServiceGraph(containerId, { isDarkMode, dotNetRef, texts });
 }

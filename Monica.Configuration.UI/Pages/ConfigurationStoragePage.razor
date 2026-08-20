@@ -9,15 +9,18 @@
 <div class="configuration-storage-page">
 <MudContainer MaxWidth="MaxWidth.False">
     <MudStack Spacing="3">
-        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-            <MudStack Spacing="0">
-                <MudText Typo="Typo.h4">@L["Pages:ConfigurationStorage:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Storage:Subtitle"]</MudText>
-            </MudStack>
-            <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
-            </MudTooltip>
-        </MudStack>
+        <ConfigurationPageHeader Title="@L["Pages:ConfigurationStorage:Title"]"
+                                 Subtitle="@L["Storage:Subtitle"]"
+                                 Icon="@Icons.Material.Filled.Storage">
+            <Actions>
+                <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Variant="Variant.Outlined"
+                                   OnClick="LoadAsync"
+                                   aria-label="@L["Common:Actions:Refresh"]" />
+                </MudTooltip>
+            </Actions>
+        </ConfigurationPageHeader>
 
         @if (_loading)
         {

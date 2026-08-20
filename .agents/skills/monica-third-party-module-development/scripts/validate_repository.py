@@ -599,12 +599,12 @@ def localized_navigation_contract_errors(
     expected_page_type: str,
 ) -> list[str]:
     errors: list[str] = []
-    blocks = find_method_invocations(module_text, "RegisterUIComponents")
+    blocks = find_method_invocations(module_text, "ConfigureNavigation")
     categories = find_generic_invocations(module_text, "RegisterLocalizedCategory")
     pages = find_generic_invocations(module_text, "RegisterLocalizedPage")
 
     if len(blocks) != 1:
-        errors.append("use exactly one RegisterUIComponents block")
+        errors.append("use exactly one ConfigureNavigation callback")
     if len(categories) != 1:
         errors.append("register exactly one localized navigation category")
     if not pages:
@@ -612,7 +612,7 @@ def localized_navigation_contract_errors(
     if len(blocks) == 1:
         block = blocks[0]
         if any(not (block.start < item.start < item.end <= block.end) for item in [*categories, *pages]):
-            errors.append("keep category and page registrations inside the RegisterUIComponents block")
+            errors.append("keep category and page registrations inside the ConfigureNavigation callback")
 
     if len(categories) != 1:
         return errors

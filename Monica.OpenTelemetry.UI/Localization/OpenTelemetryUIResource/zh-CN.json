@@ -31,6 +31,7 @@
   },
   "Status": {
     "Loading": "正在加载指标...",
+    "LoadFailed": "加载指标快照失败。",
     "Empty": "尚未采集到指标样本。",
     "Copied": "已复制到剪贴板。",
     "CopyFailed": "复制失败。"

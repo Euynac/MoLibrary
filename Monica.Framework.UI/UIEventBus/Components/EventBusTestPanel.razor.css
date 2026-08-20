@@ -1,33 +1,72 @@
+.publish-section-wrapper,
+.subscribe-section-wrapper,
+.status-indicator-wrapper,
+.message-list-wrapper,
+.message-card-wrapper {
+    min-width: 0;
+}
 
-/* Use ::deep to penetrate MudBlazor component styles */
 .publish-section-wrapper ::deep .mud-paper {
-    border-left: 4px solid var(--mud-palette-primary);
+    border-inline-start: 4px solid var(--mud-palette-primary);
 }
 
 .subscribe-section-wrapper ::deep .mud-paper {
-    border-left: 4px solid var(--mud-palette-info);
+    border-inline-start: 4px solid var(--mud-palette-info);
+}
+
+.status-indicator-wrapper ::deep .mud-paper {
+    padding: .75rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
 }
 
 .status-indicator-wrapper ::deep .mud-paper.subscribed {
-    background-color: var(--mud-palette-success-lighten);
     border-color: var(--mud-palette-success);
+    background: var(--mo-color-state-success-soft-background);
 }
 
 .status-indicator-wrapper ::deep .mud-paper.unsubscribed {
-    background-color: var(--mud-palette-surface);
-    border-color: var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
 }
 
-/* Message list style */
-.message-list-wrapper ::deep .mud-list {
-    max-height: 400px;
+.message-list-wrapper ::deep .message-list {
+    max-height: 31rem;
+    min-width: 0;
     overflow-y: auto;
 }
 
 .message-card-wrapper ::deep .mud-card {
-    transition: all 0.2s ease;
+    min-width: 0;
+    border-radius: 8px;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .message-card-wrapper ::deep .mud-card:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    border-color: color-mix(in srgb, var(--mud-palette-info) 32%, var(--mud-palette-divider));
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--mud-palette-text-primary) 9%, transparent);
+}
+
+.message-card__payload {
+    min-width: 0;
+    padding: .75rem;
+    border-radius: 6px;
+    background: var(--mud-palette-background-gray);
+}
+
+.message-card__payload ::deep .mud-typography {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+    .message-card-wrapper ::deep .mud-stack-row {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .message-card-wrapper ::deep .mud-card {
+        transition: none;
+    }
 }

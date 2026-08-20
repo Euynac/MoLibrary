@@ -596,7 +596,12 @@
   "Debug": {
     "Subtitle": "查看当前 Microsoft configuration debug 输出。",
     "SearchPlaceholder": "搜索调试视图",
-    "Empty": "调试视图为空。"
+    "Empty": "调试视图为空。",
+    "SensitiveNotice": "默认已隐藏 {0} 个疑似凭据值。仅在屏幕不会被他人观察或录制时显示具体内容。",
+    "RevealSensitive": "显示敏感值",
+    "HideSensitive": "隐藏敏感值",
+    "RevealSensitiveAria": "显示 {0} 的敏感配置值",
+    "HideSensitiveAria": "隐藏 {0} 的敏感配置值"
   },
   "Storage": {
     "Subtitle": "查看当前配置存储组合及其运行状态。",

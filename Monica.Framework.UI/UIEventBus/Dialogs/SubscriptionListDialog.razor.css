@@ -1,0 +1,21 @@
+.subscription-list-dialog__table {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.subscription-list-dialog__table ::deep .mud-table-row {
+    cursor: pointer;
+    transition: background-color 140ms ease;
+}
+
+.subscription-list-dialog__table ::deep .mud-table-row:focus-within {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .subscription-list-dialog__table ::deep .mud-table-row {
+        transition: none;
+    }
+}

@@ -70,13 +70,8 @@ public class ModuleAuthentication : MonicaModule<ModuleAuthenticationOption>, IW
     public override void Describe(ModuleDescriptor module)
     {
         module.AfterIfPresent<ModuleCors, ModuleCorsOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>(localization =>
-        {
-            if (!localization.ResourceMarkerTypes.Contains(typeof(AuthorityResource)))
-            {
-                localization.ResourceMarkerTypes.Add(typeof(AuthorityResource));
-            }
-        });
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static localization => localization.AddResource<AuthorityResource>());
     }
 
     public override void ConfigureServices(ModuleContext<ModuleAuthenticationOption> context)

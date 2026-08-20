@@ -9,7 +9,7 @@ namespace Monica.Core.Modularity.Diagnostics.Models;
 public sealed record ModuleDiagnosticsSnapshot
 {
     /// <summary>Gets the current portable diagnostics schema version.</summary>
-    public const int CURRENT_SCHEMA_VERSION = 3;
+    public const int CURRENT_SCHEMA_VERSION = 4;
 
     /// <summary>Gets the schema version used by this snapshot.</summary>
     public int SchemaVersion { get; init; } = CURRENT_SCHEMA_VERSION;

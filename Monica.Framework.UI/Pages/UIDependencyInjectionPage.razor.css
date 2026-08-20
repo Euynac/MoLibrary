@@ -1,52 +1,84 @@
-.di-page {
+.di-page { min-height: 100%; width: 100%; }
+
+.di-page__container {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    height: 100%;
-    min-height: 0;
-    padding: 1rem 1rem 1.5rem;
-    box-sizing: border-box;
+    gap: 1.25rem;
+    min-height: 100%;
+    min-width: 0;
+    padding-block: 2rem 3rem;
 }
 
-.di-header {
-    flex: 0 0 auto;
+.di-header { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.di-header__eyebrow {
+    align-items: center;
+    color: var(--mud-palette-primary);
+    display: flex;
+    font-size: 0.75rem;
+    font-weight: 800;
+    gap: 0.625rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
 }
+
+.di-header__eyebrow-line { background: var(--mud-palette-primary); height: 2px; width: 1.5rem; }
+.di-header__heading-row { align-items: flex-end; display: flex; gap: 2rem; justify-content: space-between; }
+.di-header__description { margin-top: 0.375rem; max-width: 54rem; }
+.di-header__capture { align-items: center; display: flex; gap: 0.375rem; }
 
 .di-summary-grid {
     display: grid;
     gap: 0.75rem;
-    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-    flex: 0 0 auto;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .di-summary-card {
-    min-height: 5.5rem;
+    --summary-color: var(--mud-palette-primary);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    gap: 0.125rem;
+    min-height: 5rem;
+    padding: 0.875rem 1rem;
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.di-issues-card {
-    flex: 0 0 auto;
+.di-summary-card:hover {
+    border-color: color-mix(in srgb, var(--summary-color) 38%, var(--mud-palette-divider));
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent);
+    transform: translateY(-1px);
 }
 
-.di-grid-shell {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+.di-summary-card span { color: var(--mud-palette-text-secondary); font-size: 0.75rem; font-weight: 700; }
+.di-summary-card strong { color: var(--summary-color); font-size: 1.375rem; font-variant-numeric: tabular-nums; }
+.di-summary-card--primary { --summary-color: var(--mud-palette-primary); }
+.di-summary-card--success { --summary-color: var(--mud-palette-success); }
+.di-summary-card--info { --summary-color: var(--mud-palette-info); }
+.di-summary-card--tertiary { --summary-color: var(--mud-palette-tertiary); }
+.di-summary-card--warning { --summary-color: var(--mud-palette-warning); }
+.di-summary-card--error { --summary-color: var(--mud-palette-error); }
+
+.di-page ::deep .di-issues-card,
+.di-page ::deep .di-grid-shell { border-color: var(--mud-palette-divider); border-radius: 8px; }
+.di-page ::deep .di-issues-card { background: color-mix(in srgb, var(--mud-palette-warning) 3%, var(--mud-palette-surface)); }
+.di-grid-shell { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
+.di-state-shell { align-items: center; display: flex; flex: 1 1 auto; justify-content: center; min-height: 14rem; }
+
+@media (max-width: 1199.98px) {
+    .di-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-.di-state-shell {
-    flex: 1 1 auto;
-    min-height: 14rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+@media (max-width: 599.98px) {
+    .di-page__container { gap: 1rem; padding-block: 1.25rem 1.75rem; }
+    .di-header__heading-row { align-items: flex-start; flex-direction: column; gap: 1rem; }
+    .di-header__heading-row ::deep .mud-button-root { width: 100%; }
+    .di-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 720px) {
-    .di-page {
-        padding: 0.75rem 0.75rem 1.25rem;
-    }
+@media (prefers-reduced-motion: reduce) {
+    .di-summary-card { transition: none; }
+    .di-summary-card:hover { transform: none; }
 }

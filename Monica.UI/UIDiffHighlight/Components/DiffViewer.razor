@@ -4,6 +4,7 @@
 @using MudBlazor
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
+@implements IDisposable
 @inject DiffHighlightFacade DiffHighlightFacade
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> L
@@ -79,11 +80,12 @@
     private EDiffDisplayMode DisplayMode { get; set; } = EDiffDisplayMode.Compare;
 
     private bool _isRefreshing = false;
+    private bool _disposed;
     private string? _lastAutoRefreshKey;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!AutoRefresh)
+        if (!AutoRefresh || _disposed)
         {
             return;
         }
@@ -188,7 +190,7 @@
 
     private async Task RefreshDiffInternalAsync()
     {
-        if (_isRefreshing) return;
+        if (_isRefreshing || _disposed) return;
         _isRefreshing = true;
 
         try
@@ -202,6 +204,10 @@
             ErrorMessage = string.Empty;
 
             var result = await DiffHighlightFacade.HighlightAsync(OriginText, NewText, Options);
+            if (_disposed)
+            {
+                return;
+            }
             
             if (result.IsFailed(out var error, out var data))
             {
@@ -213,15 +219,23 @@
                 DiffResult = data;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!_disposed)
         {
             ErrorMessage = ex.Message;
             Snackbar.Add($"{L["DiffViewer:ComparisonError"]}: {ex.Message}", Severity.Error);
         }
         finally
         {
-            _isRefreshing = false;
+            if (!_disposed)
+            {
+                _isRefreshing = false;
+            }
         }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
     }
 
 }

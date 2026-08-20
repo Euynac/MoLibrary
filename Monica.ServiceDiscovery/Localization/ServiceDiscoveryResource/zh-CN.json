@@ -51,7 +51,20 @@
     "Dialogs": {
       "ServiceDetailTitle": "服务详情 - {0}"
     },
-    "HeaderTitle": "服务发现管理",
+    "Header": {
+      "Description": "在一个运维工作区中检查实时服务健康、拓扑关系、领域边界以及当前宿主身份。",
+      "Eyebrow": "Monica / 实时服务目录",
+      "Live": "实时刷新",
+      "Paused": "刷新已暂停",
+      "Title": "服务发现"
+    },
+    "Metrics": {
+      "AriaLabel": "实时服务发现摘要",
+      "Domains": "业务域",
+      "Instances": "运行实例",
+      "Running": "运行服务",
+      "Services": "发现服务"
+    },
     "Messages": {
       "DomainNotFound": "未找到域: {0}",
       "LoadDomainsFailed": "获取域信息失败: {0}",
@@ -61,6 +74,7 @@
     },
     "PageTitle": "服务发现管理",
     "ServiceList": {
+      "Description": "搜索服务注册表、比较运行状态，并检查每个服务上报的运行证据。",
       "Title": "服务列表（包含预定义服务）"
     },
     "States": {
@@ -209,6 +223,7 @@
         "StatusCount": "{0}: {1} 个"
       }
     },
+    "Description": "检查业务域边界以及跨越边界的服务依赖关系。",
     "Messages": {
       "ClearedFilters": "已清除所有筛选",
       "CopiedDomainName": "已复制域名到剪贴板",
@@ -298,6 +313,7 @@
       "FocusService": "聚焦此服务",
       "ViewServiceDetails": "查看服务详情"
     },
+    "Description": "检查实时注册表中的服务健康状态与运行实例分布。",
     "Graph": {
       "Labels": {
         "AppId": "AppId",
@@ -345,7 +361,7 @@
         "IsolationHandlingMode": "孤立处理模式",
         "LeaderTtl": "Leader TTL",
         "Multiplier": "倍率",
-        "RegistryServer": "注册中心服务器",
+        "HostRole": "主机角色",
         "StateStoreMode": "状态存储模式"
       },
       "Messages": {
@@ -358,9 +374,13 @@
       },
       "Values": {
         "ContinueRunning": "继续运行（降级模式）",
-        "DistributedMode": "分布式 StateStore 模式",
+        "DistributedStorage": "分布式状态存储",
+        "ExternalKeyedStorage": "外部键控状态存储",
         "FastShutdown": "快速下线",
-        "StandaloneMode": "单实例内存模式"
+        "MemoryStorage": "进程内内存状态存储",
+        "RegistryRole": "注册中心控制平面",
+        "StandaloneRole": "独立控制平面与工作节点",
+        "WorkerRole": "工作节点"
       }
     },
     "Dialogs": {

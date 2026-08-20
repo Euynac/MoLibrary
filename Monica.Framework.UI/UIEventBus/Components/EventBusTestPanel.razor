@@ -1,8 +1,7 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.Core.Results;
 @using Monica.Framework.UI.UIEventBus.State
-@using System.Timers
-@implements IDisposable
+@implements IAsyncDisposable
 @inject EventBusTestService TestService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<EventBusResource> L
@@ -114,7 +113,7 @@
 
                     <!-- Subscription status indicator -->
                     <div class="status-indicator-wrapper">
-                        <MudPaper Class="@(_isListening ? "subscribed" : "unsubscribed")" Elevation="0" Style="padding: 0.75rem; border-radius: var(--mud-default-borderradius); border: 1px solid var(--mud-palette-lines-default);">
+                        <MudPaper Class="@(_isListening ? "subscribed" : "unsubscribed")" Elevation="0">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 @if (_isListening)
                                 {
@@ -154,7 +153,7 @@
                         else
                         {
                             <div class="message-list-wrapper">
-                                <MudStack Spacing="2" Style="max-height: 500px; overflow-y: auto;">
+                                <MudStack Spacing="2" Class="message-list">
                                     @foreach (var msg in _messages.OrderByDescending(m => m.ReceivedAt))
                                     {
                                         <div class="message-card-wrapper">
@@ -181,11 +180,11 @@
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                                 @L["TestPanel:Messages:MessageContent"]
                                                             </MudText>
-                                                            <MudPaper Class="pa-2" Elevation="0" Style="background-color: var(--mud-palette-background-gray); border-radius: 4px;">
-                                                                <MudText Typo="Typo.body2" Style="white-space: pre-wrap; word-break: break-word;">
+                                                            <div class="message-card__payload">
+                                                                <MudText Typo="Typo.body2">
                                                                     @msg.EventData.Message
                                                                 </MudText>
-                                                            </MudPaper>
+                                                            </div>
                                                         </MudStack>
 
                                                         <!-- message metadata -->
@@ -249,8 +248,16 @@
     private bool _isPublishing;
     private bool _isListening;
 
-    private Timer? _refreshTimer;
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly SemaphoreSlim _listenerGate = new(1, 1);
+    private readonly object _disposeSync = new();
+    private CancellationTokenSource? _refreshCancellation;
+    private PeriodicTimer? _refreshTimer;
+    private Task? _refreshTask;
+    private Task? _disposeTask;
     private List<ReceivedTestMessage> _messages = new();
+    private bool _ownsSubscription;
+    private bool _disposed;
 
     protected override void OnInitialized()
     {
@@ -260,6 +267,11 @@
 
     private async Task PublishMessageAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_publishMessage))
         {
             Snackbar.Add(L["TestPanel:Validation:MessageRequired"], Severity.Warning);
@@ -271,7 +283,15 @@
 
         try
         {
-            var result = await TestService.PublishTestMessageAsync(_publishMessage, _publishTopicName);
+            var result = await TestService.PublishTestMessageAsync(
+                _publishMessage,
+                _publishTopicName,
+                _lifetimeCancellation.Token);
+
+            if (_disposed)
+            {
+                return;
+            }
 
             if (result.IsFailed(out var error))
             {
@@ -286,75 +306,153 @@
         finally
         {
             _isPublishing = false;
-            StateHasChanged();
+            RenderIfActive();
         }
     }
 
     private async Task StartListeningAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_subscribeTopicName))
         {
             Snackbar.Add(L["TestPanel:Validation:TopicRequired"], Severity.Warning);
             return;
         }
 
-        // Subscribe to topics
-        var subscribeResult = await TestService.SubscribeToTestTopicAsync(_subscribeTopicName);
-
-        if (subscribeResult.IsFailed(out var error, out var subscription))
+        await _listenerGate.WaitAsync();
+        try
         {
-            Snackbar.Add(L["TestPanel:Snackbars:SubscribeFailed", error.Message ?? string.Empty], Severity.Error);
-            return;
+            if (_disposed || _ownsSubscription)
+            {
+                return;
+            }
+
+            var subscribeResult = await TestService.SubscribeToTestTopicAsync(_subscribeTopicName);
+            if (subscribeResult.IsFailed(out var error, out _))
+            {
+                if (!_disposed)
+                {
+                    Snackbar.Add(L["TestPanel:Snackbars:SubscribeFailed", error.Message ?? string.Empty], Severity.Error);
+                }
+
+                return;
+            }
+
+            _ownsSubscription = true;
+            if (_disposed)
+            {
+                return;
+            }
+
+            _isListening = true;
+            Snackbar.Add(L["TestPanel:Snackbars:SubscribeSucceeded"], Severity.Success);
+            StartRefreshLoop();
+            StateHasChanged();
         }
-
-        _isListening = true;
-        Snackbar.Add(L["TestPanel:Snackbars:SubscribeSucceeded"], Severity.Success);
-
-        // Start scheduled refresh
-        StartRefreshTimer();
-
-        StateHasChanged();
+        finally
+        {
+            _listenerGate.Release();
+        }
     }
 
     private async Task StopListeningAsync()
     {
-        StopRefreshTimer();
-
-        var result = await TestService.UnsubscribeFromTestTopicAsync();
-
-        if (result.IsFailed(out var error))
+        if (_disposed)
         {
-            Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeFailed", error.Message ?? string.Empty], Severity.Warning);
-        }
-        else
-        {
-            Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeSucceeded"], Severity.Info);
+            return;
         }
 
-        _isListening = false;
-        StateHasChanged();
-    }
-
-    private void StartRefreshTimer()
-    {
-        _refreshTimer?.Dispose();
-        _refreshTimer = new Timer(500);
-        _refreshTimer.Elapsed += async (sender, e) =>
+        await _listenerGate.WaitAsync();
+        try
         {
-            await InvokeAsync(() =>
+            if (_disposed)
             {
-                RefreshMessages();
-                StateHasChanged();
-            });
-        };
-        _refreshTimer.Start();
+                return;
+            }
+
+            await StopRefreshLoopAsync();
+            var result = _ownsSubscription
+                ? await TestService.UnsubscribeFromTestTopicAsync()
+                : Res.Ok();
+            _ownsSubscription = false;
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeFailed", error.Message ?? string.Empty], Severity.Warning);
+            }
+            else
+            {
+                Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeSucceeded"], Severity.Info);
+            }
+
+            _isListening = false;
+            StateHasChanged();
+        }
+        finally
+        {
+            _listenerGate.Release();
+        }
     }
 
-    private void StopRefreshTimer()
+    private void StartRefreshLoop()
     {
-        _refreshTimer?.Stop();
-        _refreshTimer?.Dispose();
+        _refreshCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+        _refreshTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        _refreshTask = RefreshLoopAsync(_refreshTimer, _refreshCancellation.Token);
+    }
+
+    private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(() =>
+                {
+                    if (_disposed || cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    RefreshMessages();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The component owns the refresh loop and cancels it during stop or disposal.
+        }
+    }
+
+    private async Task StopRefreshLoopAsync()
+    {
+        var refreshCancellation = _refreshCancellation;
+        var refreshTimer = _refreshTimer;
+        var refreshTask = _refreshTask;
+
+        _refreshCancellation = null;
         _refreshTimer = null;
+        _refreshTask = null;
+
+        refreshCancellation?.Cancel();
+        refreshTimer?.Dispose();
+
+        if (refreshTask is not null)
+        {
+            await refreshTask;
+        }
+
+        refreshCancellation?.Dispose();
     }
 
     private void RefreshMessages()
@@ -364,20 +462,53 @@
 
     private void ClearMessages()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         TestService.ClearReceivedMessages();
         _messages.Clear();
         Snackbar.Add(L["TestPanel:Snackbars:ClearSucceeded"], Severity.Info);
         StateHasChanged();
     }
 
-    public void Dispose()
+    private void RenderIfActive()
     {
-        StopRefreshTimer();
-
-        // If still listening, automatically unsubscribe
-        if (_isListening)
+        if (!_disposed)
         {
-            _ = TestService.UnsubscribeFromTestTopicAsync();
+            StateHasChanged();
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeSync)
+        {
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        _disposed = true;
+        _lifetimeCancellation.Cancel();
+
+        await _listenerGate.WaitAsync();
+        try
+        {
+            await StopRefreshLoopAsync();
+            if (_ownsSubscription)
+            {
+                await TestService.UnsubscribeFromTestTopicAsync();
+                _ownsSubscription = false;
+            }
+        }
+        finally
+        {
+            _listenerGate.Release();
+            _lifetimeCancellation.Dispose();
+            _listenerGate.Dispose();
         }
     }
 }

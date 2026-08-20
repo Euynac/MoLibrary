@@ -19,20 +19,7 @@ public static class ModuleDependencyInjectionUIBuilderExtensions
         public ModuleRegistration<ModuleDependencyInjectionUI, ModuleDependencyInjectionUIOption> AddDependencyInjectionUI(
             Action<ModuleDependencyInjectionUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleDependencyInjectionUI, ModuleDependencyInjectionUIOption>(action);
-            registration.Require<ModuleDependencyInjection, ModuleDependencyInjectionOption>()
-                .EnableAutoRegistrationDiagnostics();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<DependencyInjectionResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIDependencyInjectionPage, DependencyInjectionResource>(
-                    UIDependencyInjectionPage.PAGE_URL,
-                    "Pages:DependencyInjection:Title",
-                    Icons.Material.Filled.AccountTree,
-                    BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
-                    navOrder: 10));
-            return registration;
+            return builder.AddModule<ModuleDependencyInjectionUI, ModuleDependencyInjectionUIOption>(action);
         }
     }
 }
@@ -42,6 +29,23 @@ public static class ModuleDependencyInjectionUIBuilderExtensions
 /// </summary>
 public class ModuleDependencyInjectionUI : MonicaModule<ModuleDependencyInjectionUIOption>, IUIModule
 {
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleDependencyInjection, ModuleDependencyInjectionOption>(
+            static option => option.EnableAutoRegistrationDiagnostics = true);
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<DependencyInjectionResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIDependencyInjectionPage, DependencyInjectionResource>(
+                    UIDependencyInjectionPage.PAGE_URL,
+                    "Pages:DependencyInjection:Title",
+                    Icons.Material.Filled.AccountTree,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 10)));
+    }
+
     public override void ConfigureServices(ModuleContext<ModuleDependencyInjectionUIOption> context)
     {
         // UI components inject the infrastructure facade directly.

@@ -28,20 +28,7 @@ public static class ModuleSeederUIBuilderExtensions
         public ModuleRegistration<ModuleSeederUI, ModuleSeederUIOption> AddSeederUI(
             Action<ModuleSeederUIOption>? configure = null)
         {
-            var registration = builder.AddModule<ModuleSeederUI, ModuleSeederUIOption>(configure);
-            registration.Require<ModuleSeeder, ModuleSeederOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<SeederResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UISeederPage, SeederResource>(
-                    UISeederPage.PAGE_URL,
-                    "Navigation:Title",
-                    Icons.Material.Filled.PlaylistAddCheckCircle,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 15,
-                    accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSeederUIOption>)));
-            return registration;
+            return builder.AddModule<ModuleSeederUI, ModuleSeederUIOption>(configure);
         }
     }
 }
@@ -55,8 +42,18 @@ public sealed class ModuleSeederUI : MonicaModule<ModuleSeederUIOption>, IUIModu
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleSeeder, ModuleSeederOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<SeederResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UISeederPage, SeederResource>(
+                    UISeederPage.PAGE_URL,
+                    "Navigation:Title",
+                    Icons.Material.Filled.PlaylistAddCheckCircle,
+                    BuiltInNavigationCategoryIds.Monitor,
+                    addToNav: true,
+                    navOrder: 15,
+                    accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleSeederUIOption>))));
     }
 
     /// <inheritdoc />

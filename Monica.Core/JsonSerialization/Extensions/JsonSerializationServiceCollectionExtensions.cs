@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.JsonSerialization.Abstractions;
+using Monica.Core.JsonSerialization.Services;
 
 namespace Monica.Core.JsonSerialization.Extensions;
 
@@ -20,14 +20,14 @@ public static class JsonSerializationServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         var descriptor = services.LastOrDefault(static descriptor =>
-            descriptor.ServiceType == typeof(IJsonSerializerOptionsProvider));
+            descriptor.ServiceType == typeof(JsonWireContractPlan));
 
-        if (descriptor?.ImplementationInstance is IJsonSerializerOptionsProvider provider)
+        if (descriptor?.ImplementationInstance is JsonWireContractPlan plan)
         {
-            return provider.SerializerOptions;
+            return plan.GetCanonicalOptions();
         }
 
         throw new InvalidOperationException(
-            "Monica JSON serializer options are unavailable. Declare a dependency on ModuleJsonSerialization before reading them during module registration.");
+            "Monica JSON contract is unavailable. Declare a dependency on ModuleJsonSerialization before reading it during module registration.");
     }
 }

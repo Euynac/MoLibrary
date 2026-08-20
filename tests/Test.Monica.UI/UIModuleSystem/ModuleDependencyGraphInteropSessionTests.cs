@@ -1,6 +1,8 @@
+using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Monica.UI.UIModuleSystem.Components;
 using Monica.UI.UIModuleSystem.Support;
 using Xunit;
 
@@ -8,6 +10,48 @@ namespace Test.Monica.UI.UIModuleSystem;
 
 public sealed class ModuleDependencyGraphInteropSessionTests
 {
+    [Fact]
+    public async Task Component_disposal_during_retry_waits_for_browser_cleanup_before_releasing_callback()
+    {
+        var cleanupStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanupRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handle = new ControlledJsReference(async (identifier, _) =>
+        {
+            identifier.Should().Be("dispose");
+            cleanupStarted.TrySetResult();
+            await cleanupRelease.Task;
+            return null;
+        });
+        var module = CreateModule(handle);
+        var runtime = new ControlledJsRuntime(() => ValueTask.FromResult<IJSObjectReference>(module));
+        var session = new ModuleDependencyGraphInteropSession(runtime);
+        await session.RenderAsync(default, new { }, "retry-overlap", new object());
+
+        var canvas = new ModuleDependencyGraphCanvas();
+        var callbackReference = DotNetObjectReference.Create(canvas);
+        SetField(canvas, "_interop", session);
+        SetField(canvas, "_callbackReference", callbackReference);
+
+        var retry = InvokeRetryAsync(canvas);
+        await cleanupStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        var disposal = canvas.DisposeAsync().AsTask();
+        await Task.Yield();
+
+        disposal.IsCompleted.Should().BeFalse();
+        callbackReference.Value.Should().BeSameAs(canvas);
+
+        cleanupRelease.SetResult();
+        await Task.WhenAll(retry, disposal);
+
+        Action readReleasedCallback = () => _ = callbackReference.Value;
+        readReleasedCallback.Should().Throw<ObjectDisposedException>();
+        handle.InvocationIdentifiers.Should().ContainSingle().Which.Should().Be("dispose");
+        handle.DisposeCalls.Should().Be(1);
+
+        Func<Task> disposeAgain = async () => await canvas.DisposeAsync();
+        await disposeAgain.Should().NotThrowAsync();
+    }
+
     [Fact]
     public async Task Two_graph_sessions_own_distinct_handles_and_cleanup_only_their_own_instance()
     {
@@ -212,6 +256,24 @@ public sealed class ModuleDependencyGraphInteropSessionTests
             return ValueTask.FromResult<object?>(handle);
         },
         dispose);
+
+    private static Task InvokeRetryAsync(ModuleDependencyGraphCanvas canvas)
+    {
+        var retry = typeof(ModuleDependencyGraphCanvas).GetMethod(
+            "RetryAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("RetryAsync was not found.");
+
+        return (Task)(retry.Invoke(canvas, null)
+            ?? throw new InvalidOperationException("RetryAsync returned no task."));
+    }
+
+    private static void SetField(object target, string fieldName, object value)
+    {
+        var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"{fieldName} was not found.");
+        field.SetValue(target, value);
+    }
 }
 
 internal sealed class ControlledJsRuntime(

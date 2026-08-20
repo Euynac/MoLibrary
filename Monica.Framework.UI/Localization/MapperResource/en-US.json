@@ -3,5 +3,51 @@
     "MapperDebug": {
       "Title": "Mapper Debug"
     }
+  },
+  "Page": {
+    "PageTitle": "Mapper Registry",
+    "Header": {
+      "Eyebrow": "Monica / Transformation registry",
+      "Title": "Mapper registry",
+      "Description": "Inspect the registered source-to-destination transformations and review their compiled mapping expressions."
+    },
+    "Actions": {
+      "Close": "Close",
+      "InspectExpression": "Inspect expression",
+      "Loading": "Loading...",
+      "Refresh": "Refresh registry"
+    },
+    "Summary": {
+      "AriaLabel": "Mapper registry summary",
+      "Ready": "Registry ready",
+      "RegisteredMappings": "Registered mappings",
+      "Scanning": "Scanning registry"
+    },
+    "Registry": {
+      "Title": "Transformation ledger",
+      "Description": "Each row is a registered conversion path available to the object mapper.",
+      "Count": "{0} mappings",
+      "Columns": {
+        "Actions": "Actions",
+        "DestinationType": "Destination type",
+        "SourceType": "Source type"
+      }
+    },
+    "States": {
+      "EmptyDescription": "No source-to-destination expressions are registered in the current host.",
+      "EmptyTitle": "No mappings registered",
+      "Loading": "Reading mapper registrations..."
+    },
+    "Dialog": {
+      "DestinationType": "Destination type",
+      "NoExpression": "No mapping expression is available for this registration.",
+      "SourceType": "Source type",
+      "Title": "Mapping expression"
+    },
+    "Messages": {
+      "LoadException": "An error occurred while loading mapper data: {0}",
+      "LoadFailed": "Failed to load mapper data: {0}",
+      "LoadSucceeded": "Loaded {0} mapping registrations."
+    }
   }
 }

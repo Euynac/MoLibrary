@@ -11,12 +11,12 @@
     <DialogContent>
         @if (Subscriptions != null && Subscriptions.Any())
         {
+            <div class="subscription-list-dialog__table">
             <MudTable T="SubscriptionViewModel"
                      Items="@Subscriptions"
                      Dense="true"
                      Hover="true"
-                     OnRowClick="HandleSubscriptionRowClickAsync"
-                     Style="cursor: pointer;">
+                     OnRowClick="HandleSubscriptionRowClickAsync">
                 <HeaderContent>
                     <MudTh>@L["SubscriptionTable:Columns:EventType"]</MudTh>
                     <MudTh>@L["SubscriptionTable:Columns:TopicName"]</MudTh>
@@ -48,6 +48,7 @@
                     </MudTd>
                 </RowTemplate>
             </MudTable>
+            </div>
         }
         else
         {

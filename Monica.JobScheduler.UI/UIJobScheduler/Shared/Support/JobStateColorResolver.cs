@@ -1,5 +1,4 @@
 using Monica.JobScheduler.Models;
-using Monica.UI.Shell.State;
 using MudBlazor;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
@@ -8,7 +7,7 @@ namespace Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 /// Job status color service
 /// Provides a unified mapping of job status to MudBlazor colors
 /// </summary>
-public class JobStateColorResolver(IThemeState themeService)
+public class JobStateColorResolver
 {
     /// <summary>
     /// Get the MudBlazor color corresponding to the job status
@@ -32,14 +31,22 @@ public class JobStateColorResolver(IThemeState themeService)
     }
 
     /// <summary>
-    /// Get the hexadecimal color value corresponding to the job status
-    /// Returns the corresponding color based on the current theme and light and dark mode
+    /// Gets the theme token corresponding to the job status for CSS-backed visualizations.
     /// </summary>
     /// <param name="state">Job status</param>
-    /// <returns>Hex color value</returns>
-    public string GetStateColorHex(JobState state)
+    /// <returns>A MudBlazor palette custom property.</returns>
+    public static string GetStateColorToken(JobState state)
     {
-        if(state == JobState.Skipped) return Colors.Gray.Lighten1;
-        return themeService.GetColorHex(GetStateColor(state));
+        return state switch
+        {
+            JobState.Succeeded => "var(--mud-palette-success)",
+            JobState.Failed or JobState.Terminated => "var(--mud-palette-error)",
+            JobState.Cancelled => "var(--mud-palette-warning)",
+            JobState.Processing => "var(--mud-palette-primary)",
+            JobState.Enqueued => "var(--mud-palette-info)",
+            JobState.Scheduled => "var(--mud-palette-secondary)",
+            JobState.Skipped => "var(--mud-palette-text-disabled)",
+            _ => "var(--mud-palette-text-secondary)"
+        };
     }
 }

@@ -1,0 +1,110 @@
+.gc-statistics-layout {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.gc-statistics-panel {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.gc-statistics-panel:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-info) 22%, var(--mud-palette-lines-default));
+    box-shadow: var(--mud-elevation-2);
+}
+
+.gc-statistics-panel__header {
+    margin-bottom: 14px;
+}
+
+.gc-statistics-eyebrow {
+    color: var(--mud-palette-text-secondary);
+    letter-spacing: 0.08em;
+}
+
+.gc-definition-list {
+    margin: 0;
+}
+
+.gc-definition-list > div {
+    min-width: 0;
+    padding: 10px 0;
+    display: grid;
+    grid-template-columns: minmax(140px, 0.7fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.gc-definition-list > div:last-child {
+    border-bottom: 0;
+}
+
+.gc-definition-list dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.82rem;
+}
+
+.gc-definition-list dd {
+    min-width: 0;
+    margin: 0;
+    text-align: end;
+    overflow-wrap: anywhere;
+}
+
+.gc-chip-row,
+.gc-progress-value {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.gc-progress-value ::deep .mud-progress-linear {
+    flex: 1 1 160px;
+}
+
+.diagnostic-value {
+    font-family: var(--mo-font-family-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.gc-table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.gc-table-scroll ::deep .mud-table-root {
+    min-width: 540px;
+}
+
+@media (max-width: 900px) {
+    .gc-statistics-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .gc-statistics-panel {
+        padding: 14px;
+    }
+
+    .gc-definition-list > div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 4px;
+    }
+
+    .gc-definition-list dd,
+    .gc-chip-row,
+    .gc-progress-value {
+        justify-content: flex-start;
+        text-align: start;
+    }
+}

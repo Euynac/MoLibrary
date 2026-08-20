@@ -4,6 +4,10 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Monica.Configuration.Abstractions;
+using Monica.Configuration.Annotations;
+using Monica.Configuration.Models;
 using Monica.Core;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.Results;
@@ -111,6 +115,91 @@ public sealed class ProjectUnitCatalogTests
     }
 
     [Fact]
+    public void Description_ShouldPreserveSourcesAndApplyMetadataConfigurationXmlPrecedence()
+    {
+        var documentation = Substitute.For<IXmlDocumentationService>();
+        documentation.GetTypeDocumentation(typeof(AllDescriptionSourcesOptions)).Returns("XML all.");
+        documentation.GetTypeDocumentation(typeof(ConfigurationDescriptionOptions)).Returns("XML configuration.");
+        documentation.GetTypeDocumentation(typeof(XmlDescriptionOptions)).Returns("XML only.");
+
+        var catalog = CreateCatalog(
+            documentation,
+            typeof(AllDescriptionSourcesOptions),
+            typeof(ConfigurationDescriptionOptions),
+            typeof(XmlDescriptionOptions));
+
+        var all = catalog.FindByFullName<UnitConfiguration>(typeof(AllDescriptionSourcesOptions).FullName)!;
+        all.MetadataDescription.Should().Be("Metadata wins.");
+        all.ConfigurationDescription.Should().Be("Configuration fallback.");
+        all.XmlDocumentationDescription.Should().Be("XML all.");
+        all.Description.Should().Be("Metadata wins.");
+
+        var configuration = catalog.FindByFullName<UnitConfiguration>(typeof(ConfigurationDescriptionOptions).FullName)!;
+        configuration.MetadataDescription.Should().BeNull();
+        configuration.ConfigurationDescription.Should().Be("Configuration wins.");
+        configuration.XmlDocumentationDescription.Should().Be("XML configuration.");
+        configuration.Description.Should().Be("Configuration wins.");
+
+        var xml = catalog.FindByFullName<UnitConfiguration>(typeof(XmlDescriptionOptions).FullName)!;
+        xml.MetadataDescription.Should().BeNull();
+        xml.ConfigurationDescription.Should().BeNull();
+        xml.XmlDocumentationDescription.Should().Be("XML only.");
+        xml.Description.Should().Be("XML only.");
+    }
+
+    [Fact]
+    public void CreateCompleted_ShouldEnrichConfigurationReloadBehaviorAfterConnectionsExist()
+    {
+        const string definitionKey = "Test.ReloadableOptions";
+        var definition = CreateDefinition(definitionKey);
+        var registry = Substitute.For<IConfigurationDefinitionRegistry>();
+        registry.TryGet(definitionKey, out Arg.Any<ConfigurationDefinition?>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = definition;
+                return true;
+            });
+        var options = new ModuleProjectUnitsOption();
+
+        _ = ProjectUnitCatalog.CreateCompleted(
+            options,
+            options.ConventionOptions,
+            NullLogger<ProjectUnitCatalog>.Instance,
+            new[]
+            {
+                CreateShape(typeof(ReloadableOptions)),
+                CreateShape(typeof(ReloadableOptionsConsumer))
+            },
+            documentationService: null,
+            registry);
+
+        registry.Received(1).Register(Arg.Is<ConfigurationDefinition>(registered =>
+            registered.DefinitionKey == definitionKey
+            && registered.ReloadBehavior == ConfigurationReloadBehavior.OnlineReloadable
+            && registered.ReloadBehaviorObservationKind == ConfigurationReloadBehaviorObservationKind.Inferred));
+    }
+
+    [Fact]
+    public void DiscoveryPlan_ShouldPublishExactlyOnceAndRejectPartialReads()
+    {
+        var plan = new ProjectUnitDiscoveryPlan();
+
+        Action readBeforePublish = () => _ = plan.GetRequiredSnapshot();
+        readBeforePublish.Should().Throw<InvalidOperationException>()
+            .WithMessage("*discovery has not completed*");
+
+        plan.Publish([CreateShape(typeof(AnnotatedRequest))]);
+        plan.GetRequiredSnapshot().Should().ContainSingle(shape =>
+            shape.Type == typeof(AnnotatedRequest));
+
+        Action publishAgain = () => plan.Publish([CreateShape(typeof(ResolverRequest))]);
+        publishAgain.Should().Throw<InvalidOperationException>()
+            .WithMessage("*published more than once*");
+        plan.GetRequiredSnapshot().Should().ContainSingle(shape =>
+            shape.Type == typeof(AnnotatedRequest));
+    }
+
+    [Fact]
     public void Empty_catalog_reports_no_data_instead_of_full_coverage()
     {
         var service = CreateService(CreateCatalog());
@@ -203,14 +292,13 @@ public sealed class ProjectUnitCatalogTests
         params Type[] types)
     {
         var options = new ModuleProjectUnitsOption();
-        var catalog = new ProjectUnitCatalog(
+        return ProjectUnitCatalog.CreateCompleted(
             options,
             options.ConventionOptions,
-            NullLogger<ProjectUnitCatalog>.Instance);
-        catalog.SetDocumentationService(documentation);
-        catalog.Discover(types.Select(CreateShape));
-        catalog.ConnectUnits();
-        return catalog;
+            NullLogger<ProjectUnitCatalog>.Instance,
+            types.Select(CreateShape),
+            documentation,
+            configurationDefinitionRegistry: null);
     }
 
     private static BusinessTypeShape CreateShape(Type type)
@@ -250,6 +338,28 @@ public sealed class ProjectUnitCatalogTests
             serializerOptions,
             catalog,
             projections);
+    }
+
+    private static ConfigurationDefinition CreateDefinition(string definitionKey)
+    {
+        return new ConfigurationDefinition
+        {
+            DefinitionKey = definitionKey,
+            SectionPath = "Test:Reloadable",
+            DisplayName = "Reloadable options",
+            ClrTypeName = typeof(ReloadableOptions).AssemblyQualifiedName!,
+            FromProject = "Test.Monica.ProjectUnits",
+            SchemaHash = "test",
+            Root = new ConfigurationNodeDefinition
+            {
+                NodeKey = string.Empty,
+                Name = nameof(ReloadableOptions),
+                RelativePath = LogicalPath.Root,
+                ConfigurationPath = "Test:Reloadable",
+                ClrTypeName = typeof(ReloadableOptions).AssemblyQualifiedName!,
+                NodeKind = ConfigurationNodeKind.Object
+            }
+        };
     }
 
     [ProjectUnitMetadata("  Approve Order  ",
@@ -307,6 +417,24 @@ public sealed class ProjectUnitCatalogTests
         public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    [Configuration(Description = "Configuration fallback.")]
+    [ProjectUnitMetadata("All description sources", Description = "Metadata wins.")]
+    public sealed class AllDescriptionSourcesOptions;
+
+    [Configuration(Description = "Configuration wins.")]
+    public sealed class ConfigurationDescriptionOptions;
+
+    [Configuration]
+    public sealed class XmlDescriptionOptions;
+
+    [Configuration(DefinitionKey = "Test.ReloadableOptions")]
+    public sealed class ReloadableOptions;
+
+    public sealed class ReloadableOptionsConsumer(IOptionsMonitor<ReloadableOptions> options) : DomainService
+    {
+        public IOptionsMonitor<ReloadableOptions> Options { get; } = options;
     }
 
     private sealed class TestRequirementLinkResolver(

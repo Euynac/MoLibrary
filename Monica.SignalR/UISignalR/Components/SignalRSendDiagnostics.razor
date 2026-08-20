@@ -1,9 +1,9 @@
 @using Monica.SignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<MudPaper Class="pa-4 mb-4" Elevation="2">
-    <div class="d-flex justify-space-between align-center mb-3">
-        <MudText Typo="Typo.h5">@L["UISignalR:SendDiagnostics:Title"]</MudText>
+<MudPaper Class="signalr-send-diagnostics" Elevation="0">
+    <div class="signalr-component-header">
+        <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.MonitorHeart" Color="Color.Success" /><MudText Typo="Typo.h6">@L["UISignalR:SendDiagnostics:Title"]</MudText></div>
         <MudButton OnClick="OnRefreshClicked"
                    StartIcon="@Icons.Material.Filled.Refresh"
                    Color="Color.Primary"

@@ -29,6 +29,29 @@ namespace Test.Monica.UI.UIModuleSystem;
 
 public sealed class ModuleSystemWorkbenchComponentTests
 {
+    [Theory]
+    [InlineData("en-US", "Declare service contracts")]
+    [InlineData("zh-CN", "声明服务契约")]
+    public void DeclareContracts_phase_uses_the_real_bilingual_resource(
+        string cultureName,
+        string expectedLabel)
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(static options => options.ExcludeDefault());
+            monica.AddLocalization().AddResource<ModuleSystemResource>();
+        });
+        using var localizationHost = builder.Build();
+        var localizer = localizationHost.Services
+            .GetRequiredService<IStringLocalizer<ModuleSystemResource>>();
+        using var culture = new CultureScope(cultureName);
+
+        ModuleDiagnosticsDisplay.Phase(ModulePhase.DeclareContracts, localizer)
+            .Should().Be(expectedLabel);
+    }
+
     [Fact]
     public async Task Unauthorized_page_never_invokes_the_diagnostics_boundary()
     {

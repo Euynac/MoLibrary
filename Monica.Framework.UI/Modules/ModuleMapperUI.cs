@@ -19,19 +19,7 @@ public static class ModuleMapperUIBuilderExtensions
         public ModuleRegistration<ModuleMapperUI, ModuleMapperUIOption> AddMapperUI(
             Action<ModuleMapperUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleMapperUI, ModuleMapperUIOption>(action);
-            registration.Require<ModuleObjectMapping, ModuleObjectMappingOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<MapperResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>(option => option.EnableMarkdown = true)
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIMapperDebugPage, MapperResource>(
-                    UIMapperDebugPage.PAGE_URL,
-                    "Pages:MapperDebug:Title",
-                    Icons.Material.Filled.Code,
-                    BuiltInNavigationCategoryIds.Debug,
-                    addToNav: true,
-                    navOrder: 10));
-            return registration;
+            return builder.AddModule<ModuleMapperUI, ModuleMapperUIOption>(action);
         }
     }
 }
@@ -41,6 +29,24 @@ public static class ModuleMapperUIBuilderExtensions
 /// </summary>
 public class ModuleMapperUI : MonicaModule<ModuleMapperUIOption>, IUIModule
 {
+    public override void Describe(ModuleDescriptor module)
+    {
+        module.Require<ModuleObjectMapping, ModuleObjectMappingOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<MapperResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+        {
+            option.EnableMarkdown = true;
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIMapperDebugPage, MapperResource>(
+                    UIMapperDebugPage.PAGE_URL,
+                    "Pages:MapperDebug:Title",
+                    Icons.Material.Filled.Code,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 10));
+        });
+    }
 }
 
 /// <summary>

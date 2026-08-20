@@ -243,5 +243,25 @@
     "Labels": {
       "Empty": "(空)"
     }
+  },
+  "Service": {
+    "Labels": { "DefaultProvider": "默认" },
+    "Errors": {
+      "ProviderList": "加载已注册 Provider 失败",
+      "ProviderNotFound": "未找到 Provider：{0}",
+      "ProviderLoad": "加载 Provider 失败",
+      "KeySearch": "搜索 Key 失败",
+      "KeyNotFound": "未找到 Key：{0}",
+      "KeyLoad": "加载 Key 失败",
+      "KeyCheck": "检查 Key 失败",
+      "ETagMismatch": "ETag 已不匹配，该 Key 已被其他进程修改。",
+      "KeySave": "保存 Key 失败",
+      "KeyExists": "该 Key 已存在，请使用其他名称或编辑现有 Key。",
+      "KeyCreate": "创建 Key 失败",
+      "KeyDelete": "删除 Key 失败",
+      "KeysDelete": "删除所选 Key 失败",
+      "OperationDetail": "{0}：{1}"
+    },
+    "Success": { "KeySaved": "Key 保存成功", "KeyDeleted": "Key 删除成功", "KeysDeleted": "已删除 {0} 个 Key" }
   }
 }

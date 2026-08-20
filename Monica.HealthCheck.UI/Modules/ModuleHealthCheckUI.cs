@@ -28,22 +28,7 @@ public static class ModuleHealthCheckUIBuilderExtensions
         public ModuleRegistration<ModuleHealthCheckUI, ModuleHealthCheckUIOption> AddHealthCheckUI(
             Action<ModuleHealthCheckUIOption>? action = null)
         {
-            var registration = builder.AddModule<ModuleHealthCheckUI, ModuleHealthCheckUIOption>(action);
-            registration.Require<ModuleHealthCheck, ModuleHealthCheckOption>();
-            registration.Require<ModuleLocalization, ModuleLocalizationOption>()
-                .AddResource<HealthCheckResource>();
-            registration.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<
-                    UIHealthCheckPage,
-                    HealthCheckResource>(
-                    UIHealthCheckPage.PAGE_URL,
-                    "Navigation:Title",
-                    Icons.Material.Filled.MonitorHeart,
-                    BuiltInNavigationCategoryIds.Monitor,
-                    addToNav: true,
-                    navOrder: 10,
-                    accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleHealthCheckUIOption>)));
-            return registration;
+            return builder.AddModule<ModuleHealthCheckUI, ModuleHealthCheckUIOption>(action);
         }
     }
 }
@@ -57,8 +42,19 @@ public sealed class ModuleHealthCheckUI : MonicaModule<ModuleHealthCheckUIOption
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleHealthCheck, ModuleHealthCheckOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<HealthCheckResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry => registry.RegisterLocalizedPage<
+                UIHealthCheckPage,
+                HealthCheckResource>(
+                UIHealthCheckPage.PAGE_URL,
+                "Navigation:Title",
+                Icons.Material.Filled.MonitorHeart,
+                BuiltInNavigationCategoryIds.Monitor,
+                addToNav: true,
+                navOrder: 10,
+                accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleHealthCheckUIOption>))));
     }
 
     /// <inheritdoc />

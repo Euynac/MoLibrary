@@ -36,7 +36,7 @@
 
 .configuration-definition-list-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.6fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: flex-start;
     gap: 0.5rem;
     min-width: 0;

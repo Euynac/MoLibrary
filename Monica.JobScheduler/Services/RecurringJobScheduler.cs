@@ -81,6 +81,12 @@ public class RecurringJobScheduler(
             return;
         }
 
+        if (_options.RecurringJobDebugMode)
+        {
+            logger.LogDebug("Ignored JobDefinitionsChangedEvent because recurring-job debug mode is enabled.");
+            return;
+        }
+
         await _scheduleLock.WaitAsync(cancellationToken);
         try
         {
@@ -412,9 +418,6 @@ public class RecurringJobScheduler(
         }
         _inFlightRecurringSchedules.Clear();
         _longIntervalSchedules.Clear();
-
-        // Dispose lock
-        _scheduleLock.Dispose();
 
         logger.LogInformation("RecurringJobScheduler stopped");
 

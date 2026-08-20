@@ -1,0 +1,37 @@
+<header class="configuration-page-header">
+    <div class="configuration-page-identity">
+        <span class="configuration-page-icon" aria-hidden="true">
+            <MudIcon Icon="@Icon" Size="Size.Medium" />
+        </span>
+        <div class="configuration-page-copy">
+            <div class="configuration-page-title-row">
+                <MudText Typo="Typo.h4">@Title</MudText>
+                @TitleAccessory
+            </div>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@Subtitle</MudText>
+        </div>
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="configuration-page-actions">
+            @Actions
+        </div>
+    }
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Subtitle { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? TitleAccessory { get; set; }
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+}

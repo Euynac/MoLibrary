@@ -8,7 +8,16 @@
     "PageTitle": "事件总线监控",
     "Header": {
       "Title": "事件总线监控",
+      "Eyebrow": "Monica / 事件流转",
+      "Description": "观察宿主事件总线中的订阅、提供程序、拓扑变更和运行时测试监听器。",
       "Refresh": "刷新"
+    },
+    "Summary": {
+      "AriaLabel": "事件总线运行摘要",
+      "Subscriptions": "订阅",
+      "Active": "活动路由",
+      "Providers": "提供程序",
+      "RecentChanges": "近期变更"
     },
     "Tabs": {
       "Overview": "总览",
@@ -94,19 +103,11 @@
     }
   },
   "Statistics": {
-    "Cards": {
-      "TotalSubscriptions": "订阅总数",
-      "ActiveRate": "活跃率：{0}",
-      "ActiveSubscriptions": "活跃订阅",
-      "PendingInactive": "待激活：{0} | 未激活：{1}",
-      "LocalSubscriptions": "本地订阅",
-      "DistributedCount": "分布式：{0}",
-      "AutoDiscovered": "自动发现",
-      "AutoDiscoveredRate": "自动发现率：{0}"
-    },
     "Sections": {
-      "TopEventTypes": "Top 事件类型",
-      "TopTopics": "Top 主题"
+      "TopEventTypes": "热门事件类型",
+      "TopEventTypesDescription": "订阅覆盖范围最广的事件路由。",
+      "TopTopics": "热门主题",
+      "TopTopicsDescription": "承载最多已注册处理器的通信频道。"
     },
     "States": {
       "Empty": "暂无数据",

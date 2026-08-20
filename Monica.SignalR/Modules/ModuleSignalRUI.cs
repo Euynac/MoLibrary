@@ -27,17 +27,7 @@ public static class ModuleSignalRUIBuilderExtensions
         /// <returns>The host-bound SignalR UI module registration.</returns>
         public ModuleRegistration<ModuleSignalRUI, ModuleSignalRUIOption> AddSignalRUI(Action<ModuleSignalRUIOption>? action = null)
         {
-            var module = builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption>(action);
-            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<SignalRResource>();
-            module.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UISignalRDebugPage, SignalRResource>(
-                    UISignalRDebugPage.PAGE_URL,
-                    "Pages:SignalRDebug:Title",
-                    Icons.Material.Filled.Settings,
-                    BuiltInNavigationCategoryIds.Debug,
-                    addToNav: true,
-                    navOrder: 20));
-            return module;
+            return builder.AddModule<ModuleSignalRUI, ModuleSignalRUIOption>(action);
         }
     }
 }
@@ -50,16 +40,24 @@ public class ModuleSignalRUI : MonicaModule<ModuleSignalRUIOption>, IUIModule
     public override void ConfigureServices(ModuleContext<ModuleSignalRUIOption> context)
     {
         var services = context.Services;
-        services.AddScoped<SignalRDebugPageState>();
-        services.AddScoped<SignalRDebugJsClient>();
+        services.AddScoped<SignalRDebugPageStateFactory>();
         services.AddScoped<SignalRInvocationArgumentParser>();
     }
 
     public override void Describe(ModuleDescriptor module)
     {
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
         module.Require<ModuleSignalR, ModuleSignalROption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<SignalRResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UISignalRDebugPage, SignalRResource>(
+                    UISignalRDebugPage.PAGE_URL,
+                    "Pages:SignalRDebug:Title",
+                    Icons.Material.Filled.Settings,
+                    BuiltInNavigationCategoryIds.Debug,
+                    addToNav: true,
+                    navOrder: 20)));
     }
 }
 

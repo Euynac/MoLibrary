@@ -47,17 +47,17 @@ public class JobSchedulerHostedService(
     protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
         RecordState(
-            $"Waiting for {nameof(JobRegistrationHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}'",
+            $"Waiting for {nameof(JobDefinitionControlPlaneHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}'",
             HostedServiceState.WaitingDependency,
             logLevel: LogLevel.Information);
 
-        await hostedServiceCheckpointCoordinator.WaitForCheckpointAsync<JobRegistrationHostedService>(
+        await hostedServiceCheckpointCoordinator.WaitForCheckpointAsync<JobDefinitionControlPlaneHostedService>(
             JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady,
             LeaderService.LeaderBecomeTime,
             cancellationToken);
 
         RecordState(
-            $"{nameof(JobRegistrationHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}' reached, continuing scheduler initialization",
+            $"{nameof(JobDefinitionControlPlaneHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}' reached, continuing scheduler initialization",
             HostedServiceState.Executing,
             logLevel: LogLevel.Information);
 
@@ -70,6 +70,10 @@ public class JobSchedulerHostedService(
         _definitionsChangedSubscription = await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
             recurringJobScheduler.OnJobDefinitionsChangedAsync,
             JobEventTopicHelper.GetTopicName<JobDefinitionsChangedEvent>(_options.SchedulerScopeKey));
+
+        hostedServiceCheckpointCoordinator.SignalCheckpoint(
+            this,
+            JobSchedulerHostedServiceCheckpoints.SchedulerReady);
         RecordState("Subscribed to JobDefinitionsChangedEvent", logLevel: LogLevel.Debug);
     }
 

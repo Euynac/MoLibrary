@@ -1,7 +1,53 @@
 {
   "Pages": {
     "MapperDebug": {
-      "Title": "Mapper调试"
+      "Title": "Mapper 调试"
+    }
+  },
+  "Page": {
+    "PageTitle": "Mapper 注册表",
+    "Header": {
+      "Eyebrow": "Monica / 转换注册表",
+      "Title": "Mapper 注册表",
+      "Description": "检查已注册的源类型到目标类型转换，并查看其编译后的映射表达式。"
+    },
+    "Actions": {
+      "Close": "关闭",
+      "InspectExpression": "查看表达式",
+      "Loading": "加载中...",
+      "Refresh": "刷新注册表"
+    },
+    "Summary": {
+      "AriaLabel": "Mapper 注册表摘要",
+      "Ready": "注册表就绪",
+      "RegisteredMappings": "已注册映射",
+      "Scanning": "正在扫描注册表"
+    },
+    "Registry": {
+      "Title": "转换清单",
+      "Description": "每一行代表对象映射器当前可用的一条转换路径。",
+      "Count": "{0} 个映射",
+      "Columns": {
+        "Actions": "操作",
+        "DestinationType": "目标类型",
+        "SourceType": "源类型"
+      }
+    },
+    "States": {
+      "EmptyDescription": "当前宿主没有注册源类型到目标类型的映射表达式。",
+      "EmptyTitle": "没有注册映射",
+      "Loading": "正在读取 Mapper 注册信息..."
+    },
+    "Dialog": {
+      "DestinationType": "目标类型",
+      "NoExpression": "此注册项没有可用的映射表达式。",
+      "SourceType": "源类型",
+      "Title": "映射表达式"
+    },
+    "Messages": {
+      "LoadException": "加载 Mapper 数据时发生异常：{0}",
+      "LoadFailed": "加载 Mapper 数据失败：{0}",
+      "LoadSucceeded": "已加载 {0} 个映射注册项。"
     }
   }
 }

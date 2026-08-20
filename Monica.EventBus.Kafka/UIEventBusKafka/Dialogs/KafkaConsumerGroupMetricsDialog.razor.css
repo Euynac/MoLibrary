@@ -14,11 +14,8 @@
     min-width: 0;
     padding: 16px;
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
-    border-radius: var(--mud-default-borderradius);
-    background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface)),
-        var(--mud-palette-surface) 58%);
+    border-radius: 12px;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface));
 }
 
 .consumer-metrics-identity {
@@ -37,7 +34,7 @@
     align-items: center;
     justify-content: center;
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 8px;
     color: var(--mud-palette-primary);
     background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface));
 }

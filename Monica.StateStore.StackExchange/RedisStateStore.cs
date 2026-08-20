@@ -2,12 +2,13 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
-using Monica.StateStore.StackExchange.Connection;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Modules;
-using Monica.StateStore.StackExchange.Scripts;
 using Monica.StateStore.Abstractions;
 using Monica.StateStore.Models;
 using Monica.StateStore.Queries;
+using Monica.StateStore.StackExchange.Connection;
+using Monica.StateStore.StackExchange.Scripts;
 using StackExchange.Redis;
 
 namespace Monica.StateStore.StackExchange;
@@ -19,12 +20,22 @@ namespace Monica.StateStore.StackExchange;
 /// TTL is set atomically within Lua scripts via EXPIRE command
 /// Reference: Dapr components-contrib/state/redis/redis.go
 /// </summary>
-public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReader
+/// <remarks>
+/// Typed values use the immutable JSON contract owned by the current Monica host. Changing that host contract also
+/// changes the persisted Redis representation and must be coordinated with existing state.
+/// </remarks>
+public class RedisStateStore(
+    IConnectionMultiplexer connection,
+    IOptions<ModuleRedisStateStoreOption> options,
+    IJsonSerializerOptionsProvider serializerOptionsProvider,
+    IRedisConnectionFactory connectionFactory,
+    ILogger<RedisStateStore> logger) : DistributedStateStoreBase(logger), IStateStoreKeyTtlReader
 {
-    private readonly IConnectionMultiplexer _connection;
-    private readonly ModuleRedisStateStoreOption _option;
-    private readonly IDatabase _database;
-    private readonly IRedisConnectionFactory _connectionFactory;
+    private readonly IConnectionMultiplexer _connection = connection;
+    private readonly ModuleRedisStateStoreOption _option = options.Value;
+    private readonly IDatabase _database = connection.GetDatabase(options.Value.DatabaseIndex);
+    private readonly IRedisConnectionFactory _connectionFactory = connectionFactory;
+    private readonly JsonSerializerOptions _serializerOptions = serializerOptionsProvider.SerializerOptions;
 
     // Cached loaded scripts for performance
     private LoadedLuaScript? _getWithETagScript;
@@ -34,18 +45,6 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
     private LoadedLuaScript? _saveIfNotExistsScript;
     private bool _scriptsInitialized;
     private readonly object _scriptLock = new();
-
-    public RedisStateStore(
-        IConnectionMultiplexer connection,
-        IOptions<ModuleRedisStateStoreOption> options,
-        IRedisConnectionFactory connectionFactory,
-        ILogger<RedisStateStore> logger) : base(logger)
-    {
-        _connection = connection;
-        _option = options.Value;
-        _connectionFactory = connectionFactory;
-        _database = _connection.GetDatabase(_option.DatabaseIndex);
-    }
 
     /// <summary>
     /// Initialize Lua scripts on first use (lazy initialization).
@@ -209,7 +208,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
 
                 if (value.HasValue)
                 {
-                    result[keys[i]] = JsonSerializer.Deserialize<T>(value.ToString());
+                    result[keys[i]] = JsonSerializer.Deserialize<T>(value.ToString(), _serializerOptions);
                 }
             }
 
@@ -236,7 +235,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
             if (!data.HasValue)
                 return default;
 
-            return JsonSerializer.Deserialize<T>(data.ToString());
+            return JsonSerializer.Deserialize<T>(data.ToString(), _serializerOptions);
         }
         catch (OperationCanceledException)
         {
@@ -314,7 +313,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
         {
             EnsureScriptsLoaded();
 
-            var json = JsonSerializer.Serialize(value);
+            var json = JsonSerializer.Serialize(value, _serializerOptions);
             var expiry = BuildTtl(ttl);
             var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
 
@@ -397,7 +396,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
             if (dataJson == null || etag == "0")
                 return (default, string.Empty);
 
-            var deserialized = JsonSerializer.Deserialize<T>(dataJson);
+            var deserialized = JsonSerializer.Deserialize<T>(dataJson, _serializerOptions);
             return (deserialized, etag);
         }
         catch (OperationCanceledException)
@@ -424,7 +423,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
         {
             EnsureScriptsLoaded();
 
-            var json = JsonSerializer.Serialize(value);
+            var json = JsonSerializer.Serialize(value, _serializerOptions);
             var expiry = BuildTtl(ttl);
             var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
 
@@ -471,7 +470,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
         {
             EnsureScriptsLoaded();
 
-            var dataJson = JsonSerializer.Serialize(value);
+            var dataJson = JsonSerializer.Serialize(value, _serializerOptions);
             var expiry = BuildTtl(ttl);
             var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
 
@@ -549,7 +548,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var redisKey = GetRedisKey(key);
-                var json = JsonSerializer.Serialize(value);
+                var json = JsonSerializer.Serialize(value, _serializerOptions);
 
                 var task = batch.ScriptEvaluateAsync(
                     _saveStateScript!,

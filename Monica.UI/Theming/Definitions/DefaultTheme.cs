@@ -38,9 +38,9 @@ public sealed class DefaultTheme : ThemeDefinitionBase
         PrimaryDarken = "#5841d2",
         PrimaryContrastText = "#ffffff",
 
-        Secondary = "#526f89",
-        SecondaryLighten = "#718ca5",
-        SecondaryDarken = "#3d566d",
+        Secondary = "#3f779c",
+        SecondaryLighten = "#5b96ba",
+        SecondaryDarken = "#2e5c7b",
         SecondaryContrastText = "#ffffff",
 
         Tertiary = "#eeeafd",
@@ -111,9 +111,9 @@ public sealed class DefaultTheme : ThemeDefinitionBase
 
     private static PaletteDark CreateDarkPalette() => new()
     {
-        Primary = "#8c75ff",
-        PrimaryLighten = "#a995ff",
-        PrimaryDarken = "#7259eb",
+        Primary = "#9a7cff",
+        PrimaryLighten = "#b19bff",
+        PrimaryDarken = "#7b5fec",
         PrimaryContrastText = "#17122b",
 
         Secondary = "#8fa9c2",
@@ -121,8 +121,8 @@ public sealed class DefaultTheme : ThemeDefinitionBase
         SecondaryDarken = "#6d8aa4",
         SecondaryContrastText = "#101720",
 
-        Tertiary = "#292348",
-        TertiaryContrastText = "#ddd7ff",
+        Tertiary = "#332b5c",
+        TertiaryContrastText = "#e3ddff",
 
         Info = "#39bdf6",
         InfoLighten = "#6bcdf9",
@@ -144,20 +144,20 @@ public sealed class DefaultTheme : ThemeDefinitionBase
         ErrorDarken = "#df506c",
         ErrorContrastText = "#26090f",
 
-        Dark = "#111a29",
-        DarkLighten = "#202c40",
-        DarkDarken = "#090e18",
+        Dark = "#172235",
+        DarkLighten = "#29384f",
+        DarkDarken = "#0d1421",
         DarkContrastText = "#edf2fb",
 
-        Background = "#0b101a",
-        BackgroundGray = "#1b2638",
-        Surface = "#141d2c",
+        Background = "#101827",
+        BackgroundGray = "#223149",
+        Surface = "#1a2638",
 
-        DrawerBackground = "#101724",
+        DrawerBackground = "#151f30",
         DrawerText = "#dce4f0",
         DrawerIcon = "#9eabc0",
 
-        AppbarBackground = "rgba(11, 16, 26, 0.94)",
+        AppbarBackground = "rgba(16, 24, 39, 0.94)",
         AppbarText = "#edf2fb",
 
         TextPrimary = "#edf2fb",
@@ -166,25 +166,25 @@ public sealed class DefaultTheme : ThemeDefinitionBase
 
         ActionDefault = "#9eabc0",
         ActionDisabled = "#59667a",
-        ActionDisabledBackground = "#202c40",
+        ActionDisabledBackground = "#29384f",
 
-        Divider = "#293449",
-        DividerLight = "#222d40",
-        LinesDefault = "#293449",
-        LinesInputs = "#3a4860",
+        Divider = "#34435c",
+        DividerLight = "#2a3850",
+        LinesDefault = "#34435c",
+        LinesInputs = "#485b78",
 
-        TableStriped = "#101724",
-        TableHover = "#211f42",
+        TableStriped = "#151f30",
+        TableHover = "#292454",
 
         OverlayDark = "rgba(0, 0, 0, 0.78)",
-        OverlayLight = "rgba(20, 29, 44, 0.72)",
+        OverlayLight = "rgba(26, 38, 56, 0.76)",
         HoverOpacity = 0.075,
 
         GrayDefault = "#77859b",
         GrayLight = "#9eabc0",
         GrayLighter = "#d0d9e6",
         GrayDark = "#526078",
-        GrayDarker = "#303d52"
+        GrayDarker = "#3a4961"
     };
 
     private static string[] CreateElevationScale() =>

@@ -8,9 +8,10 @@ namespace Monica.ProjectUnits.Providers.AspNetCore;
 
 internal static class RequestMonitorExtensions
 {
-    internal static void AddRequestFilter(this IServiceCollection services, ProjectUnitCatalog catalog)
+    internal static void AddRequestFilter(this IServiceCollection services)
     {
-        services.AddSingleton<IRequestFilter>(catalog);
+        services.AddSingleton<IRequestFilter>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectUnitCatalog>());
         services.AddSingleton<RequestFilterMiddleware>();
     }
 

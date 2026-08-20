@@ -18,38 +18,120 @@
 <PageTitle>@L["Page:PageTitle"]</PageTitle>
 
 <div class="service-discovery-page">
-    <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
-        <MudText Typo="Typo.h4" Class="mb-4">@L["Page:HeaderTitle"]</MudText>
+    <MudContainer MaxWidth="MaxWidth.False" Class="service-discovery-page__outer-container">
+        <div class="service-discovery-page__container">
+            <header class="service-discovery-page__header">
+                <div class="service-discovery-page__eyebrow">
+                    <span class="service-discovery-page__eyebrow-line" aria-hidden="true"></span>
+                    <span>@L["Page:Header:Eyebrow"]</span>
+                </div>
+                <div class="service-discovery-page__heading-row">
+                    <div class="service-discovery-page__heading-copy">
+                        <MudText Typo="Typo.h3" HtmlTag="h1" Class="service-discovery-page__title">
+                            @L["Page:Header:Title"]
+                        </MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="service-discovery-page__description">
+                            @L["Page:Header:Description"]
+                        </MudText>
+                    </div>
+                    <div class="service-discovery-page__header-actions">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="@(PageState.AutoRefreshEnabled ? Color.Success : Color.Default)"
+                                 Icon="@(PageState.AutoRefreshEnabled ? Icons.Material.Filled.Sync : Icons.Material.Filled.SyncDisabled)">
+                            @(PageState.AutoRefreshEnabled ? L["Page:Header:Live"] : L["Page:Header:Paused"])
+                        </MudChip>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   OnClick="@(() => RefreshServicesAsync())"
+                                   Disabled="@PageState.IsLoading">
+                            @L["Shared:Actions:Refresh"]
+                        </MudButton>
+                    </div>
+                </div>
+            </header>
 
-        <MudTabs @bind-ActivePanelIndex="PageState.ActiveTabIndex"
-                 Elevation="4"
-                 Rounded="true"
-                 ApplyEffectsToContainer="true"
-                 Class="mb-6 service-discovery-tabs">
+            <section class="service-discovery-page__pulse" aria-label="@L["Page:Metrics:AriaLabel"]">
+                <article class="service-discovery-pulse-card service-discovery-pulse-card--primary">
+                    <span class="service-discovery-pulse-card__icon" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.CloudQueue" />
+                    </span>
+                    <span class="service-discovery-pulse-card__copy">
+                        <span class="service-discovery-pulse-card__label">@L["Page:Metrics:Services"]</span>
+                        <strong>@PageState.Services.Count</strong>
+                    </span>
+                </article>
+                <article class="service-discovery-pulse-card service-discovery-pulse-card--success">
+                    <span class="service-discovery-pulse-card__icon" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
+                    </span>
+                    <span class="service-discovery-pulse-card__copy">
+                        <span class="service-discovery-pulse-card__label">@L["Page:Metrics:Running"]</span>
+                        <strong>@RunningServiceCount</strong>
+                    </span>
+                </article>
+                <article class="service-discovery-pulse-card service-discovery-pulse-card--info">
+                    <span class="service-discovery-pulse-card__icon" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.Domain" />
+                    </span>
+                    <span class="service-discovery-pulse-card__copy">
+                        <span class="service-discovery-pulse-card__label">@L["Page:Metrics:Domains"]</span>
+                        <strong>@DomainCount</strong>
+                    </span>
+                </article>
+                <article class="service-discovery-pulse-card service-discovery-pulse-card--tertiary">
+                    <span class="service-discovery-pulse-card__icon" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.Dns" />
+                    </span>
+                    <span class="service-discovery-pulse-card__copy">
+                        <span class="service-discovery-pulse-card__label">@L["Page:Metrics:Instances"]</span>
+                        <strong>@RunningInstanceCount</strong>
+                    </span>
+                </article>
+            </section>
+
+            <MudTabs @bind-ActivePanelIndex="PageState.ActiveTabIndex"
+                     Elevation="0"
+                     Rounded="false"
+                     Class="service-discovery-tabs">
             <MudTabPanel Text="@L["Page:Tabs:ServiceList"]" Icon="@Icons.Material.Filled.List">
                 <div class="tab-content-panel">
-                    <MudGrid>
-                        <MudItem xs="12">
-                            <MudPaper Class="pa-4">
-                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                                        <MudText Typo="Typo.h6">@L["Page:ServiceList:Title"]</MudText>
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                            <MudSwitch T="bool" @bind-Value="PageState.AutoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="@L["Shared:Labels:AutoRefresh"]" />
-                                            <MudNumericField T="int" @bind-Value="PageState.RefreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="@L["Shared:Labels:RefreshIntervalSeconds"]" Min="1" Max="60"
-                                                             Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px"
-                                                             Disabled="!PageState.AutoRefreshEnabled" Immediate="true" />
-                                        </MudStack>
-                                    </MudStack>
-                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => RefreshServicesAsync())" Disabled="@PageState.IsLoading">
-                                        <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
-                                        @L["Shared:Actions:Refresh"]
-                                    </MudButton>
-                                </MudStack>
-                            </MudPaper>
-                        </MudItem>
+                    <section class="service-discovery-section">
+                        <header class="service-discovery-section__header">
+                            <div class="service-discovery-section__identity">
+                                <span class="service-discovery-section__icon" aria-hidden="true">
+                                    <MudIcon Icon="@Icons.Material.Filled.ListAlt" />
+                                </span>
+                                <div>
+                                    <MudText Typo="Typo.h6">@L["Page:ServiceList:Title"]</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @L["Page:ServiceList:Description"]
+                                    </MudText>
+                                </div>
+                            </div>
+                            <div class="service-discovery-section__controls">
+                                <MudSwitch T="bool"
+                                           @bind-Value="PageState.AutoRefreshEnabled"
+                                           @bind-Value:after="OnAutoRefreshToggled"
+                                           Color="Color.Success"
+                                           Label="@L["Shared:Labels:AutoRefresh"]" />
+                                <MudNumericField T="int"
+                                                 @bind-Value="PageState.RefreshInterval"
+                                                 @bind-Value:after="OnRefreshIntervalChanged"
+                                                 Label="@L["Shared:Labels:RefreshIntervalSeconds"]"
+                                                 Min="1"
+                                                 Max="60"
+                                                 Variant="Variant.Outlined"
+                                                 Margin="Margin.Dense"
+                                                 Class="service-discovery-section__interval"
+                                                 Disabled="!PageState.AutoRefreshEnabled"
+                                                 Immediate="true" />
+                            </div>
+                        </header>
 
-                        <MudItem xs="12">
+                        <div class="service-discovery-section__body">
                             <ServiceFilterPanel
                                 AllServices="@PageState.Services"
                                 FilterText="@PageState.FilterText"
@@ -61,21 +143,20 @@
                                 ShowOnlyWithInstances="@PageState.ShowOnlyWithInstances"
                                 ShowOnlyWithInstancesChanged="@OnShowOnlyWithInstancesChanged"
                                 OnFiltersChanged="@ApplyFilters" />
-                        </MudItem>
 
-                        <MudItem xs="12">
                             <ServiceDiscoveryServiceList Services="PageState.FilteredServices" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="PageState.IsLoading" />
 
                             @if (!PageState.IsLoading && !PageState.Services.Any())
                             {
-                                <MudPaper Class="pa-4 mt-2">
+                                <MudPaper Class="service-discovery-page__empty-state" Elevation="0" Outlined="true">
+                                    <MudIcon Icon="@Icons.Material.Filled.CloudOff" Color="Color.Secondary" />
                                     <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
                                         @L["Page:States:NoServices"]
                                     </MudText>
                                 </MudPaper>
                             }
-                        </MudItem>
-                    </MudGrid>
+                        </div>
+                    </section>
                 </div>
             </MudTabPanel>
 
@@ -109,13 +190,24 @@
                     <CurrentInstanceInfo />
                 </div>
             </MudTabPanel>
-        </MudTabs>
+            </MudTabs>
+        </div>
     </MudContainer>
 </div>
 
 @code {
     public const string SERVICE_DISCOVERY_DEBUG_URL = "/service-discovery-manage";
     private const int DomainManagementTabIndex = 3;
+    private bool _disposed;
+
+    private int RunningServiceCount => PageState.Services.Count(service => service.OverallStatus == ServiceStatus.Running);
+
+    private int DomainCount => PageState.Services
+        .Select(service => service.DomainName ?? L["Shared:Values:Unknown"].Value)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Count();
+
+    private int RunningInstanceCount => PageState.Services.Sum(service => service.RunningInstanceCount);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -126,7 +218,7 @@
 
         PageState.Initialize(
             L["Shared:Values:Unknown"].Value,
-            () => InvokeAsync(() => RefreshServicesAsync(false, false)));
+            () => _disposed ? Task.CompletedTask : InvokeAsync(() => RefreshServicesAsync(false, false)));
 
         await RefreshServicesAsync(showNotification: false);
     }
@@ -143,6 +235,11 @@
 
     private async Task RefreshServicesAsync(bool showNotification = true, bool showLoading = true)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         var result = await PageState.RefreshServicesAsync(showLoading);
         if (result.IsFailed(out var error, out _))
         {
@@ -156,7 +253,10 @@
             Snackbar.Add(L["Page:Messages:ServiceListRefreshed"].Value, Severity.Success);
         }
 
-        StateHasChanged();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
     }
 
     private Task OnFilterTextChanged(string text)
@@ -252,6 +352,7 @@
 
     public void Dispose()
     {
+        _disposed = true;
         PageState.Dispose();
     }
 }

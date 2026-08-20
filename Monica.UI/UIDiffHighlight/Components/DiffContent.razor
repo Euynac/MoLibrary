@@ -1,6 +1,7 @@
 @using System.Web
 @using Monica.UI.UIDiffHighlight.Models
 @using MudBlazor
+@inject IStringLocalizer<SharedResource> L
 
 @if (DiffResult?.Lines?.Any() == true)
 {
@@ -9,7 +10,7 @@
         @* split view *@        <div class="split-view-container">
             <div class="split-view-panel split-view-panel-left">
                 <div class="split-view-header">
-                    <MudText Typo="Typo.subtitle2" Class="panel-title">原始内容</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="panel-title">@L["DiffViewer:OriginalContent"]</MudText>
                 </div>
                 @foreach (var line in GetSplitViewLines(true))
                 {
@@ -25,7 +26,7 @@
             </div>
             <div class="split-view-panel split-view-panel-right">
                 <div class="split-view-header">
-                    <MudText Typo="Typo.subtitle2" Class="panel-title">新内容</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="panel-title">@L["DiffViewer:NewContent"]</MudText>
                 </div>
                 @foreach (var line in GetSplitViewLines(false))
                 {
@@ -67,7 +68,7 @@
 else
 {
     <MudAlert Severity="Severity.Info">
-        <MudText>文本无差异</MudText>
+        <MudText>@L["DiffViewer:NoDifferences"]</MudText>
     </MudAlert>
 }
 

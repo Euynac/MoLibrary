@@ -18,6 +18,11 @@ internal sealed class ProjectUnitDocumentationResolver(IXmlDocumentationService?
         return xmlDocumentationService?.GetTypeDocumentation(type);
     }
 
+    internal string? ExtractMethodDescription(MethodInfo method)
+    {
+        return xmlDocumentationService?.GetMethodDocumentation(method)?.Summary;
+    }
+
     private List<ProjectUnitMethod> GetMethods(Type type, BindingFlags bindingFlags, Type? baseType)
     {
         var methods = type.GetMethods(bindingFlags)

@@ -40,8 +40,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddMonica(monica =>
 {
     monica.AddCancellationManager()
-        .AddKeyedCancellationManager("instance1", useDistributed: false)
-        .AddKeyedCancellationManager("instance2", useDistributed: false);
+        .AddKeyedInMemoryCancellationManager("instance1")
+        .AddKeyedInMemoryCancellationManager("instance2");
 });
 
 var app = builder.Build();
@@ -55,8 +55,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddMonica(monica =>
 {
     monica.AddCancellationManager()
-        .AddKeyedCancellationManager("memory-service", useDistributed: false)
-        .AddKeyedCancellationManager("distributed-service", useDistributed: true);
+        .AddKeyedInMemoryCancellationManager("memory-service")
+        .AddKeyedDistributedCancellationManager("distributed-service");
 });
 
 var app = builder.Build();

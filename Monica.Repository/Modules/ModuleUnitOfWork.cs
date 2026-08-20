@@ -20,17 +20,11 @@ public static class ModuleUnitOfWorkBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Configuring the UnitOfWork module
+        /// Registers UnitOfWork services and their intrinsic execution-pipeline behavior.
         /// </summary>
         public ModuleRegistration<ModuleUnitOfWork, ModuleUnitOfWorkOption> AddUnitOfWork(Action<ModuleUnitOfWorkOption>? action = null)
         {
-            var module = builder.AddModule<ModuleUnitOfWork, ModuleUnitOfWorkOption>(action);
-            module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>()
-                .AddBehavior(
-                    typeof(UnitOfWorkExecutionBehavior<,>),
-                    ExecutionBehaviorOrder.UnitOfWork,
-                    static descriptor => descriptor.TransactionMode == ExecutionTransactionMode.Automatic);
-            return module;
+            return builder.AddModule<ModuleUnitOfWork, ModuleUnitOfWorkOption>(action);
         }
     }
 }
@@ -56,7 +50,11 @@ public class ModuleUnitOfWork : MonicaModule<ModuleUnitOfWorkOption>
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleDependencyInjection, ModuleDependencyInjectionOption>();
-        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>();
+        module.Require<ModuleExecutionPipeline, ModuleExecutionPipelineOption>(pipeline =>
+            pipeline.AddBehavior(
+                typeof(UnitOfWorkExecutionBehavior<,>),
+                ExecutionBehaviorOrder.UnitOfWork,
+                static descriptor => descriptor.TransactionMode == ExecutionTransactionMode.Automatic));
     }
 }
 

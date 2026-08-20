@@ -18,4 +18,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Localization\**\*.json" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
+  </ItemGroup>
 </Project>

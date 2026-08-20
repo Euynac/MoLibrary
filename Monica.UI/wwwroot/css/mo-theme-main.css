@@ -7,9 +7,11 @@
 
 /* Shared shell layout primitives */
 @import url('./layout/mo-navbar.css');
+@import url('./layout/mo-page-shell.css');
 
 /* Shared opt-in component primitives */
 @import url('./components/mo-card-surface.css');
+@import url('./components/mo-context-menu.css');
 
 /* 0. Introduce the baseline MudBlazor-compatible theme hook */
 @import url('./themes/mo-theme-mud-blazor.css');
@@ -52,6 +54,20 @@
     --mo-appbar-backdrop-filter: blur(10px);
     --mo-appbar-padding-inline: 24px;
     --mo-appbar-gap: 32px;
+
+    --mo-navbar-brand-gap: 12px;
+    --mo-navbar-brand-padding: 0;
+    --mo-navbar-brand-radius: var(--mud-default-borderradius);
+    --mo-navbar-brand-hover-background: transparent;
+    --mo-navbar-brand-hover-opacity: 0.8;
+    --mo-navbar-brand-logo-size: 40px;
+    --mo-navbar-brand-name-size: 20px;
+    --mo-navbar-brand-name-weight: 700;
+    --mo-navbar-control-radius: var(--mud-default-borderradius);
+    --mo-navbar-action-color: var(--mud-palette-text-secondary);
+    --mo-navbar-action-hover-color: var(--mud-palette-text-primary);
+    --mo-navbar-action-hover-background: var(--mud-palette-action-default-hover);
+    --mo-navbar-divider-color: var(--mud-palette-divider);
 
     --mo-color-page-hero-background: var(--mud-palette-primary);
     --mo-color-page-hero-text: var(--mud-palette-primary-text);
@@ -216,18 +232,49 @@
     color: var(--mo-appbar-menu-item-active-icon) !important;
 }
 
-/* Prevent transition animations from affecting performance of elements */
-.mud-table *,
-.mud-data-grid *,
-.mud-treeview *,
+/* Explicit local escape hatch for virtualized or measurement-sensitive content. */
 .no-transition,
 .no-transition * {
     transition: none !important;
 }
 
-/* smooth scrolling */
 html {
+    scroll-behavior: auto;
+}
+
+/* FocusOnNavigate targets route headings after navigation; they are not keyboard actions. */
+:where(h1[tabindex="-1"]:focus) {
+    outline: none;
+}
+
+.mo-scroll-smooth {
     scroll-behavior: smooth;
+}
+
+/* Resting affordances keep DataGrid sorting and column actions discoverable. */
+:where(.mud-data-grid .column-header .column-options) :is(
+    .sort-direction-icon,
+    .column-options-icon,
+    .drag-icon-options,
+    .mud-menu .mud-icon-button-label
+) {
+    color: var(--mud-palette-text-secondary);
+    opacity: 0.64;
+    transition: color 140ms ease-out, opacity 140ms ease-out;
+}
+
+:where(.mud-data-grid .column-header:is(:hover, :focus-within) .column-options) :is(
+    .sort-direction-icon,
+    .column-options-icon,
+    .drag-icon-options,
+    .mud-menu .mud-icon-button-label
+),
+:where(.mud-data-grid) :is(
+    .sort-direction-icon.mud-direction-asc,
+    .sort-direction-icon.mud-direction-desc
+) {
+    color: var(--mud-palette-text-primary);
+    opacity: 1;
 }
 
 /* Custom scroll bar style */
@@ -253,6 +300,22 @@ html {
 * {
     scrollbar-width: thin;
     scrollbar-color: var(--mud-palette-action-disabled) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html,
+    .mo-scroll-smooth {
+        scroll-behavior: auto !important;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 /* Print style optimization */

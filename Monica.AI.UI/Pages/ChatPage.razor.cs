@@ -15,6 +15,8 @@ public partial class ChatPage : IDisposable
     [Inject]
     public required IStringLocalizer<AIResource> L { get; set; }
 
+    private bool _sessionDrawerOpen = true;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -29,6 +31,11 @@ public partial class ChatPage : IDisposable
     private void OnStateChanged()
     {
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleSessionDrawer()
+    {
+        _sessionDrawerOpen = !_sessionDrawerOpen;
     }
 
     public void Dispose()

@@ -39,7 +39,7 @@
     justify-content: center;
     align-items: center;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 700;
     min-width: 70px;
@@ -83,28 +83,10 @@
 .score-bar-track {
     flex: 1;
     min-width: 140px;
-    height: 6px;
-    background-color: var(--mud-palette-lines-default);
-    border-radius: 9999px;
-    overflow: hidden;
 }
 
-.score-bar-fill {
-    height: 100%;
-    border-radius: 9999px;
-    transition: width 0.6s ease-out;
-}
-
-.score-bar-fill--high {
-    background-color: var(--mud-palette-success);
-}
-
-.score-bar-fill--mid {
-    background-color: var(--mud-palette-warning);
-}
-
-.score-bar-fill--low {
-    background-color: var(--mud-palette-text-disabled);
+.score-bar-track ::deep .mud-progress-linear {
+    width: 100%;
 }
 
 /* Content body */
@@ -165,4 +147,10 @@
     word-break: break-word;
     max-height: 200px;
     overflow-y: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .result-card {
+        transition: none;
+    }
 }

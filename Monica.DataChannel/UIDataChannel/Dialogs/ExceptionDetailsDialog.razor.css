@@ -1,163 +1,159 @@
-/* Styles for the exception details dialog */
-
-/* Labels for information fields */
-.info-label {
-    color: var(--mud-palette-text-secondary);
+.exception-details-title,
+.exception-inspector__header {
+    display: flex;
+    align-items: center;
 }
 
-/* Values for normal info fields */
-.info-value {
-    font-weight: 500;
+.exception-details-title {
+    gap: 12px;
 }
 
-/* Values for error state info fields */
-.info-value-error {
-    font-weight: 500;
+.exception-details-title__icon {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
     color: var(--mud-palette-error);
+    background-color: color-mix(in srgb, var(--mud-palette-error) 12%, var(--mud-palette-surface));
 }
 
-/* Values for warning state info fields */
-.info-value-warning {
-    font-weight: 500;
-    color: var(--mud-palette-warning);
+.exception-details-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
 }
 
-/* Container wrapping the exception table */
-.exception-table-container {
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-/* Visual treatment for exception cards */
-.exception-card {
-    border-left: 4px solid var(--mud-palette-error);
-}
-
-/* Styling for exception titles */
-.exception-title {
-    color: var(--mud-palette-error);
-}
-
-/* Labels for exception info entries */
-.exception-info-label {
-    color: var(--mud-palette-text-secondary);
-}
-
-/* Section headings inside the exception dialog */
-.exception-section-title {
-    font-weight: 500;
-}
-
-/* Container for stack trace content */
-.exception-stack-container {
-    max-height: 300px;
-    overflow-y: auto;
+.exception-details-strip {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.6fr) repeat(3, minmax(100px, 0.6fr));
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
     background-color: var(--mud-palette-background-gray);
-    padding: 12px;
-    border: 1px solid var(--mud-palette-divider);
 }
 
-/* Formatting for stack trace text */
-.exception-stack-text {
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    line-height: 1.4;
-    color: var(--mud-palette-text-primary);
+.exception-details-strip article {
+    min-width: 0;
+    padding: 13px 15px;
+    border-inline-start: 1px solid var(--mud-palette-lines-default);
+}
+
+.exception-details-strip article:first-child {
+    border-inline-start: 0;
+}
+
+.exception-identity {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.exception-records {
+    max-height: min(44vh, 460px);
+    min-width: 0;
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+}
+
+.exception-records ::deep .mud-data-grid {
+    min-width: 940px;
+}
+
+.exception-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 24%, var(--mud-palette-lines-default));
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
+}
+
+.exception-inspector__header {
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.exception-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .exception-table-container {
-        max-height: 350px;
+.exception-facts > div {
+    min-width: 0;
+    padding: 10px 12px;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.exception-facts > div:nth-child(-n + 2) {
+    border-top: 0;
+}
+
+.exception-facts > div:nth-child(even) {
+    border-inline-start: 1px solid var(--mud-palette-lines-default);
+}
+
+.exception-facts dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+}
+
+.exception-facts dd {
+    margin: 3px 0 0;
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+    font-size: 0.78rem;
+}
+
+.exception-message,
+.exception-stack {
+    min-width: 0;
+}
+
+.exception-message p {
+    margin: 7px 0 0;
+    padding: 10px 12px;
+    overflow-wrap: anywhere;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 24%, var(--mud-palette-lines-default));
+    border-radius: 8px;
+    color: var(--mud-palette-error);
+    background-color: color-mix(in srgb, var(--mud-palette-error) 6%, var(--mud-palette-surface));
+}
+
+.exception-stack ::deep .mud-paper {
+    margin-top: 7px;
+}
+
+@media (max-width: 720px) {
+    .exception-details-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    
-    .exception-stack-container {
-        max-height: 200px;
-        padding: 8px;
+
+    .exception-details-strip article:nth-child(3) {
+        border-inline-start: 0;
     }
-    
-    .exception-stack-text {
-        font-size: 11px;
+
+    .exception-details-strip article:nth-child(n + 3) {
+        border-top: 1px solid var(--mud-palette-lines-default);
     }
-}
 
-@media (max-width: 576px) {
-    .exception-table-container {
-        max-height: 250px;
+    .exception-facts {
+        grid-template-columns: minmax(0, 1fr);
     }
-    
-    .exception-stack-container {
-        max-height: 150px;
+
+    .exception-facts > div:nth-child(n + 2),
+    .exception-facts > div:nth-child(even) {
+        border-top: 1px solid var(--mud-palette-lines-default);
+        border-inline-start: 0;
     }
-}
-
-/* Custom MudBlazor overrides */
-::deep .exception-table-container .mud-table-container {
-    max-height: inherit;
-}
-
-::deep .exception-table-container .mud-data-grid {
-    max-height: inherit;
-}
-
-/* Padding inside exception cards */
-::deep .exception-card .mud-card-content {
-    padding: 12px;
-}
-
-/* Layout tweaks for exception info grid */
-::deep .exception-info-grid .mud-grid-item {
-    margin-bottom: 8px;
-}
-
-/* Styling for the dialog title */
-::deep .mud-dialog .mud-dialog-title {
-    border-bottom: 1px solid var(--mud-palette-divider);
-    padding-bottom: 16px;
-    margin-bottom: 16px;
-}
-
-/* Scrollbar styling */
-.exception-table-container::-webkit-scrollbar,
-.exception-stack-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-.exception-table-container::-webkit-scrollbar-track,
-.exception-stack-container::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-gray);
-}
-
-.exception-table-container::-webkit-scrollbar-thumb,
-.exception-stack-container::-webkit-scrollbar-thumb {
-    background: var(--mud-palette-text-disabled);
-    border-radius: 3px;
-}
-
-.exception-table-container::-webkit-scrollbar-thumb:hover,
-.exception-stack-container::-webkit-scrollbar-thumb:hover {
-    background: var(--mud-palette-text-secondary);
-}
-
-/* Exception card expansion animation */
-::deep .exception-card .mud-collapse {
-    transition: all 0.3s ease;
-}
-
-/* Selection styling for stack trace text */
-.exception-stack-text::selection {
-    background: var(--mud-palette-primary-lighten);
-}
-
-/* Hover effect for table rows */
-::deep .exception-table-container .mud-table-row:hover {
-    background-color: var(--mud-palette-action-default-hover);
-}
-
-/* Hover effect for exception cards */
-.exception-card:hover {
-    box-shadow: 0 4px 8px rgba(244, 67, 54, 0.1);
-    transition: box-shadow 0.3s ease;
 }

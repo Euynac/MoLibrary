@@ -1,7 +1,15 @@
 {
-  "Pages": {
-    "ExecutionTiming": {
-      "Title": "执行耗时"
-    }
-  }
+  "Pages": { "ExecutionTiming": { "Title": "执行耗时" } },
+  "Page": {
+    "Eyebrow": "运行时插桩",
+    "Subtitle": "检查正在执行的操作，并对比延迟、频率与内存分配证据。",
+    "Status": { "Live": "实时采样", "Paused": "采样已暂停" },
+    "Actions": { "AutoRefresh": "自动刷新", "Refresh": "刷新证据" },
+    "Messages": { "RefreshFailed": "刷新执行耗时证据失败。" }
+  },
+  "Summary": { "AriaLabel": "执行耗时摘要", "Running": "正在运行", "Operations": "操作类型", "Samples": "已记录样本", "Average": "平均延迟" },
+  "Running": { "Eyebrow": "活动跨度", "Title": "执行中的操作", "Empty": "当前没有正在运行的操作。" },
+  "Statistics": { "Eyebrow": "聚合证据", "Title": "已完成操作统计", "Empty": "尚未记录已完成的耗时样本。" },
+  "Columns": { "Name": "操作", "Description": "说明", "StartedAt": "开始时间", "CurrentDuration": "当前延迟", "RunningFor": "运行时长", "Executions": "执行次数", "AverageDuration": "平均延迟", "LastDuration": "最近延迟", "Rate": "每分钟", "AverageMemory": "平均分配", "LastMemory": "最近分配", "LastRecordedAt": "最后观测" },
+  "Common": { "Count": "{0} 条记录", "Unavailable": "—" }
 }

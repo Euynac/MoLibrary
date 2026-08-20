@@ -364,12 +364,14 @@
     private SimpleSettings _simpleSettings = new();
     private bool _cronstrueLoaded = false;
     private bool _isLoadingDescription = false;
-    private IJSObjectReference? _jsModule;
+    private CronInteropSession? _cronInterop;
+    private bool _disposed;
     private IReadOnlyList<CronFieldInfo> _quartzFields = [];
     private IReadOnlyList<CronFieldInfo> _standardFields = [];
 
     protected override void OnInitialized()
     {
+        _cronInterop = new CronInteropSession(JsRuntime);
         _format = InitialFormat;
         SetFormatHelperText();
         InitializeSyntaxGuideFields();
@@ -381,24 +383,27 @@
         {
             try
             {
-                // Load JavaScript module
-                _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>(
-                    "import",
-                    "./_content/Monica.JobScheduler.UI/js/cron-helper.js");
-
-                _cronstrueLoaded = true;
-
                 if (!string.IsNullOrWhiteSpace(Value))
                 {
                     await UpdatePreview();
-                    StateHasChanged();
                 }
+
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _cronstrueLoaded = true;
+                StateHasChanged();
             }
             catch (Exception ex)
             {
                 // JS module loading fails, logging errors but not preventing component rendering
                 _cronstrueLoaded = false;
-                Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {ex.Message}", Severity.Warning);
+                if (!_disposed)
+                {
+                    Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {ex.Message}", Severity.Warning);
+                }
             }
         }
     }
@@ -471,14 +476,18 @@
         _errorText = string.Empty;
 
         // Get text description asynchronously (only when JS module is loaded)
-        if (_jsModule != null)
+        if (_cronInterop != null && !_disposed)
         {
             _isLoadingDescription = true;
             StateHasChanged(); // Refresh immediately so the loading state is visible.
 
             try
             {
-                var descResult = await CronService.ParseToDescriptionAsync(_jsModule, Value, _format);
+                var descResult = await CronService.ParseToDescriptionAsync(_cronInterop, Value, _format);
+                if (_disposed)
+                {
+                    return;
+                }
                 if (descResult.IsFailed(out var descError, out var description))
                 {
                     _description = string.Empty;
@@ -491,7 +500,10 @@
             }
             finally
             {
-                _isLoadingDescription = false;
+                if (!_disposed)
+                {
+                    _isLoadingDescription = false;
+                }
             }
         }
         else
@@ -576,9 +588,12 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule is not null)
+        _disposed = true;
+        var cronInterop = _cronInterop;
+        _cronInterop = null;
+        if (cronInterop is not null)
         {
-            await _jsModule.DisposeAsync();
+            await cronInterop.DisposeAsync();
         }
     }
 }

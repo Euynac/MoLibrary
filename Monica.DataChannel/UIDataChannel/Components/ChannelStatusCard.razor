@@ -1,157 +1,158 @@
-@using Monica.DataChannel.Facades
-@using Monica.DataChannel.UIDataChannel.Abstractions
-@using Monica.DataChannel.UIDataChannel.Dialogs
-@using Monica.Core.Results;
 @using Monica.DataChannel.Middlewares
+@using Monica.DataChannel.UIDataChannel.Abstractions
 @using Monica.DataChannel.UIDataChannel.Models
-@inject IDialogService DialogService
 @inject DataChannelFacade DataChannelService
-@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IStringLocalizer<DataChannelResource> L
 @inject IEnumerable<IDataChannelMiddlewareRowAction> MiddlewareRowActions
+@inject ISnackbar Snackbar
+@implements IDisposable
 
-<MudCard Elevation="2" Class="@GetCardClass()">
-    <MudCardHeader Class="pb-2">
-        <CardHeaderContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+<article class="channel-card mo-card-surface" data-mo-card-tone="@GetCardTone()">
+    <header class="channel-card__header">
+        <div class="channel-card__identity">
+            <span class="channel-card__state-icon" aria-hidden="true">
                 <MudIcon Icon="@GetChannelIcon()" Color="@GetChannelColor()" />
+            </span>
+            <div class="channel-card__copy">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Channel:IdentityLabel"]</MudText>
                 <MudText Typo="Typo.h6" Class="channel-title">@Channel.Id</MudText>
-                @if (Channel.HasExceptions)
-                {
-                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Label="true">
-                        异常 (@Channel.ExceptionCount)
-                    </MudChip>
-                }
-            </MudStack>
-        </CardHeaderContent>
-        <CardHeaderActions>
-            @if (_isReInitializing)
+            </div>
+        </div>
+
+        <div class="channel-card__status">
+            <MudChip T="string"
+                     Color="@GetChannelColor()"
+                     Variant="Variant.Outlined"
+                     Size="Size.Small"
+                     Icon="@GetChannelIcon()">
+                @GetChannelStateLabel()
+            </MudChip>
+            @if (Channel.HasExceptions)
+            {
+                <MudChip T="string" Color="Color.Error" Size="Size.Small">
+                    @L["Channel:ExceptionCount", Channel.ExceptionCount]
+                </MudChip>
+            }
+            @if (_isReinitializing)
             {
                 <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
             }
             else
             {
-                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
-                    <MudMenuItem OnClick="HandleReInitialize" 
-                                Icon="@Icons.Material.Filled.Refresh"
-                                Disabled="_isReInitializing">
-                        重新初始化
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                         Size="Size.Small"
+                         AriaLabel="@L["Channel:Actions:OpenMenu", Channel.Id]">
+                    <MudMenuItem OnClick="ReinitializeAsync"
+                                 Icon="@Icons.Material.Filled.Refresh">
+                        @L["Channel:Actions:Reinitialize"]
                     </MudMenuItem>
-                    <MudMenuItem OnClick="@(() => OnViewExceptions.InvokeAsync(Channel.Id))" 
-                                Icon="@Icons.Material.Filled.ErrorOutline">
-                        查看异常
+                    <MudMenuItem OnClick="@(() => OnViewExceptions.InvokeAsync(Channel.Id))"
+                                 Icon="@Icons.Material.Filled.ErrorOutline">
+                        @L["Channel:Actions:ViewExceptions"]
                     </MudMenuItem>
                     @if (Channel.HasExceptions)
                     {
-                        <MudMenuItem OnClick="@(() => OnClearExceptions.InvokeAsync(Channel.Id))" 
-                                    Icon="@Icons.Material.Filled.Clear">
-                            清空异常
+                        <MudMenuItem OnClick="@(() => OnClearExceptions.InvokeAsync(Channel.Id))"
+                                     Icon="@Icons.Material.Filled.ClearAll">
+                            @L["Channel:Actions:ClearExceptions"]
                         </MudMenuItem>
                     }
                 </MudMenu>
             }
-        </CardHeaderActions>
-    </MudCardHeader>
-    <MudCardContent Class="channel-content">
-        @if (_isReInitializing)
-        {
-            <!-- Loading overlay -->
-            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="loading-container">
-                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-                <MudText Typo="Typo.h6" Color="Color.Primary" Class="loading-title">
-                    正在重新初始化...
-                </MudText>
-                <MudText Typo="Typo.body2" Class="loading-subtitle">
-                    请稍候，这可能需要几秒钟
-                </MudText>
-            </MudStack>
-        }
-        else
-        {
-            <!-- Normal content -->
-            <MudStack Spacing="3">
-                <!-- Status information -->
-                <MudStack Row="true" Spacing="2">
-                    <MudChip T="string" Color="@(Channel.IsInitialized ? Color.Success : Color.Secondary)" Size="Size.Small">
-                        @(Channel.IsInitialized ? "已初始化" : "未初始化")
-                    </MudChip>
-                    @if (Channel.IsInitializing)
-                    {
-                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">
-                            初始化中
-                        </MudChip>
-                    }
-                    @if (Channel.IsNotAvailable)
-                    {
-                        <MudChip T="string" Color="Color.Error" Size="Size.Small">
-                            不可用
-                        </MudChip>
-                    }
-                </MudStack>
+        </div>
+    </header>
 
-                <!-- Endpoint details -->
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.subtitle2" Class="endpoint-section-title">端点信息</MudText>
-                    
-                    <!-- Inner endpoint -->
-                    <MudExpansionPanels Elevation="0" Dense="true">
-                        <MudExpansionPanel>
-                            <TitleContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Input" Size="Size.Small" Color="Color.Info" />
-                                    <MudText Class="endpoint-text">内部: @Channel.InnerEndpoint.Name</MudText>
-                                </MudStack>
-                            </TitleContent>
-                            <ChildContent>
-                                <MetadataDisplay Metadata="Channel.InnerEndpoint.Metadata" />
-                            </ChildContent>
-                        </MudExpansionPanel>
-                    </MudExpansionPanels>
+    @if (_isReinitializing)
+    {
+        <div class="channel-card__busy" aria-live="polite">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <div>
+                <MudText Typo="Typo.subtitle1">@L["Channel:States:Reinitializing"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Channel:States:ReinitializingDescription"]</MudText>
+            </div>
+        </div>
+    }
+    else
+    {
+        <section class="endpoint-flow" aria-label="@L["Channel:Flow:AriaLabel", Channel.Id]">
+            <div class="endpoint-flow__node">
+                <span class="endpoint-flow__icon endpoint-flow__icon--inner" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Input" Size="Size.Small" />
+                </span>
+                <div class="endpoint-flow__copy">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Channel:Flow:Ingress"]</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="endpoint-flow__name">@Channel.InnerEndpoint.Name</MudText>
+                </div>
+            </div>
+            <div class="endpoint-flow__route" aria-hidden="true">
+                <span></span>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                    @L["Channel:Flow:MiddlewareCount", Channel.Middlewares.Count]
+                </MudChip>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" />
+            </div>
+            <div class="endpoint-flow__node endpoint-flow__node--outbound">
+                <span class="endpoint-flow__icon endpoint-flow__icon--outer" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Output" Size="Size.Small" />
+                </span>
+                <div class="endpoint-flow__copy">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Channel:Flow:Egress"]</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="endpoint-flow__name">@Channel.OuterEndpoint.Name</MudText>
+                </div>
+            </div>
+        </section>
 
-                    <!-- Outer endpoint -->
-                    <MudExpansionPanels Elevation="0" Dense="true">
-                        <MudExpansionPanel>
-                            <TitleContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Output" Size="Size.Small" Color="Color.Success" />
-                                    <MudText Class="endpoint-text">外部: @Channel.OuterEndpoint.Name</MudText>
-                                </MudStack>
-                            </TitleContent>
-                            <ChildContent>
-                                <MetadataDisplay Metadata="Channel.OuterEndpoint.Metadata" />
-                            </ChildContent>
-                        </MudExpansionPanel>
-                    </MudExpansionPanels>
-                </MudStack>
+        <div class="channel-evidence">
+            <MudExpansionPanels Elevation="0" Dense="true" Class="channel-evidence__panels">
+                <MudExpansionPanel Text="@L["Channel:Sections:EndpointConfiguration"]"
+                                   Icon="@Icons.Material.Filled.Cable">
+                    <div class="endpoint-config-grid">
+                        <section>
+                            <MudText Typo="Typo.overline" Color="Color.Info">@L["Channel:Flow:Ingress"]</MudText>
+                            <MetadataDisplay Metadata="Channel.InnerEndpoint.Metadata" />
+                        </section>
+                        <section>
+                            <MudText Typo="Typo.overline" Color="Color.Success">@L["Channel:Flow:Egress"]</MudText>
+                            <MetadataDisplay Metadata="Channel.OuterEndpoint.Metadata" />
+                        </section>
+                    </div>
+                </MudExpansionPanel>
 
-                <!-- Middleware info -->
-                @if (Channel.Middlewares.Any())
+                @if (Channel.Middlewares.Count > 0)
                 {
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.subtitle2" Class="middleware-section-title">中间件 (@Channel.Middlewares.Count)</MudText>
-                        <MudExpansionPanels Elevation="0" Dense="true">
+                    <MudExpansionPanel Text="@L["Channel:Sections:Pipeline", Channel.Middlewares.Count]"
+                                       Icon="@Icons.Material.Filled.AccountTree">
+                        <div class="middleware-list">
                             @foreach (var middleware in Channel.Middlewares)
                             {
-                                <MudExpansionPanel>
-                                    <TitleContent>
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                            <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="@GetComponentColor(middleware.Type)" />
-                                            <MudText Class="middleware-name">@middleware.Name</MudText>
-                                            <MudChip T="string" Color="@GetComponentColor(middleware.Type)" Size="Size.Small" Label="true">
-                                                @GetComponentTypeDisplayName(middleware.Type)
-                                            </MudChip>
+                                <section class="middleware-row">
+                                    <div class="middleware-row__summary">
+                                        <span class="middleware-row__icon" aria-hidden="true">
+                                            <MudIcon Icon="@GetComponentIcon(middleware.Type)"
+                                                     Size="Size.Small"
+                                                     Color="@GetComponentColor(middleware.Type)" />
+                                        </span>
+                                        <div class="middleware-row__copy">
+                                            <MudText Typo="Typo.subtitle2" Class="middleware-name">@middleware.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@GetComponentTypeDisplayName(middleware.Type)</MudText>
+                                        </div>
+                                        <div class="middleware-row__actions">
                                             @if (middleware.Type == PipelineComponentKind.InfoDisplayMiddleware && middleware.InfoDictionary?.Count > 0)
                                             {
-                                                <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Info">
-                                                    @middleware.InfoDictionary.Count 项信息
+                                                <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Outlined">
+                                                    @L["Channel:Info:ItemCount", middleware.InfoDictionary.Count]
                                                 </MudChip>
                                             }
                                             @if (middleware.Name == nameof(MessageDebuggerMiddleware))
                                             {
-                                                <MudIconButton Icon="@Icons.Material.Filled.BugReport" 
-                                                             Color="Color.Primary" 
-                                                             Size="Size.Small"
-                                                             OnClick="@(() => OpenMessageDebugger(Channel.Id, middleware))"
-                                                             title="打开消息调试器" />
+                                                <MudTooltip Text="@L["Debugger:Actions:Open"]">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.BugReport"
+                                                                   Color="Color.Primary"
+                                                                   Size="Size.Small"
+                                                                   OnClick="@(() => OpenMessageDebuggerAsync(Channel.Id, middleware))"
+                                                                   aria-label="@L["Debugger:Actions:Open"]" />
+                                                </MudTooltip>
                                             }
                                             @foreach (var action in GetMiddlewareRowActions(middleware))
                                             {
@@ -163,350 +164,235 @@
                                                                    aria-label="@action.Tooltip" />
                                                 </MudTooltip>
                                             }
-                                        </MudStack>
-                                    </TitleContent>
-                                    <ChildContent>
-                                        @if (middleware.Type == PipelineComponentKind.InfoDisplayMiddleware && middleware.InfoDictionary?.Any() == true)
-                                        {
-                                            <!-- Special display for info middleware -->
-                                            <MudStack Spacing="3">
-                                                <!-- Metadata info -->
-                                                <MudStack Spacing="2">
-                                                    <MudText Typo="Typo.subtitle2" Class="info-display-section-title">基础信息</MudText>
-                                                    <MetadataDisplay Metadata="middleware.Metadata" />
-                                                </MudStack>
+                                        </div>
+                                    </div>
 
-                                                <!-- Display dictionary entries -->
-                                                <MudStack Spacing="2">
-                                                    <MudText Typo="Typo.subtitle2" Class="stats-section-title">
-                                                        <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" Class="mr-1" />
-                                                        统计信息
-                                                    </MudText>
-                                                    <MudPaper Class="stats-container">
-                                                        <MudGrid Spacing="2">
-                                                            @foreach (var kvp in middleware.InfoDictionary)
-                                                            {
-                                                                <MudItem xs="12" sm="6" md="4">
-                                                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                                                                        <MudIcon Icon="@GetInfoIcon(kvp.Value)" Size="Size.Small" Color="@GetInfoColor(kvp.Value)" />
-                                                                        <MudStack Spacing="0" Class="stats-item-container">
-                                                                            <MudText Typo="Typo.caption" Class="stats-item-key">@kvp.Key</MudText>
-                                                                            <MudText Typo="Typo.body2" Class="stats-item-value">@FormatInfoValue(kvp.Value)</MudText>
-                                                                        </MudStack>
-                                                                    </MudStack>
-                                                                </MudItem>
-                                                            }
-                                                        </MudGrid>
-                                                    </MudPaper>
-                                                </MudStack>
-                                            </MudStack>
-                                        }
-                                        else
-                                        {
-                                            <!-- Display for standard middlewares -->
-                                            <MetadataDisplay Metadata="middleware.Metadata" />
-                                        }
-                                    </ChildContent>
-                                </MudExpansionPanel>
+                                    @if (middleware.Type == PipelineComponentKind.InfoDisplayMiddleware && middleware.InfoDictionary?.Count > 0)
+                                    {
+                                        <dl class="middleware-facts">
+                                            @foreach (var entry in middleware.InfoDictionary)
+                                            {
+                                                <div class="middleware-facts__row">
+                                                    <dt>@entry.Key</dt>
+                                                    <dd>@FormatInfoValue(entry.Value)</dd>
+                                                </div>
+                                            }
+                                        </dl>
+                                    }
+                                    else
+                                    {
+                                        <MetadataDisplay Metadata="middleware.Metadata" />
+                                    }
+                                </section>
                             }
-                        </MudExpansionPanels>
-                    </MudStack>
+                        </div>
+                    </MudExpansionPanel>
                 }
+            </MudExpansionPanels>
+        </div>
 
-                <!-- Exception details -->
-                @if (Channel.HasExceptions)
-                {
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.subtitle2" Class="exception-section-title">异常信息</MudText>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
-                            <MudText Class="exception-text">当前异常: @Channel.ExceptionCount</MudText>
-                        </MudStack>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Color="Color.Warning" />
-                            <MudText Class="exception-text">历史异常: @Channel.TotalExceptionCount</MudText>
-                        </MudStack>
-                    </MudStack>
-                }
-            </MudStack>
+        @if (Channel.HasExceptions)
+        {
+            <footer class="channel-exception" aria-label="@L["Channel:Exceptions:AriaLabel"]">
+                <span class="channel-exception__icon" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Size="Size.Small" />
+                </span>
+                <div>
+                    <MudText Typo="Typo.subtitle2">@L["Channel:Exceptions:Active", Channel.ExceptionCount]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Channel:Exceptions:Historical", Channel.TotalExceptionCount]</MudText>
+                </div>
+                <MudSpacer />
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           OnClick="@(() => OnViewExceptions.InvokeAsync(Channel.Id))">
+                    @L["Channel:Actions:Inspect"]
+                </MudButton>
+            </footer>
         }
-    </MudCardContent>
-</MudCard>
+    }
+</article>
 
 @code {
-    /// <summary>
-    /// Gets or sets the channel status information.
-    /// </summary>
-    [Parameter] public DataChannelStatusInfo Channel { get; set; } = null!;
+    [Parameter, EditorRequired]
+    public DataChannelStatusInfo Channel { get; set; } = null!;
 
-    /// <summary>
-    /// Gets or sets the callback used to reinitialize the channel.
-    /// </summary>
-    [Parameter] public EventCallback<string> OnReInitialize { get; set; }
+    [Parameter]
+    public EventCallback<string> OnReInitialize { get; set; }
 
-    /// <summary>
-    /// Gets or sets the callback used to view exceptions.
-    /// </summary>
-    [Parameter] public EventCallback<string> OnViewExceptions { get; set; }
+    [Parameter]
+    public EventCallback<string> OnViewExceptions { get; set; }
 
-    /// <summary>
-    /// Gets or sets the callback used to clear exceptions.
-    /// </summary>
-    [Parameter] public EventCallback<string> OnClearExceptions { get; set; }
+    [Parameter]
+    public EventCallback<string> OnClearExceptions { get; set; }
 
-    /// <summary>
-    /// Tracks whether reinitialization is currently in progress.
-    /// </summary>
-    private bool _isReInitializing = false;
+    private bool _isReinitializing;
+    private bool _disposed;
 
-    /// <summary>
-    /// Gets host-contributed actions for a middleware row in deterministic display order.
-    /// </summary>
-    private IEnumerable<IDataChannelMiddlewareRowAction> GetMiddlewareRowActions(PipelineComponentInfo middleware)
-    {
-        return MiddlewareRowActions
+    private IEnumerable<IDataChannelMiddlewareRowAction> GetMiddlewareRowActions(PipelineComponentInfo middleware) =>
+        MiddlewareRowActions
             .Where(action => action.IsVisible(Channel.Id, middleware))
             .OrderBy(action => action.Order);
-    }
 
-    /// <summary>
-    /// Handles channel reinitialization.
-    /// </summary>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task HandleReInitialize()
+    private async Task ReinitializeAsync()
     {
-        if (_isReInitializing) return;
+        if (_isReinitializing || _disposed)
+        {
+            return;
+        }
 
-        _isReInitializing = true;
-        StateHasChanged();
-
+        _isReinitializing = true;
         try
         {
-            // Use ConfigureAwait(false) to avoid deadlocks and keep the asynchronous operation from blocking the UI thread.
-            await Task.Run(async () =>
-            {
-                await OnReInitialize.InvokeAsync(Channel.Id);
-            }).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            // Additional error handling can be added here if needed.
-            System.Diagnostics.Debug.WriteLine($"重新初始化失败: {ex.Message}");
+            await OnReInitialize.InvokeAsync(Channel.Id);
         }
         finally
         {
-            // Ensure state updates run on the UI thread.
-            await InvokeAsync(() =>
+            if (!_disposed)
             {
-                _isReInitializing = false;
-                StateHasChanged();
-            });
+                _isReinitializing = false;
+            }
         }
     }
 
-    /// <summary>
-    /// Gets the CSS class list for the card.
-    /// </summary>
-    /// <returns>The computed CSS class string.</returns>
-    private string GetCardClass()
+    private string GetCardTone() => Channel switch
     {
-        var classes = new List<string> { "channel-card" };
-        
-        if (Channel.HasExceptions)
-            classes.Add("has-exceptions");
-        else if (Channel.IsNotAvailable)
-            classes.Add("not-available");
-        else if (Channel.IsInitialized)
-            classes.Add("initialized");
-            
-        return string.Join(" ", classes);
-    }
+        { IsNotAvailable: true } => "error",
+        { HasExceptions: true } => "warning",
+        { IsInitializing: true } => "info",
+        { IsInitialized: true } => "success",
+        _ => "neutral"
+    };
 
-    /// <summary>
-    /// Gets the icon for the current channel state.
-    /// </summary>
-    /// <returns>The icon name.</returns>
-    private string GetChannelIcon()
+    private string GetChannelIcon() => Channel switch
     {
-        if (Channel.IsNotAvailable) return Icons.Material.Filled.Cancel;
-        if (Channel.HasExceptions) return Icons.Material.Filled.Error;
-        if (Channel.IsInitialized) return Icons.Material.Filled.CheckCircle;
-        return Icons.Material.Filled.RadioButtonUnchecked;
-    }
+        { IsNotAvailable: true } => Icons.Material.Filled.Cancel,
+        { HasExceptions: true } => Icons.Material.Filled.Error,
+        { IsInitializing: true } => Icons.Material.Filled.Sync,
+        { IsInitialized: true } => Icons.Material.Filled.CheckCircle,
+        _ => Icons.Material.Filled.RadioButtonUnchecked
+    };
 
-    /// <summary>
-    /// Gets the color for the current channel state.
-    /// </summary>
-    /// <returns>The channel color.</returns>
-    private Color GetChannelColor()
+    private Color GetChannelColor() => Channel switch
     {
-        if (Channel.IsNotAvailable) return Color.Error;
-        if (Channel.HasExceptions) return Color.Warning;
-        if (Channel.IsInitialized) return Color.Success;
-        return Color.Default;
-    }
+        { IsNotAvailable: true } => Color.Error,
+        { HasExceptions: true } => Color.Warning,
+        { IsInitializing: true } => Color.Info,
+        { IsInitialized: true } => Color.Success,
+        _ => Color.Default
+    };
 
-    /// <summary>
-    /// Gets the icon for a pipeline component type.
-    /// </summary>
-    /// <param name="type">The component type.</param>
-    /// <returns>The icon name.</returns>
-    private string GetComponentIcon(PipelineComponentKind type)
+    private string GetChannelStateLabel() => Channel switch
     {
-        return type switch
-        {
-            PipelineComponentKind.Endpoint => Icons.Material.Filled.Adjust,
-            PipelineComponentKind.TransformMiddleware => Icons.Material.Filled.Transform,
-            PipelineComponentKind.MonitorMiddleware => Icons.Material.Filled.Monitor,
-            PipelineComponentKind.EndpointMiddleware => Icons.Material.Filled.Router,
-            PipelineComponentKind.InfoDisplayMiddleware => Icons.Material.Filled.Dashboard,
-            _ => Icons.Material.Filled.Extension
-        };
-    }
+        { IsNotAvailable: true } => L["Channel:States:Unavailable"],
+        { HasExceptions: true } => L["Channel:States:Degraded"],
+        { IsInitializing: true } => L["Channel:States:Initializing"],
+        { IsInitialized: true } => L["Channel:States:Ready"],
+        _ => L["Channel:States:NotInitialized"]
+    };
 
-    /// <summary>
-    /// Gets the color for a pipeline component type.
-    /// </summary>
-    /// <param name="type">The component type.</param>
-    /// <returns>The component color.</returns>
-    private Color GetComponentColor(PipelineComponentKind type)
+    private static string GetComponentIcon(PipelineComponentKind type) => type switch
     {
-        return type switch
-        {
-            PipelineComponentKind.Endpoint => Color.Primary,
-            PipelineComponentKind.TransformMiddleware => Color.Secondary,
-            PipelineComponentKind.MonitorMiddleware => Color.Info,
-            PipelineComponentKind.EndpointMiddleware => Color.Warning,
-            PipelineComponentKind.InfoDisplayMiddleware => Color.Success,
-            _ => Color.Default
-        };
-    }
+        PipelineComponentKind.Endpoint => Icons.Material.Filled.Adjust,
+        PipelineComponentKind.TransformMiddleware => Icons.Material.Filled.Transform,
+        PipelineComponentKind.MonitorMiddleware => Icons.Material.Filled.MonitorHeart,
+        PipelineComponentKind.EndpointMiddleware => Icons.Material.Filled.Router,
+        PipelineComponentKind.InfoDisplayMiddleware => Icons.Material.Filled.QueryStats,
+        _ => Icons.Material.Filled.Extension
+    };
 
-    /// <summary>
-    /// Gets the display name for a pipeline component type.
-    /// </summary>
-    /// <param name="type">The component type.</param>
-    /// <returns>The display name.</returns>
-    private string GetComponentTypeDisplayName(PipelineComponentKind type)
+    private static Color GetComponentColor(PipelineComponentKind type) => type switch
     {
-        return type switch
-        {
-            PipelineComponentKind.Endpoint => "端点",
-            PipelineComponentKind.TransformMiddleware => "转换中间件",
-            PipelineComponentKind.MonitorMiddleware => "监控中间件",
-            PipelineComponentKind.EndpointMiddleware => "端点中间件",
-            PipelineComponentKind.InfoDisplayMiddleware => "信息展示",
-            PipelineComponentKind.BaseMiddleware => "基础中间件",
-            _ => type.ToString()
-        };
-    }
+        PipelineComponentKind.Endpoint => Color.Primary,
+        PipelineComponentKind.TransformMiddleware => Color.Secondary,
+        PipelineComponentKind.MonitorMiddleware => Color.Info,
+        PipelineComponentKind.EndpointMiddleware => Color.Warning,
+        PipelineComponentKind.InfoDisplayMiddleware => Color.Success,
+        _ => Color.Default
+    };
 
-    /// <summary>
-    /// Gets the icon for an information item value.
-    /// </summary>
-    /// <param name="value">The information value.</param>
-    /// <returns>The icon name.</returns>
-    private string GetInfoIcon(object value)
+    private string GetComponentTypeDisplayName(PipelineComponentKind type) => type switch
     {
-        return value switch
-        {
-            long or int => Icons.Material.Filled.Numbers,
-            double or float or decimal => Icons.Material.Filled.Numbers,
-            string => Icons.Material.Filled.TextFields,
-            bool => Icons.Material.Filled.ToggleOn,
-            DateTime => Icons.Material.Filled.Schedule,
-            _ => Icons.Material.Filled.Info
-        };
-    }
+        PipelineComponentKind.Endpoint => L["Pipeline:ComponentKinds:Endpoint"],
+        PipelineComponentKind.TransformMiddleware => L["Pipeline:ComponentKinds:Transform"],
+        PipelineComponentKind.MonitorMiddleware => L["Pipeline:ComponentKinds:Monitor"],
+        PipelineComponentKind.EndpointMiddleware => L["Pipeline:ComponentKinds:EndpointMiddleware"],
+        PipelineComponentKind.InfoDisplayMiddleware => L["Pipeline:ComponentKinds:Information"],
+        PipelineComponentKind.BaseMiddleware => L["Pipeline:ComponentKinds:Base"],
+        _ => L["Pipeline:ComponentKinds:Unknown"]
+    };
 
-    /// <summary>
-    /// Gets the color for an information item value.
-    /// </summary>
-    /// <param name="value">The information value.</param>
-    /// <returns>The color associated with the value.</returns>
-    private Color GetInfoColor(object value)
+    private string FormatInfoValue(object? value) => value switch
     {
-        return value switch
-        {
-            long or int => Color.Primary,
-            double or float or decimal => Color.Primary,
-            string => Color.Secondary,
-            bool => Color.Success,
-            DateTime => Color.Info,
-            _ => Color.Default
-        };
-    }
+        long number => number.ToString("N0", System.Globalization.CultureInfo.CurrentCulture),
+        int number => number.ToString("N0", System.Globalization.CultureInfo.CurrentCulture),
+        double number => number.ToString("N2", System.Globalization.CultureInfo.CurrentCulture),
+        float number => number.ToString("N2", System.Globalization.CultureInfo.CurrentCulture),
+        decimal number => number.ToString("N2", System.Globalization.CultureInfo.CurrentCulture),
+        DateTime dateTime => dateTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.CurrentCulture),
+        bool boolean => boolean ? L["Common:Values:Yes"] : L["Common:Values:No"],
+        null => L["Common:Values:Empty"],
+        _ => value.ToString() ?? L["Common:Values:Unknown"]
+    };
 
-    /// <summary>
-    /// Formats an information value for display.
-    /// </summary>
-    /// <param name="value">The information value.</param>
-    /// <returns>The formatted display string.</returns>
-    private string FormatInfoValue(object value)
+    private async Task OpenMessageDebuggerAsync(string channelId, PipelineComponentInfo middleware)
     {
-        return value switch
-        {
-            long longValue => longValue.ToString("N0"),
-            int intValue => intValue.ToString("N0"),
-            double doubleValue => doubleValue.ToString("F2"),
-            float floatValue => floatValue.ToString("F2"),
-            decimal decimalValue => decimalValue.ToString("F2"),
-            DateTime dateTimeValue => dateTimeValue.ToString("yyyy-MM-dd HH:mm:ss"),
-            bool boolValue => boolValue ? "是" : "否",
-            null => "空",
-            _ => value.ToString() ?? "未知"
-        };
-    }
-
-    /// <summary>
-    /// Opens the message debugger dialog.
-    /// </summary>
-    private async Task OpenMessageDebugger(string channelId, PipelineComponentInfo middleware)
-    {
-        // Resolve the actual middleware instance.
-        var debuggerMiddleware = await GetMessageDebuggerMiddleware(channelId, middleware.Name);
-        if (debuggerMiddleware == null)
+        var debugger = await GetMessageDebuggerMiddlewareAsync(channelId, middleware.Name);
+        if (_disposed || debugger is null)
         {
             return;
         }
 
         var parameters = new DialogParameters<MessageDebuggerDialog>
         {
-            { x => x.Middleware, debuggerMiddleware }
+            { dialog => dialog.Middleware, debugger }
         };
 
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseButton = true,
-            BackdropClick = false
-        };
-
-        await DialogService.ShowAsync<MessageDebuggerDialog>($"消息调试器 - {channelId}", parameters, options);
+        await DialogService.ShowAsync<MessageDebuggerDialog>(
+            L["Debugger:DialogTitle", channelId],
+            parameters,
+            new DialogOptions
+            {
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = false
+            });
     }
 
-    /// <summary>
-    /// Gets the <see cref="MessageDebuggerMiddleware"/> instance.
-    /// </summary>
-    private async Task<MessageDebuggerMiddleware?> GetMessageDebuggerMiddleware(string channelId, string middlewareName)
+    private async Task<MessageDebuggerMiddleware?> GetMessageDebuggerMiddlewareAsync(
+        string channelId,
+        string middlewareName)
     {
         try
         {
             var result = await DataChannelService.GetMiddlewareAsync<MessageDebuggerMiddleware>(channelId, middlewareName);
-            if (result.IsFailed(out var error, out var middleware))
+            if (_disposed)
             {
-                Snackbar.Add($"获取调试器失败: {error}", Severity.Error);
                 return null;
             }
-            
+
+            if (result.IsFailed(out var error, out var middleware))
+            {
+                Snackbar.Add(L["Debugger:Messages:LoadFailed", error], Severity.Error);
+                return null;
+            }
+
             return middleware;
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"获取调试器时发生错误: {ex.Message}", Severity.Error);
+            if (!_disposed)
+            {
+                Snackbar.Add(L["Debugger:Messages:LoadException", ex.Message], Severity.Error);
+            }
+
             return null;
         }
     }
 
+    public void Dispose()
+    {
+        _disposed = true;
+    }
 }

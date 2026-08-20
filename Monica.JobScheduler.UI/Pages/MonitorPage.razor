@@ -12,6 +12,8 @@
 
 <PageTitle>@L["Monitor:Title"]</PageTitle>
 
+<SchedulerWorkspace Title="@L["Workspace:Pages:Monitor:Title"]"
+                    Description="@L["Workspace:Pages:Monitor:Description"]">
 <div class="monitor-page">
     @* Auto Refresh Control *@
     <AutoRefreshControl IsEnabled="@_autoRefreshEnabled"
@@ -60,6 +62,7 @@
         </MudGrid>
     }
 </div>
+</SchedulerWorkspace>
 
 @code {
     public const string PAGE_URL = "/job-scheduler/monitor";
@@ -77,6 +80,7 @@
     private RefreshInterval _refreshInterval = RefreshInterval.FiveSeconds;
     private readonly CancellationTokenSource _cts = new();
     private readonly CancellationToken _lifetimeToken;
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private PeriodicTimer? _refreshTimer;
     private Task? _refreshLoop;
 
@@ -85,13 +89,8 @@
         _lifetimeToken = _cts.Token;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
         if (await LoadDataAsync() && _autoRefreshEnabled)
         {
             StartAutoRefresh();
@@ -274,26 +273,25 @@
         }
     }
 
-    private void OnAutoRefreshToggle(bool enabled)
+    private async Task OnAutoRefreshToggle(bool enabled)
     {
         _autoRefreshEnabled = enabled;
         if (enabled)
         {
-            StartAutoRefresh();
+            await RestartAutoRefreshAsync();
         }
         else
         {
-            StopAutoRefresh();
+            await StopAutoRefreshAsync();
         }
     }
 
-    private void OnIntervalChanged(RefreshInterval interval)
+    private async Task OnIntervalChanged(RefreshInterval interval)
     {
         _refreshInterval = interval;
         if (_autoRefreshEnabled)
         {
-            StopAutoRefresh();
-            StartAutoRefresh();
+            await RestartAutoRefreshAsync();
         }
     }
 
@@ -304,36 +302,66 @@
             return;
         }
 
-        StopAutoRefresh();
         _refreshTimer = new PeriodicTimer(TimeSpan.FromMilliseconds((int)_refreshInterval));
         _refreshLoop = RefreshLoopAsync(_refreshTimer, _lifetimeToken);
     }
 
-    private void StopAutoRefresh()
+    private async Task RestartAutoRefreshAsync()
     {
-        _refreshTimer?.Dispose();
+        await _refreshGate.WaitAsync();
+        try
+        {
+            await StopAutoRefreshCoreAsync();
+            StartAutoRefresh();
+        }
+        finally
+        {
+            _refreshGate.Release();
+        }
+    }
+
+    private async Task StopAutoRefreshAsync()
+    {
+        await _refreshGate.WaitAsync();
+        try
+        {
+            await StopAutoRefreshCoreAsync();
+        }
+        finally
+        {
+            _refreshGate.Release();
+        }
+    }
+
+    private async Task StopAutoRefreshCoreAsync()
+    {
+        var refreshTimer = _refreshTimer;
         _refreshTimer = null;
+        refreshTimer?.Dispose();
+
+        var refreshLoop = _refreshLoop;
+        _refreshLoop = null;
+        if (refreshLoop is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await refreshLoop;
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
         await _cts.CancelAsync();
 
-        if (_refreshLoop != null)
-        {
-            try
-            {
-                await _refreshLoop;
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        _refreshTimer?.Dispose();
+        await StopAutoRefreshAsync();
+        _refreshGate.Dispose();
         _cts.Dispose();
-
-        await ValueTask.CompletedTask;
     }
 
     private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)

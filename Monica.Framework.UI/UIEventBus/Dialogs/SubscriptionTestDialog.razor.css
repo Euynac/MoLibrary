@@ -1,0 +1,30 @@
+.subscription-test-dialog__messages {
+    max-height: 26rem;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.subscription-test-dialog__payload {
+    min-width: 0;
+    padding: .75rem;
+    border-radius: 6px;
+    background: var(--mud-palette-background-gray);
+}
+
+.subscription-test-dialog__payload ::deep .mud-typography {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+    .subscription-test-dialog__messages ::deep .mud-stack-row {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .subscription-test-dialog__messages ::deep .mud-paper {
+        transition: none !important;
+    }
+}

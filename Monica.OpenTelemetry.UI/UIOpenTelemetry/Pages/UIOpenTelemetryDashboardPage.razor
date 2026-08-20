@@ -1,17 +1,17 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.OpenTelemetry.UI.UIOpenTelemetry.Components
 @using Monica.OpenTelemetry.UI.UIOpenTelemetry.State
-@inject OpenTelemetryDashboardPageState PageState
+@inject OpenTelemetryDashboardPageStateFactory PageStateFactory
 @inject IStringLocalizer<OpenTelemetryUIResource> L
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>@L["Page:Title"]</PageTitle>
 
-<div class="opentelemetry-page">
+<div class="opentelemetry-page mo-page-shell mo-page-shell--full-width">
     <MudContainer MaxWidth="MaxWidth.False" Gutters="false" Class="opentelemetry-container">
-        <MudPaper Class="dashboard-banner" Elevation="0">
+        <MudPaper Class="dashboard-banner mo-self-painted" Elevation="0">
             <div class="banner-title">
                 <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Size="Size.Large" Color="Color.Primary" />
                 <div>
@@ -47,7 +47,7 @@
             }
         </MudPaper>
 
-        <MudPaper Class="filter-bar" Elevation="0">
+        <MudPaper Class="filter-bar mo-self-painted" Elevation="0">
             <MudSelect T="string"
                        Value="@PageState.MeterPrefixFilter"
                        ValueChanged="SetMeterFilter"
@@ -110,7 +110,7 @@
 
         @if (PageState.IsLoading && PageState.Snapshot is null)
         {
-            <MudPaper Class="status-panel" Elevation="0">
+            <MudPaper Class="status-panel mo-self-painted" Elevation="0">
                 <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
                 <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Loading"]</MudText>
             </MudPaper>
@@ -129,7 +129,7 @@
                 <MudExpansionPanels MultiExpansion="true" Elevation="0">
                     @foreach (var meterGroup in PageState.FilteredInstrumentGroups())
                     {
-                        <MudExpansionPanel Text="@meterGroup.Key" Expanded="true">
+                        <MudExpansionPanel Text="@meterGroup.Key" Expanded="true" Class="mo-self-painted">
                             <div class="instrument-grid">
                                 @foreach (var instrument in meterGroup)
                                 {
@@ -172,6 +172,9 @@
     private const string AUTO_REFRESH_OFF = "off";
     private const string AUTO_REFRESH_1S = "1s";
     private const string AUTO_REFRESH_5S = "5s";
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private OpenTelemetryDashboardPageState PageState { get; set; } = null!;
+    private bool _disposed;
 
     private string AutoRefreshValue => PageState.AutoRefreshInterval switch
     {
@@ -180,16 +183,12 @@
         _ => AUTO_REFRESH_5S
     };
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
-        PageState.StateChanged += HandleStateChanged;
+        PageState = PageStateFactory.Create();
+        PageState.StateChanged += HandleStateChangedAsync;
         var result = await PageState.LoadAsync();
-        if (result.IsFailed(out var error))
+        if (!_disposed && result.IsFailed(out var error))
         {
             Snackbar.Add(error.Message ?? L["Status:Empty"].Value, Severity.Error);
         }
@@ -198,7 +197,7 @@
     private async Task RefreshAsync()
     {
         var result = await PageState.RefreshAsync();
-        if (result.IsFailed(out var error))
+        if (!_disposed && result.IsFailed(out var error))
         {
             Snackbar.Add(error.Message ?? L["Status:Empty"].Value, Severity.Error);
         }
@@ -218,15 +217,14 @@
         return Task.CompletedTask;
     }
 
-    private Task SetAutoRefresh(string value)
+    private async Task SetAutoRefresh(string value)
     {
-        PageState.SetAutoRefreshInterval(value switch
+        await PageState.SetAutoRefreshIntervalAsync(value switch
         {
             AUTO_REFRESH_1S => TimeSpan.FromSeconds(1),
             AUTO_REFRESH_5S => TimeSpan.FromSeconds(5),
             _ => null
         });
-        return Task.CompletedTask;
     }
 
     private async Task CopyPrometheusAsync()
@@ -243,20 +241,50 @@
     {
         try
         {
-            var success = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", text);
-            Snackbar.Add(success ? L["Status:Copied"].Value : L["Status:CopyFailed"].Value, success ? Severity.Success : Severity.Error);
+            var success = await JSRuntime.InvokeAsync<bool>(
+                "MoClipboard.copyText",
+                _lifetimeCancellation.Token,
+                text);
+            if (!_disposed)
+            {
+                Snackbar.Add(success ? L["Status:Copied"].Value : L["Status:CopyFailed"].Value, success ? Severity.Success : Severity.Error);
+            }
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
         }
         catch
         {
-            Snackbar.Add(L["Status:CopyFailed"].Value, Severity.Error);
+            if (!_disposed)
+            {
+                Snackbar.Add(L["Status:CopyFailed"].Value, Severity.Error);
+            }
         }
     }
 
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
-
-    public void Dispose()
+    private Task HandleStateChangedAsync() => InvokeAsync(() =>
     {
-        PageState.StateChanged -= HandleStateChanged;
-        PageState.Dispose();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
+    });
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        await _lifetimeCancellation.CancelAsync();
+        if (PageState is not null)
+        {
+            PageState.StateChanged -= HandleStateChangedAsync;
+            await PageState.DisposeAsync();
+        }
+
+        _lifetimeCancellation.Dispose();
     }
 }

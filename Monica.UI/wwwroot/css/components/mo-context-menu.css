@@ -1,0 +1,56 @@
+/* MudMenu-backed context menus share overlay behavior, focus management, and nested-menu timing. */
+.mo-context-menu-root {
+    display: contents;
+}
+
+.mud-popover.mo-context-menu-popover {
+    min-width: 13.75rem;
+    max-width: min(24rem, calc(100vw - 20px));
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-nav-menu-border-radius, var(--mud-default-borderradius));
+    background: var(--mud-palette-surface);
+    box-shadow: var(--mud-elevation-8);
+}
+
+.mud-popover.mo-context-menu-popover .mo-context-menu-list {
+    min-width: 13.75rem;
+    padding-block: 4px;
+}
+
+.mud-popover.mo-context-menu-popover .mo-context-menu-item,
+.mud-popover.mo-context-menu-popover .mud-menu-sub-menu-activator {
+    min-height: 38px;
+    margin: 2px 4px;
+    padding: 8px 10px;
+    border-radius: var(--mo-button-border-radius, var(--mud-default-borderradius));
+}
+
+.mud-popover.mo-context-menu-popover .mud-menu-item-text {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 12px;
+}
+
+.mud-popover.mo-context-menu-popover .mo-context-menu-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    color: var(--mud-palette-text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mud-popover.mo-context-menu-popover .mo-context-menu-shortcut {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    color: var(--mud-palette-text-disabled);
+    background: transparent;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.6875rem;
+}
+
+.mud-popover.mo-context-menu-popover .mo-context-menu-divider {
+    margin-block: 4px;
+}

@@ -1,29 +1,33 @@
-<MudPaper Class="log-filter-panel pa-3">
+@inject IStringLocalizer<LoggingResource> L
+
+<div class="log-filter-shell">
+<MudPaper Class="log-filter-panel pa-3" Elevation="0" Outlined="true">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
         <MudTextField T="string"
                       Value="@_keyword"
                       ValueChanged="OnKeywordChanged"
-                      Placeholder="输入筛选关键字"
+                      Placeholder="@L["Page:Components:Filter:Placeholder"]"
                       Immediate="false"
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       OnKeyDown="HandleKeyDown"
                       Class="log-filter-panel__input" />
 
-        <MudSwitch T="bool" Value="@_onlyCapture" ValueChanged="OnOnlyCaptureChanged" Color="Color.Primary">仅捕获匹配</MudSwitch>
+        <MudSwitch T="bool" Value="@_onlyCapture" ValueChanged="OnOnlyCaptureChanged" Color="Color.Primary">@L["Page:Components:Filter:OnlyMatches"]</MudSwitch>
 
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        Disabled="@IsApplying"
-                       OnClick="ApplyFilter">应用筛选</MudButton>
+                       OnClick="ApplyFilter">@L["Page:Components:Filter:Apply"]</MudButton>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Secondary"
                        Disabled="string.IsNullOrWhiteSpace(_keyword)"
-                       OnClick="ClearFilter">清除</MudButton>
+                       OnClick="ClearFilter">@L["Page:Components:Filter:Clear"]</MudButton>
         </MudStack>
     </MudStack>
 </MudPaper>
+</div>
 
 @code {
     [Parameter]

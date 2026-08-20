@@ -8,8 +8,8 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 
-<MudStack Spacing="4">
-    <MudPaper Class="pa-4">
+<MudStack Spacing="4" Class="domain-list">
+    <MudPaper Class="domain-list__header" Elevation="0" Outlined="true">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudText Typo="Typo.h6">@L["DomainList:Title"]</MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshDomainsAsync" Disabled="@_isLoading">
@@ -21,14 +21,14 @@
 
     @if (_isLoading)
     {
-        <MudPaper Class="pa-4">
+        <MudPaper Class="domain-list__state" Elevation="0" Outlined="true">
             <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
             <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2">@L["DomainList:States:Loading"]</MudText>
         </MudPaper>
     }
     else if (!_domains.Any())
     {
-        <MudPaper Class="pa-4">
+        <MudPaper Class="domain-list__state" Elevation="0" Outlined="true">
             <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
                 @L["DomainList:States:Empty"]
             </MudText>
@@ -41,17 +41,25 @@
             {
                 var colorRole = GetDomainColorRole(domain.Name);
                 <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudCard Elevation="4"
+                    <MudCard Elevation="0"
                              Class="@($"cursor-pointer domain-card domain-card--{colorRole}")"
-                             @onclick="() => HandleDomainClick(domain)">
+                             tabindex="0"
+                             role="button"
+                             @onclick="() => HandleDomainClick(domain)"
+                             @onkeydown="args => HandleDomainKeyDownAsync(args, domain)">
                         <MudCardContent>
                             <MudStack Spacing="2">
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                    <MudText Typo="Typo.h6" Style="color: var(--mud-palette-text-primary); font-weight: bold;">
-                                        @(domain.DisplayName ?? domain.Name)
-                                    </MudText>
+                                    <div class="domain-card__identity">
+                                        <span class="domain-card__icon" aria-hidden="true">
+                                            <MudIcon Icon="@Icons.Material.Filled.Domain" />
+                                        </span>
+                                        <MudText Typo="Typo.h6" Class="domain-card__title">
+                                            @(domain.DisplayName ?? domain.Name)
+                                        </MudText>
+                                    </div>
                                     <MudStack AlignItems="AlignItems.End" Spacing="1">
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Surface" Text="@L["DomainList:Counts:OwnedServices", GetOwnedServiceCount(domain.Name)]" />
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Text="@L["DomainList:Counts:OwnedServices", GetOwnedServiceCount(domain.Name)]" />
                                         @if (GetRelatedServiceCount(domain.Name) > 0)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainList:Counts:RelatedDependencies", GetRelatedServiceCount(domain.Name)]" />
@@ -61,20 +69,20 @@
 
                                 @if (!string.IsNullOrEmpty(domain.Description))
                                 {
-                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-primary);">
+                                    <MudText Typo="Typo.body2" Class="domain-card__description">
                                         @domain.Description
                                     </MudText>
                                 }
 
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-primary); opacity: 0.7;">
+                                    <MudText Typo="Typo.caption" Class="domain-card__meta">
                                         @L["DomainList:Summary:DomainName", domain.Name]
                                     </MudText>
                                     @{
                                         var ownedCount = GetOwnedServiceCount(domain.Name);
                                         var relatedCount = GetRelatedServiceCount(domain.Name);
                                     }
-                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-primary); opacity: 0.8;">
+                                    <MudText Typo="Typo.caption" Class="domain-card__meta domain-card__meta--strong">
                                         @L["DomainList:Summary:OwnedServices", ownedCount]
                                         @if (relatedCount > 0)
                                         {
@@ -158,5 +166,12 @@
     private async Task HandleDomainClick(DomainInfo domain)
     {
         await OnDomainSelected.InvokeAsync(domain);
+    }
+
+    private Task HandleDomainKeyDownAsync(KeyboardEventArgs args, DomainInfo domain)
+    {
+        return args.Key is "Enter" or " "
+            ? HandleDomainClick(domain)
+            : Task.CompletedTask;
     }
 }

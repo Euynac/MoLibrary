@@ -22,17 +22,7 @@ public static class ModuleGitUIBuilderExtensions
         /// </summary>
         public ModuleRegistration<ModuleGitUI, ModuleGitUIOption> AddGitUI(Action<ModuleGitUIOption>? action = null)
         {
-            var module = builder.AddModule<ModuleGitUI, ModuleGitUIOption>(action);
-            module.Require<ModuleLocalization, ModuleLocalizationOption>().AddResource<GitResource>();
-            module.Require<ModuleShellUI, ModuleShellUIOption>()
-                .RegisterUIComponents(registry => registry.RegisterLocalizedPage<UIGitRepositoriesPage, GitResource>(
-                    UIGitRepositoriesPage.PAGE_URL,
-                    "Pages:GitRepositories:Title",
-                    Icons.Material.Filled.Source,
-                    BuiltInNavigationCategoryIds.Infrastructure,
-                    addToNav: true,
-                    navOrder: 55));
-            return module;
+            return builder.AddModule<ModuleGitUI, ModuleGitUIOption>(action);
         }
     }
 }
@@ -46,8 +36,17 @@ public class ModuleGitUI : MonicaModule<ModuleGitUIOption>, IUIModule
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleGit, ModuleGitOption>();
-        module.Require<ModuleLocalization, ModuleLocalizationOption>();
-        module.Require<ModuleShellUI, ModuleShellUIOption>();
+        module.Require<ModuleLocalization, ModuleLocalizationOption>(
+            static option => option.AddResource<GitResource>());
+        module.Require<ModuleShellUI, ModuleShellUIOption>(static option =>
+            option.ConfigureNavigation(static registry =>
+                registry.RegisterLocalizedPage<UIGitRepositoriesPage, GitResource>(
+                    UIGitRepositoriesPage.PAGE_URL,
+                    "Pages:GitRepositories:Title",
+                    Icons.Material.Filled.Source,
+                    BuiltInNavigationCategoryIds.Infrastructure,
+                    addToNav: true,
+                    navOrder: 55)));
     }
 }
 

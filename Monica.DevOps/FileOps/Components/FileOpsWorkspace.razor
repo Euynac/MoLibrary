@@ -382,6 +382,8 @@
     private IReadOnlyList<FileOpsEntrySummary> _sortedEntries = [];
     private readonly HashSet<string> _selectedEntryPaths = new(GetPathComparer());
     private IJSObjectReference? _jsModule;
+    private readonly SemaphoreSlim _interopGate = new(1, 1);
+    private bool _disposed;
     private FileOpsEntrySortField _sortField = FileOpsEntrySortField.Name;
     private bool _sortDescending;
     private static readonly FileOpsEntrySortField[] _sortableFields = Enum.GetValues<FileOpsEntrySortField>();
@@ -404,7 +406,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _initialized)
+        if (!firstRender || _initialized || _disposed)
         {
             return;
         }
@@ -793,12 +795,23 @@
 
     private async Task LoadBrowseResultAsync(string? path)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _isLoading = true;
         StateHasChanged();
 
         try
         {
-            if ((await FileOpsFacade.BrowseAsync(path)).IsFailed(out var error, out var browseResult))
+            var response = await FileOpsFacade.BrowseAsync(path);
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (response.IsFailed(out var error, out var browseResult))
             {
                 SetStatus(error, Severity.Error);
                 Snackbar.Add(error, Severity.Error);
@@ -814,7 +827,10 @@
         finally
         {
             _isLoading = false;
-            StateHasChanged();
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
@@ -825,21 +841,40 @@
 
     private async Task DownloadDescriptorAsync(FileOpsDownloadDescriptor descriptor)
     {
-        var module = await GetJsModuleAsync();
-        using var streamReference = new DotNetStreamReference(descriptor.ContentStream);
-        await module.InvokeVoidAsync(
-            "downloadStream",
-            descriptor.FileName,
-            descriptor.ContentType,
-            streamReference);
-    }
+        await using var contentStream = descriptor.ContentStream;
+        await _interopGate.WaitAsync();
+        try
+        {
+            if (_disposed)
+            {
+                return;
+            }
 
-    private async Task<IJSObjectReference> GetJsModuleAsync()
-    {
-        _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import",
-            "./_content/Monica.DevOps/FileOps/Components/FileOpsWorkspace.razor.js");
-        return _jsModule;
+            if (_jsModule is null)
+            {
+                var importedModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import",
+                    "./_content/Monica.DevOps/FileOps/Components/FileOpsWorkspace.razor.js");
+                if (_disposed)
+                {
+                    await DisposeJsReferenceAsync(importedModule);
+                    return;
+                }
+
+                _jsModule = importedModule;
+            }
+
+            using var streamReference = new DotNetStreamReference(contentStream, leaveOpen: true);
+            await _jsModule.InvokeVoidAsync(
+                "downloadStream",
+                descriptor.FileName,
+                descriptor.ContentType,
+                streamReference);
+        }
+        finally
+        {
+            _interopGate.Release();
+        }
     }
 
     private string GetLocationName(string? path)
@@ -998,7 +1033,7 @@
 
     private async Task ExecuteBusyAsync(Func<Task> action)
     {
-        if (_isBusy)
+        if (_isBusy || _disposed)
         {
             return;
         }
@@ -1011,12 +1046,20 @@
         finally
         {
             _isBusy = false;
-            StateHasChanged();
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
         }
     }
 
     private void SetStatus(string message, Severity severity)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _statusMessage = message;
         _statusSeverity = severity;
         StateHasChanged();
@@ -1024,15 +1067,50 @@
 
     private void ClearStatus()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _statusMessage = string.Empty;
         _statusSeverity = Severity.Info;
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule is not null)
+        if (_disposed)
         {
-            await _jsModule.DisposeAsync();
+            return;
+        }
+
+        _disposed = true;
+        await _interopGate.WaitAsync();
+        try
+        {
+            var module = Interlocked.Exchange(ref _jsModule, null);
+            await DisposeJsReferenceAsync(module);
+        }
+        finally
+        {
+            _interopGate.Release();
+        }
+
+        _interopGate.Dispose();
+    }
+
+    private static async ValueTask DisposeJsReferenceAsync(IJSObjectReference? reference)
+    {
+        if (reference is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await reference.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
         }
     }
 

@@ -195,6 +195,12 @@ public class ServiceDiscoveryClientHostedService(
     /// </summary>
     private async Task CheckOrMaintainLeaderAsync(CancellationToken ct)
     {
+        // Worker hosts publish heartbeats but never compete for application control-plane leadership.
+        if (_option.Role == ServiceDiscoveryRole.Worker)
+        {
+            return;
+        }
+
         if (!leaderService.IsLeader)
         {
             // Not currently Leader, check if we should compete

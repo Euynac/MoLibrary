@@ -1,5 +1,6 @@
 @using Monica.Utilities.Connectivity.Models
 @using Monica.Utilities.Localization
+@implements IAsyncDisposable
 @inject ConnectivityProbeState State
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<UtilitiesResource> L
@@ -7,7 +8,7 @@
 <div class="connectivity-panel">
     <MudGrid Spacing="2" Class="connectivity-panel__grid">
         <MudItem xs="12" lg="6" xl="5">
-            <MudPaper Class="connectivity-panel__card connectivity-panel__card--form pa-4" Elevation="0">
+            <MudPaper Class="connectivity-panel__card connectivity-panel__card--form mo-self-painted pa-4" Elevation="0">
                 <MudStack Spacing="3">
                     <div>
                         <MudText Typo="Typo.h6">@L["Connectivity:Title"]</MudText>
@@ -121,7 +122,7 @@
         </MudItem>
 
         <MudItem xs="12" lg="6" xl="7">
-            <MudPaper Class="connectivity-panel__card connectivity-panel__card--result pa-4" Elevation="0">
+            <MudPaper Class="connectivity-panel__card connectivity-panel__card--result mo-self-painted pa-4" Elevation="0">
                 @if (State.LastResult is null)
                 {
                     <div class="connectivity-panel__empty">
@@ -146,7 +147,7 @@
                             <MudText Typo="Typo.subtitle2">
                                 @(State.LastResult.Succeeded ? L["Connectivity:Succeeded"] : L["Connectivity:Failed"])
                             </MudText>
-                            <MudText Typo="Typo.body2">@State.LastResult.Summary</MudText>
+                            <MudText Typo="Typo.body2">@GetResultSummary(State.LastResult)</MudText>
                         </MudAlert>
 
                         <div class="connectivity-panel__stats">
@@ -254,18 +255,32 @@
 </div>
 
 @code {
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private bool _disposed;
+
     private async Task RunProbeAsync()
     {
-        var result = await State.RunAsync();
-        if (result.IsFailed(out var error, out var probeResult))
+        try
         {
-            Snackbar.Add(error.Message ?? L["Connectivity:Failed"].Value, Severity.Error);
-            return;
-        }
+            var result = await State.RunAsync(_lifetimeCancellation.Token);
+            if (_disposed)
+            {
+                return;
+            }
 
-        Snackbar.Add(
-            probeResult.Succeeded ? L["Messages:ProbeCompleted"].Value : L["Messages:ProbeFailed"].Value,
-            probeResult.Succeeded ? Severity.Success : Severity.Warning);
+            if (result.IsFailed(out var error, out var probeResult))
+            {
+                Snackbar.Add(error.Message ?? L["Connectivity:Failed"].Value, Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(
+                probeResult.Succeeded ? L["Messages:ProbeCompleted"].Value : L["Messages:ProbeFailed"].Value,
+                probeResult.Succeeded ? Severity.Success : Severity.Warning);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+        }
     }
 
     private string FormatMilliseconds(long? milliseconds)
@@ -299,5 +314,61 @@
             ConnectivityProbeKind.Ping => FormatMilliseconds(result.Ping?.LatencyMilliseconds),
             _ => FormatMilliseconds(result.Tcp?.LatencyMilliseconds)
         };
+    }
+
+    private string GetResultSummary(ConnectivityProbeResult result)
+    {
+        var unknownError = L["Connectivity:Summary:UnknownError"].Value;
+        return result.ProbeKind switch
+        {
+            ConnectivityProbeKind.Ping when result.Succeeded => L[
+                "Connectivity:Summary:PingSucceeded",
+                result.Host,
+                result.Ping?.ReplyAddress ?? result.Host,
+                result.Ping?.LatencyMilliseconds ?? result.TotalDurationMilliseconds].Value,
+            ConnectivityProbeKind.Ping => L[
+                "Connectivity:Summary:PingFailed",
+                result.Host,
+                result.Ping?.FailureMessage ?? result.Ping?.Status ?? result.ResolutionError ?? unknownError].Value,
+            ConnectivityProbeKind.Tcp when result.Succeeded => L[
+                "Connectivity:Summary:TcpSucceeded",
+                result.Endpoint,
+                result.Tcp?.LatencyMilliseconds ?? result.TotalDurationMilliseconds].Value,
+            ConnectivityProbeKind.Tcp => L[
+                "Connectivity:Summary:TcpFailed",
+                result.Endpoint,
+                result.Tcp?.FailureMessage ?? result.ResolutionError ?? unknownError].Value,
+            _ when result.Succeeded => L[
+                "Connectivity:Summary:HttpSucceeded",
+                result.Endpoint,
+                GetHttpResponseLabel(result),
+                result.Http?.LatencyMilliseconds ?? result.TotalDurationMilliseconds].Value,
+            _ => L[
+                "Connectivity:Summary:HttpFailed",
+                result.Endpoint,
+                result.Http?.FailureMessage ?? result.Tcp?.FailureMessage ?? result.ResolutionError ?? unknownError].Value
+        };
+    }
+
+    private string GetHttpResponseLabel(ConnectivityProbeResult result)
+    {
+        if (result.Http?.StatusCode is not { } statusCode)
+        {
+            return L["Connectivity:Summary:HttpResponse"].Value;
+        }
+
+        return $"{(int)statusCode} {result.Http.ReasonPhrase}".TrimEnd();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        await _lifetimeCancellation.CancelAsync();
+        _lifetimeCancellation.Dispose();
     }
 }

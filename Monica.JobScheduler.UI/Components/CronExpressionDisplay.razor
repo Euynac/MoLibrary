@@ -86,8 +86,15 @@ else
 
     private string? _description;
     private bool _isLoading;
-    private IJSObjectReference? _jsModule;
+    private CronInteropSession? _cronInterop;
     private string? _lastExpression;
+    private int _loadVersion;
+    private bool _disposed;
+
+    protected override void OnInitialized()
+    {
+        _cronInterop = new CronInteropSession(JsRuntime);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -100,7 +107,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         // Expression changed, reload description
-        if (_lastExpression != Expression && _jsModule != null)
+        if (_lastExpression != Expression && _cronInterop != null && !_disposed)
         {
             await LoadDescriptionAsync();
         }
@@ -108,6 +115,7 @@ else
 
     private async Task LoadDescriptionAsync()
     {
+        var loadVersion = ++_loadVersion;
         if (string.IsNullOrWhiteSpace(Expression))
         {
             _description = null;
@@ -120,25 +128,36 @@ else
 
         try
         {
-            // Load JS module if not loaded
-            _jsModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/Monica.JobScheduler.UI/js/cron-helper.js");
+            var cronInterop = _cronInterop;
+            if (cronInterop is null || _disposed)
+            {
+                return;
+            }
 
             // Detect format based on segment count
             var format = DetectFormat(Expression);
 
             // Parse to description
-            var result = await CronService.ParseToDescriptionAsync(_jsModule, Expression, format);
-            _description = result.IsOk(out var desc) ? desc : null;
+            var result = await CronService.ParseToDescriptionAsync(cronInterop, Expression, format);
+            if (!_disposed && loadVersion == _loadVersion)
+            {
+                _description = result.IsOk(out var desc) ? desc : null;
+            }
         }
         catch
         {
-            _description = null;
+            if (!_disposed && loadVersion == _loadVersion)
+            {
+                _description = null;
+            }
         }
         finally
         {
-            _isLoading = false;
-            StateHasChanged();
+            if (!_disposed && loadVersion == _loadVersion)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
         }
     }
 
@@ -164,16 +183,13 @@ else
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule != null)
+        _disposed = true;
+        _loadVersion++;
+        var cronInterop = _cronInterop;
+        _cronInterop = null;
+        if (cronInterop != null)
         {
-            try
-            {
-                await _jsModule.DisposeAsync();
-            }
-            catch
-            {
-                // Ignore disposal errors
-            }
+            await cronInterop.DisposeAsync();
         }
     }
 }

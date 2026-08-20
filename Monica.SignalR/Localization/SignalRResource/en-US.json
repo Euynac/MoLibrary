@@ -2,8 +2,23 @@
   "Pages": {
     "SignalRDebug": {
       "Title": "SignalR Debug",
-      "Heading": "SignalR Debug",
+      "Heading": "Real-time Channel Lab",
+      "Eyebrow": "SIGNALR / LIVE TRANSPORT",
+      "Subtitle": "Open a browser-side hub session, inspect channel activity, and exercise the registered contract in one workspace.",
+      "Summary": {
+        "AriaLabel": "SignalR channel summary",
+        "Hubs": "hubs",
+        "Users": "users",
+        "Received": "received"
+      },
+      "Sections": {
+        "Connection": "Connection workspace",
+        "Telemetry": "Channel telemetry",
+        "Methods": "Hub contract tools",
+        "Messages": "Message tools"
+      },
       "Settings": {
+        "Eyebrow": "CLIENT TRACE",
         "Title": "Debug Settings",
         "VerboseLogging": "Enable verbose debug logs",
         "VerboseLoggingHelper": "Show detailed argument conversion and method invocation information to troubleshoot parameter type issues."
@@ -192,8 +207,7 @@
       "ConnectionFailed": "Connection failed: {0}",
       "Disconnected": "Disconnected",
       "RegisteredListener": "Registered listener for: {0}",
-      "UnregisteredListener": "Unregistered listener for: {0}",
-      "AllListenersCleared": "All listeners cleared"
+      "UnregisteredListener": "Unregistered listener for: {0}"
     },
     "DebugClient": {
       "ConnectedToHub": "Connected to SignalR hub: {0}",
@@ -209,10 +223,7 @@
       "RegisterListenerFailed": "Failed to register the listener: {0}",
       "UnregisterListenerFailed": "Failed to unregister the listener: {0}",
       "ListenerToggleFailed": "Failed to update the listener state: {0}",
-      "ConnectionStatusChanged": "Connection status changed: {0}",
-      "JavaScriptLoadTimeout": "Timed out while waiting for SignalR debug JavaScript to load.",
-      "SetLocalizationFailed": "Failed to set JavaScript localization: {0}",
-      "SetCallbacksFailed": "Failed to set JavaScript callbacks: {0}"
+      "ConnectionStatusChanged": "Connection status changed: {0}"
     }
   }
 }

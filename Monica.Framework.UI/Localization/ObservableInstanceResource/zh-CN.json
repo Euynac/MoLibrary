@@ -7,7 +7,16 @@
   "Page": {
     "PageTitle": "可观测实例监控",
     "Header": {
-      "Title": "可观测实例监控"
+      "Title": "可观测实例监控",
+      "Eyebrow": "Monica / 运行时状态",
+      "Description": "在同一个运行台账中追踪已注册实例、健康变化、异常压力与分组归属。"
+    },
+    "Summary": {
+      "AriaLabel": "可观测实例运行摘要",
+      "Tracked": "跟踪实例",
+      "Healthy": "健康实例",
+      "Exceptions": "异常总数",
+      "Groups": "分组"
     },
     "Tabs": {
       "Overview": "总览",

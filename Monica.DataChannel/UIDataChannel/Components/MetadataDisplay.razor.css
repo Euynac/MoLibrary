@@ -1,199 +1,93 @@
-/* Styles for the metadata display component */
-
-/* Container for each metadata entry */
-.metadata-item {
-    padding: 8px;
-    border-radius: 4px;
-    background-color: var(--mud-palette-background-gray);
+.metadata-list {
+    display: flex;
+    flex-direction: column;
+    margin: 8px 0 0;
+    min-width: 0;
 }
 
-/* Styles for metadata keys */
-.metadata-key {
+.metadata-row {
+    display: grid;
+    grid-template-columns: minmax(92px, 0.38fr) minmax(0, 1fr);
+    gap: 12px;
+    min-width: 0;
+    padding: 9px 0;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.metadata-row:first-child {
+    border-top: 0;
+}
+
+.metadata-row dt {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
     font-weight: 600;
-    color: var(--mud-palette-primary);
-    min-width: 120px;
-    text-align: left;
 }
 
-/* Layout for metadata values */
-.metadata-value-container {
-    flex: 1;
-}
-
-/* Styling for primitive metadata values */
-.metadata-simple-value {
-    color: var(--mud-palette-text-primary);
-    word-break: break-word;
-    white-space: pre-wrap;
-}
-
-/* Heading for complex metadata objects */
-.metadata-complex-title {
-    color: var(--mud-palette-text-primary);
-}
-
-/* Container for complex metadata sections */
-.metadata-complex-container {
-    padding: 12px;
-    background-color: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-divider);
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-/* Code block styling */
-.metadata-code {
+.metadata-row dd {
+    min-width: 0;
     margin: 0;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
+}
+
+.metadata-value {
+    display: block;
+    overflow-wrap: anywhere;
     color: var(--mud-palette-text-primary);
-    line-height: 1.4;
+    font-family: var(--mo-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+    font-size: 0.78rem;
 }
 
-/* Empty state container */
-.metadata-empty-state {
-    padding: 12px;
-    border-radius: 4px;
-    background-color: var(--mud-palette-background-gray);
+.metadata-complex {
+    min-width: 0;
 }
 
-/* Empty state icon */
-.metadata-empty-icon {
-    color: var(--mud-palette-text-secondary);
-}
-
-/* Empty state text */
-.metadata-empty-text {
-    color: var(--mud-palette-text-secondary);
-    font-style: italic;
-}
-
-/* Responsive adjustments */
-@media (max-width: 576px) {
-    .metadata-key {
-        min-width: 80px;
-        font-size: 0.875rem;
-    }
-    
-    .metadata-complex-container {
-        max-height: 200px;
-        padding: 8px;
-    }
-    
-    .metadata-code {
-        font-size: 11px;
-    }
-}
-
-@media (max-width: 768px) {
-    .metadata-item {
-        padding: 6px;
-    }
-    
-    .metadata-empty-state {
-        padding: 8px;
-    }
-}
-
-/* Custom MudBlazor overrides */
-::deep .metadata-item .mud-stack-row {
-    align-items: flex-start;
-}
-
-::deep .metadata-complex-container .mud-paper {
-    border-radius: 4px;
-}
-
-/* Expansion panel tweaks */
-::deep .metadata-item .mud-expansion-panels {
+.metadata-complex ::deep .mud-expansion-panels {
     box-shadow: none;
 }
 
-::deep .metadata-item .mud-expansion-panel {
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 4px;
+.metadata-complex ::deep .mud-expansion-panel {
     overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-background-gray);
 }
 
-::deep .metadata-item .mud-expansion-panel-content {
-    padding: 0;
+.metadata-complex ::deep .mud-expand-panel-header {
+    min-height: 38px;
+    padding-inline: 10px;
 }
 
-/* Scrollbar styling */
-.metadata-complex-container::-webkit-scrollbar {
-    width: 6px;
+.metadata-code {
+    max-height: 280px;
+    margin: 0;
+    padding: 10px;
+    overflow: auto;
+    color: var(--mud-palette-text-primary);
+    background-color: var(--mud-palette-surface);
+    font-family: var(--mo-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+    font-size: 0.75rem;
+    line-height: 1.55;
+    white-space: pre;
 }
 
-.metadata-complex-container::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-gray);
+.metadata-empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 10px 0;
+    color: var(--mud-palette-text-secondary);
 }
 
-.metadata-complex-container::-webkit-scrollbar-thumb {
-    background: var(--mud-palette-text-disabled);
-    border-radius: 3px;
-}
-
-.metadata-complex-container::-webkit-scrollbar-thumb:hover {
-    background: var(--mud-palette-text-secondary);
-}
-
-/* Syntax highlighting colors */
-.metadata-code .json-key {
-    color: var(--mo-color-code-key);
-    font-weight: bold;
-}
-
-.metadata-code .json-string {
-    color: var(--mo-color-code-string);
-}
-
-.metadata-code .json-number {
-    color: var(--mo-color-code-number);
-}
-
-.metadata-code .json-boolean {
-    color: var(--mo-color-code-boolean);
-}
-
-.metadata-code .json-null {
-    color: var(--mo-color-code-null);
-}
-
-/* Hover state */
-.metadata-item:hover {
-    background-color: var(--mud-palette-action-default-hover);
-    transition: background-color 0.2s ease;
-}
-
-/* Focus state */
-.metadata-item:focus-within {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 2px;
-}
-
-/* Expansion animation */
-::deep .metadata-item .mud-collapse {
-    transition: all 0.3s ease;
-}
-
-/* Icon alignment */
-::deep .metadata-item .mud-icon {
-    margin-top: 2px;
-}
-
-/* Empty state animation */
-.metadata-empty-state {
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
+@media (max-width: 600px) {
+    .metadata-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 4px;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+
+    .metadata-code {
+        max-height: 220px;
     }
 }

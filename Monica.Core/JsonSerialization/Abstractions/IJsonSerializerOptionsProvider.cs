@@ -12,7 +12,7 @@ public interface IJsonSerializerOptionsProvider
     DateTimeWireFormat DateTimeFormat { get; }
 
     /// <summary>
-    /// Gets the shared JSON serializer options used by the application.
+    /// Gets the immutable JSON serializer options shared by the host and supported adapters.
     /// </summary>
     JsonSerializerOptions SerializerOptions { get; }
 

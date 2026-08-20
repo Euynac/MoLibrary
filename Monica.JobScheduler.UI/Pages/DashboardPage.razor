@@ -13,6 +13,8 @@
 
 <PageTitle>@L["Dashboard:Title"]</PageTitle>
 
+<SchedulerWorkspace Title="@L["Workspace:Pages:Dashboard:Title"]"
+                    Description="@L["Workspace:Pages:Dashboard:Description"]">
 <div class="dashboard-page">
     @if (_isLoading)
     {
@@ -69,6 +71,7 @@
         }
     }
 </div>
+</SchedulerWorkspace>
 
 @code {
     public const string PAGE_URL = "/job-scheduler";
@@ -94,13 +97,8 @@
         _lifetimeToken = _cts.Token;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
         if (await LoadDataAsync() && _autoRefreshEnabled)
         {
             StartAutoRefresh();
@@ -239,7 +237,6 @@
         _refreshTimer?.Dispose();
         _cts.Dispose();
 
-        await ValueTask.CompletedTask;
     }
 
     private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)

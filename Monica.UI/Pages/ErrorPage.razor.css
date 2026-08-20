@@ -1,0 +1,118 @@
+.error-page {
+    display: grid;
+    gap: var(--mo-page-section-gap);
+    width: 100%;
+    min-width: 0;
+    padding: var(--mo-page-gutter-block) var(--mo-page-gutter-inline);
+}
+
+.error-page__surface {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.25rem;
+    min-width: 0;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 28%, var(--mud-palette-lines-default));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--mud-palette-error) 5%, var(--mud-palette-surface));
+}
+
+.error-page__icon,
+.error-page__guidance-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 8px;
+}
+
+.error-page__icon {
+    color: var(--mud-palette-error);
+    background: color-mix(in srgb, var(--mud-palette-error) 13%, transparent);
+}
+
+.error-page__icon ::deep .mud-icon-root {
+    font-size: 1.75rem;
+}
+
+.error-page__copy {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.error-page ::deep .error-page__eyebrow {
+    color: var(--mud-palette-error);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.error-page__request-id {
+    display: grid;
+    grid-column: 2 / -1;
+    gap: 0.3rem;
+    min-width: 0;
+    padding-top: 1rem;
+    border-top: 1px solid var(--mud-palette-divider);
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8rem;
+}
+
+.error-page__request-id code {
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-primary);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    user-select: text;
+}
+
+.error-page__guidance {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1.25rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+}
+
+.error-page__guidance-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--mud-palette-info);
+    background: color-mix(in srgb, var(--mud-palette-info) 12%, transparent);
+}
+
+.error-page__guidance > div {
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+@media (max-width: 680px) {
+    .error-page__surface {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .error-page__action,
+    .error-page__request-id {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 420px) {
+    .error-page__surface {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .error-page__icon {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+    .error-page__guidance {
+        flex-direction: column;
+    }
+}

@@ -1,10 +1,11 @@
 @using Microsoft.Extensions.Options
 @using Monica.Modules
 @using Monica.UI.Shell.State
+@using Monica.UI.Shell.Support
 @inherits LayoutComponentBase
 @inject IOptions<ModuleShellUIOption> Options
 @inject ThemeState ThemeService
-@implements IDisposable
+@implements IAsyncDisposable
 
 <ThemeProviderHost>
     <MudPopoverProvider />
@@ -29,20 +30,23 @@
 </div>
 
 @code {
+    private readonly ComponentRenderTracker _renderTracker = new();
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
         ThemeService.OnThemeChanged += HandleThemeChanged;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         ThemeService.OnThemeChanged -= HandleThemeChanged;
+        await _renderTracker.CompleteAsync();
     }
 
     private void HandleThemeChanged()
     {
-        InvokeAsync(StateHasChanged);
+        _renderTracker.Queue(() => InvokeAsync(StateHasChanged));
     }
 }
 

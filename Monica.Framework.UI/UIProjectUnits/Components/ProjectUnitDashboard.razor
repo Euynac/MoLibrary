@@ -44,7 +44,11 @@
                         <MudText Typo="Typo.h4" HtmlTag="h2">@_snapshot.Service.AppName</MudText>
                         @if (!string.IsNullOrWhiteSpace(_snapshot.Service.AppVersion))
                         {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Variant="Variant.Outlined"
+                                     Class="project-unit-dashboard__service-version"
+                                     title="@_snapshot.Service.AppVersion">
                                 @_snapshot.Service.AppVersion
                             </MudChip>
                         }
@@ -297,7 +301,10 @@
                                 </div>
                                 <div class="project-unit-dashboard__gap-copy">
                                     <MudText Typo="Typo.subtitle2">@gap.Unit.Title</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="project-unit-dashboard__gap-key">
+                                    <MudText Typo="Typo.caption"
+                                             Color="Color.Secondary"
+                                             Class="project-unit-dashboard__gap-key"
+                                             title="@gap.Unit.Key">
                                         @gap.Unit.Key
                                     </MudText>
                                     <div class="project-unit-dashboard__gap-badges">
@@ -315,7 +322,9 @@
                                         }
                                     </div>
                                 </div>
-                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Secondary" />
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
+                                         Color="Color.Secondary"
+                                         Class="project-unit-dashboard__gap-chevron" />
                             </button>
                         }
                     </div>

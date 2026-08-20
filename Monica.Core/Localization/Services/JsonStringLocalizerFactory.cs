@@ -1,13 +1,13 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Localization.Models.Internal;
+using Monica.Core.Localization.Models;
 using Monica.Core.Localization.Services.Support;
 
 namespace Monica.Core.Localization.Services;
 
 internal sealed class JsonStringLocalizerFactory(
-    LocalizationRuntimeOptions options,
+    LocalizationProfile profile,
     LocalizationResourceRegistry resourceRegistry,
     ILogger<JsonStringLocalizerFactory> logger,
     ILogger<DictionaryStringLocalizer> localizerLogger) : IStringLocalizerFactory
@@ -30,14 +30,14 @@ internal sealed class JsonStringLocalizerFactory(
     {
         if (resourceRegistry.TryGetRegistration(resourceSource, out var registration))
         {
-            var resources = EmbeddedJsonResourceLoader.Load(registration, options.SupportedCultures);
-            return new DictionaryStringLocalizer(resourceSource.Name, resources, options, localizerLogger);
+            var resources = EmbeddedJsonResourceLoader.Load(registration, profile.SupportedCultures);
+            return new DictionaryStringLocalizer(resourceSource.Name, resources, profile, localizerLogger);
         }
 
         logger.LogDebug(
             "No localization resource registration was found for {ResourceType}. Returning an empty localizer.",
             resourceSource.FullName ?? resourceSource.Name);
 
-        return new DictionaryStringLocalizer(resourceSource.Name, [], options, localizerLogger);
+        return new DictionaryStringLocalizer(resourceSource.Name, [], profile, localizerLogger);
     }
 }

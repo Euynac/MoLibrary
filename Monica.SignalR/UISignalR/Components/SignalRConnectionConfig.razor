@@ -1,17 +1,19 @@
 @using Monica.SignalR.Models
 @inject IStringLocalizer<SignalRResource> L
 
-<!-- Connection configuration -->
-<MudPaper Class="pa-4 mb-4" Elevation="2">
-    <MudText Typo="Typo.h5" Class="mb-3">@L["UISignalR:ConnectionConfig:Title"]</MudText>
+<MudPaper Class="signalr-connection-config" Elevation="0">
+    <div class="signalr-component-heading">
+        <MudIcon Icon="@Icons.Material.Outlined.Cable" Color="Color.Primary" />
+        <MudText Typo="Typo.h6">@L["UISignalR:ConnectionConfig:Title"]</MudText>
+    </div>
     <MudGrid>
-        <MudItem xs="12">
+        <MudItem xs="12" md="6">
             <MudTextField @bind-Value="AccessToken" 
                         Label="@L["UISignalR:ConnectionConfig:AccessTokenLabel"]" 
                         Variant="Variant.Outlined"
                         HelperText="@L["UISignalR:ConnectionConfig:AccessTokenHelper"]" />
         </MudItem>
-        <MudItem xs="12">
+        <MudItem xs="12" md="6">
             <MudSelect @bind-Value="SelectedHubRoute" 
                      Label="@L["UISignalR:ConnectionConfig:HubUrlLabel"]" 
                      Variant="Variant.Outlined"
@@ -23,7 +25,7 @@
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12">
+        <MudItem xs="12" Class="signalr-connection-actions">
             <MudButton Variant="Variant.Filled" 
                      Color="Color.Primary" 
                      OnClick="ConnectAsync"

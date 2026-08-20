@@ -1,0 +1,4 @@
+.key-dialog__diagnostic-input ::deep input,
+.key-dialog__diagnostic-input ::deep textarea {
+    font-family: var(--mo-font-family-mono);
+}

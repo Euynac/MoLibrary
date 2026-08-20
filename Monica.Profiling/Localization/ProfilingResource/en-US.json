@@ -1,0 +1,15 @@
+{
+  "Unavailable": {
+    "Eyebrow": "OPTIONAL PROFILING MODULE",
+    "RuntimeMetrics": {
+      "PageTitle": "Runtime Metrics Unavailable",
+      "Title": "Runtime metrics are not enabled",
+      "Description": "Enable the Runtime Metrics UI module in this host to collect and inspect live process evidence."
+    },
+    "MemoryAnalysis": {
+      "PageTitle": "Memory Analysis Unavailable",
+      "Title": "Memory analysis is not enabled",
+      "Description": "Enable the Memory Analysis UI module in this host to inspect memory, GC, and allocation evidence."
+    }
+  }
+}
