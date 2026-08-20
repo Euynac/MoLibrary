@@ -16,6 +16,10 @@ public static class TreeBuilder
         Func<TData, TKey?> parentKeySelector,
         IEqualityComparer<TKey>? comparer = null) where TKey : notnull
     {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(keySelector);
+        ArgumentNullException.ThrowIfNull(parentKeySelector);
+
         comparer ??= EqualityComparer<TKey>.Default;
         var nodeMap = new Dictionary<TKey, TreeNode<TData>>(comparer);
         var childBuffer = new Dictionary<TKey, List<TreeNode<TData>>>(comparer);
@@ -25,7 +29,10 @@ public static class TreeBuilder
         {
             var key = keySelector(item);
             var node = new TreeNode<TData>(item);
-            nodeMap[key] = node;
+            if (!nodeMap.TryAdd(key, node))
+            {
+                throw new ArgumentException($"Duplicate tree key '{key}' was found.", nameof(items));
+            }
 
             // Attach any children that were waiting for this node
             if (childBuffer.TryGetValue(key, out var waiting))
@@ -77,6 +84,11 @@ public static class TreeBuilder
         Func<TItem, string, TPathData> leafDataFactory,
         char separator = '/')
     {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(pathSelector);
+        ArgumentNullException.ThrowIfNull(directoryDataFactory);
+        ArgumentNullException.ThrowIfNull(leafDataFactory);
+
         var root = new TreeNode<TPathData>(directoryDataFactory(string.Empty));
         var dirCache = new Dictionary<string, TreeNode<TPathData>>();
 

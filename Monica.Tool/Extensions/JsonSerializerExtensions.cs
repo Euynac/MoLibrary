@@ -37,7 +37,13 @@ public static class JsonSerializerExtensions
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
     /// <returns>return <see langword="null"/> or <see langword="default"/> if <paramref name="json"/> is <see langword="null"/>, <see cref="string.Empty"/> or whitespace.</returns>
-    public static ValueTask<T?> DeserializeJsonAsync<T>(this string? json, JsonSerializerOptions? options = default, CancellationToken cancellationToken = default) => string.IsNullOrWhiteSpace(json) ? default : JsonSerializer.DeserializeAsync<T>(json.ConvertToStream(), options, cancellationToken);
+    public static async ValueTask<T?> DeserializeJsonAsync<T>(this string? json, JsonSerializerOptions? options = default, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return default;
+
+        await using var stream = json.ConvertToStream();
+        return await JsonSerializer.DeserializeAsync<T>(stream, options, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <summary>
     /// Use future populate method instead #29538
@@ -53,7 +59,12 @@ public static class JsonSerializerExtensions
 
     public static void PopulateObject(object target, string jsonSource, Type type)
     {
-        var json = JsonDocument.Parse(jsonSource).RootElement;
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(jsonSource);
+        ArgumentNullException.ThrowIfNull(type);
+
+        using var document = JsonDocument.Parse(jsonSource);
+        var json = document.RootElement;
         foreach (var property in json.EnumerateObject())
         {
             OverwriteProperty(target, property, type);
@@ -62,9 +73,12 @@ public static class JsonSerializerExtensions
 
     public static void OverwriteProperty(object target, JsonProperty updatedProperty, Type type)
     {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(type);
+
         var propertyInfo = type.GetProperty(updatedProperty.Name);
 
-        if (propertyInfo == null)
+        if (propertyInfo is null || !propertyInfo.CanWrite || propertyInfo.GetIndexParameters().Length != 0)
         {
             return;
         }
@@ -76,7 +90,10 @@ public static class JsonSerializerExtensions
         {
             parsedValue = null;
         }
-        else if (propertyType.IsValueType || propertyType == typeof(string))
+        else if (updatedProperty.Value.ValueKind != JsonValueKind.Object ||
+                 propertyType.IsValueType ||
+                 propertyType == typeof(string) ||
+                 typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType))
         {
             parsedValue = JsonSerializer.Deserialize(
                 updatedProperty.Value.GetRawText(),

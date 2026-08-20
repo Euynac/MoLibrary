@@ -20,8 +20,16 @@ public static class JsonExceptionExtensions
         ArgumentNullException.ThrowIfNull(jsonException);
         ArgumentNullException.ThrowIfNull(originJson);
 
-        var lineNumber = (int)(jsonException.LineNumber ?? 0);
-        var bytePositionInLine = (int)(jsonException.BytePositionInLine ?? 0);
+        var lineNumberValue = jsonException.LineNumber ?? 0;
+        var bytePositionValue = jsonException.BytePositionInLine ?? 0;
+
+        if (lineNumberValue is < 0 or > int.MaxValue || bytePositionValue is < 0 or > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(jsonException), "The JSON error position is outside the supported range.");
+        }
+
+        var lineNumber = (int)lineNumberValue;
+        var bytePositionInLine = (int)bytePositionValue;
 
         var lines = originJson.Split(["\r\n", "\n"], StringSplitOptions.None);
 
@@ -45,6 +53,10 @@ public static class JsonExceptionExtensions
 
     public static string GetPreviewAroundBytesPosition(string line, int bytePosition, int contextWindow = 20)
     {
+        ArgumentNullException.ThrowIfNull(line);
+        ArgumentOutOfRangeException.ThrowIfNegative(bytePosition);
+        ArgumentOutOfRangeException.ThrowIfNegative(contextWindow);
+
         var position = NormalizeCount(line, bytePosition);
         var start = Math.Max(0, position - contextWindow);
         var end = Math.Min(line.Length, position + contextWindow);
@@ -52,7 +64,7 @@ public static class JsonExceptionExtensions
         var preview = line[start..end];
 
         var markedPreview = new StringBuilder(preview);
-        markedPreview.Insert(Math.Min(position - start + 1, preview.Length), "<<< ERROR HERE <<<");
+        markedPreview.Insert(Math.Clamp(position - start, 0, preview.Length), "<<< ERROR HERE <<<");
 
         return markedPreview.ToString();
     }
@@ -65,7 +77,21 @@ public static class JsonExceptionExtensions
     /// <returns></returns>
     public static int NormalizeCount(string str, int count)
     {
-        var bytes = Encoding.UTF8.GetBytes(str);
-        return bytes.Length != str.Length ? Encoding.UTF8.GetCharCount(bytes, 0, count) : count;
+        ArgumentNullException.ThrowIfNull(str);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        var consumedBytes = 0;
+        var characterIndex = 0;
+        while (characterIndex < str.Length)
+        {
+            var characterLength = char.IsSurrogatePair(str, characterIndex) ? 2 : 1;
+            var encodedLength = Encoding.UTF8.GetByteCount(str.AsSpan(characterIndex, characterLength));
+            if (consumedBytes + encodedLength > count) break;
+
+            consumedBytes += encodedLength;
+            characterIndex += characterLength;
+        }
+
+        return characterIndex;
     }
 }

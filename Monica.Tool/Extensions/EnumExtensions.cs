@@ -102,17 +102,25 @@ public static class EnumExtensions
     /// <returns></returns>
     public static T RetrieveFlags<T>(this string flagsStr, char separator, bool ignoreCase = false, bool strictMode = true) where T: struct, Enum
     {
-        var e = 0;
+        ArgumentNullException.ThrowIfNull(flagsStr);
+
+        ulong combined = 0;
         foreach (var flag in flagsStr.Split(separator, StringSplitOptions.RemoveEmptyEntries))
         {
-            if (!Enum.TryParse(typeof(T), flag, ignoreCase, out var tmpFlag) && strictMode)
+            if (!Enum.TryParse<T>(flag, ignoreCase, out var parsedFlag))
             {
-                throw new IndexOutOfRangeException($"{flagsStr} can't not parse to {typeof(T).Name}");
+                if (strictMode)
+                {
+                    throw new IndexOutOfRangeException($"{flagsStr} cannot be parsed as {typeof(T).Name}");
+                }
+
+                continue;
             }
 
-            e |= tmpFlag?.GetHashCode() ?? 0;
+            combined |= ToUInt64(parsedFlag);
         }
-        return (T)(e as object);
+
+        return FromUInt64<T>(combined);
     }
     /// <summary>
     /// Returns the enumeration values ​​contained in the given bitwise enumeration one by one.
@@ -173,13 +181,13 @@ public static class EnumExtensions
     /// <returns></returns>
     public static T Remove<T>(this T flags, params T[] removeFlags) where T : Enum
     {
-        var flagInt = flags.GetHashCode();
-        foreach (var removeFlag in removeFlags) // Using dynamic here might be nicer, but the current version does not support it.
+        var value = ToUInt64(flags);
+        foreach (var removeFlag in removeFlags)
         {
-            flagInt &= ~removeFlag.GetHashCode(); // Avoid extra boxing overhead.
+            value &= ~ToUInt64(removeFlag);
         }
 
-        return (T)(flagInt as object);
+        return FromUInt64<T>(value);
     }
     /// <summary>
     /// Adds the specified enumeration to the specified bitwise enumeration.
@@ -191,13 +199,13 @@ public static class EnumExtensions
     /// <returns></returns>
     public static T Add<T>(this T flags, params T[] addFlags) where T : Enum
     {
-        var flagInt = flags.GetHashCode();
+        var value = ToUInt64(flags);
         foreach (var flag in addFlags)
         {
-            flagInt |= flag.GetHashCode();
+            value |= ToUInt64(flag);
         }
 
-        return (T)(flagInt as object);
+        return FromUInt64<T>(value);
     }
 
     /// <summary>
@@ -248,6 +256,40 @@ public static class EnumExtensions
     /// <returns></returns>
     public static bool HasTheFlag<T>(this T value, T flag) where T : Enum
         => value.HasFlag(flag);
+
+    private static ulong ToUInt64<T>(T value) where T : Enum
+    {
+        return Type.GetTypeCode(Enum.GetUnderlyingType(typeof(T))) switch
+        {
+            TypeCode.SByte => unchecked((ulong)Convert.ToSByte(value)),
+            TypeCode.Int16 => unchecked((ulong)Convert.ToInt16(value)),
+            TypeCode.Int32 => unchecked((ulong)Convert.ToInt32(value)),
+            TypeCode.Int64 => unchecked((ulong)Convert.ToInt64(value)),
+            TypeCode.Byte => Convert.ToByte(value),
+            TypeCode.UInt16 => Convert.ToUInt16(value),
+            TypeCode.UInt32 => Convert.ToUInt32(value),
+            TypeCode.UInt64 => Convert.ToUInt64(value),
+            _ => throw new InvalidOperationException($"Unsupported enum underlying type for {typeof(T).FullName}.")
+        };
+    }
+
+    private static T FromUInt64<T>(ulong value) where T : Enum
+    {
+        object underlyingValue = Type.GetTypeCode(Enum.GetUnderlyingType(typeof(T))) switch
+        {
+            TypeCode.SByte => unchecked((sbyte)value),
+            TypeCode.Int16 => unchecked((short)value),
+            TypeCode.Int32 => unchecked((int)value),
+            TypeCode.Int64 => unchecked((long)value),
+            TypeCode.Byte => unchecked((byte)value),
+            TypeCode.UInt16 => unchecked((ushort)value),
+            TypeCode.UInt32 => unchecked((uint)value),
+            TypeCode.UInt64 => value,
+            _ => throw new InvalidOperationException($"Unsupported enum underlying type for {typeof(T).FullName}.")
+        };
+
+        return (T)Enum.ToObject(typeof(T), underlyingValue);
+    }
 
     #endregion
 }

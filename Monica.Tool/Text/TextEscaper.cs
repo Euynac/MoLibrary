@@ -69,35 +69,32 @@ public static class TextEscaper
     /// <returns></returns>
     public static string RemoveEscapeChars(string originalText, char escapeChar = '\\')
     {
-        var result = new StringBuilder();
-        var state = RemoveEscapeCharsStates.Reset;
+        ArgumentNullException.ThrowIfNull(originalText);
+
+        var result = new StringBuilder(originalText.Length);
+        var escaping = false;
         foreach (var chr in originalText)
         {
-            switch (state)
+            if (escaping)
             {
-                case RemoveEscapeCharsStates.Reset:
-                    if (chr == escapeChar)
-                    {
-                        state = RemoveEscapeCharsStates.FoundEscapeChar;
-                    }
-                    else
-                    {
-                        result.Append(chr);
-                        state = RemoveEscapeCharsStates.Reset;
-                    }
-                    break;
-                case RemoveEscapeCharsStates.FoundEscapeChar:
-                    result.Append(chr);
-                    state = RemoveEscapeCharsStates.Reset;
-                    break;
-                default:
-                    throw new Exception("Unknown state");
+                result.Append(chr);
+                escaping = false;
+            }
+            else if (chr == escapeChar)
+            {
+                escaping = true;
+            }
+            else
+            {
+                result.Append(chr);
             }
         }
-        if (state != RemoveEscapeCharsStates.Reset)
+
+        if (escaping)
         {
-            throw new Exception($"{state} is not an accept state!");
+            throw new FormatException("The text ends with an incomplete escape sequence.");
         }
+
         return result.ToString();
     }
 }

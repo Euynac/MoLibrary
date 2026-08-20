@@ -17,6 +17,8 @@ public static class StreamExtensions
 
     public static async Task<byte[]> GetAllBytesAsync(this Stream stream, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (stream is MemoryStream memoryStream)
         {
             return memoryStream.ToArray();
@@ -44,21 +46,33 @@ public static class StreamExtensions
 
     public async static Task<MemoryStream> CreateMemoryStreamAsync(this Stream stream, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(stream);
+
         if (stream.CanSeek)
         {
             stream.Position = 0;
         }
 
         var memoryStream = new MemoryStream();
-        await stream.CopyToAsync(memoryStream, cancellationToken);
-
-        if (stream.CanSeek)
+        try
         {
-            stream.Position = 0;
-        }
+            await stream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
 
-        memoryStream.Position = 0;
-        return memoryStream;
+            memoryStream.Position = 0;
+            return memoryStream;
+        }
+        catch
+        {
+            await memoryStream.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+        finally
+        {
+            if (stream.CanSeek)
+            {
+                stream.Position = 0;
+            }
+        }
     }
 
     public static MemoryStream CreateMemoryStream(this Stream stream)
@@ -81,10 +95,23 @@ public static class StreamExtensions
     }
     public static async Task<string> ReadAsAsStringWithoutChangePosAsync(this Stream stream)
     {
-        var reader = new StreamReader(stream);
-        reader.BaseStream.Seek(0, SeekOrigin.Begin);
-        var content = await reader.ReadToEndAsync();
-        return content;
+        ArgumentNullException.ThrowIfNull(stream);
+        if (!stream.CanSeek)
+        {
+            throw new NotSupportedException("The stream must support seeking to preserve its position.");
+        }
+
+        var originalPosition = stream.Position;
+        try
+        {
+            stream.Position = 0;
+            using var reader = new StreamReader(stream, leaveOpen: true);
+            return await reader.ReadToEndAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            stream.Position = originalPosition;
+        }
     }
     /// <summary>
     /// Read all bytes in the stream. If the stream is a MemoryStream, ToArray() is returned directly, otherwise the stream is copied to the memory stream and ToArray() is returned.

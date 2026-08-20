@@ -52,7 +52,7 @@ public class LangDetector
 
     private static readonly IReadOnlyList<LanguageRuleSet> LANGUAGE_RULES = LoadLanguageRules();
 
-    private sealed record LanguageRule(string Pattern, int Points, bool NearTop);
+    private sealed record LanguageRule(int Points, bool NearTop, Regex Matcher);
 
     private sealed record LanguageRuleSet(string Language, IReadOnlyList<LanguageRule> Rules);
 
@@ -89,22 +89,29 @@ public class LangDetector
     }
     public List<ScoresResult> GetLangScores(string snippet)
     {
-        var linesOfCode = snippet.RegexReplace("\r\n?", "\n").RegexReplace("\n{2,}", "\n").Split('\n');
+        ArgumentNullException.ThrowIfNull(snippet);
+
+        var linesOfCode = snippet.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Split('\n')
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
+        var originalLineCount = linesOfCode.Length;
 
         bool NearTop(int index)
         {
-            if (linesOfCode.Length <= 10) return true;
-            return index < linesOfCode.Length / 10;
+            if (originalLineCount <= 10) return true;
+            return index < Math.Max(1, originalLineCount / 10);
         }
 
-        if (linesOfCode.Length > 500)
-        {
-            linesOfCode = linesOfCode
-                .Where((lineOfCode, index) => NearTop(index) || index % (int)Math.Ceiling((double)linesOfCode.Length / 500) == 0)
-                .ToArray();
-        }
+        var sampleInterval = originalLineCount > 500
+            ? (int)Math.Ceiling((double)originalLineCount / 500)
+            : 1;
+        var sampledLines = linesOfCode
+            .Select((line, index) => (Line: line, Index: index))
+            .Where(item => NearTop(item.Index) || item.Index % sampleInterval == 0)
+            .ToArray();
 
-        var useNearTop = linesOfCode.Length > 500;
         var results = LANGUAGE_RULES.Select(ruleSet =>
         {
             var language = ruleSet.Language;
@@ -114,19 +121,30 @@ public class LangDetector
                 Languages = SupportedLanguages.Unknown,
                 Scores = 1
             };
-            var pointsList = linesOfCode.Select((lineOfCode, index) =>
+            var points = 0;
+            foreach (var (line, originalIndex) in sampledLines)
             {
-                
-                var relevantCheckers = !useNearTop ? checkers:NearTop(index)
-                    ? checkers.Where(checker => checker.NearTop).ToList()
-                    : checkers.Where(checker => !checker.NearTop).ToList();
+                foreach (var checker in checkers)
+                {
+                    if (checker.NearTop && !NearTop(originalIndex))
+                    {
+                        continue;
+                    }
 
-                return relevantCheckers
-                    .Where(checker => Regex.IsMatch(lineOfCode, checker.Pattern))
-                    .Sum(checker => checker.Points);
-            }).ToList();
+                    try
+                    {
+                        if (checker.Matcher.IsMatch(line))
+                        {
+                            points += checker.Points;
+                        }
+                    }
+                    catch (RegexMatchTimeoutException)
+                    {
+                        // A pathological line must not prevent all other language rules from scoring.
+                    }
+                }
+            }
 
-            var points = pointsList.Sum();
             return new ScoresResult()
             {
                 Languages = language.ToEnum<SupportedLanguages>()!.Value,
@@ -146,7 +164,13 @@ public class LangDetector
             .Select(pair => new LanguageRuleSet(
                 pair.Key,
                 pair.Value
-                    .Select(option => new LanguageRule(option.pattern, option.points, option.nearTop))
+                    .Select(option => new LanguageRule(
+                        option.points,
+                        option.nearTop,
+                        new Regex(
+                            option.pattern,
+                            RegexOptions.Compiled | RegexOptions.CultureInvariant,
+                            TimeSpan.FromMilliseconds(250))))
                     .ToArray()))
             .ToArray();
     }
@@ -525,7 +549,7 @@ public class LangDetector
                 {
                     "pattern": "virtual|override|sealed",
                     "points": 3
-                },
+                }
             ],
             "CSS": [
                 {

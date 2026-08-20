@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Monica.Tool.Extensions;
 
@@ -14,7 +15,8 @@ public static class CustomAttributeExtensions
     /// <summary>
     /// Cache Data [Key composed of TypeName + AttributeName, Attribute object]
     /// </summary>
-    private static readonly ConcurrentDictionary<string, object?> _cache = new();
+    private static readonly ConditionalWeakTable<Type, ConcurrentDictionary<(string? MemberName, Type AttributeType), object>> Cache = new();
+    private static readonly object MissingAttribute = new();
 
     /// <summary>
     /// Get the CustomAttribute of the specified type
@@ -38,7 +40,7 @@ public static class CustomAttributeExtensions
         Expression<Func<TClass, TProperty>> property)
         where TAttribute : Attribute
     {
-        var name = ((MemberExpression)property.Body).Member.Name;
+        var name = property.GetPropertyInfo().Name;
         return GetCustomAttributeCached<TAttribute>(classType, name);
     }
 
@@ -52,7 +54,7 @@ public static class CustomAttributeExtensions
     public static TAttribute? GetCustomAttributeCached<TAttribute, TClass, TProperty>(this TClass classType,
         TAttribute attributeType, Expression<Func<TClass, TProperty>> property) where TAttribute : Attribute where TClass : class, new()
     {
-        var name = ((MemberExpression)property.Body).Member.Name;
+        var name = property.GetPropertyInfo().Name;
         var type = typeof(TClass);
         return GetCustomAttributeCached<TAttribute>(type, name);
     }
@@ -67,10 +69,12 @@ public static class CustomAttributeExtensions
     public static TAttribute? GetCustomAttributeCached<TAttribute>(this Type sourceType, string? name)
         where TAttribute : Attribute
     {
-        var cacheKey = sourceType.FullName + "." + name + "." + typeof(TAttribute).FullName;
-        var value = _cache.GetOrAdd(cacheKey, key => GetValue<TAttribute>(sourceType, name));
-        if (value is TAttribute attribute) return attribute;
-        return null;
+        ArgumentNullException.ThrowIfNull(sourceType);
+
+        var typeCache = Cache.GetValue(sourceType, static _ => new());
+        var cacheKey = (name, typeof(TAttribute));
+        var value = typeCache.GetOrAdd(cacheKey, _ => GetValue<TAttribute>(sourceType, name) ?? MissingAttribute);
+        return ReferenceEquals(value, MissingAttribute) ? null : (TAttribute)value;
     }
     /// <summary>
     /// Gets the CustomAttribute of the specified class or its attributes or methods

@@ -380,7 +380,7 @@ public static class StringExtensions
     /// <returns></returns>
     public static string ConvertToString(this Stream stream)
     {
-        using var reader = new StreamReader(stream);
+        using var reader = new StreamReader(stream, leaveOpen: true);
         return reader.ReadToEnd();
     }
 
@@ -411,7 +411,21 @@ public static class StringExtensions
     /// <param name="str"></param>
     /// <param name="times"></param>
     /// <returns></returns>
-    public static string Repeat(this string str, int times) => new(Enumerable.Range(0, times).SelectMany(x => str).ToArray());
+    public static string Repeat(this string str, int times)
+    {
+        ArgumentNullException.ThrowIfNull(str);
+        ArgumentOutOfRangeException.ThrowIfNegative(times);
+        if (str.Length == 0 || times == 0) return string.Empty;
+
+        var resultLength = checked(str.Length * times);
+        return string.Create(resultLength, (Value: str, Count: times), static (destination, state) =>
+        {
+            for (var index = 0; index < state.Count; index++)
+            {
+                state.Value.AsSpan().CopyTo(destination[(index * state.Value.Length)..]);
+            }
+        });
+    }
     /// <summary>
     /// Indicates whether the specified string is NOT null or an <see cref="F:System.String.Empty"></see> string.
     /// </summary>
@@ -514,7 +528,8 @@ public static class StringExtensions
     public static List<int> AllIndexOf(this string? source, string value, bool repeat = false)
     {
         var list = new List<int>();
-        if (source.IsNullOrEmpty()) return list;
+        ArgumentNullException.ThrowIfNull(value);
+        if (source.IsNullOrEmpty() || value.Length == 0) return list;
         var i = 0;
         while (i >= 0 && i < source.Length)
         {
@@ -659,8 +674,22 @@ public static class StringExtensions
     /// <returns></returns>
     public static string FilterChars(this string source, params char[] charsToRemove)
     {
-        var regex = new Regex($"[{new string(charsToRemove)}]");
-        return regex.Replace(source, "");
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(charsToRemove);
+        if (source.Length == 0 || charsToRemove.Length == 0) return source;
+
+        var characters = charsToRemove.ToHashSet();
+        var retainedCount = source.Count(character => !characters.Contains(character));
+        if (retainedCount == source.Length) return source;
+
+        return string.Create(retainedCount, (Source: source, Removed: characters), static (destination, state) =>
+        {
+            var index = 0;
+            foreach (var character in state.Source)
+            {
+                if (!state.Removed.Contains(character)) destination[index++] = character;
+            }
+        });
     }
     /// <summary>
     /// Filter '\', '/', ':', '*', '?', '"', '&lt;', '&gt;', '|','.' chars from given string.
@@ -794,7 +823,7 @@ public static class StringExtensions
         return string.Create(s.Length, s, (chars, state) =>
         {
             state.AsSpan().CopyTo(chars);
-            chars[0] = char.ToUpper(chars[0]);
+            chars[0] = char.ToUpperInvariant(chars[0]);
         });
     }
     /// <summary>

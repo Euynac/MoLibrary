@@ -15,8 +15,8 @@ public class InformationUnitConverter : UnitConverterBase
         var eb = new Unit("EB", 1000, pb, "ExaByte");
         var zb = new Unit("ZB", 1000, eb, "ZettaByte");
         var yb = new Unit("YB", 1000, zb, "YottaByte");
-        var rb = new Unit("RB", 1000, zb, "Ronnabyte");
-        var qb = new Unit("QB", 1000, zb, "Quettabyte");
+        var rb = new Unit("RB", 1000, yb, "Ronnabyte");
+        var qb = new Unit("QB", 1000, rb, "Quettabyte");
 
         //International Electrotechnical Commission (IEC) binary.
         var kib = new Unit("KiB", 1024, @byte, "kibibyte");

@@ -25,7 +25,7 @@ public static class TextOperations
                 array[i] = (char)12288;
                 continue;
             }
-            if (array[i] < 127)
+            if (array[i] is >= (char)33 and <= (char)126)
             {
                 array[i] = (char)(array[i] + 65248);
             }
@@ -37,7 +37,22 @@ public static class TextOperations
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    public static bool ContainsChinese(string input) => Regex.IsMatch(input, @"[\u4e00-\u9fa5]");
+    public static bool ContainsChinese(string input)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+
+        foreach (var rune in input.EnumerateRunes())
+        {
+            if (rune.Value is >= 0x3400 and <= 0x4DBF or
+                >= 0x4E00 and <= 0x9FFF or
+                >= 0x20000 and <= 0x3134F)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Convert string to half-width
@@ -106,7 +121,7 @@ public static class TextOperations
         encoding ??= Encoding.Unicode;
         return Regex.Replace(
             value,
-            $@"{prefix.ToRegexEscaped()}([a-zA-Z0-9]+)",
+            $@"{prefix.ToRegexEscaped()}([a-fA-F0-9]+)",
             m =>
             {
                 var hexStr = m.Groups[1].Value;
@@ -159,7 +174,7 @@ public static class TextOperations
     {
         return Regex.Replace(
             value,
-            @"\\u([a-zA-Z0-9]{4})",
+            @"\\u([a-fA-F0-9]{4})",
             m => ((char)int.Parse(m.Groups[1].Value, NumberStyles.HexNumber)).ToString());
     }
 

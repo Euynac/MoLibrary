@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 namespace Monica.Tool.Algorithms.Trees;
@@ -12,6 +13,7 @@ namespace Monica.Tool.Algorithms.Trees;
 public class TreeNode<TData> : IEnumerable<TreeNode<TData>>
 {
     private readonly List<TreeNode<TData>> _children = [];
+    private readonly ReadOnlyCollection<TreeNode<TData>> _readOnlyChildren;
 
     /// <summary>
     /// Creates a new tree node with the specified data.
@@ -19,6 +21,7 @@ public class TreeNode<TData> : IEnumerable<TreeNode<TData>>
     public TreeNode(TData data)
     {
         Data = data;
+        _readOnlyChildren = _children.AsReadOnly();
     }
 
     /// <summary>
@@ -34,7 +37,7 @@ public class TreeNode<TData> : IEnumerable<TreeNode<TData>>
     /// <summary>
     /// The children of this node.
     /// </summary>
-    public IReadOnlyList<TreeNode<TData>> Children => _children;
+    public IReadOnlyList<TreeNode<TData>> Children => _readOnlyChildren;
 
     /// <summary>
     /// The depth of this node (distance from root). Root has depth 0.
@@ -121,6 +124,21 @@ public class TreeNode<TData> : IEnumerable<TreeNode<TData>>
     /// <returns>This node (for chaining).</returns>
     public TreeNode<TData> AddChild(TreeNode<TData> child)
     {
+        ArgumentNullException.ThrowIfNull(child);
+
+        for (var ancestor = this; ancestor is not null; ancestor = ancestor.Parent)
+        {
+            if (ReferenceEquals(ancestor, child))
+            {
+                throw new InvalidOperationException("Attaching this node would create a tree cycle.");
+            }
+        }
+
+        if (ReferenceEquals(child.Parent, this))
+        {
+            return this;
+        }
+
         child.Detach();
         child.Parent = this;
         _children.Add(child);
@@ -144,7 +162,10 @@ public class TreeNode<TData> : IEnumerable<TreeNode<TData>>
     /// <returns>This node (for chaining).</returns>
     public TreeNode<TData> AddChildren(IEnumerable<TreeNode<TData>> children)
     {
-        foreach (var child in children)
+        ArgumentNullException.ThrowIfNull(children);
+
+        // Materialize before mutation so callers may safely pass a live children view.
+        foreach (var child in children.ToArray())
         {
             AddChild(child);
         }
@@ -157,6 +178,8 @@ public class TreeNode<TData> : IEnumerable<TreeNode<TData>>
     /// <returns>This node (for chaining).</returns>
     public TreeNode<TData> AddChildren(params TData[] dataItems)
     {
+        ArgumentNullException.ThrowIfNull(dataItems);
+
         foreach (var data in dataItems)
         {
             AddChild(data);
@@ -170,6 +193,8 @@ public class TreeNode<TData> : IEnumerable<TreeNode<TData>>
     /// <returns>True if the child was found and removed.</returns>
     public bool RemoveChild(TreeNode<TData> child)
     {
+        ArgumentNullException.ThrowIfNull(child);
+
         if (!_children.Remove(child)) return false;
         child.Parent = null;
         return true;

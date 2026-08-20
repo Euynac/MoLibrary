@@ -11,8 +11,13 @@ public static class GenericTypeHelper
     /// <param name="type"></param>
     /// <param name="genericType">Need to use typeof(IList&lt;&gt;)</param>
     /// <returns></returns>
-    public static bool ImplementsGenericType(this Type type, Type genericType) => type.GetInterfaces()
-        .Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == genericType);
+    public static bool ImplementsGenericType(this Type type, Type genericType)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(genericType);
+
+        return ReflectionHelper.IsAssignableToGenericType(type, genericType);
+    }
     /// <summary>
     /// Convert Predicate into corresponding Func
     /// </summary>
