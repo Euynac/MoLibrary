@@ -15,9 +15,13 @@ public class TcpEndpointProbe
     {
         try
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(ip);
+            ArgumentOutOfRangeException.ThrowIfLessThan(port, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(port, ushort.MaxValue);
+
             using var client = new TcpClient();
-            var cancellationTokenSource = new CancellationTokenSource(timeout ?? new TimeSpan(0, 1, 0)).Token;
-            await client.ConnectAsync(ip, port, cancellationTokenSource);
+            using var cancellationTokenSource = new CancellationTokenSource(timeout ?? TimeSpan.FromMinutes(1));
+            await client.ConnectAsync(ip, port, cancellationTokenSource.Token).ConfigureAwait(false);
             return null;
         }
         catch (Exception e)

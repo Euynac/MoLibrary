@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Globalization;
 using Monica.Tool.Annotations;
 using Monica.Tool.Extensions;
 
@@ -9,6 +10,16 @@ namespace Monica.Tool.Text;
 /// </summary>
 public static class TextValueParser
 {
+    private const string IntervalValuePattern = @"(?:(?:\d{1,7}\.)?(?:(?:2[0-3]|[01]?\d):)?(?:(?:[0-5]?\d):))?(?:[0-5]?\d)(?:\.\d{1,7})?";
+    private static readonly Regex IntervalRegex = new(
+        $@"^\s*(?<left>{IntervalValuePattern})\s*[^.:\d]+?\s*(?<right>{IntervalValuePattern})\s*$",
+        RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(250));
+    private static readonly Regex IntervalValueRegex = new(
+        @"^(?:(?:(?<day>\d{1,7})\.)?(?:(?<hour>2[0-3]|[01]?\d):)?(?:(?<minute>[0-5]?\d):))?(?<second>[0-5]?\d)(?:\.(?<fraction>\d{1,7}))?$",
+        RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(250));
+
     /// <summary>
     /// Tries to parse localized boolean text, including common English and Chinese literals.
     /// </summary>
@@ -25,8 +36,9 @@ public static class TextValueParser
             return false;
         }
 
-        return !allowLocalizedLiterals ? bool.TryParse(str, out boolResult) :
-            TextMappings.StringToBoolDict.TryGetValue(str, out boolResult);
+        var normalized = str.Trim();
+        return !allowLocalizedLiterals ? bool.TryParse(normalized, out boolResult) :
+            TextMappings.StringToBoolDict.TryGetValue(normalized, out boolResult);
     }
 
     /// <summary>
@@ -50,7 +62,7 @@ public static class TextValueParser
     public static bool TryToEnum(string str, Type enumType, out object? enumResult, bool supportNumeric = false)
     {
         enumResult = null;
-        if (str.IsNullOrEmpty())
+        if (str.IsNullOrEmpty() || enumType is null || !enumType.IsEnum)
         {
             return false;
         }
@@ -60,20 +72,12 @@ public static class TextValueParser
             return true;
         }
 
-        try
-        {
-            if (!supportNumeric && str.IsInt())
-            {
-                return false;
-            }
-
-            enumResult = Enum.Parse(enumType, str, true);
-            return true;
-        }
-        catch (Exception)
+        if (!supportNumeric && Regex.IsMatch(str, @"^[+-]?\d+$", RegexOptions.CultureInvariant))
         {
             return false;
         }
+
+        return Enum.TryParse(enumType, str, ignoreCase: true, out enumResult);
     }
 
     /// <summary>
@@ -101,9 +105,47 @@ public static class TextValueParser
             return str;
         }
 
-        return str.ContainsAny(TextMappings.ZhToEnPunctuationDict.Values)
-            ? str.ReplaceBasedOnDict(TextMappings.ZhToEnPunctuationDict, true)
-            : str;
+        var result = new System.Text.StringBuilder(str.Length);
+        var openingQuote = true;
+        for (var index = 0; index < str.Length; index++)
+        {
+            if (str[index] == '"')
+            {
+                result.Append(openingQuote ? '“' : '”');
+                openingQuote = !openingQuote;
+                continue;
+            }
+
+            if (index <= str.Length - 3 && str.AsSpan(index, 3).SequenceEqual("..."))
+            {
+                result.Append('…');
+                index += 2;
+                continue;
+            }
+
+            result.Append(str[index] switch
+            {
+                ';' => '；',
+                '.' => '。',
+                ':' => '：',
+                ',' => '，',
+                '?' => '？',
+                '!' => '！',
+                '(' => '（',
+                ')' => '）',
+                '[' => '【',
+                ']' => '】',
+                '<' => '《',
+                '>' => '》',
+                '-' => '—',
+                '$' => '￥',
+                '\\' => '、',
+                '~' => '～',
+                _ => str[index]
+            });
+        }
+
+        return result.ToString();
     }
 
     /// <summary>
@@ -111,8 +153,8 @@ public static class TextValueParser
     /// </summary>
     public static bool TryGetTimeSpanInterval(this string str, out TimeSpan left, out TimeSpan right)
     {
-        left = new TimeSpan();
-        right = new TimeSpan();
+        left = default;
+        right = default;
         if (str.IsNullOrWhiteSpace())
         {
             return false;
@@ -120,29 +162,59 @@ public static class TextValueParser
 
         str = str.Trim();
 
-        // Matches a pair of TimeSpan-like values separated by a non-numeric delimiter.
-        var regex = new Regex(@"^(?<lefttime>(?:(?:(?<lday>\d{1,7})\.)?(?:(?<lhour>2[0-3]|[0-1]\d|\d):)?(?:(?<lminute>[0-5]\d|\d):))?(?<lsecond>[0-5]\d|\d)(?:(?:\.)?(?<lmillisecond>\d{1,7}))?)[^.:\d]+?(?<righttime>(?:(?:(?<rday>[0-5]\d|\d)\.)?(?:(?<rhour>2[0-3]|[0-1]\d|\d):)?(?:(?<rminute>[0-5]\d|\d):))?(?<rsecond>[0-5]\d|\d))(?:(?:\.)?(?<rmillisecond>\d{1,7}))?$");
-        if (regex.IsMatch(str))
+        try
         {
-            var groups = regex.Match(str).Groups;
-            int.TryParse(groups["lday"]?.Value, out var lday);
-            int.TryParse(groups["lhour"]?.Value, out var lhour);
-            int.TryParse(groups["lminute"]?.Value, out var lminute);
-            int.TryParse(groups["lsecond"]?.Value, out var lsecond);
-            int.TryParse(groups["lmillisecond"]?.Value, out var lmillisecond);
-            int.TryParse(groups["rday"]?.Value, out var rday);
-            int.TryParse(groups["rhour"]?.Value, out var rhour);
-            int.TryParse(groups["rminute"]?.Value, out var rminute);
-            int.TryParse(groups["rsecond"]?.Value, out var rsecond);
-            int.TryParse(groups["rmillisecond"]?.Value, out var rmillisecond);
-            left = new TimeSpan(lday, lhour, lminute, lsecond, lmillisecond);
-            right = new TimeSpan(rday, rhour, rminute, rsecond, rmillisecond);
-            if (left <= right)
+            var intervalMatch = IntervalRegex.Match(str);
+            if (!intervalMatch.Success ||
+                !TryParseIntervalValue(intervalMatch.Groups["left"].Value, out var parsedLeft) ||
+                !TryParseIntervalValue(intervalMatch.Groups["right"].Value, out var parsedRight) ||
+                parsedLeft > parsedRight)
             {
-                return true;
+                return false;
             }
+
+            left = parsedLeft;
+            right = parsedRight;
+            return true;
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            left = default;
+            right = default;
+            return false;
         }
 
-        return false;
+        static bool TryParseIntervalValue(string value, out TimeSpan result)
+        {
+            result = default;
+            var match = IntervalValueRegex.Match(value);
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            try
+            {
+                var days = ParseGroup("day");
+                var hours = ParseGroup("hour");
+                var minutes = ParseGroup("minute");
+                var seconds = ParseGroup("second");
+                var fraction = match.Groups["fraction"].Value;
+                var fractionTicks = fraction.Length == 0
+                    ? 0
+                    : int.Parse(fraction.PadRight(7, '0'), CultureInfo.InvariantCulture);
+
+                result = new TimeSpan(days, hours, minutes, seconds) + TimeSpan.FromTicks(fractionTicks);
+                return true;
+            }
+            catch (OverflowException)
+            {
+                return false;
+            }
+
+            int ParseGroup(string name) => match.Groups[name].Success
+                ? int.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture)
+                : 0;
+        }
     }
 }

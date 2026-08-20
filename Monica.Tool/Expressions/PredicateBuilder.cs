@@ -55,6 +55,9 @@ public static class PredicateBuilder
     public static Expression<Func<T, bool>> Or<T>([NotNull] this Expression<Func<T, bool>> expr1,
         [NotNull] Expression<Func<T, bool>> expr2)
     {
+        ArgumentNullException.ThrowIfNull(expr1);
+        ArgumentNullException.ThrowIfNull(expr2);
+
         var expr2Body = new RebindParameterVisitor(expr2.Parameters[0], expr1.Parameters[0]).Visit(expr2.Body);
         return Expression.Lambda<Func<T, bool>>(Expression.OrElse(expr1.Body, expr2Body!), expr1.Parameters);
     }
@@ -63,6 +66,9 @@ public static class PredicateBuilder
     public static Expression<Func<T, bool>> And<T>([NotNull] this Expression<Func<T, bool>> expr1,
         [NotNull] Expression<Func<T, bool>> expr2)
     {
+        ArgumentNullException.ThrowIfNull(expr1);
+        ArgumentNullException.ThrowIfNull(expr2);
+
         var expr2Body = new RebindParameterVisitor(expr2.Parameters[0], expr1.Parameters[0]).Visit(expr2.Body);
         return Expression.Lambda<Func<T, bool>>(Expression.AndAlso(expr1.Body, expr2Body!), expr1.Parameters);
     }
@@ -78,7 +84,15 @@ public static class PredicateBuilder
     public static Expression<Func<T, bool>> Extend<T>([NotNull] this Expression<Func<T, bool>> first,
         [NotNull] Expression<Func<T, bool>> second, PredicateOperator @operator = PredicateOperator.Or)
     {
-        return @operator == PredicateOperator.Or ? first.Or(second) : first.And(second);
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+
+        return @operator switch
+        {
+            PredicateOperator.Or => first.Or(second),
+            PredicateOperator.And => first.And(second),
+            _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, "Unsupported predicate operator.")
+        };
     }
 
     /// <summary>
@@ -92,7 +106,15 @@ public static class PredicateBuilder
     public static Expression<Func<T, bool>> Extend<T>([NotNull] this ExpressionStarter<T> first,
         [NotNull] Expression<Func<T, bool>> second, PredicateOperator @operator = PredicateOperator.Or)
     {
-        return @operator == PredicateOperator.Or ? first.Or(second) : first.And(second);
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+
+        return @operator switch
+        {
+            PredicateOperator.Or => first.Or(second),
+            PredicateOperator.And => first.And(second),
+            _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, "Unsupported predicate operator.")
+        };
     }
 }
 
@@ -142,9 +164,11 @@ public class ExpressionStarter<T>
     /// <param name="exp">The first expression</param>
     public Expression<Func<T, bool>> Start(Expression<Func<T, bool>> exp)
     {
+        ArgumentNullException.ThrowIfNull(exp);
+
         if (IsStarted)
         {
-            throw new Exception("Predicate cannot be started again.");
+            throw new InvalidOperationException("Predicate cannot be started again.");
         }
 
         return _predicate = exp;

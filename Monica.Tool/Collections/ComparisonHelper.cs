@@ -35,10 +35,10 @@ public static class ComparisonHelper
         if (CompareToNullObj(obj1, obj2, out var nullResult, nullIsLast))
         {
             result = nullResult;
-            return null;
+            return result == 0 ? new object() : null;
         }
         ArgumentNullException.ThrowIfNull(obj1);
-        result = GetComparable(obj1).CompareTo(obj2) * result;
+        result = InvertComparison(GetComparable(obj1).CompareTo(obj2));
         return result != 0 ? null : new object();
     }
 
@@ -59,10 +59,10 @@ public static class ComparisonHelper
         if (CompareToNullObj(obj1, obj2, out var nullResult, nullIsLast))
         {
             result = nullResult;
-            return null;
+            return result == 0 ? new object() : null;
         }
         ArgumentNullException.ThrowIfNull(obj1);
-        result = GetComparable(obj1).CompareTo(obj2) * result;
+        result = NormalizeComparison(GetComparable(obj1).CompareTo(obj2));
         return result != 0 ? null : new object();
     }
     /// <summary>
@@ -76,10 +76,10 @@ public static class ComparisonHelper
     public static int CompareToObj(this object? obj1, object? obj2, bool isDesc = false,
         bool nullIsLast = true)
     {
-        var result = isDesc ? -1 : 1;
         if (CompareToNullObj(obj1, obj2, out var nullReturnValue, nullIsLast)) return nullReturnValue;
         ArgumentNullException.ThrowIfNull(obj1);
-        return GetComparable(obj1).CompareTo(obj2) * result;
+        var comparison = GetComparable(obj1).CompareTo(obj2);
+        return isDesc ? InvertComparison(comparison) : NormalizeComparison(comparison);
     }
 
 
@@ -119,4 +119,8 @@ public static class ComparisonHelper
     private static IComparable GetComparable(object value)
         => value as IComparable
            ?? throw new InvalidCastException($"Type {value.GetType().FullName} does not implement {nameof(IComparable)}.");
+
+    private static int NormalizeComparison(int comparison) => Math.Sign(comparison);
+
+    private static int InvertComparison(int comparison) => -Math.Sign(comparison);
 }

@@ -288,8 +288,17 @@ public static class IEnumerableExtensions
     /// <param name="collection">specified collection</param>
     /// <returns></returns>
     [ContractAnnotation("null => true")]
-    public static bool IsNullOrEmptySet<T>([NotNullWhen(false)][NoEnumeration] this IEnumerable<T>? collection) //指示不会对collection进行读写操作，但这里读了?
-        => collection == null || !collection.Any();
+    public static bool IsNullOrEmptySet<T>([NotNullWhen(false)] this IEnumerable<T>? collection)
+    {
+        return collection switch
+        {
+            null => true,
+            ICollection<T> genericCollection => genericCollection.Count == 0,
+            IReadOnlyCollection<T> readOnlyCollection => readOnlyCollection.Count == 0,
+            ICollection nonGenericCollection => nonGenericCollection.Count == 0,
+            _ => !collection.Any()
+        };
+    }
 
     /// <summary>
     /// Determine whether a collection is null or an empty collection.
@@ -297,7 +306,21 @@ public static class IEnumerableExtensions
     /// </summary>
     /// https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/attributes/nullable-analysis
     [ContractAnnotation("null => true")] //能够教会ReSharper空判断(传入的是null，返回true)
-    public static bool IsNullOrEmptySet([NotNullWhen(false)][NoEnumeration] this IEnumerable? @this) => @this == null || !@this.GetEnumerator().MoveNext();
+    public static bool IsNullOrEmptySet([NotNullWhen(false)] this IEnumerable? @this)
+    {
+        if (@this is null) return true;
+        if (@this is ICollection collection) return collection.Count == 0;
+
+        var enumerator = @this.GetEnumerator();
+        try
+        {
+            return !enumerator.MoveNext();
+        }
+        finally
+        {
+            (enumerator as IDisposable)?.Dispose();
+        }
+    }
 
     /// <summary>
     /// If given value not null, it will add into list, otherwise, ignore the value.
@@ -364,7 +387,7 @@ public static class IEnumerableExtensions
     [ContractAnnotation("dict:null => false; key:null => false")]
     public static bool TryGetValueOrDefault<TKey, TValue>(this IDictionary<TKey, TValue>? dict, TKey? key, out TValue? value, TValue? defaultValue = default)
     {
-        if (dict.IsNullOrEmptySet() || key == null)
+        if (dict is null || key is null)
         {
             value = defaultValue;
             return false;
@@ -384,10 +407,10 @@ public static class IEnumerableExtensions
     public static bool TryGetKey<TKey, TValue>(this IEnumerable<KeyValuePair<TKey, TValue>>? dict, TValue value, out TKey? key)
     {
         key = default;
-        if (dict.IsNullOrEmptySet()) return false;
+        if (dict is null) return false;
         foreach (var pair in dict)
         {
-            if (pair.Value != null && pair.Value.Equals(value))
+            if (EqualityComparer<TValue>.Default.Equals(pair.Value, value))
             {
                 key = pair.Key;
                 return true;
@@ -407,7 +430,7 @@ public static class IEnumerableExtensions
     public static bool TryGetAllKey<TKey, TValue>(this IEnumerable<KeyValuePair<TKey, TValue>>? dict, TValue value, out List<TKey> key)
     {
         key = new List<TKey>();
-        if (dict.IsNullOrEmptySet()) return false;
+        if (dict is null) return false;
         foreach (var keyValuePair in dict)
         {
             if (EqualityComparer<TValue>.Default.Equals(keyValuePair.Value, value))
@@ -434,7 +457,7 @@ public static class IEnumerableExtensions
     /// <typeparam name="T"></typeparam>
     /// <param name="enumerable"></param>
     /// <returns></returns>
-    public static IEnumerable<T> BeNotNull<T>(this IEnumerable<T>? enumerable) => enumerable ?? new List<T>();
+    public static IEnumerable<T> BeNotNull<T>(this IEnumerable<T>? enumerable) => enumerable ?? Enumerable.Empty<T>();
 
     /// <summary>
     /// Foreach with index.
@@ -462,8 +485,23 @@ public static class IEnumerableExtensions
     /// <returns></returns>
     public static (T? item1, T? item2) TakeTuple<T>(this IEnumerable<T> list, int index1, int index2)
     {
-        var tmp = list.ToList();
-        return (tmp.ElementAtOrDefault(index1), tmp.ElementAtOrDefault(index2));
+        ArgumentNullException.ThrowIfNull(list);
+
+        T? item1 = default;
+        T? item2 = default;
+        var lastIndex = Math.Max(index1, index2);
+        if (lastIndex < 0) return (item1, item2);
+
+        var index = 0;
+        foreach (var item in list)
+        {
+            if (index == index1) item1 = item;
+            if (index == index2) item2 = item;
+            if (index == lastIndex) break;
+            index++;
+        }
+
+        return (item1, item2);
     }
     /// <summary>Do action for each item in given collection</summary>
     /// <typeparam name="T"></typeparam>

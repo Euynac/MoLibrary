@@ -25,12 +25,18 @@ public static class TypeHelper
         typeof(uint),
         typeof(ulong),
         typeof(bool),
+        typeof(char),
         typeof(float),
+        typeof(double),
         typeof(decimal),
         typeof(DateTime),
         typeof(DateTimeOffset),
+        typeof(DateOnly),
+        typeof(TimeOnly),
         typeof(TimeSpan),
-        typeof(Guid)
+        typeof(Guid),
+        typeof(IntPtr),
+        typeof(UIntPtr)
     ];
 
     public static bool IsNonNullablePrimitiveType(Type type)
@@ -46,17 +52,19 @@ public static class TypeHelper
         }
 
         var type = obj.GetType();
-        if (!type.GetTypeInfo().IsGenericType)
+        if (!type.GetTypeInfo().IsGenericType || !typeof(Delegate).IsAssignableFrom(type))
         {
             return false;
         }
 
-        return type.GetGenericTypeDefinition() == typeof(Func<>);
+        var genericDefinition = type.GetGenericTypeDefinition();
+        return genericDefinition.Namespace == typeof(Func<>).Namespace &&
+               genericDefinition.Name.StartsWith("Func`", StringComparison.Ordinal);
     }
 
     public static bool IsFunc<TReturn>(object? obj)
     {
-        return obj != null && obj.GetType() == typeof(Func<TReturn>);
+        return IsFunc(obj) && obj!.GetType().GenericTypeArguments[^1] == typeof(TReturn);
     }
 
     public static bool IsPrimitiveExtended(Type type, bool includeNullables = true, bool includeEnums = false)
@@ -76,17 +84,14 @@ public static class TypeHelper
 
     public static bool IsNullable(Type type)
     {
-        return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+        ArgumentNullException.ThrowIfNull(type);
+        return Nullable.GetUnderlyingType(type) != null;
     }
 
     public static Type GetFirstGenericArgumentIfNullable(this Type t)
     {
-        if (t.GetGenericArguments().Length > 0 && t.GetGenericTypeDefinition() == typeof(Nullable<>))
-        {
-            return t.GetGenericArguments().First();
-        }
-
-        return t;
+        ArgumentNullException.ThrowIfNull(t);
+        return Nullable.GetUnderlyingType(t) ?? t;
     }
 
     public static bool IsEnumerable(Type type, out Type? itemType, bool includePrimitives = true)

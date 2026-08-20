@@ -25,24 +25,14 @@ public class BinaryTreeNode<TData>
     public BinaryTreeNode<TData>? Left
     {
         get => _left;
-        set
-        {
-            if (_left is not null) _left.Parent = null;
-            _left = value;
-            if (_left is not null) _left.Parent = this;
-        }
+        set => SetChild(value, isLeft: true);
     }
 
     /// <summary>The right child node.</summary>
     public BinaryTreeNode<TData>? Right
     {
         get => _right;
-        set
-        {
-            if (_right is not null) _right.Parent = null;
-            _right = value;
-            if (_right is not null) _right.Parent = this;
-        }
+        set => SetChild(value, isLeft: false);
     }
 
     /// <summary>Whether this node is a root (has no parent).</summary>
@@ -91,4 +81,73 @@ public class BinaryTreeNode<TData>
 
     private string GetDebugDisplay() =>
         $"Data={Data}, Left={(_left is not null ? "yes" : "no")}, Right={(_right is not null ? "yes" : "no")}";
+
+    private void SetChild(BinaryTreeNode<TData>? value, bool isLeft)
+    {
+        var current = isLeft ? _left : _right;
+        if (ReferenceEquals(current, value))
+        {
+            return;
+        }
+
+        if (value is not null)
+        {
+            for (var ancestor = this; ancestor is not null; ancestor = ancestor.Parent)
+            {
+                if (ReferenceEquals(ancestor, value))
+                {
+                    throw new InvalidOperationException("Attaching this node would create a binary-tree cycle.");
+                }
+            }
+        }
+
+        if (current is not null && ReferenceEquals(current.Parent, this))
+        {
+            current.Parent = null;
+        }
+
+        value?.Parent?.DetachChild(value);
+
+        if (value is not null)
+        {
+            // A node can occupy only one slot on a parent.
+            if (isLeft && ReferenceEquals(_right, value))
+            {
+                _right = null;
+            }
+            else if (!isLeft && ReferenceEquals(_left, value))
+            {
+                _left = null;
+            }
+
+            value.Parent = this;
+        }
+
+        if (isLeft)
+        {
+            _left = value;
+        }
+        else
+        {
+            _right = value;
+        }
+    }
+
+    private void DetachChild(BinaryTreeNode<TData> child)
+    {
+        if (ReferenceEquals(_left, child))
+        {
+            _left = null;
+        }
+
+        if (ReferenceEquals(_right, child))
+        {
+            _right = null;
+        }
+
+        if (ReferenceEquals(child.Parent, this))
+        {
+            child.Parent = null;
+        }
+    }
 }

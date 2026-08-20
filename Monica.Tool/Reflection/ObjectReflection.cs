@@ -15,6 +15,8 @@ public static class ObjectReflection
     /// <returns></returns>
     public static T ShallowCopy<T>(this T obj) where T : class
     {
+        ArgumentNullException.ThrowIfNull(obj);
+
         var method = obj.GetType().GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)!;
         return (T) method.Invoke(obj, null)!;
     }
@@ -29,8 +31,12 @@ public static class ObjectReflection
     /// <returns>Return given cloned object for convenient.</returns>
     public static T CloneParameters<T>(this T obj, T copyFromObj, params string[] ignoreParameterNames)
     {
-        var ignoreList = ignoreParameterNames.ToHashSet();
-        foreach (var propertyInfo in typeof(T).GetProperties().Where(p => p.CanWrite))
+        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(copyFromObj);
+        ArgumentNullException.ThrowIfNull(ignoreParameterNames);
+
+        var ignoreList = ignoreParameterNames.ToHashSet(StringComparer.Ordinal);
+        foreach (var propertyInfo in GetReadableProperties(typeof(T)).Where(p => p.CanWrite))
         {
             //Get attribute value:
             var propertyValue = propertyInfo.GetValue(copyFromObj);
@@ -50,8 +56,10 @@ public static class ObjectReflection
     /// <returns></returns>
     public static IEnumerable<object?> GetPublicPropertyValues<T>(T instance) where T : class
     {
+        ArgumentNullException.ThrowIfNull(instance);
+
         var type = typeof(T);
-        foreach (var propertyInfo in type.GetProperties())
+        foreach (var propertyInfo in GetReadableProperties(type))
         {
             //Get attribute value:
             yield return propertyInfo.GetValue(instance);
@@ -68,14 +76,16 @@ public static class ObjectReflection
     /// <returns></returns>
     public static Dictionary<string, KeyValuePair<Type, object?>> GetAllPropertyInfo<T>(T instance, bool toLowerCase = false) where T : class
     {
-        var propertyInfoDict = new Dictionary<string, KeyValuePair<Type, object?>>();
+        ArgumentNullException.ThrowIfNull(instance);
+
+        var propertyInfoDict = new Dictionary<string, KeyValuePair<Type, object?>>(StringComparer.Ordinal);
         var type = typeof(T);
-        foreach (var propertyInfo in type.GetProperties())
+        foreach (var propertyInfo in GetReadableProperties(type))
         {
             //Get attribute type
             var propertyType = propertyInfo.PropertyType;
             //Get attribute name:
-            var propertyName = toLowerCase ? propertyInfo.Name.ToLower() : propertyInfo.Name;
+            var propertyName = toLowerCase ? propertyInfo.Name.ToLowerInvariant() : propertyInfo.Name;
             //Get attribute value:
             var propertyValue = propertyInfo.GetValue(instance);
             var propertyPair = new KeyValuePair<Type, object?>(propertyType, propertyValue);
@@ -83,4 +93,8 @@ public static class ObjectReflection
         }
         return propertyInfoDict;
     }
+
+    private static IEnumerable<PropertyInfo> GetReadableProperties(Type type) =>
+        type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(property => property.CanRead && property.GetIndexParameters().Length == 0);
 }

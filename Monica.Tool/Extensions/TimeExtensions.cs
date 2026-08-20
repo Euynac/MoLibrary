@@ -165,7 +165,7 @@ public static class TimeExtensions
     /// <param name="timeOnly"></param>
     /// <returns></returns>
     public static DateTime ReplaceTime(this DateTime dateTime, TimeOnly timeOnly) =>
-    new(dateTime.Year, dateTime.Month, dateTime.Day, timeOnly.Hour, timeOnly.Minute, timeOnly.Second);
+        dateTime.Date.Add(timeOnly.ToTimeSpan());
     #region Formatting
 
     /// <summary>
@@ -211,21 +211,21 @@ public static class TimeExtensions
     /// <param name="dateTime"></param>
     /// <returns></returns>
     public static TimeSpan NextMinuteSpan(this DateTime dateTime) =>
-        dateTime - NextMinute(dateTime);
+        NextMinute(dateTime) - dateTime;
     /// <summary>
     /// Get the time span of given date time to that next hour.
     /// </summary>
     /// <param name="dateTime"></param>
     /// <returns></returns>
     public static TimeSpan NextHourSpan(this DateTime dateTime) =>
-        dateTime - NextMinute(dateTime);
+        NextHour(dateTime) - dateTime;
     /// <summary>
     /// Get the time span of given date time to that next day 00:00.
     /// </summary>
     /// <param name="dateTime"></param>
     /// <returns></returns>
     public static TimeSpan NextDaySpan(this DateTime dateTime) =>
-        dateTime - NextDay(dateTime);
+        NextDay(dateTime) - dateTime;
     /// <summary>
     /// Get the date time of given date time to that next minute.
     /// </summary>
@@ -234,7 +234,7 @@ public static class TimeExtensions
     public static DateTime NextMinute(this DateTime dateTime)
     {
         var timeBase = dateTime.AddMinutes(1);
-        return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, timeBase.Hour, timeBase.Minute, 0);
+        return new DateTime(timeBase.Ticks - timeBase.Ticks % TimeSpan.TicksPerMinute, timeBase.Kind);
     }
     /// <summary>
     /// Get the date time of given date time to that next hour.
@@ -244,7 +244,7 @@ public static class TimeExtensions
     public static DateTime NextHour(this DateTime dateTime)
     {
         var timeBase = dateTime.AddHours(1);
-        return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, timeBase.Hour, 0, 0);
+        return new DateTime(timeBase.Ticks - timeBase.Ticks % TimeSpan.TicksPerHour, timeBase.Kind);
     }
     /// <summary>
     /// Get the date time of given date time to that next day 00:00.
@@ -253,8 +253,7 @@ public static class TimeExtensions
     /// <returns></returns>
     public static DateTime NextDay(this DateTime dateTime)
     {
-        var timeBase = dateTime.AddDays(1);
-        return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, 0, 0, 0);
+        return dateTime.Date.AddDays(1);
     }
 
     /// <summary>
@@ -265,18 +264,14 @@ public static class TimeExtensions
     /// <returns>Note that this is based on the local time zone</returns>
     public static DateTime ToDateTime(this long timestamp, TimeStampType timeStampType = TimeStampType.Unix)
     {
-        var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
-        var daTime = new DateTime();
-        switch (timeStampType)
+        var dateTimeOffset = timeStampType switch
         {
-            case TimeStampType.Unix:
-                daTime = startTime.AddSeconds(timestamp);
-                break;
-            case TimeStampType.Javascript:
-                daTime = startTime.AddMilliseconds(timestamp);
-                break;
-        }
-        return daTime;
+            TimeStampType.Unix => DateTimeOffset.FromUnixTimeSeconds(timestamp),
+            TimeStampType.Javascript => DateTimeOffset.FromUnixTimeMilliseconds(timestamp),
+            _ => throw new ArgumentOutOfRangeException(nameof(timeStampType), timeStampType, null)
+        };
+
+        return dateTimeOffset.LocalDateTime;
     }
     /// <summary>
     /// DateTime to timestamp
@@ -286,18 +281,13 @@ public static class TimeExtensions
     /// <returns>Note that this is based on the local time zone</returns>
     public static long ToTimeStamp(this DateTime dateTime, TimeStampType timeStampType = TimeStampType.Unix)
     {
-        var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
-        long timestamp = 0;
-        switch (timeStampType)
+        var dateTimeOffset = new DateTimeOffset(dateTime);
+        return timeStampType switch
         {
-            case TimeStampType.Unix:
-                timestamp = (long)(dateTime - startTime).TotalSeconds;
-                break;
-            case TimeStampType.Javascript:
-                timestamp = (long)(dateTime - startTime).TotalMilliseconds;
-                break;
-        }
-        return timestamp;
+            TimeStampType.Unix => dateTimeOffset.ToUnixTimeSeconds(),
+            TimeStampType.Javascript => dateTimeOffset.ToUnixTimeMilliseconds(),
+            _ => throw new ArgumentOutOfRangeException(nameof(timeStampType), timeStampType, null)
+        };
     }
     /// <summary>
     /// Convert to the representation of the day of the week in Chinese style (Sunday is the seventh day)
@@ -327,7 +317,7 @@ public static class TimeExtensions
     /// <param name="time"></param>
     /// <returns></returns>
     public static DateTime RoundToSecond(this DateTime time) =>
-        new(time.Year, time.Month, time.Day, time.Hour, time.Minute, time.Second);
+        new(time.Ticks - time.Ticks % TimeSpan.TicksPerSecond, time.Kind);
 
     /// <summary>
     /// Combine given and time from given DateTime.
@@ -336,7 +326,7 @@ public static class TimeExtensions
     /// <param name="time"></param>
     /// <returns></returns>
     public static DateTime CombineDateAndTime(this DateTime date, DateTime time) =>
-        new(date.Year, date.Month, date.Day, time.Hour, time.Minute, time.Second, time.Millisecond);
+        date.Date.Add(time.TimeOfDay);
 
     public enum DateTimePart
     {
@@ -377,16 +367,13 @@ public static class TimeExtensions
     {
         return part switch
         {
-            DateTimePart.Year => new DateTime(dateTime.Year, 0, 0),
-            DateTimePart.Month => new DateTime(dateTime.Year, dateTime.Month, 0),
-            DateTimePart.Day => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day),
-            DateTimePart.Hour => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, 0, 0),
-            DateTimePart.Minute => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
-                dateTime.Minute, 0),
-            DateTimePart.Second => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
-                dateTime.Minute, dateTime.Second),
-            DateTimePart.Millisecond => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
-                dateTime.Minute, dateTime.Second, dateTime.Millisecond),
+            DateTimePart.Year => new DateTime(dateTime.Year, 1, 1, 0, 0, 0, dateTime.Kind),
+            DateTimePart.Month => new DateTime(dateTime.Year, dateTime.Month, 1, 0, 0, 0, dateTime.Kind),
+            DateTimePart.Day => dateTime.Date,
+            DateTimePart.Hour => new DateTime(dateTime.Ticks - dateTime.Ticks % TimeSpan.TicksPerHour, dateTime.Kind),
+            DateTimePart.Minute => new DateTime(dateTime.Ticks - dateTime.Ticks % TimeSpan.TicksPerMinute, dateTime.Kind),
+            DateTimePart.Second => new DateTime(dateTime.Ticks - dateTime.Ticks % TimeSpan.TicksPerSecond, dateTime.Kind),
+            DateTimePart.Millisecond => new DateTime(dateTime.Ticks - dateTime.Ticks % TimeSpan.TicksPerMillisecond, dateTime.Kind),
             _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
         };
     }

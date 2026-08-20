@@ -12,7 +12,18 @@ public class UnitValue
     }
     public UnitValue ConvertToUnit(Unit toUnit)
     {
-        
+        ArgumentNullException.ThrowIfNull(toUnit);
+        var sourceRoot = Unit.GetRootUnit();
+        var targetRoot = toUnit.GetRootUnit();
+        var dimensionsMatch = Unit.DimensionType is not null && toUnit.DimensionType is not null
+            ? Unit.DimensionType == toUnit.DimensionType
+            : ReferenceEquals(sourceRoot, targetRoot);
+        if (!dimensionsMatch)
+        {
+            throw new InvalidOperationException(
+                $"Cannot convert between unrelated units '{Unit.Symbol}' and '{toUnit.Symbol}'.");
+        }
+
         return new UnitValue(toUnit.FromRootValue(Unit.ToRootValue(Value)), toUnit);
     }
 
@@ -23,6 +34,8 @@ public class UnitValue
 }
 public class Unit
 {
+    internal Type? DimensionType { get; set; }
+
     public string Symbol { get; set; }
     public List<string> UnitNames { get; set; } 
     /// <summary>
@@ -82,7 +95,21 @@ public class Unit
 
     public Unit GetRootUnit()
     {
-        return ParentUnit == this ? this : ParentUnit.GetRootUnit();
+        var visited = new HashSet<Unit>(ReferenceEqualityComparer.Instance);
+        var current = this;
+
+        while (!ReferenceEquals(current.ParentUnit, current))
+        {
+            if (!visited.Add(current))
+            {
+                throw new InvalidOperationException("The unit parent graph contains a cycle.");
+            }
+
+            current = current.ParentUnit
+                ?? throw new InvalidOperationException($"Unit '{current.Symbol}' has no parent unit.");
+        }
+
+        return current;
     }
 
     /// <summary>
