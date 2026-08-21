@@ -28,7 +28,7 @@ internal sealed class SeederBackgroundService(
     /// <summary>
     /// Publishes a cancelled run for shutdowns that race ahead of the background loop: modern
     /// <see cref="BackgroundService"/> implementations dispatch <c>ExecuteAsync</c> through
-    /// <see cref="Task.Run(object?, CancellationToken)"/>, so a stop that fires before the queued work
+    /// <see cref="Task.Run(Action, CancellationToken)"/>, so a stop that fires before the queued work
     /// item starts would otherwise leave the run in <see cref="SeederRunStatus.Waiting"/> forever.
     /// The stop pipeline always awaits this hook, which makes the pre-start outcome deterministic.
     /// </summary>
