@@ -9,22 +9,25 @@ using Monica.Core.Results;
 namespace Monica.AI.Mcp.Facades;
 
 /// <summary>
-/// UI-facing entry point for MCP connectivity and user-managed external client profiles.
+/// UI-facing entry point for MCP connectivity, user-managed external client profiles, and agent skill pack export.
 /// </summary>
 public sealed class McpFacade
 {
     private readonly IExternalMcpClientProfileStore profileStore;
     private readonly MonicaMcpCatalog catalog;
     private readonly IAgentCapabilityService capabilityService;
+    private readonly McpSkillPackExporter skillPackExporter;
 
     internal McpFacade(
         IExternalMcpClientProfileStore profileStore,
         MonicaMcpCatalog catalog,
-        IAgentCapabilityService capabilityService)
+        IAgentCapabilityService capabilityService,
+        McpSkillPackExporter skillPackExporter)
     {
         this.profileStore = profileStore;
         this.catalog = catalog;
         this.capabilityService = capabilityService;
+        this.skillPackExporter = skillPackExporter;
     }
 
     /// <summary>
@@ -101,6 +104,30 @@ public sealed class McpFacade
         });
     }
 
+    /// <summary>
+    /// Renders the agent skill pack for one local HTTP MCP server and writes it below a target skills directory.
+    /// </summary>
+    /// <param name="serverName">Logical name of a local HTTP MCP server in the catalog.</param>
+    /// <param name="endpointUrl">Absolute HTTP endpoint the pack's helper scripts call by default.</param>
+    /// <param name="targetRoot">Directory that receives <c>targetRoot/&lt;skill name&gt;</c>; must not already contain it.</param>
+    public Res<McpSkillPackExportResult> ExportSkillPack(string serverName, string endpointUrl, string targetRoot)
+    {
+        return Execute(() =>
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(serverName);
+            ArgumentException.ThrowIfNullOrWhiteSpace(endpointUrl);
+            ArgumentException.ThrowIfNullOrWhiteSpace(targetRoot);
+            if (!Uri.TryCreate(endpointUrl, UriKind.Absolute, out var uri)
+                || uri.Scheme is not ("http" or "https"))
+            {
+                throw new ArgumentException($"Endpoint URL '{endpointUrl}' must be an absolute HTTP or HTTPS URL.");
+            }
+
+            var pack = skillPackExporter.Render(serverName, uri);
+            return skillPackExporter.WriteToDirectory(pack, targetRoot);
+        });
+    }
+
     private static async Task<Res<T>> ExecuteAsync<T>(Func<Task<T>> operation)
     {
         try
@@ -110,6 +137,18 @@ public sealed class McpFacade
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail(ex.GetMessageRecursively());
+        }
+    }
+
+    private static Res<T> Execute<T>(Func<T> operation)
+    {
+        try
+        {
+            return Res.Ok<T>(operation());
         }
         catch (Exception ex)
         {

@@ -15,6 +15,7 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<AIResource> L
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
 <PageTitle>@L["Capabilities:Title"]</PageTitle>
 
@@ -461,6 +462,17 @@
                             @L["Capabilities:Mcp:CopyConfig"]
                         </MudButton>
                     </MudTooltip>
+                    @if (CanExportSkillPack(entry))
+                    {
+                        <MudTooltip Text="@L["Capabilities:Mcp:ExportSkill:Tooltip"]">
+                            <MudButton Variant="Variant.Outlined"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Download"
+                                       OnClick="@(() => ShowSkillPackExportDialogAsync(entry))">
+                                @L["Capabilities:Mcp:ExportSkill:Action"]
+                            </MudButton>
+                        </MudTooltip>
+                    }
                     @if (entry.IsUserManaged)
                     {
                         <MudButton Variant="Variant.Outlined"
@@ -874,6 +886,46 @@
         return entry.McpExternalProfile is not null
                || !string.IsNullOrWhiteSpace(entry.McpDisplayUrl)
                || !string.IsNullOrWhiteSpace(entry.McpEndpointPath);
+    }
+
+    private static bool CanExportSkillPack(AgentCapabilityEntryInfo entry)
+    {
+        return entry.Kind == AgentCapabilityKind.Mcp
+               && entry.McpExternalProfile is null
+               && entry.McpTransportKind == McpServerTransportKind.Http
+               && !string.IsNullOrWhiteSpace(entry.McpEndpointPath);
+    }
+
+    private async Task ShowSkillPackExportDialogAsync(AgentCapabilityEntryInfo entry)
+    {
+        if (!CanExportSkillPack(entry))
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            { nameof(SkillPackExportDialog.ServerName), entry.Name },
+            { nameof(SkillPackExportDialog.DefaultEndpoint), ResolveMcpEndpointUrl(entry) },
+            { nameof(SkillPackExportDialog.ToolCount), entry.Tools.Count }
+        };
+
+        await DialogService.ShowAsync<SkillPackExportDialog>(
+            L["Capabilities:Mcp:ExportSkill:Title"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+    }
+
+    private string ResolveMcpEndpointUrl(AgentCapabilityEntryInfo entry)
+    {
+        if (!string.IsNullOrWhiteSpace(entry.McpDisplayUrl))
+        {
+            return entry.McpDisplayUrl;
+        }
+
+        var baseUri = new Uri(NavigationManager.BaseUri);
+        var authority = baseUri.GetLeftPart(UriPartial.Authority);
+        return authority.TrimEnd('/') + "/" + entry.McpEndpointPath!.TrimStart('/');
     }
 
     private string GetCopyMcpConfigTooltip(AgentCapabilityEntryInfo entry)

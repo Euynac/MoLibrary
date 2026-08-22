@@ -93,6 +93,15 @@ internal sealed class MonicaMcpCatalog : IAsyncDisposable
     }
 
     /// <summary>
+    /// Finds one active local MCP server entry by logical name.
+    /// </summary>
+    /// <returns>The local catalog entry, or <see langword="null"/> when no active server uses that name.</returns>
+    internal LocalMcpServerEntry? FindLocalServer(string name)
+    {
+        return _localCatalog.Find(name);
+    }
+
+    /// <summary>
     /// Gets local and external MCP tools enabled for Monica agents.
     /// </summary>
     public Task<IReadOnlyList<AITool>> GetAgentToolsAsync(
