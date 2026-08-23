@@ -57,7 +57,7 @@ public sealed class McpSkillPackExporterTests : IDisposable
         skill.Should().Contain("`list-things`");
         skill.Should().NotContain("\r");
 
-        Content(first, "references/tools.md").Should().Contain("`echo-message`");
+        Content(first, "references/tools.md").Should().Contain("`echo-message`").And.NotContain("\r");
         Content(first, "scripts/mcp-call.sh").Should().Contain("MONICA_WORKFLOW_MCP_URL").And.NotContain("\r");
         Content(first, "scripts/mcp-call.ps1").Should().Contain("$env:MONICA_WORKFLOW_MCP_URL").And.NotContain("\r");
     }

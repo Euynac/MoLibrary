@@ -117,7 +117,9 @@ internal sealed class McpSkillPackExporter
             {
                 var path = Path.Combine(skillDirectoryPath, file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.WriteAllText(path, file.Content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                // Skill packs are byte-deterministic artifacts; force canonical LF regardless
+                // of any platform-newline text embedded by the render pipeline.
+                File.WriteAllText(path, file.Content.Replace("\r\n", "\n"), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
                 if (!OperatingSystem.IsWindows() && file.RelativePath.EndsWith(".sh", StringComparison.Ordinal))
                 {
                     File.SetUnixFileMode(
