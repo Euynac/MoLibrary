@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
@@ -192,7 +191,7 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
 
     private void QueueCronDescriptionLoad(IReadOnlyList<JobOperationalSummary> summaries)
     {
-        var cultureName = CultureInfo.CurrentUICulture.Name;
+        var cultureName = CronDescriptionSession.ResolveCultureName();
         var fingerprint = string.Join(
             '\u001f',
             summaries
@@ -243,7 +242,7 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         {
             results = await session.DescribeAsync(
                 requests,
-                CultureInfo.CurrentUICulture.Name,
+                CronDescriptionSession.ResolveCultureName(),
                 _lifetimeCancellation.Token);
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)

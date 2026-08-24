@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.JSInterop;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Support;
@@ -12,6 +13,17 @@ namespace Monica.JobScheduler.UI.UIJobScheduler.Support;
 internal sealed class CronDescriptionSession(IJSRuntime jsRuntime) : IAsyncDisposable
 {
     private const string MODULE_PATH = "./_content/Monica.JobScheduler.UI/js/cron-descriptions.js";
+    private const string FALLBACK_CULTURE_NAME = "en-US";
+
+    /// <summary>
+    /// Resolves the culture name sent with Cron-description requests. Hosts running under invariant globalization
+    /// expose an empty culture name, so they fall back to English instead of failing the description load.
+    /// </summary>
+    internal static string ResolveCultureName()
+    {
+        var cultureName = CultureInfo.CurrentUICulture.Name;
+        return string.IsNullOrWhiteSpace(cultureName) ? FALLBACK_CULTURE_NAME : cultureName;
+    }
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly object _disposeSync = new();
