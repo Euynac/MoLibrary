@@ -350,9 +350,9 @@ internal sealed class ConfluentKafkaAdminProvider(IOptions<ModuleEventBusKafkaOp
         bool includeMemberPayloads,
         CancellationToken cancellationToken)
     {
-        // Coordinator-targeted Admin requests in librdkafka 2.13.0 can violate the
-        // rd_kafka_enq_once reference count before managed exception handling can run.
-        // This compatibility reader uses the legacy path and also releases partial native results.
+        // Coordinator-targeted Admin requests can violate the rd_kafka_enq_once reference count
+        // before managed exception handling can run. This compatibility reader uses the legacy
+        // path and also releases partial native results.
         return KafkaNativeRequestAwaiter.RunBlockingAsync(
             () => ConfluentKafkaLegacyGroupReader.ListGroups(
                 admin,

@@ -384,9 +384,9 @@ internal sealed partial class ConfluentKafkaOffsetMetricsProvider(IOptions<Modul
             return ConsumerOffsetTotals.Empty;
         }
 
-        // librdkafka 2.13.0 can terminate the process when a coordinator-targeted Admin request
-        // fails during connection setup. Query committed offsets through isolated, short-lived
-        // read-only consumers instead, and bound their native handles and worker threads.
+        // A coordinator-targeted Admin request can terminate the process when it fails during
+        // connection setup. Query committed offsets through isolated, short-lived read-only
+        // consumers instead, and bound their native handles and worker threads.
         var parallelism = Math.Clamp(Option.ConsumerOffsetQueryParallelism, 1, groups.Count);
         using var gate = new SemaphoreSlim(parallelism, parallelism);
         var groupTasks = groups.Select(async groupId =>

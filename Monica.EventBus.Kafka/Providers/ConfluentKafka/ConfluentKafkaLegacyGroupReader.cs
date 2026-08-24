@@ -8,10 +8,10 @@ namespace Monica.EventBus.Kafka.Providers.ConfluentKafka;
 /// Reads legacy consumer-group snapshots while guaranteeing native result ownership.
 /// </summary>
 /// <remarks>
-/// Confluent.Kafka 2.13.0 does not release the group-list pointer when librdkafka returns a
-/// partial result. This isolated compatibility reader preserves the legacy protocol path needed
-/// to avoid coordinator-targeted Admin crashes and releases every returned pointer in a
-/// <see langword="finally"/> block.
+/// The Confluent.Kafka legacy group-list path does not guarantee release of the group-list
+/// pointer when librdkafka returns a partial result. This isolated compatibility reader preserves
+/// the protocol path needed to avoid coordinator-targeted Admin crashes and releases every
+/// returned pointer in a <see langword="finally"/> block.
 /// </remarks>
 internal static class ConfluentKafkaLegacyGroupReader
 {
@@ -190,11 +190,11 @@ internal static class ConfluentKafkaLegacyGroupReader
 
     private static byte[] CopyMemberPayload(
         IntPtr payload,
-        int payloadSize,
+        IntPtr payloadSize,
         string fieldName,
         ref long totalMemberPayloadBytes)
     {
-        var byteLength = (long)payloadSize;
+        var byteLength = payloadSize.ToInt64();
         if (byteLength < 0 || byteLength > MAX_MEMBER_PAYLOAD_BYTES)
         {
             throw new InvalidDataException(
@@ -287,9 +287,9 @@ internal static class ConfluentKafkaLegacyGroupReader
         public readonly IntPtr ClientId;
         public readonly IntPtr ClientHost;
         public readonly IntPtr MemberMetadata;
-        public readonly int MemberMetadataSize;
+        public readonly IntPtr MemberMetadataSize;
         public readonly IntPtr MemberAssignment;
-        public readonly int MemberAssignmentSize;
+        public readonly IntPtr MemberAssignmentSize;
     }
 
     [StructLayout(LayoutKind.Sequential)]
