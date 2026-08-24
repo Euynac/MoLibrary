@@ -47,9 +47,14 @@ builder.AddMonica(monica =>
         {
             options.MaxWorkerExecutionThreads = 1;
         })
-        .UseInMemoryMetadataRepository()
+        .AsStandalone()
+        .UseInMemoryStore()
         .UseSchedulerScope("monica-reference-ordering")
-        .UseInMemoryProvider();
+        .UseCatalogRelease(
+            "monica-reference-ordering:development",
+            deploymentGeneration: 1,
+            [new("Monica.Reference.Api", "monica-reference-ordering:development")])
+        .UseLocalWorkerIdentity("Monica.Reference.Api", "monica-reference-ordering:development");
     monica.AddOpenTelemetry()
         .UsePrometheusEndpoint();
 });

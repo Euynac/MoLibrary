@@ -1,90 +1,34 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Monica.Core.HostedService.Abstractions;
-using Monica.Core.HostedService.Models;
-using Monica.Core.ObservableInstance.Services;
 using Monica.JobScheduler.Services.Support;
 using Monica.Modules;
-using NSubstitute;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.Services;
 
 public sealed class JobSchedulerHealthCheckTests
 {
-    [Fact]
-    public async Task CheckHealthAsync_WhenNoSchedulerServicesAreRegistered_ShouldBeUnhealthy()
-    {
-        var healthCheck = CreateHealthCheck([], new ModuleJobSchedulerOption());
-
-        var result = await healthCheck.CheckHealthAsync(
-            new HealthCheckContext(),
-            TestContext.Current.CancellationToken);
-
-        result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Description.Should().Contain("readiness cannot be established");
-    }
-
-    [Fact]
-    public async Task CheckHealthAsync_WhenOneMandatoryServiceIsMissing_ShouldBeUnhealthy()
-    {
-        var healthCheck = CreateHealthCheck(
-            [typeof(JobWorkerManagerHostedService)],
-            new ModuleJobSchedulerOption());
-
-        var result = await healthCheck.CheckHealthAsync(
-            new HealthCheckContext(),
-            TestContext.Current.CancellationToken);
-
-        result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Description.Should().Contain(nameof(JobDefinitionPublisherHostedService));
-        result.Description.Should().NotContain(nameof(JobWorkerManagerHostedService));
-    }
-
     [Theory]
-    [InlineData(EnabledControlPlaneService.LongIntervalScheduler)]
-    [InlineData(EnabledControlPlaneService.ZombieDetector)]
-    [InlineData(EnabledControlPlaneService.HistoryCleanup)]
-    public async Task CheckHealthAsync_WhenEnabledControlPlaneServiceIsMissing_ShouldBeUnhealthy(
-        EnabledControlPlaneService enabledService)
+    [InlineData(JobSchedulerRole.ControlPlane)]
+    [InlineData(JobSchedulerRole.Worker)]
+    [InlineData(JobSchedulerRole.Standalone)]
+    public async Task CheckHealthAsync_WhenRequiredPlaneHasNotInitialized_ShouldBeUnhealthy(JobSchedulerRole role)
     {
-        var options = new ModuleJobSchedulerOption
-        {
-            EnableLongIntervalScheduler = enabledService == EnabledControlPlaneService.LongIntervalScheduler,
-            EnableZombieDetection = enabledService == EnabledControlPlaneService.ZombieDetector,
-            EnableHistoryCleanup = enabledService == EnabledControlPlaneService.HistoryCleanup
-        };
-        var missingServiceType = enabledService switch
-        {
-            EnabledControlPlaneService.LongIntervalScheduler => typeof(LongIntervalSchedulerService),
-            EnabledControlPlaneService.ZombieDetector => typeof(JobZombieDetectorHostedService),
-            EnabledControlPlaneService.HistoryCleanup => typeof(JobHistoryCleanupHostedService),
-            _ => throw new ArgumentOutOfRangeException(nameof(enabledService), enabledService, null)
-        };
-        var healthCheck = CreateHealthCheck(
-            [
-                typeof(JobDefinitionControlPlaneHostedService),
-                typeof(JobConcurrencyGuardHostedService),
-                typeof(JobSchedulerHostedService)
-            ],
-            options,
-            ServiceDiscoveryRole.Registry);
+        var healthCheck = CreateHealthCheck(role, out _);
 
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(),
             TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Description.Should().Contain(missingServiceType.Name);
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WhenControlPlaneDoesNotRun_ShouldOnlyRequireWorkerServices()
+    public async Task CheckHealthAsync_WhenZeroJobWorkerRegisteredCapability_ShouldBeHealthy()
     {
-        var healthCheck = CreateHealthCheck(
-            [typeof(JobDefinitionPublisherHostedService), typeof(JobWorkerManagerHostedService)],
-            new ModuleJobSchedulerOption());
+        var healthCheck = CreateHealthCheck(JobSchedulerRole.Worker, out var runtimeState);
+        runtimeState.SetWorker(true, "Worker capability is active for 0 local job(s).");
 
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(),
@@ -94,23 +38,11 @@ public sealed class JobSchedulerHealthCheckTests
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WhenOptionalControlPlaneServicesAreDisabled_ShouldNotRequireThem()
+    public async Task CheckHealthAsync_WhenStandalonePlanesAreReady_ShouldBeHealthy()
     {
-        var options = new ModuleJobSchedulerOption
-        {
-            EnableLongIntervalScheduler = false,
-            EnableZombieDetection = false,
-            EnableHistoryCleanup = false
-        };
-        var healthCheck = CreateHealthCheck(
-            [
-                typeof(JobDefinitionControlPlaneHostedService),
-                typeof(JobWorkerManagerHostedService),
-                typeof(JobConcurrencyGuardHostedService),
-                typeof(JobSchedulerHostedService)
-            ],
-            options,
-            ServiceDiscoveryRole.Standalone);
+        var healthCheck = CreateHealthCheck(JobSchedulerRole.Standalone, out var runtimeState);
+        runtimeState.SetControlPlane(true, "Control plane initialized.");
+        runtimeState.SetWorker(true, "Worker capability initialized.");
 
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext(),
@@ -120,42 +52,12 @@ public sealed class JobSchedulerHealthCheckTests
     }
 
     private static JobSchedulerHealthCheck CreateHealthCheck(
-        IReadOnlyCollection<Type> registeredServiceTypes,
-        ModuleJobSchedulerOption options,
-        ServiceDiscoveryRole role = ServiceDiscoveryRole.Worker)
+        JobSchedulerRole role,
+        out JobSchedulerRuntimeState runtimeState)
     {
-        var servicesByType = registeredServiceTypes.ToDictionary(
-            static serviceType => serviceType,
-            static serviceType => (IReadOnlyList<HostedServiceRuntimeInfo>)
-            [CreateRuntimeInfo(serviceType)]);
-        var registry = Substitute.For<IMoHostedServiceRegistry>();
-        registry.GetServices(Arg.Any<Type>())
-            .Returns(call => servicesByType.GetValueOrDefault(
-                call.Arg<Type>(),
-                Array.Empty<HostedServiceRuntimeInfo>()));
-
+        runtimeState = new JobSchedulerRuntimeState();
         return new JobSchedulerHealthCheck(
-            registry,
-            Options.Create(options),
-            Options.Create(new ModuleServiceDiscoveryOption { Role = role }));
-    }
-
-    private static HostedServiceRuntimeInfo CreateRuntimeInfo(Type serviceType)
-    {
-        var registry = new ObservableInstanceRegistry(Options.Create(new ModuleObservableInstanceOption()));
-        var tracker = registry.Register($"test-{serviceType.Name}", registration =>
-        {
-            registration.InstanceName = serviceType.Name;
-            registration.InstanceType = serviceType;
-        });
-        tracker.RecordState("Healthy for test.", HostedServiceState.Running);
-        return new HostedServiceRuntimeInfo(tracker);
-    }
-
-    public enum EnabledControlPlaneService
-    {
-        LongIntervalScheduler,
-        ZombieDetector,
-        HistoryCleanup
+            runtimeState,
+            Options.Create(new ModuleJobSchedulerOption { Role = role }));
     }
 }

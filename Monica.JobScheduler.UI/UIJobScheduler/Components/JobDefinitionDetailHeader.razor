@@ -1,0 +1,224 @@
+@using Monica.JobScheduler.Models
+@using Monica.JobScheduler.Models.Catalog
+@using Monica.JobScheduler.Models.Operations
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<header class="job-detail-header">
+    <div class="job-detail-header__main">
+        <div class="job-detail-header__identity">
+            <div class="job-detail-header__chips">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                    @L[$"JobTypes:{Definition.Declaration.JobType}"]
+                </MudChip>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined"
+                         Icon="@(IsPolicyDisabled ? Icons.Material.Filled.PauseCircle : Icons.Material.Filled.CheckCircle)"
+                         Color="@(IsPolicyDisabled ? Color.Warning : Color.Success)">
+                    @(IsPolicyDisabled ? L["Catalog:Policy:Paused"] : L["Catalog:Policy:Enabled"])
+                </MudChip>
+                @if (IsDebugSuppressed)
+                {
+                    <MudTooltip Text="@L["Catalog:Lifecycle:DebugSuppressedDescription"]" Placement="Placement.Top" Arrow="true">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Icon="@Icons.Material.Filled.BugReport"
+                                 Color="Color.Info">
+                            @L["Catalog:Lifecycle:DebugSuppressed"]
+                        </MudChip>
+                    </MudTooltip>
+                }
+                @if (!Summary.HasCompatibleWorker)
+                {
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="Color.Error"
+                             Icon="@Icons.Material.Filled.PortableWifiOff">
+                        @L["JobDetail:Header:NoCompatibleWorker"]
+                    </MudChip>
+                }
+            </div>
+
+            <div class="job-detail-header__title-row">
+                <span class="job-detail-header__symbol" aria-hidden="true">
+                    <MudIcon Icon="@(Definition.Declaration.JobType == JobType.Recurring
+                                        ? Icons.Material.Filled.Update
+                                        : Icons.Material.Filled.Bolt)" />
+                </span>
+                <MudText Typo="Typo.h5" HtmlTag="h2">@Definition.EffectiveConfiguration.JobName</MudText>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Definition.EffectiveConfiguration.Description))
+            {
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="job-detail-header__description">
+                    @Definition.EffectiveConfiguration.Description
+                </MudText>
+            }
+            <code title="@Definition.Declaration.JobKey">@Definition.Declaration.JobKey</code>
+        </div>
+
+        <div class="job-detail-header__actions">
+            @if (Definition.Declaration.JobType == JobType.Triggered)
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           Disabled="@(Definition.IsDisabled || IsMutating)"
+                           OnClick="OnTrigger">
+                    @L["Catalog:Actions:Trigger"]
+                </MudButton>
+            }
+            @if (Definition.Declaration.JobType == JobType.Recurring)
+            {
+                <MudTooltip Text="@(IsDebugSuppressed ? L["Catalog:Actions:RunDuringDebug"] : L["Catalog:Actions:Run"])"
+                            Placement="Placement.Top"
+                            Arrow="true">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               Disabled="@IsMutating"
+                               OnClick="OnRunNow">
+                        @L["Catalog:Actions:Run"]
+                    </MudButton>
+                </MudTooltip>
+                <MudTooltip Text="@ToggleDisabledTooltip" Placement="Placement.Top" Arrow="true">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="@(IsOperatorPaused ? Color.Success : Color.Warning)"
+                               StartIcon="@(IsOperatorPaused ? Icons.Material.Filled.PlayCircle : Icons.Material.Filled.PauseCircle)"
+                               Disabled="@IsMutating"
+                               OnClick="OnToggleDisabled">
+                        @(IsOperatorPaused ? L["Catalog:Actions:Resume"] : L["Catalog:Actions:Pause"])
+                    </MudButton>
+                </MudTooltip>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.EventRepeat"
+                           OnClick="OnInspectSchedule">
+                    @L["JobDetail:Actions:InspectSchedule"]
+                </MudButton>
+            }
+            <MudTooltip Text="@L["Catalog:Actions:Policy"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Tune"
+                               Variant="Variant.Outlined"
+                               Disabled="@IsMutating"
+                               OnClick="OnEditPolicy"
+                               aria-label="@L["Catalog:Actions:Policy"]" />
+            </MudTooltip>
+            <MudTooltip Text="@L["Common:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Color="Color.Primary"
+                               Variant="Variant.Outlined"
+                               Disabled="@IsRefreshing"
+                               OnClick="OnRefresh"
+                               aria-label="@L["Common:Refresh"]" />
+            </MudTooltip>
+        </div>
+    </div>
+
+    <dl class="job-detail-header__evidence" aria-label="@L["JobDetail:Header:EvidenceAriaLabel"]">
+        <div class="job-detail-header__metric" data-metric="active">
+            <dt>
+                <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.PendingActions" Size="Size.Small" /></span>
+                <span>@L["JobDetail:Header:ActiveExecutions"]</span>
+            </dt>
+            <dd>@Summary.ActiveExecutionCount</dd>
+        </div>
+        <div class="job-detail-header__metric" data-metric="queued" data-tone="info">
+            <dt>
+                <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Size="Size.Small" /></span>
+                <span>@L["JobDetail:Header:QueuedExecutions"]</span>
+            </dt>
+            <dd>@Summary.QueuedExecutionCount</dd>
+        </div>
+        <div class="job-detail-header__metric" data-metric="running" data-tone="secondary">
+            <dt>
+                <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.PlayCircle" Size="Size.Small" /></span>
+                <span>@L["JobDetail:Header:RunningExecutions"]</span>
+            </dt>
+            <dd>@Summary.RunningExecutionCount</dd>
+        </div>
+        <div class="job-detail-header__metric"
+             data-metric="workers"
+             data-tone="@(Summary.HasCompatibleWorker ? "success" : "error")">
+            <dt>
+                <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Small" /></span>
+                <span>@L["JobDetail:Header:CompatibleWorkers"]</span>
+            </dt>
+            <dd>@Summary.CompatibleWorkerCount</dd>
+        </div>
+    </dl>
+</header>
+
+@code {
+    /// <summary>
+    /// Gets the operational snapshot rendered by this header.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobOperationalSummary Summary { get; set; } = null!;
+
+    /// <summary>
+    /// Gets whether the owning detail page is refreshing.
+    /// </summary>
+    [Parameter]
+    public bool IsRefreshing { get; set; }
+
+    /// <summary>
+    /// Gets whether an operator mutation is being persisted.
+    /// </summary>
+    [Parameter]
+    public bool IsMutating { get; set; }
+
+    /// <summary>
+    /// Gets the callback that refreshes the owning operational snapshot.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRefresh { get; set; }
+
+    /// <summary>
+    /// Gets the callback that opens the recurring schedule inspector.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnInspectSchedule { get; set; }
+
+    /// <summary>
+    /// Gets the callback that opens the operator policy editor.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnEditPolicy { get; set; }
+
+    /// <summary>
+    /// Gets the callback that toggles recurring materialization.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnToggleDisabled { get; set; }
+
+    /// <summary>
+    /// Gets the callback that admits an immediate operator occurrence without advancing the recurring cursor.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRunNow { get; set; }
+
+    /// <summary>
+    /// Gets the callback that opens triggered execution admission.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnTrigger { get; set; }
+
+    private ActiveJobDefinition Definition => Summary.Definition;
+
+    private bool IsPolicyDisabled => Definition.IsDisabled;
+
+    private bool IsOperatorPaused => JobSchedulerUiPresentation.IsOperatorPaused(Summary);
+
+    private bool IsDebugSuppressed => JobSchedulerUiPresentation.IsDebugSuppressed(Summary);
+
+    private string ToggleDisabledTooltip => JobSchedulerUiPresentation.IsDebugOnlySuppressed(Summary)
+        ? L["Catalog:Actions:PauseUnavailableDebug"]
+        : IsOperatorPaused
+            ? L["Catalog:Actions:Resume"]
+            : L["Catalog:Actions:Pause"];
+
+}

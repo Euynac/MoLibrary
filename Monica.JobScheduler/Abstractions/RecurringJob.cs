@@ -23,7 +23,7 @@ namespace Monica.JobScheduler.Abstractions;
 /// <para>
 /// <b>Dependency Injection:</b> RecurringJob supports primary constructor dependency injection.
 /// Any services registered in the DI container can be injected through the constructor.
-/// Job instances are created with a scoped lifetime for each execution.
+/// Job instances are transient and resolved inside one dependency-injection scope per execution.
 /// </para>
 /// <para>
 /// <b>Cancellation:</b> The ExecuteAsync method receives a CancellationToken that will be signaled

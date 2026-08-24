@@ -15,8 +15,10 @@ The launch profile uses the `Development` environment so Blazor static web asset
 ## What It Registers
 
 - one `builder.AddMonica(monica => ...)` host boundary
-- `monica.AddJobScheduler().UseInMemoryMetadataRepository().UseSchedulerScope("job-scheduler-minimal").UseInMemoryProvider()`
+- one standalone JobScheduler using `UseInMemoryStore()`, an explicit scheduler scope, immutable release manifest, and local worker identity
 - `monica.AddJobSchedulerUI()`
 - web lifecycle: `app.UseMonica()` and `app.MapMonica()`
 
-The app defines one recurring `MinimalHeartbeatJob` so the dashboard and job definitions page have a concrete job to display.
+The app defines one recurring `MinimalHeartbeatJob` so the scheduler overview, catalog, and execution pages have a concrete job to display.
+
+The in-memory store is for local development. With a durable production store, worker crash recovery is at-least-once: lease fencing protects scheduler state from stale workers, while job-owned side effects still need idempotency or transactional boundaries.

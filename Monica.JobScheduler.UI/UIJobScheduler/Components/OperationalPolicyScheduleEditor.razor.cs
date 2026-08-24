@@ -1,0 +1,421 @@
+using System.Globalization;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
+using Microsoft.JSInterop;
+using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.UI.Localization;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
+
+namespace Monica.JobScheduler.UI.UIJobScheduler.Components;
+
+/// <summary>
+/// Edits a prospective recurring schedule while keeping its deployment-configured timezone immutable.
+/// </summary>
+public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
+{
+    private const string DESCRIPTION_KEY = "policy-draft";
+
+    private static readonly TimeSpan MAX_TIMER_DELAY = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
+    private static readonly string[] SyntaxTokens = ["*", ",", "-", "/", "?", "L", "W", "#"];
+
+    private static readonly CronExample[] FiveFieldExamples =
+    [
+        new("EveryFiveMinutes", "*/5 * * * *"),
+        new("EveryDayNoon", "0 12 * * *"),
+        new("WeekdaysNine", "0 9 * * MON-FRI"),
+        new("MonthlyFirst", "0 0 1 * *")
+    ];
+
+    private static readonly CronExample[] SixFieldExamples =
+    [
+        new("EveryFiveMinutes", "0 */5 * * * *"),
+        new("EveryDayNoon", "0 0 12 * * *"),
+        new("WeekdaysNine", "0 0 9 * * MON-FRI"),
+        new("MonthlyFirst", "0 0 0 1 * *")
+    ];
+
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly CronSimpleScheduleSettings _simpleSettings = new();
+    private readonly SemaphoreSlim _previewRefreshSignal = new(0, 1);
+    private CronDescriptionSession? _descriptionSession;
+    private Task? _descriptionTask;
+    private Task? _previewTask;
+    private string? _descriptionFingerprint;
+    private string? _description;
+    private string? _conversionFailure;
+    private bool _descriptionPending;
+    private bool _descriptionRunning;
+    private int _descriptionVersion;
+    private int _disposed;
+
+    [Inject]
+    private IJSRuntime JsRuntime { get; set; } = null!;
+
+    [Inject]
+    private IStringLocalizer<JobSchedulerResource> L { get; set; } = null!;
+
+    [Inject]
+    private TimeProvider TimeProvider { get; set; } = null!;
+
+    /// <summary>
+    /// Gets the component-owned prospective schedule draft.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public CronPolicyDraft Draft { get; set; } = null!;
+
+    /// <summary>
+    /// Gets whether policy controls are disabled by an in-progress save.
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Gets whether the effective operator policy suspends recurring materialization.
+    /// </summary>
+    [Parameter]
+    public bool IsPaused { get; set; }
+
+    /// <summary>
+    /// Raised after the prospective schedule changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback Changed { get; set; }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private bool IsDraftValid => Draft.Evaluation.IsValid
+                                 && Draft.OverrideExpression is not
+                                 {
+                                     Length: > JobDeclaration.CRON_EXPRESSION_MAX_LENGTH
+                                 };
+
+    private string ValidationError => Draft.OverrideExpression?.Length > JobDeclaration.CRON_EXPRESSION_MAX_LENGTH
+        ? L["Policy:Schedule:CronTooLong", JobDeclaration.CRON_EXPRESSION_MAX_LENGTH]
+        : Draft.AreBoundariesValid
+            ? L["Policy:Schedule:ValidationError"]
+            : L["Policy:Schedule:BoundaryValidationError"];
+
+    private IReadOnlyList<CronSyntaxField> SyntaxFields
+    {
+        get
+        {
+            CronSyntaxField[] fields =
+            [
+                new(CronPolicyFieldKind.Minute, "0-59", "* , - /"),
+                new(CronPolicyFieldKind.Hour, "0-23", "* , - /"),
+                new(CronPolicyFieldKind.DayOfMonth, "1-31", "* , - / ? L W"),
+                new(CronPolicyFieldKind.Month, "1-12, JAN-DEC", "* , - /"),
+                new(CronPolicyFieldKind.DayOfWeek, "0-7, SUN-SAT", "* , - / ? L #")
+            ];
+            return Draft.Mode == CronExpressionMode.SixFieldsWithSeconds
+                ? [new(CronPolicyFieldKind.Second, "0-59", "* , - /"), .. fields]
+                : fields;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _descriptionSession = new CronDescriptionSession(JsRuntime);
+    }
+
+    protected override void OnParametersSet()
+    {
+        RefreshPreview();
+        _previewTask ??= RunPreviewLoopAsync();
+        QueueDescription();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_descriptionPending || _descriptionRunning || IsDisposed)
+        {
+            return;
+        }
+
+        _descriptionRunning = true;
+        var task = DrainDescriptionsAsync();
+        _descriptionTask = task;
+        try
+        {
+            await task;
+        }
+        finally
+        {
+            _descriptionRunning = false;
+            if (ReferenceEquals(_descriptionTask, task))
+            {
+                _descriptionTask = null;
+            }
+        }
+    }
+
+    private async Task SetExpressionAsync(string? value)
+    {
+        Draft.SetExpression(value);
+        RefreshPreview();
+        _conversionFailure = null;
+        QueueDescription();
+        await Changed.InvokeAsync();
+    }
+
+    private async Task ResetExpressionAsync()
+    {
+        Draft.ResetExpression();
+        RefreshPreview();
+        _conversionFailure = null;
+        QueueDescription();
+        await Changed.InvokeAsync();
+    }
+
+    private async Task ChangeModeAsync(CronExpressionMode mode)
+    {
+        var conversion = Draft.SetMode(mode);
+        _conversionFailure = conversion.Failure switch
+        {
+            CronExpressionConversionFailure.None => null,
+            CronExpressionConversionFailure.NonZeroSeconds =>
+                L["Policy:Schedule:NonZeroSecondsConversion"].Value,
+            _ => L["Policy:Schedule:InvalidConversion"].Value
+        };
+        if (conversion.IsSuccess)
+        {
+            RefreshPreview();
+            QueueDescription();
+            await Changed.InvokeAsync();
+        }
+    }
+
+    private async Task ApplySimpleSettingsAsync()
+    {
+        var expression = CronPolicyEditor.BuildSimpleExpression(_simpleSettings, Draft.Mode);
+        await SetExpressionAsync(expression);
+    }
+
+    private Task StartBoundaryChangedAsync()
+    {
+        RefreshPreview();
+        return Changed.InvokeAsync();
+    }
+
+    private Task EndBoundaryChangedAsync()
+    {
+        RefreshPreview();
+        return Changed.InvokeAsync();
+    }
+
+    private void QueueDescription()
+    {
+        var fingerprint = $"{CultureInfo.CurrentUICulture.Name}\u001f{Draft.EffectiveExpression}";
+        if (string.Equals(_descriptionFingerprint, fingerprint, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _descriptionFingerprint = fingerprint;
+        _description = null;
+        _descriptionVersion++;
+        _descriptionPending = IsDraftValid;
+    }
+
+    private async Task DrainDescriptionsAsync()
+    {
+        while (_descriptionPending && !IsDisposed)
+        {
+            _descriptionPending = false;
+            await ResolveDescriptionAsync(_descriptionVersion);
+        }
+    }
+
+    private async Task ResolveDescriptionAsync(int version)
+    {
+        var session = _descriptionSession;
+        if (session is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<CronDescriptionResult> results;
+        try
+        {
+            results = await session.DescribeAsync(
+                [new CronDescriptionRequest(DESCRIPTION_KEY, Draft.EffectiveExpression)],
+                CultureInfo.CurrentUICulture.Name,
+                _lifetimeCancellation.Token);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (JSException)
+        {
+            results = [];
+        }
+
+        if (IsDisposed || version != _descriptionVersion)
+        {
+            return;
+        }
+
+        _description = results
+            .FirstOrDefault(result => string.Equals(result.Key, DESCRIPTION_KEY, StringComparison.Ordinal))
+            ?.Description;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void RefreshPreview(bool signalLoop = true)
+    {
+        Draft.RefreshEvaluation(TimeProvider.GetUtcNow());
+        if (signalLoop)
+        {
+            SignalPreviewLoop();
+        }
+    }
+
+    private void SignalPreviewLoop()
+    {
+        if (IsDisposed || _previewRefreshSignal.CurrentCount != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _previewRefreshSignal.Release();
+        }
+        catch (SemaphoreFullException)
+        {
+            // A concurrent render already queued the only wake-up the coalescing loop needs.
+        }
+    }
+
+    private async Task RunPreviewLoopAsync()
+    {
+        // A one-shot deadline avoids polling; draft and pause changes interrupt it through the coalesced signal.
+        var cancellationToken = _lifetimeCancellation.Token;
+        try
+        {
+            while (!IsDisposed)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                DateTimeOffset? proposedNextUtc = null;
+                await InvokeAsync(() =>
+                {
+                    proposedNextUtc = IsPaused ? null : Draft.ProposedNextOccurrenceUtc;
+                });
+                if (proposedNextUtc is null)
+                {
+                    await _previewRefreshSignal.WaitAsync(cancellationToken);
+                    continue;
+                }
+
+                var delay = proposedNextUtc.Value - TimeProvider.GetUtcNow();
+                if (delay > TimeSpan.Zero
+                    && !await WaitForPreviewDeadlineOrChangeAsync(
+                        delay > MAX_TIMER_DELAY ? MAX_TIMER_DELAY : delay,
+                        cancellationToken))
+                {
+                    continue;
+                }
+
+                await InvokeAsync(() =>
+                {
+                    if (IsDisposed)
+                    {
+                        return;
+                    }
+
+                    RefreshPreview(signalLoop: false);
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task<bool> WaitForPreviewDeadlineOrChangeAsync(
+        TimeSpan delay,
+        CancellationToken cancellationToken)
+    {
+        using var iterationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var delayTask = Task.Delay(delay, TimeProvider, iterationCancellation.Token);
+        var changeTask = _previewRefreshSignal.WaitAsync(iterationCancellation.Token);
+        var completed = await Task.WhenAny(delayTask, changeTask);
+        await iterationCancellation.CancelAsync();
+        try
+        {
+            await Task.WhenAll(delayTask, changeTask);
+        }
+        catch (OperationCanceledException) when (iterationCancellation.IsCancellationRequested)
+        {
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return ReferenceEquals(completed, delayTask);
+    }
+
+    private string FieldLabel(CronPolicyFieldKind kind) =>
+        L[$"Policy:Schedule:Fields:{kind}"];
+
+    private static string TokenKey(string token) => token switch
+    {
+        "*" => "Star",
+        "," => "Comma",
+        "-" => "Hyphen",
+        "/" => "Slash",
+        "?" => "Question",
+        "L" => "Last",
+        "W" => "Weekday",
+        "#" => "Hash",
+        _ => throw new ArgumentOutOfRangeException(nameof(token), token, null)
+    };
+
+    private string FormatScheduleTime(DateTimeOffset? value) => value is null
+        ? L["Common:NotAvailable"]
+        : Draft.ToScheduleTime(value.Value).ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.CurrentCulture);
+
+    private static string FormatUtc(DateTimeOffset? value) => value is null
+        ? "—"
+        : value.Value.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        await _lifetimeCancellation.CancelAsync();
+        if (_descriptionTask is { } descriptionTask)
+        {
+            try
+            {
+                await descriptionTask;
+            }
+            catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+            {
+            }
+        }
+
+        if (_previewTask is { } previewTask)
+        {
+            await previewTask;
+        }
+
+        if (_descriptionSession is not null)
+        {
+            await _descriptionSession.DisposeAsync();
+            _descriptionSession = null;
+        }
+
+        _previewRefreshSignal.Dispose();
+        _lifetimeCancellation.Dispose();
+    }
+
+    private sealed record CronSyntaxField(CronPolicyFieldKind Kind, string Range, string Characters);
+
+    private sealed record CronExample(string Key, string Expression);
+}

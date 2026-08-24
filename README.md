@@ -70,9 +70,14 @@ builder.AddMonica(monica =>
         {
             options.ProjectName = "Orders";
         })
-        .UseInMemoryMetadataRepository()
+        .AsStandalone()
+        .UseInMemoryStore()
         .UseSchedulerScope("orders")
-        .UseInMemoryProvider();
+        .UseCatalogRelease(
+            "orders:development",
+            deploymentGeneration: 1,
+            [new("Orders", "orders:development")])
+        .UseLocalWorkerIdentity("Orders", "orders:development");
 
     monica.AddJobSchedulerUI();
 });
@@ -83,9 +88,11 @@ app.MapMonica();
 app.Run();
 ```
 
+With a durable production store, leases provide at-least-once execution after a worker crash, and fencing rejects stale scheduler mutations. A logical job's concurrency gate is keyed by scheduler scope and `JobKey`; it therefore remains closed while a superseded owner or revision is still cooperatively stopping after catalog cutover. Fencing cannot make arbitrary job side effects exactly-once; jobs should use idempotency keys or transactional business boundaries for those effects.
+
 The callback is the complete composition boundary. Captured `ModuleRegistration<,>` handles cannot mutate the graph after it closes, and startup fails early when the graph is incomplete or cyclic.
 
-For a runnable DDD application rather than a toy snippet, see [`examples/Monica.ReferenceApplication`](examples/Monica.ReferenceApplication). For the smallest dashboard host, see [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal).
+For a runnable DDD application rather than a toy snippet, see [`examples/Monica.ReferenceApplication`](examples/Monica.ReferenceApplication). For the smallest operational scheduler UI host, see [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal).
 
 ## The architecture contract
 
@@ -149,7 +156,7 @@ Applications can adopt Stable without taking a dependency on Labs. Integration p
 
 Monica includes operational Blazor surfaces for module dependencies, ProjectUnits, configuration, jobs, dependency injection, telemetry, repositories, and other registered capabilities. They share a theme contract and first-party `en-US` and `zh-CN` localization resources.
 
-The one-minute demo shows the JobScheduler dashboard, cron editing, module dependency inspection, and runtime configuration:
+The one-minute demo shows JobScheduler operations, module dependency inspection, and runtime configuration:
 
 https://github.com/user-attachments/assets/250e1e5f-0a78-4b8b-b832-756d682a01bd
 

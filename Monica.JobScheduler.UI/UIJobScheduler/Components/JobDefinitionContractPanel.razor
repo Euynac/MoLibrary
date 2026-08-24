@@ -1,0 +1,264 @@
+@using System.Globalization
+@using Monica.JobScheduler.Models.Catalog
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="job-contract-panel" aria-labelledby="job-contract-heading">
+    <header class="job-contract-panel__heading">
+        <div>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="job-contract-heading">
+                @L["JobDetail:Contract:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["JobDetail:Contract:Description"]
+            </MudText>
+        </div>
+        <MudChip T="string"
+                 Size="Size.Small"
+                 Variant="Variant.Outlined"
+                 Color="Color.Primary"
+                 Icon="@Icons.Material.Filled.Lock">
+            @L["JobDetail:Contract:Immutable"]
+        </MudChip>
+    </header>
+
+    <div class="job-contract-panel__sections">
+        <section aria-labelledby="job-declaration-heading">
+            <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-declaration-heading">
+                @L["JobDetail:Contract:DeclarationTitle"]
+            </MudText>
+            <dl>
+                <div>
+                    <dt>@L["JobDetail:Contract:Owner"]</dt>
+                    <dd><code>@Definition.OwnerId</code></dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:ArgumentsKey"]</dt>
+                    <dd><code>@Display(Definition.Declaration.JobArgsKey)</code></dd>
+                </div>
+                <div>
+                    <dt class="job-contract-panel__term-with-help">
+                        <span>@L["JobDetail:Contract:MaxConcurrency"]</span>
+                        <MudTooltip Text="@L["JobDetail:Contract:MaxConcurrencyHelp"]" Placement="Placement.Top" Arrow="true">
+                            <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:MaxConcurrencyHelp"]">
+                                <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                            </button>
+                        </MudTooltip>
+                    </dt>
+                    <dd>@Definition.Declaration.MaxConcurrency</dd>
+                </div>
+                <div>
+                    <dt class="job-contract-panel__term-with-help">
+                        <span>@L["JobDetail:Contract:RetryCount"]</span>
+                        <MudTooltip Text="@L["JobDetail:Contract:RetryCountHelp"]" Placement="Placement.Top" Arrow="true">
+                            <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:RetryCountHelp"]">
+                                <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                            </button>
+                        </MudTooltip>
+                    </dt>
+                    <dd>@Definition.Declaration.RetryCount</dd>
+                </div>
+                <div>
+                    <dt class="job-contract-panel__term-with-help">
+                        <span>@L["JobDetail:Contract:ExecutionTimeout"]</span>
+                        <MudTooltip Text="@L["JobDetail:Contract:ExecutionTimeoutHelp"]" Placement="Placement.Top" Arrow="true">
+                            <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:ExecutionTimeoutHelp"]">
+                                <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                            </button>
+                        </MudTooltip>
+                    </dt>
+                    <dd>@TimePresentation.FormatDuration(Definition.Declaration.MaxExecutionTimeout)</dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:DeclarationDefault"]</dt>
+                    <dd>@(Definition.Declaration.IsDisabledByDefault ? L["Catalog:Disabled"] : L["Catalog:Enabled"])</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section aria-labelledby="job-policy-heading">
+            <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-policy-heading">
+                @L["JobDetail:Contract:PolicyTitle"]
+            </MudText>
+            <dl>
+                <div>
+                    <dt>@L["JobDetail:Contract:EffectiveState"]</dt>
+                    <dd>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="@(Definition.IsDisabled ? Color.Warning : Color.Success)">
+                            @(Definition.IsDisabled ? L["Catalog:Disabled"] : L["Catalog:Enabled"])
+                        </MudChip>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:DisabledOverride"]</dt>
+                    <dd>@FormatDisabledOverride(Definition.Policy.Overrides.DisabledOverride)</dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:Fields:DisplayName"]</dt>
+                    <dd>@FormatOverrideEffective(
+                        Definition.Policy.Overrides.DisplayNameOverride,
+                        Definition.EffectiveConfiguration.JobName)</dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:Fields:MaxConcurrency"]</dt>
+                    <dd>@FormatOverrideEffective(
+                        Definition.Policy.Overrides.MaxConcurrencyOverride,
+                        Definition.EffectiveConfiguration.MaxConcurrency)</dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:Fields:RetryCount"]</dt>
+                    <dd>@FormatOverrideEffective(
+                        Definition.Policy.Overrides.RetryCountOverride,
+                        Definition.EffectiveConfiguration.RetryCount)</dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:Fields:ExecutionTimeout"]</dt>
+                    <dd>@FormatOverrideEffective(
+                        Definition.Policy.Overrides.MaxExecutionTimeoutOverride is { } timeout
+                            ? TimePresentation.FormatDuration(timeout)
+                            : null,
+                        TimePresentation.FormatDuration(Definition.EffectiveConfiguration.MaxExecutionTimeout))</dd>
+                </div>
+                <div>
+                    <dt class="job-contract-panel__term-with-help">
+                        <span>@L["Policy:MaxRecords"]</span>
+                        <MudTooltip Text="@L["Policy:MaxRecordsHelp"]" Placement="Placement.Top" Arrow="true">
+                            <button type="button" class="job-contract-panel__help" aria-label="@L["Policy:MaxRecordsHelp"]">
+                                <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                            </button>
+                        </MudTooltip>
+                    </dt>
+                    <dd>@FormatOverrideEffective(
+                        FormatLimit(Definition.Policy.Overrides.MaxRetainedHistoryRecords),
+                        FormatLimit(Definition.EffectiveConfiguration.MaxRetainedHistoryRecords))</dd>
+                </div>
+                <div>
+                    <dt class="job-contract-panel__term-with-help">
+                        <span>@L["Policy:MaxDays"]</span>
+                        <MudTooltip Text="@L["Policy:MaxDaysHelp"]" Placement="Placement.Top" Arrow="true">
+                            <button type="button" class="job-contract-panel__help" aria-label="@L["Policy:MaxDaysHelp"]">
+                                <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                            </button>
+                        </MudTooltip>
+                    </dt>
+                    <dd>@FormatOverrideEffective(
+                        FormatLimit(Definition.Policy.Overrides.MaxRetentionDays),
+                        FormatLimit(Definition.EffectiveConfiguration.MaxRetentionDays))</dd>
+                </div>
+                <div>
+                    <dt>@L["JobDetail:Contract:PolicyUpdated"]</dt>
+                    <dd>@TimePresentation.FormatTimestamp(Definition.Policy.UpdatedAtUtc)</dd>
+                </div>
+                <div>
+                    <dt>@L["Policy:Identity:ReviewedRevision"]</dt>
+                    <dd>
+                        <code>@Display(Definition.Policy.ReviewedAgainstJobRevisionId)</code>
+                        @if (Definition.IsPolicyReviewOutdated)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                @L["Policy:Values:ReviewOutdated"]
+                            </MudChip>
+                        }
+                    </dd>
+                </div>
+                <div>
+                    <dt class="job-contract-panel__term-with-help">
+                        <span>@L["JobDetail:Contract:PolicyStamp"]</span>
+                        <MudTooltip Text="@L["JobDetail:Contract:PolicyStampHelp"]" Placement="Placement.Top" Arrow="true">
+                            <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:PolicyStampHelp"]">
+                                <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                            </button>
+                        </MudTooltip>
+                    </dt>
+                    <dd><code>@Definition.Policy.ConcurrencyStamp</code></dd>
+                </div>
+            </dl>
+        </section>
+    </div>
+
+    <section class="job-contract-panel__revision" aria-labelledby="job-revision-heading">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-revision-heading">
+            @L["JobDetail:Contract:RevisionTitle"]
+        </MudText>
+        <dl>
+            <div>
+                <dt>@L["JobDetail:Contract:SchedulerScope"]</dt>
+                <dd><code>@Definition.SchedulerScopeKey</code></dd>
+            </div>
+            <div>
+                <dt class="job-contract-panel__term-with-help">
+                    <span>@L["JobDetail:Contract:Release"]</span>
+                    <MudTooltip Text="@L["JobDetail:Contract:ReleaseHelp"]" Placement="Placement.Top" Arrow="true">
+                        <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:ReleaseHelp"]">
+                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                        </button>
+                    </MudTooltip>
+                </dt>
+                <dd><code>@Definition.ReleaseId</code></dd>
+            </div>
+            <div>
+                <dt class="job-contract-panel__term-with-help">
+                    <span>@L["JobDetail:Contract:ActivationEpoch"]</span>
+                    <MudTooltip Text="@L["JobDetail:Contract:ActivationEpochHelp"]" Placement="Placement.Top" Arrow="true">
+                        <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:ActivationEpochHelp"]">
+                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                        </button>
+                    </MudTooltip>
+                </dt>
+                <dd>@Definition.ActivationEpoch</dd>
+            </div>
+            <div>
+                <dt class="job-contract-panel__term-with-help">
+                    <span>@L["JobDetail:Contract:WorkerRevision"]</span>
+                    <MudTooltip Text="@L["JobDetail:Contract:WorkerRevisionHelp"]" Placement="Placement.Top" Arrow="true">
+                        <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:WorkerRevisionHelp"]">
+                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                        </button>
+                    </MudTooltip>
+                </dt>
+                <dd><code>@Definition.WorkerRevisionId</code></dd>
+            </div>
+            <div class="job-contract-panel__revision-wide">
+                <dt class="job-contract-panel__term-with-help">
+                    <span>@L["JobDetail:Contract:JobRevision"]</span>
+                    <MudTooltip Text="@L["JobDetail:Contract:JobRevisionHelp"]" Placement="Placement.Top" Arrow="true">
+                        <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:JobRevisionHelp"]">
+                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+                        </button>
+                    </MudTooltip>
+                </dt>
+                <dd><code>@Definition.JobRevisionId</code></dd>
+            </div>
+        </dl>
+    </section>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the active definition whose code declaration, operator policy, and revision evidence are rendered.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public ActiveJobDefinition Definition { get; set; } = null!;
+
+    private string FormatDisabledOverride(bool? disabledOverride) => disabledOverride switch
+    {
+        true => L["Policy:ForceDisabled"],
+        false => L["Policy:ForceEnabled"],
+        null => L["Policy:InheritDefault"]
+    };
+
+    private string FormatLimit(int? value) => value?.ToString(CultureInfo.CurrentCulture)
+        ?? L["Policy:InheritDefault"];
+
+    private string FormatOverrideEffective(object? overrideValue, object effectiveValue) =>
+        L["JobDetail:Contract:OverrideEffective",
+            overrideValue?.ToString() ?? L["Policy:InheritDefault"],
+            effectiveValue];
+
+    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

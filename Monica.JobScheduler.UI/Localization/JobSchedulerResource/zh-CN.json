@@ -1,638 +1,831 @@
 {
   "Pages": {
-    "JobSchedulerDashboard": {
-      "Title": "总览"
-    },
-    "JobSchedulerMonitor": {
-      "Title": "实时监控"
-    },
-    "JobDefinitions": {
-      "Title": "作业定义"
-    },
-    "JobInstances": {
-      "Title": "作业实例"
-    },
-    "JobStatistics": {
-      "Title": "统计分析"
-    }
+    "Overview": { "Title": "调度总览" },
+    "Catalog": { "Title": "作业目录" },
+    "JobDetail": { "Title": "作业详情" },
+    "Executions": { "Title": "执行账本" },
+    "Statistics": { "Title": "调度统计分析" }
   },
   "Workspace": {
-    "Eyebrow": "MONICA / 调度运行中心",
-    "ControlPlaneLabel": "调度控制面",
-    "ControlPlaneValue": "计划 · 派发 · 证据",
-    "NavigationLabel": "调度功能区",
+    "Eyebrow": "MONICA / 持久化调度",
+    "ContractLabel": "一致性边界",
+    "ContractValue": "目录 · 队列 · 租约",
+    "TimeZone": "调度时区 · {0}",
     "Navigation": {
-      "Dashboard": "调度总览",
-      "Monitor": "实时监控",
-      "Definitions": "作业定义",
-      "Instances": "执行账本",
+      "Overview": "总览",
+      "Catalog": "目录",
+      "Executions": "执行",
       "Statistics": "统计分析"
     },
     "Pages": {
-      "Dashboard": {
-        "Title": "调度控制台",
-        "Description": "在同一运行视图中协调作业定义、活动任务、执行健康度与最近结果。"
+      "Overview": {
+        "Title": "调度运行总览",
+        "Description": "优先掌握工作负载、执行结果、最近活动与关注信号，再深入查看部署证据。"
       },
-      "Monitor": {
-        "Title": "实时执行",
-        "Description": "持续观察执行中的作业、队列压力与调度器的并发占用变化。"
+      "Catalog": {
+        "Title": "作业目录",
+        "Description": "分别浏览周期作业与触发作业，掌握调度状态，并进入完整的作业运行档案。"
       },
-      "Definitions": {
-        "Title": "调度定义库",
-        "Description": "检查周期与触发型作业定义、下次派发时间及当前控制状态。"
+      "JobDetail": {
+        "Title": "作业运行档案",
+        "Description": "将单个不可变声明与生效策略、调度游标、工作节点兼容性和最近执行证据集中呈现。"
       },
-      "DefinitionDetail": {
-        "Title": "定义档案",
-        "Description": "查看单个调度定义的身份、运行健康度、活动实例与执行策略。"
-      },
-      "Instances": {
-        "Title": "执行账本",
-        "Description": "按状态、时间窗口、作业键或实例标识检索完整运行记录。"
+      "Executions": {
+        "Title": "持久化执行账本",
+        "Description": "检索排队与已完成工作、检查带栅栏的租约历史，并在不依赖消息投递的情况下请求取消。"
       },
       "Statistics": {
-        "Title": "效能证据",
-        "Description": "在选定时间窗口内比较执行量、耗时、失败集中度与调度效率。"
+        "Title": "调度统计分析",
+        "Description": "在有界调度时区范围内度量可靠率、调度达成率、吞吐量、耗时分位数与工作负载集中度。"
       }
     }
   },
+  "Access": {
+    "Checking": "正在检查调度权限…",
+    "DeniedTitle": "无权访问任务调度",
+    "DeniedDescription": "当前账号无权查看或操作 JobScheduler。"
+  },
   "Common": {
-    "Actions": {
-      "Search": "搜索",
-      "Reset": "重置",
-      "Cancel": "取消",
-      "Confirm": "确认",
-      "Save": "保存",
-      "Close": "关闭",
-      "Apply": "应用",
-      "Execute": "执行",
-      "Retry": "重试",
-      "ViewAll": "查看全部",
-      "ViewDetails": "查看详情",
-      "Edit": "编辑",
-      "Back": "返回列表",
-      "ClearSelection": "清除选择"
+    "Loading": "加载中…",
+    "Retry": "重试",
+    "Refresh": "刷新",
+    "Search": "搜索",
+    "Cancel": "取消",
+    "Save": "保存策略",
+    "Saving": "保存中…",
+    "Submitting": "提交中…",
+    "Close": "关闭",
+    "Keep": "保留执行",
+    "NotAvailable": "暂无",
+    "RunningDuration": "已运行 {0}",
+    "Duration": {
+      "Seconds": "{0} 秒",
+      "Milliseconds": "{0} 毫秒"
+    }
+  },
+  "ExecutionStates": {
+    "Queued": "排队中",
+    "Running": "执行中",
+    "Succeeded": "成功",
+    "Failed": "失败",
+    "Cancelled": "已取消",
+    "Skipped": "已跳过"
+  },
+  "JobTypes": {
+    "Recurring": "周期作业",
+    "Triggered": "触发作业"
+  },
+  "ExecutionOrigins": {
+    "Triggered": "触发准入",
+    "RecurringSchedule": "周期调度",
+    "RecurringRunNow": "运维立即执行"
+  },
+  "ExecutionSkipReasons": {
+    "RecurringCapacityUnavailable": "该执行时点没有可用的未完成执行容量。"
+  },
+  "Overview": {
+    "PageTitle": "任务调度 · 总览",
+    "Release": {
+      "AriaLabel": "目录发布状态",
+      "Desired": "期望发布",
+      "Active": "活动发布",
+      "Generation": "部署代次",
+      "Intent": "活动 / 期望意图",
+      "Activation": "激活纪元",
+      "Change": "变更纪元",
+      "Publication": "发布纪元",
+      "Converged": "已收敛",
+      "Transitioning": "切换中",
+      "WaitingWorkers": "等待工作节点",
+      "TransitionMessage": "在完整的期望发布激活前，新执行准入与周期实例物化将暂停。",
+      "ReadinessDescription": "期望发布与精确工作节点版本全部收敛后，该发布才能成为活动执行契约。",
+      "EpochAriaLabel": "目录纪元推进状态"
     },
-    "Status": {
-      "Loading": "加载中...",
-      "Saving": "保存中...",
-      "Executing": "执行中..."
+    "Workload": {
+      "AriaLabel": "调度工作负载摘要",
+      "TotalJobs": "作业总数",
+      "AcrossOwners": "来自 {0} 个项目",
+      "RecurringJobs": "周期作业",
+      "RecurringDescription": "由调度计划驱动",
+      "TriggeredJobs": "触发作业",
+      "TriggeredDescription": "由运维或 API 准入",
+      "SuccessRate": "成功率",
+      "CompletedSample": "基于 {0} 次成功或失败执行"
+    },
+    "Queue": {
+      "Title": "执行状态",
+      "Description": "当前持久化执行账本的生命周期分布。",
+      "Total": "执行",
+      "AriaLabel": "持久化执行状态统计"
+    },
+    "Attention": {
+      "Title": "需要关注",
+      "Description": "可能需要运维人员处理的信号。",
+      "ClearTitle": "暂无需立即干预",
+      "ClearDescription": "没有失败或跳过的执行，所有来源项目均已收敛。",
+      "Failed": "失败执行",
+      "FailedDescription": "检查错误与重试证据。",
+      "Skipped": "跳过的执行时点",
+      "SkippedDescription": "检查重叠执行与调度容量。",
+      "Owners": "未收敛的来源项目",
+      "OwnersDescription": "缺少声明发布或兼容工作节点。"
+    },
+    "Analytics": {
+      "Title": "统计分析",
+      "Description": "在有界时间范围内分析吞吐量、执行结果趋势、耗时分位数与慢作业。",
+      "Action": "打开统计分析"
+    },
+    "Deployment": {
+      "Title": "部署证据",
+      "Description": "发布纪元与工作节点收敛信息下移保留，用于深入的运行诊断。"
+    },
+    "Owners": {
+      "Title": "所有者收敛",
+      "Description": "仅当每个预期定义快照和匹配的工作节点版本都存在时，发布才具备运行条件。",
+      "Revision": "工作节点版本",
+      "Publication": "已发布",
+      "Workers": "在线节点",
+      "Definitions": "活动作业",
+      "Published": "已发布",
+      "Pending": "待发布",
+      "Empty": "期望发布中没有所有者。",
+      "Ready": "已就绪",
+      "NeedsAttention": "需要关注",
+      "OpenDetails": "查看 {0} 的详情",
+      "SignalsAriaLabel": "{0} 的就绪信号",
+      "Detail": {
+        "Title": "所有者详情",
+        "Eyebrow": "所有者就绪状态",
+        "ReadinessTitle": "所有者信号",
+        "Ready": "运行条件已就绪",
+        "Waiting": "等待就绪证据",
+        "ReadyDescription": "所需快照与匹配的工作节点版本均已存在。此所有者信号本身并不表示期望发布已激活。",
+        "WaitingDescription": "仍缺少定义快照或匹配的工作节点版本；发布激活会单独评估。",
+        "SnapshotReadyDescription": "预期的不可变定义快照已可用。",
+        "SnapshotWaitingDescription": "预期的定义快照尚未发布。",
+        "WorkersDescription": "与预期版本匹配的在线工作节点。",
+        "DefinitionsDescription": "活动目录中来自此所有者精确版本的作业。",
+        "RevisionDescription": "工作节点能力必须报告此精确的可执行版本。",
+        "ReleaseTitle": "发布激活",
+        "ReleaseDescription": "所有者就绪与目录激活是两个独立信号。",
+        "DesiredReleaseActive": "期望发布已激活",
+        "DesiredReleasePending": "期望发布尚未激活",
+        "JobsTitle": "匹配的活动作业",
+        "JobsDescription": "活动目录中由此精确工作节点版本拥有的定义。",
+        "JobsEmpty": "活动目录中没有匹配的定义。",
+        "CapturedAt": "证据采集于"
+      }
+    },
+    "Recent": {
+      "Title": "最近队列活动",
+      "Description": "所有作业中最新的持久化执行准入记录。",
+      "Empty": "尚未准入任何执行。"
+    },
+    "RefreshFailed": "最近一次刷新失败：{0}",
+    "LastRefreshed": "最近刷新：{0}"
+  },
+  "Catalog": {
+    "PageTitle": "任务调度 · 作业目录",
+    "Title": "作业定义",
+    "Count": "共 {0} 个定义",
+    "Enabled": "已启用",
+    "Disabled": "已禁用",
+    "OnDemand": "按需触发",
+    "Empty": "没有符合当前筛选条件的活动定义。",
+    "Filters": {
+      "AriaLabel": "作业目录搜索与筛选",
+      "Search": "定义",
+      "SearchPlaceholder": "作业名称或键",
+      "Owner": "来源项目",
+      "AnyOwner": "全部来源项目",
+      "Type": "作业类型",
+      "Policy": "运维策略",
+      "AnyPolicy": "全部策略",
+      "PageSize": "每页行数"
+    },
+    "Columns": {
+      "Definition": "定义",
+      "Owner": "所有者",
+      "Lifecycle": "调度状态",
+      "Schedule": "调度",
+      "NextRun": "下次执行",
+      "Readiness": "运行就绪",
+      "LastRun": "上次执行",
+      "Revision": "作业版本",
+      "Actions": "操作"
+    },
+    "Actions": {
+      "Run": "立即执行作业",
+      "Trigger": "通过活动目录执行",
+      "Policy": "编辑运维策略",
+      "Details": "打开作业详情",
+      "Pause": "暂停周期实例物化",
+      "Resume": "继续周期实例物化",
+      "PauseUnavailableDebug": "调试模式已抑制自动物化，无法再次快速暂停；仍可通过“立即执行作业”显式运行。",
+      "RunDuringDebug": "立即执行仍然可用，因为显式准入不会推进周期游标。",
+      "PauseSelected": "暂停所选",
+      "ResumeSelected": "继续所选",
+      "Reset": "重置筛选"
+    },
+    "Readiness": {
+      "Workers": "{0} 个兼容工作节点",
+      "NoWorker": "没有兼容工作节点"
+    },
+    "ScheduleStatus": {
+      "Awaiting": "等待同步",
+      "Exhausted": "调度已结束"
+    },
+    "Policy": {
+      "Enabled": "策略已启用",
+      "Paused": "策略已暂停"
+    },
+    "Lifecycle": {
+      "Automatic": "自动调度",
+      "OperatorPaused": "已由策略暂停",
+      "DebugSuppressed": "仅手动执行",
+      "OperatorAndDebug": "策略暂停 · 调试模式",
+      "AutomaticDescription": "周期实例自动物化已启用。",
+      "OperatorPausedDescription": "运维策略阻止周期实例自动物化。",
+      "DebugSuppressedDescription": "调试模式抑制自动物化；仍可显式立即执行作业。",
+      "OperatorAndDebugDescription": "运维策略与调试模式都在抑制周期实例自动物化。",
+      "AwaitingDescription": "周期游标正在等待活动声明完成同步。",
+      "ExhaustedDescription": "声明的调度边界内已没有可自动物化的执行时点。",
+      "TriggeredEnabledDescription": "该触发作业已允许运维人员准入执行。",
+      "TriggeredDisabledDescription": "运维策略阻止该触发作业准入新的执行。"
+    },
+    "NextRun": {
+      "In": "将在 {0} 后执行",
+      "DueNow": "下一个执行时点已到。"
+    },
+    "Cron": {
+      "Unavailable": "无法解析调度含义",
+      "Parsing": "正在解析调度…",
+      "ConfiguredTimeZone": "部署配置的时区（只读）"
+    },
+    "Triggered": {
+      "Ready": "可由运维人员触发",
+      "NoArguments": "无需参数契约"
+    },
+    "History": { "NeverRun": "从未执行" },
+    "Activity": { "QueuedRunning": "排队 {0} · 执行中 {1}" },
+    "Selection": {
+      "SelectAll": "选择本页全部周期作业",
+      "SelectPage": "选择本页",
+      "SelectJob": "选择 {0}",
+      "ToolbarLabel": "所选周期作业操作",
+      "Count": "已选择 {0} 个周期作业",
+      "Description": "批量变更会保留每个作业独立的历史保留策略和乐观并发栅栏。",
+      "DebugPauseUnavailable": "所选作业中存在已处于调试手动模式的作业，因此不能对该选择执行快速暂停。",
+      "Clear": "清除选择"
     },
     "Messages": {
-      "LoadFailed": "加载失败",
-      "SaveFailed": "保存失败",
-      "AndMore": "还有 {0} 个"
+      "Paused": "周期实例物化已暂停。",
+      "Resumed": "周期实例物化将从下一个未来时点继续。",
+      "PauseUnavailableDebug": "调试模式已抑制自动物化；仍可立即执行作业。",
+      "ResumedDebugRemains": "运维暂停已解除；调试模式仍在抑制自动物化，立即执行仍然可用。",
+      "UpdateFailed": "策略更新失败。",
+      "RunFailed": "作业无法入队。",
+      "Queued": "执行 {0} 已入队。"
     },
-    "Time": {
-      "JustNow": "刚刚",
-      "SecondsAgo": "{0}秒前",
-      "MinutesAgo": "{0}分钟前",
-      "Days": "天",
+    "Batch": {
+      "Empty": "请至少选择一个周期作业。",
+      "PauseTitle": "暂停所选周期作业？",
+      "ResumeTitle": "继续所选周期作业？",
+      "PauseMessage": "暂停 {0} 个所选作业的新周期实例？现有排队及运行中的执行不受影响。",
+      "ResumeMessage": "从下一个未来时点继续 {0} 个所选作业？暂停期间的执行时点不会补跑。",
+      "PauseUnavailableDebug": "所选作业中至少有一个仅由调试模式抑制且没有运维暂停，因此不能快速暂停。",
+      "Result": "{0} 项策略更新成功，{1} 项失败。",
+      "ResultDebugRemains": "{0} 项运维暂停更新成功，{1} 项失败；已配置调试模式的作业仍会抑制自动物化。"
+    }
+  },
+  "Policy": {
+    "Title": "运维策略工作台",
+    "ImmutableNotice": "作业键、作业类型、参数契约、所有者、发布、工作器修订、作业修订和已配置时区始终由部署管理。策略变更影响后续准入；已排队和运行中的执行保留其已捕获配置。",
+    "DisabledOverride": "执行状态覆盖",
+    "InheritDefault": "继承代码默认值",
+    "ForceEnabled": "强制启用",
+    "ForceDisabled": "强制禁用",
+    "MaxRecords": "最大保留执行数",
+    "MaxRecordsHelp": "留空继承 100；设为 0 可禁用按数量保留。",
+    "MaxDays": "最大保留天数",
+    "MaxDaysHelp": "留空继承不限制保留时长。",
+    "Saved": "运维策略已保存。",
+    "UnsavedChanges": "存在未保存的运维变更",
+    "NoChanges": "没有策略变更",
+    "DriftWarning": "此粘性策略上次针对作业修订 {0} 审核，当前发布已使用 {1}。保存前请检查生效值。",
+    "Provenance": {
+      "Declared": "声明默认值",
+      "Override": "运维覆盖值",
+      "Effective": "生效值",
+      "Help": "每一行都分别展示不可变发布默认值、运维意图以及调度器将采用的实际行为。"
+    },
+    "Sections": {
+      "General": "常规",
+      "GeneralHelp": "控制准入状态和面向运维人员的作业信息。",
+      "Schedule": "调度",
+      "ScheduleHelp": "在部署已配置的时区中编辑周期节奏和边界。",
+      "Execution": "执行",
+      "ExecutionHelp": "控制容量以及新准入执行捕获的重试和超时快照。",
+      "Retention": "保留",
+      "RetentionHelp": "按数量和时长限制终态执行历史。"
+    },
+    "Fields": {
+      "Enabled": "启用状态",
+      "DisplayName": "显示名称",
+      "Description": "描述",
+      "DescriptionMode": "描述意图",
+      "MaxConcurrency": "最大并发数",
+      "RetryCount": "重试次数",
+      "ExecutionTimeout": "执行超时",
       "Hours": "小时",
       "Minutes": "分钟",
       "Seconds": "秒",
-      "Milliseconds": "毫秒"
-    }
-  },
-  "JobStates": {
-    "Succeeded": "成功",
-    "Failed": "失败",
-    "Terminated": "终止",
-    "Processing": "执行中",
-    "Enqueued": "等待中",
-    "Scheduled": "已调度",
-    "Skipped": "已跳过",
-    "Cancelled": "已取消"
-  },
-  "Dashboard": {
-    "Title": "任务调度 - 总览",
-    "Metrics": {
-      "TotalJobsLabel": "任务总数",
-      "RecurringJobsShort": "周期",
-      "TriggeredJobsShort": "触发",
-      "DisabledJobs": "已禁用",
-      "RunningNowLabel": "正在运行",
-      "SuccessRateLabel": "成功率",
-      "ThroughputLabel": "吞吐量",
-      "ThroughputUnit": "每小时执行"
+      "MaxRecords": "保留执行数量",
+      "MaxDays": "保留时长（天）"
     },
-    "StateDistribution": {
-      "Title": "状态分布",
-      "NoData": "暂无执行数据",
-      "Total": "总数"
+    "Identity": {
+      "ArgumentContract": "参数契约",
+      "ReviewedRevision": "已审核作业修订",
+      "PolicyRevision": "策略修订",
+      "UpdatedAt": "策略更新时间（UTC）",
+      "Release": "目录发布",
+      "WorkerRevision": "工作节点修订",
+      "JobType": "作业类型"
     },
-    "ProblemJobs": {
-      "Title": "需要关注",
-      "AllHealthy": "所有任务运行正常",
-      "ConsecutiveFailures": "连续失败",
-      "ConsecutiveFailuresDetail": "连续 {0} 次失败",
-      "LongRunning": "长时间运行",
-      "LongRunningDetail": "已运行 {0} ({1}% 超时)",
-      "HighSkipRate": "跳过率过高",
-      "HighSkipRateDetail": "跳过率 {0}% (并发上限: {1})"
+    "DescriptionModes": {
+      "Inherit": "继承声明描述",
+      "Clear": "清空描述",
+      "Value": "使用运维描述"
     },
-    "RecentActivity": {
-      "Title": "最近活动",
-      "NoActivity": "暂无活动记录",
-      "Yesterday": "昨天"
-    },
-    "AutoRefresh": {
-      "Enabled": "自动刷新已启用 (每{0}秒)"
-    },
-    "TimeRange": {
-      "LastHours": "最近{0}小时",
-      "LastDays": "最近{0}天"
-    }
-  },
-  "JobDefinitions": {
-    "Title": "作业定义",
-    "Filters": {
-      "Search": "搜索",
-      "SearchPlaceholder": "作业键 / 作业名称 / 来源项目",
-      "SourceProject": "来源项目",
-      "SourceProjectSelected": "已选 {0} 个来源",
-      "Badges": "筛选",
-      "LastExecutionFailed": "上次执行出错"
-    },
-    "Tabs": {
-      "RecurringJob": "周期性作业",
-      "TriggerJob": "触发型作业"
-    },
-    "Columns": {
-      "SourceProject": "来源项目",
-      "JobKey": "作业键",
-      "JobName": "作业名称",
-      "CronExpression": "Cron表达式",
-      "NextExecutionTime": "下次执行时间",
-      "LastExecutionTime": "上次执行时间",
-      "Status": "状态",
-      "Actions": "操作"
+    "BoundaryModes": {
+      "Inherit": "继承声明边界",
+      "None": "不设边界",
+      "Value": "使用运维边界"
     },
     "Actions": {
-      "Pause": "暂停",
-      "Resume": "继续",
-      "Execute": "执行",
-      "ViewDetails": "详情",
-      "BatchPause": "批量暂停",
-      "BatchResume": "批量继续"
+      "ResetField": "将此字段重置为声明默认值",
+      "ResetAll": "重置全部覆盖值",
+      "Override": "添加覆盖值"
     },
-    "Status": {
-      "Enabled": "启用",
-      "Disabled": "已禁用"
+    "Values": {
+      "Enabled": "已启用",
+      "Disabled": "已禁用",
+      "NoLimit": "不限制",
+      "Days": "{0} 天",
+      "ReviewOutdated": "审核已过期"
     },
-    "BatchOperation": {
-      "Selected": "已选择 {0} 个作业",
-      "ConfirmTitle": "确认批量操作",
-      "ResultTitle": "批量操作结果",
-      "Success": "批量操作成功: {0} 个作业已更新",
-      "PartialSuccess": "批量操作完成: {0} 成功, {1} 失败",
-      "AllFailed": "批量操作失败: 所有操作均失败"
+    "Validation": {
+      "DisplayNameRequired": "请输入长度符合限制的显示名称，或重置该字段以继承声明值。",
+      "DescriptionRequired": "请输入长度符合限制的说明、选择清空，或继承声明值。",
+      "Timeout": "请输入大于 0 且在支持范围内的执行超时。"
     },
-    "NextExecutionTimeTooltip": {
-      "Future": "将在 {0} 后执行",
-      "Past": "已到期 {0}",
-      "Now": "现在到期"
+    "Conflict": {
+      "DraftsPreserved": "另一位运维人员或新发布更改了策略基线（{0} → {1}）。未保存的编辑会保留，未触及字段会采用最新策略；请检查后再重试。",
+      "ReloadFailed": "策略已发生变化，但无法加载最新运维基线。请关闭并重新打开工作台后重试。",
+      "SameField": "最新策略至少修改了您也编辑过的字段；这些字段将保留您的草稿。重试前请检查声明值、覆盖值和生效值三列。",
+      "ScheduleTypeChanged": "此 Cron 草稿打开期间，作业已从周期型变为触发型。隐藏草稿尚未提交；请仅丢弃该调度意图，再保存其余编辑。",
+      "DiscardScheduleDraft": "丢弃调度草稿"
     },
-    "RelativeTime": {
-      "DaysHours": "{0}天 {1}小时",
-      "HoursMinutes": "{0}小时 {1}分钟",
-      "MinutesSeconds": "{0}分钟 {1}秒",
-      "Seconds": "{0}秒"
+    "Execution": {
+      "ProspectiveNotice": "最大并发数会立即约束新领取，但不会取消活动执行。重试和超时变更仅由新准入的执行捕获。",
+      "SubsecondPrecisionPreserved": "现有超时值包含亚秒精度；编辑整秒字段时将保留这些小数刻度。"
     },
-    "Messages": {
-      "NoRecurringJobs": "没有找到匹配的周期性作业",
-      "NoTriggerJobs": "没有找到匹配的触发型作业",
-      "PauseSuccess": "作业 {0} 已暂停",
-      "PauseFailed": "暂停失败",
-      "ResumeSuccess": "作业 {0} 已继续",
-      "ResumeFailed": "继续失败",
-      "JobKeyCopied": "作业键已复制"
-    }
-  },
-  "JobInstances": {
-    "Title": "作业实例",
-    "Filters": {
-      "Search": "搜索",
-      "SearchPlaceholder": "作业键 / 实例ID",
-      "State": "状态",
-      "TimeRange": "时间范围",
-      "StartTime": "开始时间",
-      "EndTime": "结束时间",
-      "Custom": "自定义",
-      "LastHour": "最近1小时",
-      "Last24Hours": "最近24小时",
-      "Last7Days": "最近7天",
-      "Last30Days": "最近30天"
+    "Retention": {
+      "ZeroUnlimited": "设为 0 可禁用按数量保留。"
     },
-    "Columns": {
-      "InstanceId": "实例ID",
-      "JobKey": "作业键",
-      "State": "状态",
-      "CreatedTime": "创建时间",
-      "StartTime": "开始时间",
-      "EndTime": "结束时间",
-      "Duration": "执行时长",
-      "Actions": "操作"
-    },
-    "Actions": {
-      "ViewDetails": "详情",
-      "CleanupHistory": "清理历史记录"
-    },
-    "Messages": {
-      "NoInstances": "没有找到匹配的作业实例",
-      "Running": "运行中",
-      "LoadFailed": "加载失败",
-      "CleanupConfirm": "确定要清理历史记录吗？此操作将根据保留策略删除旧的作业实例记录。",
-      "CleanupConfirmTitle": "确认清理",
-      "CleanupSuccess": "已清理 {0} 条历史记录，耗时 {1} 秒",
-      "CleanupNoRecords": "没有需要清理的历史记录",
-      "CleanupFailed": "清理失败"
-    },
-    "TableHeader": {
-      "InstanceList": "实例列表"
+    "Schedule": {
+      "CronTitle": "周期节奏契约",
+      "CronDescription": "节奏区域以前瞻方式展示与 Cronos 运行时完全一致的契约。",
+      "Format": "表达式格式",
+      "FiveFields": "5 字段",
+      "SixFields": "含秒的 6 字段",
+      "CronExpression": "Cron 表达式覆盖值",
+      "CronInputHelp": "编辑后的空值无效；请使用“重置”继承声明表达式。",
+      "CronTooLong": "Cron 表达式不能超过 {0} 个字符。",
+      "ParsedFields": "已解析 Cron 字段",
+      "ConfiguredTimeZone": "已配置时区",
+      "TimeZoneLockedHelp": "时区由部署配置，特意不允许在此编辑。",
+      "StartBoundary": "开始边界",
+      "EndBoundary": "结束边界",
+      "BoundaryMode": "边界意图",
+      "BoundaryDate": "调度本地日期",
+      "BoundaryTime": "调度本地时间",
+      "BoundaryValidationError": "请完整选择日期和时间，并确保该墙上时间在已配置时区中有效。",
+      "AmbiguousBoundary": "夏令时回退会使此墙上时间出现两次；系统会确定性地采用较早的 UTC 时点。",
+      "BoundaryFailures": {
+        "Incomplete": "请同时选择日期和时间。",
+        "InvalidLocalTime": "已配置时区的时钟在此处向前跳变，因此该墙上时间不存在。"
+      },
+      "ValidationError": "调度器运行时不接受此表达式。",
+      "DescriptionLoading": "正在生成本地化描述…",
+      "DescriptionUnavailable": "暂时无法生成本地化描述；运行时校验和预览仍是权威结果。",
+      "NonZeroSecondsConversion": "此六字段表达式的秒字段不是 0。切换为五字段前请手动修正，避免静默改变执行节奏。",
+      "InvalidConversion": "当前表达式无效，无法进行格式转换。",
+      "AuthoritativeNext": "加载时的权威下次执行时点",
+      "AuthoritativeObservedAt": "加载自观测于 {0} 的权威状态",
+      "ProposedNext": "拟议下次执行时点",
+      "PreviewSuspended": "已由生效策略暂停",
+      "PreviewSuspendedDescription": "生效策略暂停期间不会调度新的执行时点。",
+      "ProspectiveWarning": "保存会在同一事务中替换周期游标，并且只调度严格晚于数据库当前时间的下一个时点；绝不补跑错过的时点。",
+      "SimpleSettings": {
+        "Title": "简易调度设置",
+        "Mode": "调度模式",
+        "Apply": "应用为 Cron 覆盖值",
+        "Modes": {
+          "EveryMinute": "每分钟",
+          "EveryHour": "每小时",
+          "EveryDay": "每天指定时间",
+          "EveryWeek": "每周指定星期和时间",
+          "EveryMonth": "每月指定日期和时间",
+          "Custom": "自定义字段"
+        }
+      },
+      "Fields": {
+        "Second": "秒",
+        "Minute": "分",
+        "Hour": "时",
+        "DayOfMonth": "月内日期",
+        "Month": "月",
+        "DayOfWeek": "星期"
+      },
+      "Weekdays": {
+        "0": "星期日",
+        "1": "星期一",
+        "2": "星期二",
+        "3": "星期三",
+        "4": "星期四",
+        "5": "星期五",
+        "6": "星期六"
+      },
+      "Preview": {
+        "AriaLabel": "后续五个拟议调度时点",
+        "Sequence": "序号",
+        "ConfiguredTime": "已配置时区时间",
+        "Utc": "UTC 时间戳"
+      },
+      "Syntax": {
+        "Title": "Cronos 语法说明",
+        "RuntimeContract": "字段顺序为分、时、月内日期、月、星期；六字段格式在最前面增加秒。",
+        "FieldTable": "Cron 字段范围和特殊字符",
+        "Field": "字段",
+        "Range": "允许范围",
+        "Characters": "特殊字符",
+        "Names": "月份可使用 JAN–DEC，星期可使用 SUN–SAT，且不区分大小写。",
+        "ReversedRanges": "反向范围会跨越字段边界循环，例如 FRI-MON 或 22-2。",
+        "Steps": "步长在基础范围内生效；*/15 从字段最小值开始，每次增加 15。",
+        "DayMatching": "当月内日期和星期都受约束时，Cronos 要求两个字段同时匹配。",
+        "Tokens": {
+          "Star": "全部允许值",
+          "Comma": "值列表",
+          "Hyphen": "闭区间，包括反向范围",
+          "Slash": "按步长遍历范围",
+          "Question": "月内日期或星期的任意值",
+          "Last": "月末或最后一个指定星期",
+          "Weekday": "距离指定月内日期最近的工作日",
+          "Hash": "当月第 N 个指定星期"
+        },
+        "Examples": {
+          "EveryFiveMinutes": "每五分钟",
+          "EveryDayNoon": "每天中午",
+          "WeekdaysNine": "每个工作日上午 09:00",
+          "MonthlyFirst": "每月第一天零点"
+        }
+      }
     }
   },
   "JobDetail": {
-    "HealthMetrics": {
-      "Title": "健康指标 (最近 {0} 天)",
-      "HealthScore": "健康度",
-      "HealthScoreTooltip": "健康度 = (总执行次数 - 跳过 - 失败 - 终止) / 总执行次数。反映作业被成功调度执行的比例。",
-      "ExecutionFailureRate": "执行失败率",
-      "ExecutionFailureRateTooltip": "执行失败率 = 失败次数 / 实际完成次数。实际完成次数 = 总执行次数 - 跳过 - 取消 - 运行中。反映作业执行代码的失败率。",
-      "TotalExecutions": "总执行次数",
-      "RecentFailures": "最近失败实例",
-      "NoFailuresInWindow": "在监控时间窗口内无失败记录",
-      "InstanceDetailTitle": "作业实例详情"
+    "PageTitle": "任务调度 · 作业详情",
+    "BreadcrumbAriaLabel": "作业目录导航",
+    "NotFound": "活动目录中不存在作业 {0} 的声明。",
+    "RefreshFailed": "最近一次刷新失败：{0}",
+    "ObservedAt": "运行证据观测时间：{0}",
+    "Actions": {
+      "BackToCatalog": "返回作业目录",
+      "InspectSchedule": "编辑调度策略"
     },
-    "Statistics": {
-      "Title": "统计信息",
-      "TotalExecutions": "总执行次数",
-      "FailedExecutions": "失败次数",
-      "AverageExecutionTime": "平均执行时间",
-      "FastestExecutionTime": "最快执行时间",
-      "SlowestExecutionTime": "最慢执行时间",
-      "LastExecutionTime": "最后执行时间",
-      "LastExecutionState": "最后执行状态"
+    "Header": {
+      "NoCompatibleWorker": "没有兼容工作节点",
+      "EvidenceAriaLabel": "当前作业运行证据",
+      "ActiveExecutions": "活动执行",
+      "QueuedExecutions": "排队中",
+      "RunningExecutions": "执行中",
+      "CompatibleWorkers": "兼容工作节点"
     },
-    "BasicInfo": {
-      "Title": "基本信息",
-      "JobKey": "作业键",
-      "SourceProject": "来源项目",
-      "JobType": "作业类型",
-      "Status": "状态",
-      "CronExpression": "Cron表达式",
-      "Description": "描述"
+    "Activity": {
+      "Eyebrow": "实时执行证据",
+      "Title": "执行活动",
+      "Description": "当前逻辑作业的最新运行实例与最近失败证据。",
+      "Bounded": "每组显示最新 {0} 条",
+      "RunningTitle": "正在运行",
+      "RunningDescription": "当前有界的活动工作节点租约。",
+      "RunningLoadFailed": "正在运行的实例刷新失败：{0}",
+      "RunningEmpty": "当前没有正在运行的实例。",
+      "FailuresTitle": "最近失败",
+      "FailuresDescription": "在 30 天健康窗口内创建的最新失败执行。",
+      "FailuresLoadFailed": "最近失败实例刷新失败：{0}",
+      "FailuresEmpty": "未发现最近失败的实例。",
+      "OpenDetails": "打开执行 {0} 的详情"
+    },
+    "Schedule": {
+      "Title": "周期调度",
+      "Description": "持久化游标依据此不可变调度和活动策略物化执行时点。",
+      "NextOccurrence": "下次执行时点",
+      "CronExpression": "Cron 表达式",
+      "TimeZone": "调度时区",
+      "StartBoundary": "开始边界",
+      "EndBoundary": "结束边界",
+      "TriggeredTitle": "按需准入",
+      "TriggeredDescription": "该作业没有周期游标，运维人员需通过活动目录显式准入执行。",
+      "DebugManualOnly": "调试模式正在抑制自动周期实例；立即执行仍然可用，并且不会推进周期游标。",
+      "StatusDescriptions": {
+        "NotRecurring": "按需作业不使用周期游标。",
+        "AwaitingSynchronization": "活动声明正在等待控制平面创建持久化游标。",
+        "Scheduled": "持久化游标已确定下一个待物化的未来时点。",
+        "Suspended": "运维策略已暂停新的周期实例物化。",
+        "Exhausted": "声明的调度边界内已没有后续执行时点。"
+      },
+      "SuspensionDescriptions": {
+        "OperatorPolicy": "运维策略已暂停周期实例自动物化。",
+        "DebugMode": "调试模式抑制周期实例自动物化，同时保留显式立即执行能力。",
+        "OperatorAndDebug": "运维策略与调试模式都在抑制自动物化；解除运维暂停后，调试抑制仍会生效。"
+      }
+    },
+    "Contract": {
+      "Title": "声明与策略契约",
+      "Description": "代码声明字段保持不可变；运维策略独立存储，并通过乐观并发更新。",
+      "Immutable": "不可变声明",
+      "DeclarationTitle": "执行声明",
+      "Owner": "目录所有者",
+      "ArgumentsKey": "参数契约",
+      "MaxConcurrency": "最大并发数",
+      "MaxConcurrencyHelp": "限制并发工作节点租约；周期实例物化也将其作为排队与运行实例的重叠上限。",
+      "RetryCount": "允许重试次数",
+      "RetryCountHelp": "首次尝试失败后允许的额外重试次数。",
+      "ExecutionTimeout": "执行超时",
+      "ExecutionTimeoutHelp": "单次执行尝试允许的最长持续时间。",
+      "DeclarationDefault": "代码默认状态",
+      "PolicyTitle": "运维策略",
+      "EffectiveState": "生效状态",
+      "PolicyUpdated": "策略更新时间",
+      "PolicyStamp": "并发标识",
+      "PolicyStampHelp": "乐观并发令牌；策略更新必须匹配当前值，并在成功后获得新值。",
+      "RevisionTitle": "发布与版本身份",
+      "SchedulerScope": "调度范围",
+      "Release": "目录发布",
+      "ReleaseHelp": "提供当前生效声明的不可变目录发布。",
+      "ActivationEpoch": "激活纪元",
+      "ActivationEpochHelp": "此发布成为活动执行契约时分配的单调递增纪元。",
+      "WorkerRevision": "工作节点版本",
+      "WorkerRevisionHelp": "兼容工作节点认领此作业前必须声明的精确可执行修订。",
+      "JobRevision": "作业版本",
+      "JobRevisionHelp": "新执行实例所捕获的不可变声明内容标识。",
+      "OverrideEffective": "覆盖值：{0} · 生效值：{1}"
+    },
+    "LatestExecution": {
+      "Title": "最近执行",
+      "Description": "该逻辑作业跨目录版本的最新持久化执行证据。",
+      "Empty": "该作业尚未生成持久化执行。"
+    },
+    "Health": {
+      "Eyebrow": "最近 30 天执行证据",
+      "Title": "作业健康指标",
+      "Description": "分别度量执行可靠率、调度达成率、终态分布与执行耗时。",
+      "Window": "最近 30 天",
+      "ReliabilityHelp": "基于 {0} 次成功或失败执行",
+      "ReliabilityFormulaHelp": "成功完成数除以成功与失败完成数之和；跳过和取消的执行不计入该指标。",
+      "FulfillmentHelp": "基于 {0} 个已完成调度结果",
+      "FulfillmentFormulaHelp": "已交付到工作节点的周期调度时点（无论成功或失败）除以已交付与已跳过时点之和；触发准入和运维立即执行不计入该指标。",
+      "TriggeredFulfillmentNotApplicable": "触发作业没有需要达成的自动调度。",
+      "OutcomeAriaLabel": "所选时间范围内创建的作业执行结果",
+      "CohortTotal": "入组执行",
+      "TerminalDispositions": "终态处置",
+      "ExecutedCompletions": "已执行完成",
+      "DurationSamples": "耗时样本",
+      "CohortNote": "结果卡片统计时间窗内创建的执行；可靠率与耗时统计时间窗内完成的执行。",
+      "LoadFailed": "无法刷新作业健康分析：{0}"
+    }
+  },
+  "RecurringScheduleStatuses": {
+    "NotRecurring": "按需触发",
+    "AwaitingSynchronization": "等待同步",
+    "Scheduled": "已调度",
+    "Suspended": "已暂停",
+    "Exhausted": "已结束"
+  },
+  "Trigger": {
+    "Title": "准入执行",
+    "Revision": "预期的不可变作业版本",
+    "InstanceId": "幂等执行标识",
+    "PayloadSection": "执行参数载荷",
+    "Arguments": "JSON 参数",
+    "ArgumentsType": "声明的参数类型：{0}",
+    "ArgumentsUnknown": "请输入符合该作业参数契约的 JSON 对象。",
+    "ArgumentsRequired": "请输入 JSON 参数。",
+    "InvalidJson": "参数必须是有效的 JSON。",
+    "Action": "加入队列",
+    "Queued": "执行 {0} 已持久化入队。",
+    "Delay": {
+      "Title": "队列可用时间",
+      "Description": "设置工作节点最早可领取此执行的调度墙上时间。",
+      "Enable": "延迟准入",
+      "Date": "可用日期",
+      "Time": "可用时间",
+      "TimeZoneHelp": "所选墙上时间按调度时区 {0} 解释，并以 UTC 持久化。",
+      "Required": "请选择完整的日期和时间。",
+      "InvalidWallTime": "该墙上时间在调度时区 {0} 中不存在，请选择其他时间。",
+      "Future": "延迟可用时间必须晚于当前时间。"
+    }
+  },
+  "Analytics": {
+    "PageTitle": "任务调度 · 统计分析",
+    "RefreshFailed": "最近一次分析刷新失败：{0}",
+    "ObservedAt": "分析观测时间：{0}",
+    "Range": {
+      "Title": "分析时间范围",
+      "Description": "日历范围采用调度时区 {0}，并由数据库执行有界聚合。",
+      "Today": "今天",
+      "Last24Hours": "最近 24 小时",
+      "Last7Days": "最近 7 天",
+      "Last30Days": "最近 30 天"
+    },
+    "Metrics": {
+      "AriaLabel": "调度统计摘要",
+      "Reliability": "执行可靠率",
+      "Throughput": "执行吞吐量",
+      "ScheduleFulfillment": "调度达成率",
+      "DecidedRuns": "基于 {0} 次成功或失败执行",
+      "PerHour": "每小时终态执行数",
+      "ScheduledDispositions": "基于 {0} 个已完成调度结果",
+      "DurationSample": "基于 {0} 次有耗时记录的终态执行"
+    },
+    "Trend": {
+      "Eyebrow": "完成脉搏",
+      "Title": "执行结果趋势",
+      "Description": "按所选时间范围展示完成结果，并统一呈现为调度时区时间。",
+      "LegendAriaLabel": "结果趋势图例",
+      "ChartAriaLabel": "调度完成结果趋势图",
+      "ViewAriaLabel": "结果趋势图展示方式",
+      "Bars": "柱状图",
+      "Lines": "折线图",
+      "TotalsAriaLabel": "完成结果汇总",
+      "Total": "总执行",
+      "BucketTooltip": "{0}：成功 {1}，失败 {2}，跳过 {3}，取消 {4}"
+    },
+    "Duration": {
+      "Eyebrow": "耗时档案",
+      "Title": "终态执行耗时",
+      "Description": "从最近一次执行开始到终态完成；未占用工作节点的跳过记录不进入分布。",
+      "Samples": "{0} 个样本",
+      "PercentilesAriaLabel": "执行耗时分位数",
+      "Minimum": "最短",
+      "Average": "平均",
+      "P50": "P50",
+      "P50Description": "半数执行不超过此耗时",
+      "P90": "P90",
+      "P90Description": "九成执行不超过此耗时",
+      "P95": "P95",
+      "P95Description": "尾部耗时阈值",
+      "P99": "P99",
+      "P99Description": "极端尾部耗时阈值",
+      "Maximum": "最长"
+    },
+    "Rankings": {
+      "Eyebrow": "工作负载集中度",
+      "Volume": "执行次数排行",
+      "VolumeDescription": "该时间范围内终态完成次数最多的作业。",
+      "Failures": "失败次数排行",
+      "FailuresDescription": "该时间范围内产生失败完成最多的作业。",
+      "TopTen": "TOP 10",
+      "OpenJobWithMetric": "第 {0} 名：打开 {1}；{2}：{3}（{4}）",
+      "VolumeEmpty": "该时间范围内没有完成的作业活动。",
+      "FailuresEmpty": "该时间范围内没有失败执行。"
+    },
+    "Slowest": {
+      "Top": "最慢执行 · TOP 10",
+      "Description": "每个作业耗时最长的一条终态执行，可直接打开其持久化证据。",
+      "Empty": "该时间范围内没有可度量耗时的终态执行。",
+      "OpenDetails": "第 {0} 名：检查 {1} 的执行实例 {2}；{3}；完成于 {4}；耗时 {5}"
+    },
+    "CohortNote": "状态总数统计时间窗内创建的执行；结果、吞吐量、趋势、排名与耗时统计时间窗内完成的执行。"
+  },
+  "Executions": {
+    "PageTitle": "任务调度 · 执行账本",
+    "Title": "执行账本",
+    "Count": "共 {0} 个执行",
+    "LastRefreshed": "观测时间：{0}",
+    "Empty": "没有符合当前筛选条件的持久化执行。",
+    "Filters": {
+      "AriaLabel": "执行搜索与筛选",
+      "Search": "执行",
+      "SearchPlaceholder": "实例 ID 或作业键",
+      "AnyState": "全部状态",
+      "States": "状态",
+      "TimeRange": "入队时间范围",
+      "StartDate": "开始日期",
+      "EndDate": "结束日期",
+      "PageSize": "每页行数",
+      "InvalidRange": "结束日期不能早于开始日期。"
+    },
+    "TimeRanges": {
+      "All": "全部时间",
+      "LastHour": "最近 1 小时",
+      "Last24Hours": "最近 24 小时",
+      "Last7Days": "最近 7 天",
+      "Last30Days": "最近 30 天",
+      "Custom": "自定义范围"
+    },
+    "Columns": {
+      "Definition": "定义",
+      "Instance": "实例",
+      "State": "状态",
+      "Created": "入队时间",
+      "Started": "开始时间",
+      "Completed": "完成时间",
+      "Duration": "耗时",
+      "Attempts": "执行 / 重试次数",
+      "Worker": "租约所有者",
+      "Actions": "操作"
     },
     "Actions": {
-      "Enable": "启用",
-      "Disable": "禁用",
-      "ExecuteNow": "立即执行",
-      "Execute": "执行"
+      "Details": "检查执行",
+      "OpenDetailsFor": "检查 {0} 的执行实例 {1}",
+      "Cancel": "请求取消",
+      "Apply": "应用筛选",
+      "Reset": "重置"
     },
-    "RunningInstances": {
-      "Title": "运行中的实例",
-      "ViewAll": "查看所有实例",
-      "NoRunning": "当前无运行中的实例",
-      "Columns": {
-        "InstanceId": "实例ID",
-        "State": "状态",
-        "CreatedTime": "创建时间",
-        "StartTime": "开始时间",
-        "Duration": "运行时长",
-        "Actions": "操作"
-      }
-    },
-    "Configuration": {
-      "Title": "作业配置",
-      "MaxConcurrency": "最大并发数",
-      "MaxConcurrencyTooltip": "相同作业Key的并发执行数量。默认值为`1`，如果超过并发数量，新的作业执行请求将被`Skipped`",
-      "RetryCount": "重试次数",
-      "RetryCountTooltip": "默认值为`0`，作业出现异常后立即自动进行重试，会被最大并发数量影响。",
-      "MaxExecutionTimeout": "最大执行超时",
-      "MaxExecutionTimeoutTooltip": "当作业超过此时间仍未返回结果，则作业视为执行超时失败，Worker执行器会将`CancellationToken`置为以已取消状态来尝试终止该作业（如果作业没有使用取消令牌机制，则该线程将一直被占用，由于`.NET`机制，无法强制杀死后台进程）。默认值为 `1小时`。",
-      "MaxRetainedHistoryRecords": "最大历史记录数",
-      "MaxRetainedHistoryRecordsTooltip": "保留的历史执行记录最大数量。当超过此数量时，最旧的记录将被自动清理。设置为0或负数表示不限制记录数量。",
-      "MaxRetentionDays": "历史保留天数",
-      "MaxRetentionDaysTooltip": "历史执行记录的最大保留天数。超过此天数的记录将被自动清理。未设置表示不启用基于时间的清理策略。",
-      "StartTime": "开始时间",
-      "EndTime": "结束时间",
-      "Unlimited": "无限制",
-      "NotSet": "未设置",
-      "Days": "天"
-    },
-    "Messages": {
-      "LoadFailed": "加载失败",
-      "LoadRunningInstancesFailed": "加载运行中实例失败",
-      "DisableSuccess": "作业已禁用",
-      "DisableFailed": "禁用失败",
-      "EnableSuccess": "作业已启用",
-      "EnableFailed": "启用失败",
-      "GetDefinitionFailed": "获取作业定义失败",
-      "DefinitionNotFound": "作业定义不存在"
+    "Cancel": {
+      "Title": "取消执行？",
+      "Message": "排队中的执行 {0} 会立即取消；执行中的实例会收到持久化的协作取消请求。",
+      "Requested": "取消请求已持久化。",
+      "Failed": "无法持久化取消请求。",
+      "Cancelled": "排队中的执行已取消。",
+      "AlreadyTerminal": "该执行已经结束。",
+      "NotFound": "该执行已不存在。"
     }
   },
-  "Monitor": {
-    "Title": "任务调度 - 实时监控",
-    "LiveExecution": {
-      "Title": "实时执行",
-      "ActiveCount": "{0} 个活跃",
-      "Columns": {
-        "Job": "任务",
-        "State": "状态",
-        "ElapsedTime": "已运行",
-        "TimeoutProgress": "超时进度",
-        "Actions": "操作"
-      },
-      "Actions": {
-        "ViewDetails": "查看详情",
-        "Cancel": "取消执行"
-      },
-      "Messages": {
-        "NoExecutions": "当前没有正在执行的任务",
-        "AllCompleted": "所有任务已完成或等待调度",
-        "Waiting": "等待中...",
-        "CancelSuccess": "任务已请求取消",
-        "CancelFailed": "取消失败"
-      }
-    },
-    "QueueStatus": {
-      "Title": "队列状态",
-      "Processing": "处理中",
-      "Enqueued": "等待执行",
-      "Scheduled": "已调度",
-      "ActiveTotal": "活跃总计"
-    },
-    "ConcurrencyUtilization": {
-      "Title": "并发状态",
-      "Reconcile": "同步",
-      "Syncing": "同步中...",
-      "ReconcileTooltip": "显示内存中并发槽位状态",
-      "ReconcileSuccess": "同步完成 (耗时: {0}ms, 偏差: {1} -> {2})",
-      "ReconcileFailed": "同步失败",
-      "NoJobs": "当前无活跃任务",
-      "InconsistentState": "状态不一致 (偏差值: {0})",
-      "ShowDetails": "详情",
-      "HideDetails": "收起",
-      "RunningDeviation": "Running: {0}",
-      "PendingDeviation": "Pending: {0}",
-      "AtCapacity": "已满",
-      "Running": "运行中 ({0})",
-      "Pending": "等待中 ({0})",
-      "InstanceId": "实例ID",
-      "Worker": "Worker",
-      "ElapsedTime": "已运行",
-      "WaitingTime": "等待时间"
-    },
-    "AutoRefresh": {
-      "Enable": "自动刷新",
-      "Interval": "刷新间隔",
-      "LastRefresh": "上次刷新",
-      "ManualRefresh": "刷新",
-      "Refreshing": "刷新中...",
-      "Intervals": {
-        "ThreeSeconds": "3 秒",
-        "FiveSeconds": "5 秒",
-        "TenSeconds": "10 秒",
-        "ThirtySeconds": "30 秒"
-      }
-    },
-    "Messages": {
-      "LoadFailed": "加载数据失败",
-      "RefreshFailed": "刷新失败"
+  "ExecutionDetail": {
+    "Title": "执行证据",
+    "Eyebrow": "持久化执行 / 证据",
+    "NotFound": "该执行已不存在。",
+    "State": "状态",
+    "Job": "作业键",
+    "Owner": "所有者",
+    "Release": "目录发布",
+    "Activation": "激活纪元",
+    "Attempts": "执行 / 重试次数",
+    "Origin": "准入方式",
+    "Available": "可执行时间",
+    "Worker": "执行节点",
+    "Revision": "精确执行身份",
+    "WorkerRevision": "工作节点版本",
+    "JobRevision": "作业版本",
+    "Arguments": "序列化参数",
+    "History": "追加式执行历史",
+    "Identity": "执行身份",
+    "Instance": "实例 ID",
+    "Scope": "调度范围",
+    "Observed": "快照观测时间",
+    "JobType": "作业类型",
+    "ArgumentsType": "参数契约",
+    "PolicySnapshot": "已捕获执行策略",
+    "MaxConcurrency": "最大并发数",
+    "RetryCount": "允许重试次数",
+    "Timeout": "执行超时",
+    "Timing": "时间证据",
+    "Created": "入队时间",
+    "Started": "开始时间",
+    "Completed": "完成时间",
+    "Duration": "耗时",
+    "ScheduledOccurrence": "计划执行时点",
+    "CancellationRequested": "请求取消时间",
+    "Runtime": "租约与恢复",
+    "LeaseLosses": "已恢复租约丢失次数",
+    "LeaseExpires": "租约到期时间",
+    "NoArguments": "没有捕获序列化参数。",
+    "SkipReason": "跳过原因",
+    "HistoryCount": "保留 {0} 条记录",
+    "HistoryDescription": "持久化状态变更、工作节点日志与运维取消证据。",
+    "EmptyHistory": "没有可用的保留历史记录。",
+    "CancellationPending": "协作取消请求自 {0} 起等待处理。",
+    "Copied": "诊断信息已复制到剪贴板。",
+    "CopyFailed": "无法复制诊断信息。",
+    "Actions": {
+      "ViewCatalog": "打开作业详情",
+      "CopyDiagnostics": "复制诊断信息"
     }
   },
-  "Statistics": {
-    "Title": "任务调度 - 统计分析",
-    "TimeRange": {
-      "Today": "今天",
-      "Last24Hours": "24小时",
-      "Last7Days": "7天",
-      "Last30Days": "30天",
-      "Custom": "自定义",
-      "Label": "时间范围"
-    },
-    "ExecutionTrend": {
-      "Title": "执行趋势",
-      "Legend": {
-        "Success": "成功",
-        "Failed": "失败",
-        "Skipped": "跳过"
-      },
-      "Summary": {
-        "TotalExecutions": "总执行",
-        "Success": "成功",
-        "Failed": "失败",
-        "Skipped": "跳过"
-      },
-      "NoData": "暂无趋势数据"
-    },
-    "DurationPercentiles": {
-      "Title": "执行耗时分布",
-      "Sample": "样本",
-      "P50": "P50",
-      "P90": "P90",
-      "P95": "P95",
-      "P99": "P99",
-      "P50Desc": "中位数",
-      "P90Desc": "90%分位",
-      "P95Desc": "95%分位",
-      "P99Desc": "99%分位",
-      "Average": "平均",
-      "Fastest": "最快",
-      "Slowest": "最慢",
-      "SlowestInstances": "最慢实例 Top {0}",
-      "SlowestTooltip": "统计不同作业的最慢执行实例（每个作业仅显示最慢的一条）",
-      "NoData": "暂无耗时数据"
-    },
-    "TopJobs": {
-      "ExecutionCount": "执行次数排行",
-      "FailureCount": "失败次数排行",
-      "TopN": "Top {0}",
-      "NoData": "暂无排行数据"
-    },
-    "FailureAnalysis": {
-      "Title": "失败分析",
-      "TotalFailures": "失败次数",
-      "TotalTerminated": "终止次数",
-      "RetrySuccessRate": "重试成功率",
-      "ByJob": "按任务分布",
-      "FailureCount": "{0} 次失败",
-      "NoFailures": "该时间段内无失败记录",
-      "AllNormal": "所有任务执行正常"
-    },
-    "Messages": {
-      "LoadFailed": "加载统计数据失败"
-    }
+  "ExecutionHistoryKinds": {
+    "StateTransition": "状态变更",
+    "ExecutionLog": "执行日志",
+    "Cancellation": "取消"
   },
-  "Dialogs": {
-    "JobInstanceDetail": {
-      "Title": "作业实例详情",
-      "BasicInfo": "基本信息",
-      "InstanceId": "实例ID",
-      "JobKey": "作业键",
-      "State": "状态",
-      "CreatedTime": "创建时间",
-      "StartTime": "开始时间",
-      "EndTime": "结束时间",
-      "Duration": "执行时长",
-      "RetryCount": "重试次数",
-      "ViewJobDefinition": "查看作业定义",
-      "LoadFailed": "加载失败",
-      "RunningClient": "运行客户端",
-      "ScheduledExecutionTime": "计划执行时间",
-      "JobArgs": "作业参数",
-      "CancelJob": "取消作业",
-      "CancelConfirmTitle": "确认取消",
-      "CancelConfirmMessage": "确定要取消作业实例 {0} 吗？",
-      "CancelSuccess": "作业已取消",
-      "CancelFailed": "取消失败",
-      "InstanceIdCopied": "实例ID已复制"
-    },
-    "JobExecute": {
-      "Title": "执行作业",
-      "JobName": "作业名称",
-      "ExecuteSuccess": "作业已提交执行",
-      "ExecuteFailed": "执行失败",
-      "ArgsType": "参数类型",
-      "JsonArgs": "JSON 参数",
-      "ValidationSuccess": "JSON 验证通过，可以执行",
-      "NoArgsRequired": "此作业不需要参数，点击执行按钮立即触发",
-      "TypeReference": "类型参考"
-    },
-    "CronEditor": {
-      "Title": "编辑 Cron 表达式",
-      "SaveSuccess": "Cron 表达式已更新",
-      "EmptyExpression": "Cron 表达式不能为空"
-    },
-    "JobConfigEditor": {
-      "Title": "编辑作业配置",
-      "JobName": "作业名称",
-      "JobNameHelper": "作业的可读名称",
-      "JobNameRequired": "作业名称不能为空",
-      "Description": "描述",
-      "DescriptionHelper": "作业的详细描述（可选）",
-      "MaxConcurrency": "最大并发数",
-      "MaxConcurrencyHelper": "相同作业Key的并发执行数量，默认值为1",
-      "MaxConcurrencyRequired": "最大并发数必须大于等于1",
-      "RetryCount": "重试次数",
-      "RetryCountHelper": "作业出现异常后自动重试的次数，默认值为0",
-      "RetryCountRequired": "重试次数必须大于等于0",
-      "TimeoutHours": "超时时间（小时）",
-      "TimeoutMinutes": "分钟",
-      "TimeoutRequired": "超时时间必须大于0",
-      "CurrentTimeout": "当前超时: {0} 小时 {1} 分钟（默认: 1小时）",
-      "HistoryRetentionPolicy": "历史记录保留策略",
-      "HistoryRetentionTooltip": "这两个设置共同控制作业执行历史的自动清理。当记录数超过最大数量或超过保留天数时，最旧的记录将被自动删除",
-      "MaxRetainedHistoryRecords": "最大历史记录数",
-      "MaxRetainedHistoryRecordsHelper": "保留的历史记录最大数量。默认值为100，设置为0或负数表示不限制记录数量",
-      "MaxRetainedHistoryRecordsRequired": "最大历史记录数不能为空",
-      "MaxRetentionDays": "历史保留天数",
-      "MaxRetentionDaysHelper": "历史记录保留的最大天数。留空表示不启用基于时间的清理策略",
-      "StartTime": "开始时间",
-      "StartTimeHelper": "作业最早执行时间（可选）",
-      "EndTime": "结束时间",
-      "EndTimeHelper": "作业最晚执行时间（可选）",
-      "SaveSuccess": "配置已更新",
-      "SaveFailed": "保存失败",
-      "ValidationJobNameEmpty": "作业名称不能为空",
-      "ValidationMaxConcurrency": "最大并发数必须大于等于1",
-      "ValidationTimeout": "超时时间必须大于0",
-      "ValidationRetentionDays": "历史保留天数必须大于等于1"
-    },
-    "BatchOperationConfirm": {
-      "Message": "确定要对以下 {0} 个作业执行 {1} 操作吗？"
-    },
-    "BatchOperationResult": {
-      "Success": "成功",
-      "Failed": "失败",
-      "Total": "总计",
-      "FailedDetails": "失败项详情"
-    },
-    "StateHistory": {
-      "Title": "状态历史",
-      "NoHistory": "暂无历史记录",
-      "SourceClientTooltip": "状态变更来源客户端: {0}"
-    }
-  },
-  "Services": {
-    "Errors": {
-      "ExpressionEmpty": "表达式不能为空",
-      "ExpressionFormatError": "表达式格式错误: {0}",
-      "CountRange": "计算次数必须在 1-100 之间",
-      "CalculateOccurrencesFailed": "计算执行时间失败: {0}",
-      "ParseFailed": "解析失败",
-      "JsInvokeFailed": "JavaScript 调用失败: {0}",
-      "ParseFailedWithMessage": "解析失败: {0}",
-      "UnknownSettingsType": "未知的设置类型",
-      "GeneratedExpressionInvalid": "生成的表达式无效: {0}",
-      "BuildExpressionFailed": "构建表达式失败: {0}",
-      "SourceExpressionInvalid": "源表达式无效: {0}",
-      "QuartzFormatMustHave6Parts": "Quartz 格式必须严格包含 6 段。",
-      "FormatConversionFailed": "格式转换失败: {0}"
-    }
-  },
-  "Components": {
-    "CronExpressionEditor": {
-      "Title": "Cron 表达式编辑器",
-      "FormatStandard": "Standard (5段)",
-      "FormatQuartz": "Quartz (6段)",
-      "ExpressionLabel": "Cron 表达式",
-      "Parsing": "解析中...",
-      "DescriptionPrefix": "解析：",
-      "NextOccurrencesTitle": "近5次执行时间",
-      "ShowToggle": "显示{0}",
-      "HideToggle": "隐藏{0}",
-      "SimpleSettingsToggleTarget": "简易设置",
-      "SyntaxGuideToggleTarget": "语法说明",
-      "SimpleSettingsTitle": "简易设置",
-      "TypeLabel": "类型",
-      "SimpleTypeEveryMinute": "每分钟",
-      "SimpleTypeEveryHour": "每小时",
-      "SimpleTypeEveryDay": "每天",
-      "SimpleTypeEveryWeek": "每周",
-      "SimpleTypeEveryMonth": "每月",
-      "SimpleTypeCustom": "自定义",
-      "FieldSecond": "秒",
-      "FieldMinute": "分",
-      "FieldHour": "时",
-      "FieldWeekday": "星期",
-      "FieldDate": "日期",
-      "FieldDay": "日",
-      "FieldMonth": "月",
-      "FieldWeek": "周",
-      "WeekdayHelper": "0-6 (0=周日)",
-      "DayOfMonthHelper": "1-31",
-      "ApplySettings": "应用设置",
-      "SyntaxGuideTitle": "Cron 表达式语法说明",
-      "QuartzSyntaxPrefix": "Quartz 格式（6段）：",
-      "QuartzSyntaxFields": "秒 分 时 日 月 周",
-      "StandardSyntaxPrefix": "Standard 格式（5段）：",
-      "StandardSyntaxFields": "分 时 日 月 周",
-      "FieldColumn": "字段",
-      "AllowedValuesColumn": "允许值",
-      "SpecialCharsColumn": "特殊字符",
-      "SpecialCharsTitle": "特殊字符说明：",
-      "SpecialCharAll": "所有值",
-      "SpecialCharNoSpecificValue": "不指定值（仅用于日和周字段）",
-      "SpecialCharRange": "范围，例如：10-12",
-      "SpecialCharList": "列表，例如：1,3,5",
-      "SpecialCharIncrement": "增量，例如：*/5 表示每5个单位",
-      "ExamplesTitle": "示例：",
-      "ExampleEveryFiveMinutes": "每5分钟执行一次",
-      "ExampleEveryDayNoon": "每天12:00执行",
-      "ExampleWeekdaysNine": "工作日09:00执行",
-      "ExampleMonthlyFirst": "每月1号00:00执行",
-      "QuartzFormatHelper": "格式：秒 分 时 日 月 周",
-      "StandardFormatHelper": "格式：分 时 日 月 周",
-      "QuartzMonthAllowedValues": "1-12 或 JAN-DEC",
-      "QuartzWeekAllowedValues": "0-6 或 SUN-SAT",
-      "StandardWeekAllowedValues": "0-7 (0或7=周日)",
-      "FormatConversionFailed": "格式转换失败: {0}",
-      "DescriptionParseFailed": "解析描述失败: {0}",
-      "CalculateOccurrencesFailed": "计算执行时间失败: {0}",
-      "BuildExpressionFailed": "生成表达式失败"
-    },
-    "CronExpressionDisplay": {
-      "Parsing": "解析中..."
-    }
+  "LogLevels": {
+    "Trace": "跟踪",
+    "Debug": "调试",
+    "Information": "信息",
+    "Warning": "警告",
+    "Error": "错误",
+    "Critical": "严重",
+    "None": "无"
   }
 }

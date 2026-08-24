@@ -1,0 +1,102 @@
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject TimeProvider TimeProvider
+@inject SchedulerTimePresentation TimePresentation
+@inject IDialogService DialogService
+
+@implements IDisposable
+
+<section class="recent-panel" aria-labelledby="recent-panel-title">
+    <header class="recent-panel__heading">
+        <div>
+            <MudText id="recent-panel-title" Typo="Typo.h6" HtmlTag="h2">@L["Overview:Recent:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Recent:Description"]</MudText>
+        </div>
+        <MudTooltip Text="@L["Common:Refresh"]">
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           Color="Color.Primary"
+                           Disabled="@IsRefreshing"
+                           OnClick="OnRefresh"
+                           aria-label="@L["Common:Refresh"]" />
+        </MudTooltip>
+    </header>
+
+    @if (Executions.Count == 0)
+    {
+        <div class="recent-panel__empty">
+            <MudIcon Icon="@Icons.Material.Outlined.Inbox" Size="Size.Large" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Recent:Empty"]</MudText>
+        </div>
+    }
+    else
+    {
+        <ol class="recent-panel__timeline">
+            @foreach (var execution in Executions)
+            {
+                var jobTitle = JobSchedulerUiPresentation.GetJobDisplayName(execution.Template);
+                <li class="recent-panel__event" data-state="@execution.State.ToString().ToLowerInvariant()">
+                    <button type="button"
+                            class="recent-panel__event-link"
+                            aria-label="@L["Executions:Actions:OpenDetailsFor", jobTitle, execution.InstanceId]"
+                            @onclick="@(() => OpenExecutionAsync(execution.InstanceId))">
+                        <span class="recent-panel__marker" aria-hidden="true">
+                            <MudIcon Icon="@ExecutionUiPresentation.GetStateIcon(execution.State)" Size="Size.Small" />
+                        </span>
+                        <span class="recent-panel__event-copy">
+                            <span class="recent-panel__event-heading">
+                                <strong title="@jobTitle">@jobTitle</strong>
+                                <span class="recent-panel__state">@L[$"ExecutionStates:{execution.State}"]</span>
+                            </span>
+                            <code title="@execution.Template.Revision.JobKey">@execution.Template.Revision.JobKey</code>
+                            <code title="@execution.InstanceId">@JobSchedulerUiPresentation.ShortIdentity(execution.InstanceId, 18)</code>
+                        </span>
+                        <span class="recent-panel__event-time">
+                            <time datetime="@execution.CreatedAtUtc.ToString("O")">
+                                @TimePresentation.FormatTimestamp(execution.CreatedAtUtc)
+                            </time>
+                            <small>@TimePresentation.FormatExecutionDuration(execution, TimeProvider.GetUtcNow())</small>
+                        </span>
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
+                                 Size="Size.Small"
+                                 Class="recent-panel__chevron" />
+                    </button>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the bounded newest-first execution summaries.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<JobExecutionInstance> Executions { get; set; } = [];
+
+    /// <summary>
+    /// Gets whether the owning overview is refreshing.
+    /// </summary>
+    [Parameter]
+    public bool IsRefreshing { get; set; }
+
+    /// <summary>
+    /// Gets the refresh callback.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRefresh { get; set; }
+
+    private bool _disposed;
+
+    private async Task OpenExecutionAsync(string instanceId)
+    {
+        await ExecutionDetailDialogLauncher.ShowAsync(DialogService, L, instanceId);
+        if (!_disposed)
+        {
+            await OnRefresh.InvokeAsync();
+        }
+    }
+
+    public void Dispose() => _disposed = true;
+}

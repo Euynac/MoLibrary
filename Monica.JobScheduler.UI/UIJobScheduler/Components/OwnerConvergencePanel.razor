@@ -1,0 +1,100 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject IDialogService DialogService
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<section class="owner-panel">
+    <header class="owner-panel__heading">
+        <div>
+            <MudText Typo="Typo.h6" HtmlTag="h2">@L["Overview:Owners:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Owners:Description"]</MudText>
+        </div>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+            @Overview.Owners.Count
+        </MudChip>
+    </header>
+
+    @if (Overview.Owners.Count == 0)
+    {
+        <div class="owner-panel__empty">
+            <MudIcon Icon="@Icons.Material.Filled.DomainDisabled" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Owners:Empty"]</MudText>
+        </div>
+    }
+    else
+    {
+        <div class="owner-panel__items">
+            @foreach (var owner in Overview.Owners)
+            {
+                <button type="button"
+                        class="owner-panel__item"
+                        data-state="@(owner.IsConverged ? "ready" : "attention")"
+                        aria-label="@L["Overview:Owners:OpenDetails", owner.OwnerId]"
+                        @onclick="@(() => OpenDetailsAsync(owner))">
+                    <span class="owner-panel__state" aria-hidden="true">
+                        <MudIcon Icon="@(owner.IsConverged ? Icons.Material.Filled.Verified : Icons.Material.Filled.PendingActions)"
+                                 Size="Size.Small" />
+                    </span>
+
+                    <span class="owner-panel__identity">
+                        <span class="owner-panel__name" title="@owner.OwnerId">@owner.OwnerId</span>
+                        <MudTooltip Text="@owner.WorkerRevisionId" Placement="Placement.Bottom">
+                            <code class="owner-panel__revision">@owner.WorkerRevisionId</code>
+                        </MudTooltip>
+                    </span>
+
+                    <span class="owner-panel__signals"
+                          aria-label="@L["Overview:Owners:SignalsAriaLabel", owner.OwnerId]">
+                        <span class="owner-panel__signal" data-state="@(owner.HasPublishedSnapshot ? "ready" : "attention")">
+                            <MudIcon Icon="@(owner.HasPublishedSnapshot ? Icons.Material.Filled.Inventory : Icons.Material.Filled.Inventory2)"
+                                     Size="Size.Small" />
+                            <span>@(owner.HasPublishedSnapshot ? L["Overview:Owners:Published"] : L["Overview:Owners:Pending"])</span>
+                        </span>
+                        <span class="owner-panel__metric">
+                            <small>@L["Overview:Owners:Workers"]</small>
+                            <strong>@owner.ActiveWorkerCount</strong>
+                        </span>
+                        <span class="owner-panel__metric">
+                            <small>@L["Overview:Owners:Definitions"]</small>
+                            <strong>@owner.ActiveDefinitionCount</strong>
+                        </span>
+                    </span>
+
+                    <span class="owner-panel__disclosure" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" />
+                    </span>
+                </button>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the bounded scheduler overview used to resolve owner, release, and active-definition evidence.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobSchedulerOverview Overview { get; set; } = null!;
+
+    private async Task OpenDetailsAsync(JobOwnerConvergence owner)
+    {
+        var parameters = new DialogParameters<OwnerConvergenceDetailDialog>
+        {
+            { dialog => dialog.Overview, Overview },
+            { dialog => dialog.Owner, owner }
+        };
+        var dialog = await DialogService.ShowAsync<OwnerConvergenceDetailDialog>(
+            L["Overview:Owners:Detail:Title"],
+            parameters,
+            DialogOptions);
+        await dialog.Result;
+    }
+
+    private static DialogOptions DialogOptions { get; } = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Medium
+    };
+}

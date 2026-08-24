@@ -1,0 +1,75 @@
+.statistics-page {
+    display: grid;
+    gap: var(--mo-page-section-gap);
+    width: 100%;
+    min-width: 0;
+}
+
+.statistics-page ::deep .statistics-page__toolbar {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) auto auto;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.statistics-page ::deep .statistics-page__toolbar > div {
+    min-width: 0;
+}
+
+.statistics-page ::deep .statistics-page__toolbar > .mud-chipset {
+    min-width: 0;
+}
+
+.statistics-page ::deep .statistics-page__toolbar .mud-chipset > .mud-chipset-items {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.statistics-page__loading {
+    display: grid;
+    min-height: 22rem;
+    place-items: center;
+    align-content: center;
+    gap: 12px;
+}
+
+.statistics-page__freshness {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+}
+
+@media (max-width: 700px) {
+    .statistics-page ::deep .statistics-page__toolbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .statistics-page ::deep .statistics-page__toolbar > .mud-chipset {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .statistics-page ::deep .statistics-page__toolbar .mud-chipset > .mud-chipset-items {
+        justify-content: flex-start;
+    }
+
+    .statistics-page ::deep .statistics-page__toolbar > .mud-tooltip-root {
+        grid-column: 2;
+        grid-row: 1;
+    }
+}
+
+@media (max-width: 390px) {
+    .statistics-page ::deep .statistics-page__toolbar {
+        gap: 10px;
+        padding-inline: 10px !important;
+    }
+
+    .statistics-page__freshness {
+        justify-content: flex-start;
+    }
+}

@@ -1,16 +1,10 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Monica.Core.Execution;
-using Monica.EventBus.Abstractions;
 using Monica.JobScheduler;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Services;
-using Monica.Modules;
-using Monica.ServiceDiscovery.Abstractions;
-using NSubstitute;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.Services;
@@ -24,7 +18,7 @@ public sealed class JobExecutorExecutionPipelineTests
         await using var provider = CreateProvider(pipeline, services =>
             services.AddScoped<RecordingRecurringJob>());
         await using var scope = provider.CreateAsyncScope();
-        var executor = CreateExecutor();
+        var executor = new JobExecutor();
 
         await executor.ExecuteRecurringJobAsync(new JobExecutionContext
         {
@@ -49,7 +43,7 @@ public sealed class JobExecutorExecutionPipelineTests
         await using var provider = CreateProvider(pipeline, services =>
             services.AddTransient(_ => new FailingTriggeredJob(expected)));
         await using var scope = provider.CreateAsyncScope();
-        var executor = CreateExecutor();
+        var executor = new JobExecutor();
         var context = new JobExecutionContext
         {
             InstanceId = "triggered-1",
@@ -77,17 +71,6 @@ public sealed class JobExecutorExecutionPipelineTests
         services.AddScoped(_ => pipeline);
         configure(services);
         return services.BuildServiceProvider();
-    }
-
-    private static JobExecutor CreateExecutor()
-    {
-        var manager = new JobInstanceManager(
-            Substitute.For<IJobMetadataRepository>(),
-            Substitute.For<IEventBus>(),
-            Substitute.For<IServiceDiscoveryClientInfo>(),
-            Options.Create(new ModuleJobSchedulerOption()),
-            NullLogger<JobInstanceManager>.Instance);
-        return new JobExecutor(manager);
     }
 
     private sealed class RecordingPipeline : IExecutionPipeline

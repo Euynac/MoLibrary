@@ -1,0 +1,172 @@
+@using Monica.JobScheduler.Models.Execution
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="job-activity" aria-labelledby="job-activity-heading">
+    <header class="job-activity__heading">
+        <div>
+            <MudText Typo="Typo.overline" Color="Color.Primary">@L["JobDetail:Activity:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="job-activity-heading">
+                @L["JobDetail:Activity:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["JobDetail:Activity:Description"]
+            </MudText>
+        </div>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+            @L["JobDetail:Activity:Bounded", Running.ItemLimit]
+        </MudChip>
+    </header>
+
+    <div class="job-activity__streams">
+        <section class="job-activity__stream job-activity__stream--running" aria-labelledby="job-running-heading">
+            <header>
+                <span class="job-activity__stream-icon" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Size="Size.Small" />
+                </span>
+                <div>
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-running-heading">
+                        @L["JobDetail:Activity:RunningTitle"]
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @L["JobDetail:Activity:RunningDescription"]
+                    </MudText>
+                </div>
+                <strong>@Running.TotalCount</strong>
+            </header>
+
+            @if (Running.Error is not null)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                    @L["JobDetail:Activity:RunningLoadFailed", Running.Error]
+                </MudAlert>
+            }
+
+            @if (Running.Error is null && Running.Items.Count == 0)
+            {
+                <div class="job-activity__empty">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Small" />
+                    <span>@L["JobDetail:Activity:RunningEmpty"]</span>
+                </div>
+            }
+            else
+            {
+                <div class="job-activity__items">
+                    @foreach (var execution in Running.Items)
+                    {
+                        <button type="button"
+                                class="job-activity__item"
+                                @onclick="() => OpenAsync(execution.InstanceId)"
+                                aria-label="@L["JobDetail:Activity:OpenDetails", execution.InstanceId]">
+                            <span class="job-activity__identity">
+                                <strong title="@execution.InstanceId">@execution.InstanceId</strong>
+                                <small>@Display(execution.RunningWorkerInstanceId)</small>
+                            </span>
+                            <span class="job-activity__timing">
+                                <small>@L["Executions:Columns:Started"]</small>
+                                <strong>@TimePresentation.FormatTimestamp(execution.StartedAtUtc)</strong>
+                            </span>
+                            <span class="job-activity__duration">
+                                @TimePresentation.FormatExecutionDuration(execution, ObservedAtUtc)
+                            </span>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
+                                     Size="Size.Small"
+                                     Class="job-activity__chevron" />
+                        </button>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="job-activity__stream job-activity__stream--failed" aria-labelledby="job-failed-heading">
+            <header>
+                <span class="job-activity__stream-icon" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
+                </span>
+                <div>
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-failed-heading">
+                        @L["JobDetail:Activity:FailuresTitle"]
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @L["JobDetail:Activity:FailuresDescription"]
+                    </MudText>
+                </div>
+                <strong>@Failures.TotalCount</strong>
+            </header>
+
+            @if (Failures.Error is not null)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                    @L["JobDetail:Activity:FailuresLoadFailed", Failures.Error]
+                </MudAlert>
+            }
+
+            @if (Failures.Error is null && Failures.Items.Count == 0)
+            {
+                <div class="job-activity__empty">
+                    <MudIcon Icon="@Icons.Material.Filled.Verified" Size="Size.Small" />
+                    <span>@L["JobDetail:Activity:FailuresEmpty"]</span>
+                </div>
+            }
+            else
+            {
+                <div class="job-activity__items">
+                    @foreach (var execution in Failures.Items)
+                    {
+                        <button type="button"
+                                class="job-activity__item"
+                                @onclick="() => OpenAsync(execution.InstanceId)"
+                                aria-label="@L["JobDetail:Activity:OpenDetails", execution.InstanceId]">
+                            <span class="job-activity__identity">
+                                <strong title="@execution.InstanceId">@execution.InstanceId</strong>
+                                <small>@L["Executions:Columns:Attempts"] @execution.ExecutionAttempt / @execution.RetryAttempt</small>
+                            </span>
+                            <span class="job-activity__timing">
+                                <small>@L["Executions:Columns:Completed"]</small>
+                                <strong>@TimePresentation.FormatTimestamp(execution.CompletedAtUtc)</strong>
+                            </span>
+                            <span class="job-activity__duration">
+                                @TimePresentation.FormatExecutionDuration(execution, ObservedAtUtc)
+                            </span>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
+                                     Size="Size.Small"
+                                     Class="job-activity__chevron" />
+                        </button>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the bounded running-execution slice and its authoritative filtered total.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobExecutionActivitySlice Running { get; set; } = JobExecutionActivitySlice.Empty;
+
+    /// <summary>
+    /// Gets the bounded recent-failure slice and its authoritative filtered total.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobExecutionActivitySlice Failures { get; set; } = JobExecutionActivitySlice.Empty;
+
+    /// <summary>
+    /// Gets the accepted observation time used to calculate running duration.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public DateTimeOffset ObservedAtUtc { get; set; }
+
+    /// <summary>
+    /// Gets the callback that opens durable execution evidence in place.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> ExecutionSelected { get; set; }
+
+    private Task OpenAsync(string instanceId) => ExecutionSelected.InvokeAsync(instanceId);
+
+    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

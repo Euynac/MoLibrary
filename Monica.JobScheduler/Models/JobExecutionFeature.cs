@@ -1,8 +1,8 @@
 namespace Monica.JobScheduler.Models;
 
 /// <summary>
-/// Identifies the scheduler-owned job instance associated with one pipeline execution.
+/// Identifies the scheduler-owned durable execution associated with one pipeline invocation.
 /// </summary>
-/// <param name="InstanceId">The durable job-instance identifier.</param>
-/// <param name="JobType">Whether the instance is recurring or triggered.</param>
+/// <param name="InstanceId">The durable execution identifier.</param>
+/// <param name="JobType">Whether the execution is recurring or triggered.</param>
 public sealed record JobExecutionFeature(string InstanceId, JobType JobType);

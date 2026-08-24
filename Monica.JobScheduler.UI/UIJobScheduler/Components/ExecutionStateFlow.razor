@@ -1,0 +1,85 @@
+@using System.Globalization
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+@{
+    var total = States.Sum(state => Counts.GetValueOrDefault(state));
+    var offset = 0d;
+}
+
+<section class="execution-flow" aria-labelledby="execution-flow-title">
+    <header class="execution-flow__heading">
+        <div>
+            <MudText id="execution-flow-title" Typo="Typo.h6" HtmlTag="h2">@L["Overview:Queue:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Overview:Queue:Description"]</MudText>
+        </div>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@total</MudChip>
+    </header>
+
+    <div class="execution-flow__body">
+        <div class="execution-flow__chart" role="img" aria-label="@L["Overview:Queue:AriaLabel"]">
+            <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                <circle class="execution-flow__track" cx="50" cy="50" r="41" pathLength="100" />
+                @if (total > 0)
+                {
+                    @foreach (var state in States)
+                    {
+                        var length = Counts.GetValueOrDefault(state) * 100d / total;
+                        if (length > 0)
+                        {
+                            <circle class="execution-flow__segment execution-flow__segment--@state.ToString().ToLowerInvariant()"
+                                    cx="50"
+                                    cy="50"
+                                    r="41"
+                                    pathLength="100"
+                                    stroke-dasharray="@FormatSegment(length)"
+                                    stroke-dashoffset="@FormatOffset(offset)" />
+                            offset += length;
+                        }
+                    }
+                }
+            </svg>
+            <div class="execution-flow__total">
+                <strong>@total</strong>
+                <span>@L["Overview:Queue:Total"]</span>
+            </div>
+        </div>
+
+        <div class="execution-flow__legend">
+            @foreach (var state in States)
+            {
+                <a class="execution-flow__state"
+                   data-state="@state.ToString().ToLowerInvariant()"
+                   href="@GetExecutionHref(state)">
+                    <span class="execution-flow__state-dot" aria-hidden="true"></span>
+                    <span>@L[$"ExecutionStates:{state}"]</span>
+                    <strong>@Counts.GetValueOrDefault(state)</strong>
+                </a>
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    private static readonly JobExecutionState[] States = Enum.GetValues<JobExecutionState>();
+
+    /// <summary>
+    /// Gets the current durable execution counts by state.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyDictionary<JobExecutionState, int> Counts { get; set; } =
+        new Dictionary<JobExecutionState, int>();
+
+    private static string GetExecutionHref(JobExecutionState state) =>
+        $"/job-scheduler/executions?states={Uri.EscapeDataString(state.ToString())}";
+
+    private static string FormatSegment(double length)
+    {
+        var visibleLength = Math.Max(0, length - Math.Min(1.2, length * 0.14));
+        return $"{visibleLength.ToString("0.###", CultureInfo.InvariantCulture)} {(100 - visibleLength).ToString("0.###", CultureInfo.InvariantCulture)}";
+    }
+
+    private static string FormatOffset(double offset) =>
+        (-offset).ToString("0.###", CultureInfo.InvariantCulture);
+}

@@ -10,12 +10,11 @@ namespace Monica.JobScheduler.Services;
 /// Owns the immutable local job-type catalog used by this host's execution plane.
 /// </summary>
 /// <remarks>
-/// The local catalog is built when this singleton is created on every host, including Worker hosts that never acquire
-/// service-discovery leadership. Persistent definition reconciliation is independently owned by the elected control
-/// plane and never mutates this process-local CLR-type catalog.
+/// The local catalog is built once when this worker singleton is created. Durable catalog publication and activation
+/// never mutate the process-local CLR-type catalog.
 /// </remarks>
 public class JobRegistry(
-    IReadOnlyList<JobDefinition> localJobDefinitions,
+    IReadOnlyList<LocalJobDefinition> localJobDefinitions,
     ILogger<JobRegistry> logger)
 {
     private readonly LocalJobCatalog _localJobs = LocalJobCatalog.Create(localJobDefinitions, logger);
@@ -25,101 +24,83 @@ public class JobRegistry(
     /// </summary>
     /// <param name="jobKey">The unique job key (job type's full name).</param>
     /// <returns>The CLR type of the job, or null if not found.</returns>
-    public Type? GetJobClrType(string jobKey)
-    {
-        return _localJobs.JobTypesByKey.GetValueOrDefault(jobKey);
-    }
-    
-    /// <summary>
-    /// Retrieves the CLR type for a triggered job by its job args key.
-    /// </summary>
-    /// <param name="jobArgsKey"></param>
-    /// <returns></returns>
-    public Type? GetTriggeredJobClrType(string jobArgsKey)
-    {
-        return _localJobs.TriggeredJobTypesByArgsKey.GetValueOrDefault(jobArgsKey);
-    }
+    public Type? GetJobClrType(string jobKey) => _localJobs.JobTypesByKey.GetValueOrDefault(jobKey);
 
     /// <summary>
     /// Retrieves the CLR type for job arguments by its job args key.
     /// </summary>
     /// <param name="jobArgsKey">The unique job args key (args type's full name).</param>
     /// <returns>The CLR type of the job arguments, or null if not found.</returns>
-    public Type? GetJobArgsClrType(string jobArgsKey)
-    {
-        return _localJobs.TriggeredArgsTypesByKey.GetValueOrDefault(jobArgsKey);
-    }
+    public Type? GetJobArgsClrType(string jobArgsKey) =>
+        _localJobs.TriggeredArgsTypesByKey.GetValueOrDefault(jobArgsKey);
 
     private sealed record LocalJobCatalog(
         FrozenDictionary<string, Type> JobTypesByKey,
-        FrozenDictionary<string, Type> TriggeredJobTypesByArgsKey,
         FrozenDictionary<string, Type> TriggeredArgsTypesByKey)
     {
         internal static LocalJobCatalog Create(
-            IReadOnlyList<JobDefinition> definitions,
+            IReadOnlyList<LocalJobDefinition> definitions,
             ILogger<JobRegistry> logger)
         {
             ArgumentNullException.ThrowIfNull(definitions);
 
             var jobTypesByKey = new Dictionary<string, Type>(StringComparer.Ordinal);
-            var triggeredJobTypesByArgsKey = new Dictionary<string, Type>(StringComparer.Ordinal);
             var triggeredArgsTypesByKey = new Dictionary<string, Type>(StringComparer.Ordinal);
 
             foreach (var definition in definitions)
             {
-                if (!jobTypesByKey.TryAdd(definition.JobKey, definition.JobClrType))
+                var declaration = definition.Declaration;
+                if (!jobTypesByKey.TryAdd(declaration.JobKey, definition.JobClrType))
                 {
                     throw new JobRegistrationException(
-                        $"Duplicate local job key '{definition.JobKey}'.",
-                        definition.JobKey);
+                        $"Duplicate local job key '{declaration.JobKey}'.",
+                        declaration.JobKey);
                 }
 
                 logger.LogInformation(
                     "Registered local job: {JobKey} | Name: {JobName} | Type: {JobType} | MaxConcurrency: {MaxConcurrency} | RetryCount: {RetryCount} | Timeout: {Timeout}",
-                    definition.JobKey,
-                    definition.JobName,
-                    definition.JobType,
-                    definition.MaxConcurrency,
-                    definition.RetryCount,
-                    definition.MaxExecutionTimeout);
+                    declaration.JobKey,
+                    declaration.JobName,
+                    declaration.JobType,
+                    declaration.MaxConcurrency,
+                    declaration.RetryCount,
+                    declaration.MaxExecutionTimeout);
 
-                if (definition.JobType == JobType.Recurring)
+                if (declaration.JobType == JobType.Recurring)
                 {
                     logger.LogDebug(
                         "Recurring job details - JobKey: {JobKey}, CronExpression: {CronExpression}, StartTime: {StartTime}, EndTime: {EndTime}, IsDisabled: {IsDisabled}",
-                        definition.JobKey,
-                        definition.CronExpression,
-                        definition.StartTime,
-                        definition.EndTime,
-                        definition.IsDisabled);
+                        declaration.JobKey,
+                        declaration.CronExpression,
+                        declaration.StartTimeUtc,
+                        declaration.EndTimeUtc,
+                        declaration.IsDisabledByDefault);
                     continue;
                 }
 
-                if (definition.JobType != JobType.Triggered)
+                if (declaration.JobType != JobType.Triggered)
                 {
                     continue;
                 }
 
                 var argumentsType = definition.JobArgsClrType
                     ?? throw new JobRegistrationException(
-                        $"Triggered job '{definition.JobKey}' does not declare an argument CLR type.",
-                        definition.JobKey);
+                        $"Triggered job '{declaration.JobKey}' does not declare an argument CLR type.",
+                        declaration.JobKey);
                 var argumentsKey = argumentsType.FullName
                     ?? throw new JobRegistrationException(
-                        $"Argument CLR type '{argumentsType.Name}' for job '{definition.JobKey}' has no full name.",
-                        definition.JobKey);
+                        $"Argument CLR type '{argumentsType.Name}' for job '{declaration.JobKey}' has no full name.",
+                        declaration.JobKey);
 
-                triggeredJobTypesByArgsKey.TryAdd(argumentsKey, definition.JobClrType);
                 triggeredArgsTypesByKey.TryAdd(argumentsKey, argumentsType);
                 logger.LogDebug(
                     "Triggered job details - JobKey: {JobKey}, ParameterType: {ParameterType}",
-                    definition.JobKey,
+                    declaration.JobKey,
                     argumentsType.GetCleanFullName());
             }
 
             return new LocalJobCatalog(
                 jobTypesByKey.ToFrozenDictionary(StringComparer.Ordinal),
-                triggeredJobTypesByArgsKey.ToFrozenDictionary(StringComparer.Ordinal),
                 triggeredArgsTypesByKey.ToFrozenDictionary(StringComparer.Ordinal));
         }
     }
