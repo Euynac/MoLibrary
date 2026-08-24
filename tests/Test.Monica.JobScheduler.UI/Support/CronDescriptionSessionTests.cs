@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.JSInterop;
 using Monica.JobScheduler.UI.UIJobScheduler.Support;
@@ -9,6 +10,38 @@ public sealed class CronDescriptionSessionTests
 {
     private const string EXPECTED_MODULE_PATH =
         "./_content/Monica.JobScheduler.UI/js/cron-descriptions.js";
+
+    [Fact]
+    public void ResolveCultureName_WhenUiCultureIsInvariant_ShouldFallBackToEnglish()
+    {
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+
+            CronDescriptionSession.ResolveCultureName().Should().Be("en-US");
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
+    }
+
+    [Fact]
+    public void ResolveCultureName_WhenUiCultureIsNamed_ShouldPassTheCultureThrough()
+    {
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("zh-CN");
+
+            CronDescriptionSession.ResolveCultureName().Should().Be("zh-CN");
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
+    }
 
     [Fact]
     public void JavascriptModule_ShouldDescribeCronosDayFieldsWithLogicalAndSemantics()
