@@ -206,7 +206,7 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
 
     private void QueueDescription()
     {
-        var fingerprint = $"{CultureInfo.CurrentUICulture.Name}\u001f{Draft.EffectiveExpression}";
+        var fingerprint = $"{CronDescriptionSession.ResolveCultureName()}\u001f{Draft.EffectiveExpression}";
         if (string.Equals(_descriptionFingerprint, fingerprint, StringComparison.Ordinal))
         {
             return;
@@ -240,7 +240,7 @@ public partial class OperationalPolicyScheduleEditor : IAsyncDisposable
         {
             results = await session.DescribeAsync(
                 [new CronDescriptionRequest(DESCRIPTION_KEY, Draft.EffectiveExpression)],
-                CultureInfo.CurrentUICulture.Name,
+                CronDescriptionSession.ResolveCultureName(),
                 _lifetimeCancellation.Token);
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)

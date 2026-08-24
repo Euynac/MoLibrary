@@ -1,4 +1,3 @@
-@using System.Globalization
 @using Microsoft.JSInterop
 @using Monica.JobScheduler.UI.Localization
 
@@ -75,7 +74,7 @@
         }
 
         _session ??= new CronDescriptionSession(JsRuntime);
-        var fingerprint = $"{CultureInfo.CurrentUICulture.Name}\u001f{Expression}";
+        var fingerprint = $"{CronDescriptionSession.ResolveCultureName()}\u001f{Expression}";
         if (string.Equals(_fingerprint, fingerprint, StringComparison.Ordinal))
         {
             return;
@@ -134,7 +133,7 @@
         {
             results = await session.DescribeAsync(
                 [new CronDescriptionRequest(REQUEST_KEY, Expression)],
-                CultureInfo.CurrentUICulture.Name,
+                CronDescriptionSession.ResolveCultureName(),
                 _lifetimeCancellation.Token);
         }
         catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
