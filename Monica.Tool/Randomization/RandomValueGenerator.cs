@@ -19,8 +19,9 @@ public static class RandomValueGenerator
     /// </summary>
     public static byte[] NextSecureBytes(int byteCount = 1)
     {
-        var count = byteCount.LimitInRange(1, 62);
-        var bytes = new byte[count];
+        ArgumentOutOfRangeException.ThrowIfNegative(byteCount);
+
+        var bytes = new byte[byteCount];
         RandomNumberGenerator.Fill(bytes);
         return bytes;
     }
@@ -133,32 +134,31 @@ public static class RandomValueGenerator
     /// <summary>
     /// Generates a random double in the supplied range.
     /// </summary>
-    public static double NextDouble(double minValue, double maxValue) =>
-        Random.Shared.NextDouble() * (maxValue - minValue) + minValue;
+    public static double NextDouble(double minValue, double maxValue)
+    {
+        ValidateDoubleRange(minValue, maxValue);
+        return Interpolate(minValue, maxValue, Random.Shared.NextDouble());
+    }
 
     /// <summary>
     /// Generates a deterministic double in the supplied range using a hash seed.
     /// </summary>
-    public static double NextDouble(double minValue, double maxValue, object hashSeed) =>
-        ((hashSeed.GetHashCode() + Math.Abs((long)int.MinValue)) /
-         (double)(int.MaxValue + Math.Abs((long)int.MinValue))) * (maxValue - minValue) + minValue;
+    public static double NextDouble(double minValue, double maxValue, object hashSeed)
+    {
+        ArgumentNullException.ThrowIfNull(hashSeed);
+        ValidateDoubleRange(minValue, maxValue);
+
+        var normalizedHash = unchecked((uint)(hashSeed.GetHashCode() - int.MinValue));
+        var fraction = normalizedHash / ((double)uint.MaxValue + 1);
+        return Interpolate(minValue, maxValue, fraction);
+    }
 
     /// <summary>
     /// Generates a random integer in the supplied inclusive range.
     /// </summary>
     public static int NextInt(int minValue, int maxValue)
     {
-        if (minValue >= maxValue)
-        {
-            return minValue;
-        }
-
-        if (maxValue == int.MaxValue)
-        {
-            maxValue--;
-        }
-
-        return Random.Shared.Next(minValue, maxValue + 1);
+        return checked((int)NextLong(minValue, maxValue));
     }
 
     /// <summary>
@@ -166,14 +166,17 @@ public static class RandomValueGenerator
     /// </summary>
     public static int NextInt(int minValue, int maxValue, object hashSeed)
     {
-        if (minValue >= maxValue)
+        ArgumentNullException.ThrowIfNull(hashSeed);
+
+        if (maxValue < minValue)
         {
-            return minValue;
+            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than or equal to minValue.");
         }
 
-        var modulus = maxValue - minValue + 1L;
-        var remainder = (int)(Math.Abs(hashSeed.GetHashCode()) % modulus);
-        return minValue + remainder;
+        var range = (ulong)((long)maxValue - minValue) + 1;
+        var normalizedHash = unchecked((uint)(hashSeed.GetHashCode() - int.MinValue));
+        var offset = normalizedHash % range;
+        return (int)(minValue + (long)offset);
     }
 
     /// <summary>
@@ -191,18 +194,22 @@ public static class RandomValueGenerator
             return maxValue;
         }
 
-        var range = (ulong)(maxValue - minValue) + 1;
-        var rejectionThreshold = ulong.MaxValue - ((ulong.MaxValue % range) + 1) % range;
-        ulong randomValue;
+        var range = unchecked((ulong)maxValue - (ulong)minValue + 1);
+        var randomValue = NextUInt64();
 
-        do
+        if (range == 0)
         {
-            var buffer = new byte[8];
-            Random.Shared.NextBytes(buffer);
-            randomValue = (ulong)BitConverter.ToInt64(buffer, 0);
-        } while (randomValue > rejectionThreshold);
+            return unchecked((long)randomValue);
+        }
 
-        return (long)(randomValue % range) + minValue;
+        var rejectionThreshold = unchecked(0UL - range) % range;
+        while (randomValue < rejectionThreshold)
+        {
+            randomValue = NextUInt64();
+        }
+
+        var offset = randomValue % range;
+        return unchecked((long)((ulong)minValue + offset));
     }
 
     private static string ExpandSimplePattern(string format) =>
@@ -241,5 +248,35 @@ public static class RandomValueGenerator
         }
 
         return builder.ToString();
+    }
+
+    private static ulong NextUInt64()
+    {
+        Span<byte> bytes = stackalloc byte[sizeof(ulong)];
+        Random.Shared.NextBytes(bytes);
+        return BitConverter.ToUInt64(bytes);
+    }
+
+    private static void ValidateDoubleRange(double minValue, double maxValue)
+    {
+        if (!double.IsFinite(minValue))
+        {
+            throw new ArgumentOutOfRangeException(nameof(minValue), "The range boundary must be finite.");
+        }
+
+        if (!double.IsFinite(maxValue) || maxValue < minValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be finite and greater than or equal to minValue.");
+        }
+    }
+
+    private static double Interpolate(double minValue, double maxValue, double fraction)
+    {
+        if (minValue == maxValue)
+        {
+            return minValue;
+        }
+
+        return minValue * (1 - fraction) + maxValue * fraction;
     }
 }

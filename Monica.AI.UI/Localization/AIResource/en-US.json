@@ -745,6 +745,16 @@
       "CopyConfigUnavailable": "No HTTP endpoint is available to copy for this MCP entry.",
       "CopyConfigSuccess": "MCP JSON configuration copied.",
       "CopyConfigFailed": "Failed to copy MCP JSON configuration.",
+      "ExportSkill": {
+        "Action": "Export as skill",
+        "Tooltip": "Export this MCP server as an Agent Skills pack that calls the endpoint over plain HTTP, so agent hosts need no registered MCP client.",
+        "Title": "Export MCP server as agent skill",
+        "Summary": "Renders '{0}' ({1} tool(s)) as an Agent Skills pack that calls the MCP endpoint over plain HTTP through bundled helper scripts. Agent hosts then need no registered MCP client.",
+        "TargetRoot": "Target skills directory",
+        "TargetRootHint": "The pack is written below this directory; existing content is never overwritten.",
+        "Submit": "Export",
+        "Success": "Skill pack written to '{0}' ({1} tool(s))."
+      },
       "Source": {
         "LocalServer": "Local MCP server",
         "SkillServer": "Skill-backed MCP",

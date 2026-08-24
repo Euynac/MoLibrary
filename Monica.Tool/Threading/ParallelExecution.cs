@@ -9,9 +9,14 @@ public static class ParallelExecution
     /// <param name="func"></param>
     /// <param name="count"></param>
     /// <returns></returns>
-    public static ParallelQuery<T> ParallelSelect<T>(Func<T> func, int count) =>
-        Enumerable.Range(0, count)
+    public static ParallelQuery<T> ParallelSelect<T>(Func<T> func, int count)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        return Enumerable.Range(0, count)
             .AsParallel()
-            .WithDegreeOfParallelism(Environment.ProcessorCount - 1)
+            .WithDegreeOfParallelism(Math.Max(1, Environment.ProcessorCount - 1))
             .Select(_ => func.Invoke());
+    }
 }

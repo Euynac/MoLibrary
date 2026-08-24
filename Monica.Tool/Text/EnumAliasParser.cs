@@ -48,12 +48,17 @@ public static class EnumAliasParser
     public static bool TryParseAliasFuzzy<T>(this string? str, out List<T> result) where T : struct, Enum
     {
         result = [];
+        if (string.IsNullOrWhiteSpace(str))
+        {
+            return false;
+        }
+
         if (!TryParseAlias(typeof(T), str ?? string.Empty, out var resultEnum, true))
         {
             return false;
         }
 
-        result = ((IEnumerable)resultEnum).Cast<T>().ToList();
+        result = ((IEnumerable)resultEnum).Cast<T>().Distinct().ToList();
         return true;
     }
 
@@ -67,7 +72,16 @@ public static class EnumAliasParser
     /// Gets a specific alias from the enum member.
     /// </summary>
     public static string? GetEnumAlias(this Enum? value, int valueAt = 1)
-        => value?.GetType().GetCustomAttributeCached<EnumAliasAttribute>(value.ToString())?.Names[valueAt - 1];
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(valueAt, 1);
+        var names = value.GetType().GetCustomAttributeCached<EnumAliasAttribute>(value.ToString())?.Names;
+        return names is not null && valueAt <= names.Length ? names[valueAt - 1] : null;
+    }
 
     /// <summary>
     /// Gets an alias when available, otherwise falls back to the enum member name.
@@ -76,15 +90,13 @@ public static class EnumAliasParser
 
     private static Dictionary<string, Enum> GetDictionary(Type type)
     {
-        if (EnumCache.TryGetValue(type, out var enumDict))
+        ArgumentNullException.ThrowIfNull(type);
+        if (!type.IsEnum)
         {
-            return enumDict;
+            throw new ArgumentException($"Type {type.FullName} is not an enum.", nameof(type));
         }
 
-        CreateCache(type);
-        return EnumCache.TryGetValue(type, out enumDict)
-            ? enumDict
-            : throw new InvalidOperationException($"Failed to create enum cache for type {type.FullName}.");
+        return EnumCache.GetOrAdd(type, CreateCache);
     }
 
     /// <summary>
@@ -93,6 +105,13 @@ public static class EnumAliasParser
     public static bool TryParseAlias(Type enumType, string str, out object result, bool fuzzy = false)
     {
         result = default!;
+        ArgumentNullException.ThrowIfNull(enumType);
+        ArgumentNullException.ThrowIfNull(str);
+        if (!enumType.IsEnum || fuzzy && string.IsNullOrWhiteSpace(str))
+        {
+            return false;
+        }
+
         var enumDict = GetDictionary(enumType);
         switch (fuzzy)
         {
@@ -114,7 +133,7 @@ public static class EnumAliasParser
     /// <summary>
     /// Builds the alias cache for the supplied enum type.
     /// </summary>
-    private static void CreateCache(Type enumType)
+    private static Dictionary<string, Enum> CreateCache(Type enumType)
     {
         var enumValues = Enum.GetValues(enumType);
         var enumNames = Enum.GetNames(enumType);
@@ -144,6 +163,6 @@ public static class EnumAliasParser
             }
         }
 
-        EnumCache.TryAdd(enumType, enumNameDictionary);
+        return enumNameDictionary;
     }
 }

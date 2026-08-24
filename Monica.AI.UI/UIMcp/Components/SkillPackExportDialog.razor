@@ -1,0 +1,128 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.Mcp.Facades
+@using Monica.AI.Mcp.Models
+@using Monica.AI.UI.Localization
+@using Monica.Core.Results
+@inject McpFacade McpFacade
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["Capabilities:Mcp:ExportSkill:Summary", ServerName, ToolCount]
+            </MudText>
+
+            <MudTextField T="string"
+                          @bind-Value="@_endpoint"
+                          Label="@L["Capabilities:Mcp:Dialog:Endpoint"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Required="true"
+                          RequiredError="@L["Common:Validation:Required"]"
+                          Error="@(!string.IsNullOrWhiteSpace(EndpointValidationMessage))"
+                          ErrorText="@EndpointValidationMessage" />
+
+            <MudTextField T="string"
+                          @bind-Value="@_targetRoot"
+                          Label="@L["Capabilities:Mcp:ExportSkill:TargetRoot"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Required="true"
+                          RequiredError="@L["Common:Validation:Required"]"
+                          HelperText="@L["Capabilities:Mcp:ExportSkill:TargetRootHint"]" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!CanSubmit || _isExporting)"
+                   OnClick="ExportAsync">
+            @if (_isExporting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+            }
+            @L["Capabilities:Mcp:ExportSkill:Submit"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public string ServerName { get; set; } = string.Empty;
+    [Parameter] public string DefaultEndpoint { get; set; } = string.Empty;
+    [Parameter] public int ToolCount { get; set; }
+
+    private string _endpoint = string.Empty;
+    private string _targetRoot = string.Empty;
+    private bool _isExporting;
+
+    private string? EndpointValidationMessage
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_endpoint))
+            {
+                return null;
+            }
+
+            return Uri.TryCreate(_endpoint.Trim(), UriKind.Absolute, out var uri)
+                   && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+                ? null
+                : L["Capabilities:Mcp:Dialog:EndpointInvalid"].Value;
+        }
+    }
+
+    private bool CanSubmit
+        => !string.IsNullOrWhiteSpace(_endpoint)
+           && !string.IsNullOrWhiteSpace(_targetRoot)
+           && string.IsNullOrWhiteSpace(EndpointValidationMessage);
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(_endpoint))
+        {
+            _endpoint = DefaultEndpoint;
+        }
+
+        if (string.IsNullOrEmpty(_targetRoot))
+        {
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            _targetRoot = Path.Combine(userProfile, ".agents", "skills");
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        if (!CanSubmit || _isExporting)
+        {
+            return;
+        }
+
+        _isExporting = true;
+        StateHasChanged();
+
+        var result = McpFacade.ExportSkillPack(ServerName, _endpoint.Trim(), _targetRoot.Trim());
+        if (result.IsFailed(out var error, out var export))
+        {
+            Snackbar.Add(string.IsNullOrWhiteSpace(error.Message) ? L["Error:Generic"] : error.Message, Severity.Error);
+            _isExporting = false;
+            StateHasChanged();
+            return;
+        }
+
+        Snackbar.Add(L["Capabilities:Mcp:ExportSkill:Success", export.SkillDirectoryPath, export.Pack.ToolCount], Severity.Success);
+        MudDialog.Close(DialogResult.Ok(export));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Globalization;
 using Monica.Tool.Extensions;
 
 namespace Monica.Tool.Text;
@@ -8,7 +9,7 @@ namespace Monica.Tool.Text;
 /// </summary>
 public static class DisplayFormatting
 {
-    private static readonly string[] SizeUnits = ["B", "KB", "MB", "GB", "TB", "PB"];
+    private static readonly string[] SizeUnits = ["B", "KB", "MB", "GB", "TB", "PB", "EB"];
 
     /// <summary>
     /// Converts a one-based alphabet index to an uppercase letter.
@@ -49,13 +50,13 @@ public static class DisplayFormatting
     {
         double size = bytes;
         var unitIndex = 0;
-        while (unitIndex < SizeUnits.Length - 1 && size >= 1024)
+        while (unitIndex < SizeUnits.Length - 1 && Math.Abs(size) >= 1024)
         {
             size /= 1024;
             unitIndex++;
         }
 
-        return $"{size:0.###}{SizeUnits[unitIndex]}";
+        return size.ToString("0.###", CultureInfo.InvariantCulture) + SizeUnits[unitIndex];
     }
 
     /// <summary>
@@ -66,6 +67,11 @@ public static class DisplayFormatting
         if (length < 3)
         {
             throw new ArgumentOutOfRangeException(nameof(length), "Progress bar length must be at least 3.");
+        }
+
+        if (!double.IsFinite(percentage))
+        {
+            throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be finite.");
         }
 
         var completedCount = (int)((length - 2) * percentage.LimitInRange(0, 1));

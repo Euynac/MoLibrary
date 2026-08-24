@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Monica.Tool.Extensions;
 using Monica.Tool.Randomization;
@@ -37,9 +38,7 @@ public static class FileSystem
     /// <returns>If file not exist or is a file, return false.</returns>
     public static bool IsDirectory(string path)
     {
-        if (File.Exists(path)) return false;
-        var attr = File.GetAttributes(path);
-        return attr.HasFlag(FileAttributes.Directory);
+        return !string.IsNullOrWhiteSpace(path) && Directory.Exists(path);
     }
 
     /// <summary>
@@ -66,10 +65,17 @@ public static class FileSystem
     /// </summary>
     /// <param name="fileUri">The path of the file to read. Format: folder. File name. Extension name</param>
     /// <returns></returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static string? ReadEmbeddedResource(string fileUri)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileUri);
+
         var assembly = Assembly.GetCallingAssembly();
-        using var stream = assembly.GetManifestResourceStream($"{assembly.GetName().Name}.{fileUri}");
+        var assemblyName = assembly.GetName().Name;
+        using var stream = assembly.GetManifestResourceStream(fileUri) ??
+                           (assemblyName == null
+                               ? null
+                               : assembly.GetManifestResourceStream($"{assemblyName}.{fileUri.TrimStart('.')}"));
         if (stream == null) return null;
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
@@ -174,15 +180,11 @@ public static class FileSystem
     /// <param name="ensureDirectory">If the directory does not exist, create it</param>
     public static void AppendFile(string path, StringBuilder content, bool ensureDirectory = true)
     {
-        if (ensureDirectory)
-        {
-            Directory.CreateDirectory(Directory.GetParent(path)?.FullName ?? path);
-        }
-        using var fileStream = new FileStream(path, FileMode.Append);
-        var writer = new StreamWriter(fileStream);
+        ArgumentNullException.ThrowIfNull(content);
+        EnsureParentDirectory(path, ensureDirectory);
+
+        using var writer = new StreamWriter(path, append: true);
         writer.Write(content);
-        writer.Flush();
-        writer.Close();
     }
     /// <summary>
     /// Overwrite file
@@ -192,15 +194,11 @@ public static class FileSystem
     /// <param name="ensureDirectory">If the directory does not exist, create it</param>
     public static void WriteFile(string path, StringBuilder content, bool ensureDirectory = true)
     {
-        if (ensureDirectory)
-        {
-            Directory.CreateDirectory(Directory.GetParent(path)?.FullName ?? path);
-        }
-        using var fileStream = new FileStream(path, FileMode.Create);
-        var writer = new StreamWriter(fileStream);
+        ArgumentNullException.ThrowIfNull(content);
+        EnsureParentDirectory(path, ensureDirectory);
+
+        using var writer = new StreamWriter(path, append: false);
         writer.Write(content);
-        writer.Flush();
-        writer.Close();
     }
     /// <summary>
     /// Delete file at given path.
@@ -239,7 +237,7 @@ public static class FileSystem
             reader.Close();
             return result;
         }
-        catch (FileNotFoundException)
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
         {
             return new StringBuilder();
         }
@@ -253,11 +251,27 @@ public static class FileSystem
     {
         var directory = Path.GetDirectoryName(path);
         // if directory don't have ending \', then add it.
-        if (!string.IsNullOrEmpty(directory) && !directory.EndsWith(@"\"))
+        if (!string.IsNullOrEmpty(directory) && !Path.EndsInDirectorySeparator(directory))
         {
-            directory += @"\";
+            directory += Path.DirectorySeparatorChar;
         }
         var fileName = Path.GetFileName(path);
         return (directory, fileName);
+    }
+
+    private static void EnsureParentDirectory(string path, bool ensureDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        if (!ensureDirectory)
+        {
+            return;
+        }
+
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
     }
 }

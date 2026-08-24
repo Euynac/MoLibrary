@@ -1,10 +1,10 @@
 using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Text.Unicode;
 
 namespace Monica.Tool.Diagnostics;
@@ -41,7 +41,7 @@ public static class DebugJson
         }
 
         var json = JsonSerializer.Serialize(s, options);
-        return writeIndented ? Regex.Unescape(json) : json;
+        return json;
     }
 
     /// <summary>
@@ -73,26 +73,37 @@ public static class DebugJson
     public static string? ToJsonStringForce<T>(this T? s, ForceSerializeOptions? forceOptions, bool writeIndented = true, bool relaxedEscaping = true, JsonSerializerOptions? customOptions = null)
     {
         if (s == null) return null;
-        if (customOptions is not null)
-        {
-            return JsonSerializer.Serialize(s, customOptions);
-        }
-
         forceOptions ??= ForceSerializeOptions.Default;
+        forceOptions.Validate();
 
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = writeIndented
-        };
+        var options = customOptions is null
+            ? new JsonSerializerOptions { WriteIndented = writeIndented }
+            : new JsonSerializerOptions(customOptions);
 
-        if (relaxedEscaping)
+        if (customOptions is null && relaxedEscaping)
         {
             options.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
         }
 
-        options.Converters.Add(new ForceSerializeConverterFactory(forceOptions));
+        options.Converters.Insert(0, new ForceSerializeConverterFactory(forceOptions));
         var json = JsonSerializer.Serialize(s, options);
-        return writeIndented ? Regex.Unescape(json) : json;
+        return LimitJsonOutput(json, forceOptions.MaxOutputSizeBytes);
+    }
+
+    private static string LimitJsonOutput(string json, int maxOutputSizeBytes)
+    {
+        if (Encoding.UTF8.GetByteCount(json) <= maxOutputSizeBytes)
+        {
+            return json;
+        }
+
+        const string truncationMarker = "{\"$truncated\":\"OUTPUT_SIZE_LIMIT_EXCEEDED\"}";
+        if (Encoding.UTF8.GetByteCount(truncationMarker) <= maxOutputSizeBytes)
+        {
+            return truncationMarker;
+        }
+
+        return "null";
     }
 }
 
@@ -130,6 +141,15 @@ public class ForceSerializeOptions
     /// Maximum number of properties to serialize from an object. Default is 50.
     /// </summary>
     public int MaxProperties { get; set; } = 50;
+
+    internal void Validate()
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(MaxDepth);
+        ArgumentOutOfRangeException.ThrowIfLessThan(MaxOutputSizeBytes, 4);
+        ArgumentOutOfRangeException.ThrowIfNegative(MaxCollectionItems);
+        ArgumentOutOfRangeException.ThrowIfNegative(MaxStringLength);
+        ArgumentOutOfRangeException.ThrowIfNegative(MaxProperties);
+    }
 }
 
 /// <summary>
@@ -188,6 +208,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
     /// <inheritdoc />
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
+        _options.Validate();
         WriteValue(writer, value, options, new ForceSerializationContext());
     }
 
@@ -219,19 +240,13 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
 
         var type = value.GetType();
 
-        // Handle JsonElement directly
+        // JsonElement needs the same collection, property, string, and depth limits as object graphs.
         if (value is JsonElement jsonElement)
         {
-            jsonElement.WriteTo(writer);
+            WriteJsonElement(writer, jsonElement, options, context);
             return;
         }
         
-        // Handle special types that need custom serialization
-        if (TryWriteSpecialType(writer, value, type, options, context))
-        {
-            return;
-        }
-
         // Check for types that should be skipped entirely
         if (ShouldSkipType(type))
         {
@@ -239,22 +254,36 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
             return;
         }
 
-        // Check for circular reference (only for reference types)
-        if (!type.IsValueType && !context.TryTrack(value))
+        var tracked = !type.IsValueType;
+        if (tracked && !context.TryTrack(value))
         {
             WriteSkippedValue(writer, type, "CIRCULAR_REFERENCE");
             return;
         }
 
-      
-        // Try normal serialization first (without our converter to avoid infinite recursion)
-        if (TryNormalSerialization(writer, value, type, options))
+        try
         {
-            return;
-        }
+            if (TryWriteSpecialType(writer, value, type, options, context))
+            {
+                return;
+            }
 
-        // Fall back to property-by-property serialization
-        WriteObjectProperties(writer, value, type, options, context);
+            // Only scalar framework values bypass graph traversal. Complex values must honor
+            // MaxProperties, MaxCollectionItems, MaxStringLength, and cycle tracking.
+            if (IsSimpleValue(type) && TryNormalSerialization(writer, value, type, options))
+            {
+                return;
+            }
+
+            WriteObjectProperties(writer, value, type, options, context);
+        }
+        finally
+        {
+            if (tracked)
+            {
+                context.Untrack(value);
+            }
+        }
     }
 
     private bool CheckOutputLimitExceeded(Utf8JsonWriter writer, ForceSerializationContext context)
@@ -355,6 +384,115 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         }
 
         return false;
+    }
+
+    private void WriteJsonElement(
+        Utf8JsonWriter writer,
+        JsonElement element,
+        JsonSerializerOptions options,
+        ForceSerializationContext context)
+    {
+        if (CheckOutputLimitExceeded(writer, context))
+        {
+            WriteSkippedValue(writer, typeof(JsonElement), "OUTPUT_SIZE_LIMIT_EXCEEDED");
+            return;
+        }
+
+        if (context.CurrentDepth >= _options.MaxDepth)
+        {
+            WriteSkippedValue(writer, typeof(JsonElement), "MAX_DEPTH_EXCEEDED");
+            return;
+        }
+
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                context.EnterNestedValue();
+                try
+                {
+                    writer.WriteStartObject();
+                    var propertyCount = 0;
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        if (propertyCount >= _options.MaxProperties || CheckOutputLimitExceeded(writer, context))
+                        {
+                            writer.WriteString("$truncated", $"property limit: {_options.MaxProperties}");
+                            break;
+                        }
+
+                        writer.WritePropertyName(property.Name);
+                        WriteJsonElement(writer, property.Value, options, context);
+                        propertyCount++;
+                    }
+                    writer.WriteEndObject();
+                }
+                finally
+                {
+                    context.ExitNestedValue();
+                }
+                return;
+            case JsonValueKind.Array:
+                context.EnterNestedValue();
+                try
+                {
+                    writer.WriteStartArray();
+                    var itemCount = 0;
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        if (itemCount >= _options.MaxCollectionItems || CheckOutputLimitExceeded(writer, context))
+                        {
+                            writer.WriteStringValue($"...[TRUNCATED, showing first {_options.MaxCollectionItems} items]");
+                            break;
+                        }
+
+                        WriteJsonElement(writer, item, options, context);
+                        itemCount++;
+                    }
+                    writer.WriteEndArray();
+                }
+                finally
+                {
+                    context.ExitNestedValue();
+                }
+                return;
+            case JsonValueKind.String:
+                writer.WriteStringValue(TruncateString(element.GetString(), _options.MaxStringLength));
+                return;
+            case JsonValueKind.Number:
+                var number = element.GetRawText();
+                if (number.Length <= _options.MaxStringLength)
+                {
+                    writer.WriteRawValue(number);
+                }
+                else
+                {
+                    writer.WriteStringValue(TruncateString(number, _options.MaxStringLength));
+                }
+                return;
+            case JsonValueKind.True:
+                writer.WriteBooleanValue(true);
+                return;
+            case JsonValueKind.False:
+                writer.WriteBooleanValue(false);
+                return;
+            case JsonValueKind.Null:
+            case JsonValueKind.Undefined:
+                writer.WriteNullValue();
+                return;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(element), element.ValueKind, "Unknown JSON value kind.");
+        }
+    }
+
+    private static bool IsSimpleValue(Type type)
+    {
+        return type.IsEnum ||
+               Type.GetTypeCode(type) != TypeCode.Object ||
+               type == typeof(Guid) ||
+               type == typeof(DateTimeOffset) ||
+               type == typeof(DateOnly) ||
+               type == typeof(TimeOnly) ||
+               type == typeof(TimeSpan);
     }
 
     private static void WriteTypeInfo(Utf8JsonWriter writer, Type type)
@@ -476,12 +614,6 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
 
     private bool TryNormalSerialization(Utf8JsonWriter writer, object value, Type type, JsonSerializerOptions options)
     {
-        // Skip trying normal serialization for types known to fail
-        if (IsKnownProblematicType(type))
-        {
-            return false;
-        }
-
         // Create options without the ForceSerializeConverterFactory to avoid infinite recursion
         var cleanOptions = new JsonSerializerOptions
         {
@@ -515,20 +647,6 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         {
             return false;
         }
-    }
-
-    private static bool IsKnownProblematicType(Type type)
-    {
-        // Types that are known to fail with System.Text.Json
-        if (typeof(Type).IsAssignableFrom(type)) return true;
-        if (typeof(MemberInfo).IsAssignableFrom(type)) return true;
-        if (typeof(Delegate).IsAssignableFrom(type)) return true;
-        if (typeof(Exception).IsAssignableFrom(type)) return true;
-        if (typeof(Assembly).IsAssignableFrom(type)) return true;
-        if (typeof(Module).IsAssignableFrom(type)) return true;
-        if (typeof(IntPtr) == type || typeof(UIntPtr) == type) return true;
-
-        return false;
     }
 
     private void WriteObjectProperties(
@@ -572,7 +690,6 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
                 .Take(_options.MaxProperties + 1)
                 .ToList();
 
-            var propertyCount = 0;
             foreach (var prop in properties.Take(_options.MaxProperties))
             {
                 if (CheckOutputLimitExceeded(writer, context)) break;
@@ -604,7 +721,6 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
 
                 writer.WritePropertyName(prop.Name);
                 WriteValue(writer, propValue, options, context);
-                propertyCount++;
             }
 
             if (properties.Count > _options.MaxProperties)
@@ -693,6 +809,11 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         public bool TryTrack(object value)
         {
             return _visitedObjects.Add(value);
+        }
+
+        public void Untrack(object value)
+        {
+            _visitedObjects.Remove(value);
         }
 
         public void EnterNestedValue()

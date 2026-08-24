@@ -19,14 +19,11 @@ public static class Hashing
         HashAlgorithmName? algorithm = null,
         bool lowercase = true)
     {
-        if (string.IsNullOrEmpty(input))
-        {
-            return string.Empty;
-        }
+        ArgumentNullException.ThrowIfNull(input);
 
         var resolvedAlgorithm = algorithm ?? HashAlgorithmName.MD5;
         var format = lowercase ? "x2" : "X2";
-        var builder = new StringBuilder();
+        var builder = new StringBuilder(resolvedAlgorithm == HashAlgorithmName.MD5 ? 32 : 64);
 
         using var hash = IncrementalHash.CreateHash(resolvedAlgorithm);
         hash.AppendData(Encoding.UTF8.GetBytes(input));

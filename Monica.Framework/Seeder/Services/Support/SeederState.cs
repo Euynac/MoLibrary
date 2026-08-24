@@ -106,18 +106,41 @@ internal sealed class SeederState(SeederGraph graph, TimeProvider timeProvider) 
     {
         lock (_sync)
         {
-            var completedAtUtc = timeProvider.GetUtcNow();
-            var completedTimestamp = timeProvider.GetTimestamp();
-            foreach (var seeder in _seeders.Values.Where(static seeder => seeder.Status == SeederStatus.Pending))
+            MarkPendingSeedersCancelled();
+            CompleteRun(SeederRunStatus.Cancelled);
+        }
+    }
+
+    /// <summary>
+    /// Transitions a run that never left the waiting phase to <see cref="SeederRunStatus.Cancelled"/>.
+    /// Unlike <see cref="MarkSchedulerCancelled"/>, this is a no-op once the run has started or completed,
+    /// so shutdown can publish a deterministic cancelled state even when the background loop never ran.
+    /// </summary>
+    public void MarkSchedulerCancelledIfWaiting()
+    {
+        lock (_sync)
+        {
+            if (_status != SeederRunStatus.Waiting)
             {
-                seeder.Status = SeederStatus.Cancelled;
-                seeder.CompletedAtUtc = completedAtUtc;
-                seeder.CompletedTimestamp = completedTimestamp;
-                seeder.ErrorType = typeof(OperationCanceledException).GetCleanFullName();
-                seeder.ErrorMessage = "Seeder execution was cancelled before it could start.";
+                return;
             }
 
+            MarkPendingSeedersCancelled();
             CompleteRun(SeederRunStatus.Cancelled);
+        }
+    }
+
+    private void MarkPendingSeedersCancelled()
+    {
+        var completedAtUtc = timeProvider.GetUtcNow();
+        var completedTimestamp = timeProvider.GetTimestamp();
+        foreach (var seeder in _seeders.Values.Where(static seeder => seeder.Status == SeederStatus.Pending))
+        {
+            seeder.Status = SeederStatus.Cancelled;
+            seeder.CompletedAtUtc = completedAtUtc;
+            seeder.CompletedTimestamp = completedTimestamp;
+            seeder.ErrorType = typeof(OperationCanceledException).GetCleanFullName();
+            seeder.ErrorMessage = "Seeder execution was cancelled before it could start.";
         }
     }
 

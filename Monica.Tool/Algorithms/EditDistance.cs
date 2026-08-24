@@ -11,10 +11,11 @@ public class EditDistance
     };
     public static EditOperation[] EditSequence(string source, string target, int insertCost = 1, int removeCost = 1, int editCost = 2)
     {
-        if (null == source)
-            throw new ArgumentNullException(nameof(source));
-        if (null == target)
-            throw new ArgumentNullException(nameof(target));
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentOutOfRangeException.ThrowIfNegative(insertCost);
+        ArgumentOutOfRangeException.ThrowIfNegative(removeCost);
+        ArgumentOutOfRangeException.ThrowIfNegative(editCost);
 
         // Forward: building score matrix
 
@@ -55,12 +56,14 @@ public class EditDistance
 
                 var min = Math.Min(Math.Min(insert, delete), edit);
 
-                if (min == insert)
-                    m[i][j] = EditOperationKind.Add;
-                else if (min == delete)
-                    m[i][j] = EditOperationKind.Remove;
-                else if (min == edit)
+                // Prefer a diagonal operation on ties because it produces the shortest,
+                // most useful edit script (including equality operations).
+                if (min == edit)
                     m[i][j] = EditOperationKind.Edit;
+                else if (min == insert)
+                    m[i][j] = EditOperationKind.Add;
+                else
+                    m[i][j] = EditOperationKind.Remove;
 
                 d[i][j] = min;
             }
@@ -104,7 +107,9 @@ public class EditDistance
             ValueFrom = valueFrom;
             ValueTo = valueTo;
 
-            Operation = valueFrom == valueTo ? EditOperationKind.None : operation;
+            Operation = operation == EditOperationKind.Edit && valueFrom == valueTo
+                ? EditOperationKind.None
+                : operation;
         }
 
         public char ValueFrom { get; }

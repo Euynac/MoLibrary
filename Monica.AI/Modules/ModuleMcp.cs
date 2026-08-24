@@ -89,6 +89,7 @@ public sealed class ModuleMcp : MonicaModule<ModuleMcpOption>, IWebModule
         var services = context.Services;
         services.TryAddSingleton<ILoadedModuleCatalog, ModuleRegistryLoadedModuleCatalog>();
         services.TryAddSingleton<MonicaMcpCatalog>();
+        services.TryAddSingleton<McpSkillPackExporter>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IAgentCapabilitySource, McpAgentCapabilitySource>());
         services.TryAddEnumerable(
@@ -96,7 +97,8 @@ public sealed class ModuleMcp : MonicaModule<ModuleMcpOption>, IWebModule
         services.AddScoped(sp => new McpFacade(
             sp.GetRequiredService<IExternalMcpClientProfileStore>(),
             sp.GetRequiredService<MonicaMcpCatalog>(),
-            sp.GetRequiredService<IAgentCapabilityService>()));
+            sp.GetRequiredService<IAgentCapabilityService>(),
+            sp.GetRequiredService<McpSkillPackExporter>()));
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IConfigureOptions<ModelContextProtocol.Server.McpServerOptions>, McpServerOptionsConfigurator>());
 

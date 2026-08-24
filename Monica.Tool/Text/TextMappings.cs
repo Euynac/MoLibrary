@@ -18,7 +18,7 @@ public static class TextMappings
     /// <summary>
     /// Maps common boolean text literals to their boolean values.
     /// </summary>
-    public static IReadOnlyDictionary<string, bool> StringToBoolDict { get; } = new Dictionary<string, bool>
+    public static IReadOnlyDictionary<string, bool> StringToBoolDict { get; } = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
     {
         {"yes", true}, {"no", false}, {"1", true}, {"0", false}, {"是", true}, {"否", false}, {"对", true},
         {"错", false}, {"不对", false}, {"on", true}, {"off", false}, {"非", false},{"not", false},

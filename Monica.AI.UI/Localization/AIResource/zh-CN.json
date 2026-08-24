@@ -745,6 +745,16 @@
       "CopyConfigUnavailable": "该 MCP 条目没有可复制的 HTTP 端点。",
       "CopyConfigSuccess": "已复制 MCP JSON 配置。",
       "CopyConfigFailed": "复制 MCP JSON 配置失败。",
+      "ExportSkill": {
+        "Action": "导出为技能",
+        "Tooltip": "将该 MCP 服务器导出为通过纯 HTTP 调用端点的 Agent Skills 技能包，代理宿主无需注册 MCP 客户端。",
+        "Title": "将 MCP 服务器导出为技能包",
+        "Summary": "将“{0}”（{1} 个工具）渲染为 Agent Skills 技能包，内置调用脚本通过纯 HTTP 访问 MCP 端点，代理宿主无需注册 MCP 客户端。",
+        "TargetRoot": "目标技能目录",
+        "TargetRootHint": "技能包将写入该目录之下；不会覆盖已有内容。",
+        "Submit": "导出",
+        "Success": "技能包已写入“{0}”（{1} 个工具）。"
+      },
       "Source": {
         "LocalServer": "本地 MCP Server",
         "SkillServer": "Skill 转 MCP",

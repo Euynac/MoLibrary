@@ -7,7 +7,10 @@ internal static class AgentCapabilitySchemaParser
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        WriteIndented = true
+        WriteIndented = true,
+        // Indented System.Text.Json defaults to Environment.NewLine; deterministic
+        // artifacts (skill packs, snapshots) must not vary by operating system.
+        NewLine = "\n"
     };
 
     internal static string? FormatSchema(JsonElement? schema)

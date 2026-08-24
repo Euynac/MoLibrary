@@ -25,6 +25,19 @@ internal sealed class SeederBackgroundService(
 
     public override string? ServiceGroupId => nameof(ModuleSeeder);
 
+    /// <summary>
+    /// Publishes a cancelled run for shutdowns that race ahead of the background loop: modern
+    /// <see cref="BackgroundService"/> implementations dispatch <c>ExecuteAsync</c> through
+    /// <see cref="Task.Run(Action, CancellationToken)"/>, so a stop that fires before the queued work
+    /// item starts would otherwise leave the run in <see cref="SeederRunStatus.Waiting"/> forever.
+    /// The stop pipeline always awaits this hook, which makes the pre-start outcome deterministic.
+    /// </summary>
+    protected override Task OnStoppingAsync(CancellationToken cancellationToken)
+    {
+        seederState.MarkSchedulerCancelledIfWaiting();
+        return Task.CompletedTask;
+    }
+
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
         RecordState(
