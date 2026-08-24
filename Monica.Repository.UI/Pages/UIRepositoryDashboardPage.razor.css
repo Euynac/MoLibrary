@@ -42,6 +42,27 @@
     justify-content: flex-end;
 }
 
+.detail-header__actions {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.detail-header__actions ::deep .mud-tooltip-root {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.detail-header__actions ::deep .mud-button-root {
+    block-size: 2.5rem;
+    min-block-size: 2.5rem;
+    flex: 0 0 auto;
+}
+
+.detail-header__actions ::deep .mud-icon-button {
+    inline-size: 2.5rem;
+    min-inline-size: 2.5rem;
+}
+
 .dashboard-workspace {
     flex: 1 1 auto;
     min-height: 0;
