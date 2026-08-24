@@ -48,16 +48,25 @@ public sealed class McpSkillPackExporterTests : IDisposable
         first.ToolSchemaDigest.Should().StartWith("sha256:");
         second.Files.Should().BeEquivalentTo(first.Files);
         first.Files.Select(static file => file.RelativePath)
-            .Should().BeEquivalentTo(["SKILL.md", "references/tools.md", "scripts/mcp-call.sh", "scripts/mcp-call.ps1"]);
+            .Should().BeEquivalentTo(
+            [
+                "SKILL.md",
+                "references/tools/echo-message.md",
+                "references/tools/list-things.md",
+                "scripts/mcp-call.sh",
+                "scripts/mcp-call.ps1",
+            ]);
 
         var skill = Content(first, "SKILL.md");
         skill.Should().Contain("name: monica-workflow-operations");
         skill.Should().Contain("http://localhost:61345/mcp/monica-workflow");
         skill.Should().Contain("MONICA_WORKFLOW_MCP_URL");
         skill.Should().Contain("`list-things`");
+        skill.Should().Contain("references/tools/<tool-name>.md");
         skill.Should().NotContain("\r");
 
-        Content(first, "references/tools.md").Should().Contain("`echo-message`").And.NotContain("\r");
+        var echoTool = Content(first, "references/tools/echo-message.md");
+        echoTool.Should().Contain("# echo-message").And.Contain("```json").And.NotContain("\r");
         Content(first, "scripts/mcp-call.sh").Should().Contain("MONICA_WORKFLOW_MCP_URL").And.NotContain("\r");
         Content(first, "scripts/mcp-call.ps1").Should().Contain("$env:MONICA_WORKFLOW_MCP_URL").And.NotContain("\r");
     }
@@ -86,7 +95,7 @@ public sealed class McpSkillPackExporterTests : IDisposable
         var result = exporter.WriteToDirectory(pack, _temp.Root);
 
         result.SkillDirectoryPath.Should().Be(Path.Combine(_temp.Root, "monica-workflow-operations"));
-        result.WrittenFiles.Should().HaveCount(4);
+        result.WrittenFiles.Should().HaveCount(pack.Files.Count);
         foreach (var file in pack.Files)
         {
             var path = Path.Combine(result.SkillDirectoryPath, file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
