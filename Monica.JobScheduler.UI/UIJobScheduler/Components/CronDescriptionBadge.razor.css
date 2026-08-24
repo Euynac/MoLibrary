@@ -1,0 +1,24 @@
+.cron-description-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.cron-description-badge code {
+    overflow: hidden;
+    font-family: var(--mo-font-family-mono);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cron-description-badge ::deep .mud-icon-button {
+    flex: 0 0 auto;
+    color: var(--mud-palette-info);
+}
+
+.cron-description-badge ::deep .mud-icon-button:hover,
+.cron-description-badge ::deep .mud-icon-button:focus-visible {
+    color: var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+}

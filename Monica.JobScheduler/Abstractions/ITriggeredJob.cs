@@ -3,7 +3,7 @@
 /// <summary>
 ///     Defines interface of a triggered job.
 /// </summary>
-public interface ITriggeredJob<in TArgs> : IJobDefinition
+public interface ITriggeredJob<in TArgs> : IJobDefinition where TArgs : class
 {
     /// <summary>
     /// Executes the triggered job logic with the provided parameters.
@@ -11,7 +11,7 @@ public interface ITriggeredJob<in TArgs> : IJobDefinition
     /// </summary>
     /// <param name="parameters">
     /// The strongly-typed parameter object containing data needed for job execution.
-    /// This object is deserialized from JSON after being distributed via IEventBus.
+    /// This object is deserialized from the durable execution payload.
     /// Ensure the parameter type is JSON-serializable and contains all necessary data.
     /// </param>
     /// <param name="cancellationToken">
@@ -30,22 +30,22 @@ public interface ITriggeredJob<in TArgs> : IJobDefinition
     /// <remarks>
     /// <para>
     /// <b>Error Handling:</b> Exceptions thrown from this method will be caught by the job executor.
-    /// The job will be marked as Failed and the error message will be logged to the metadata store.
-    /// If RetryCount is configured, the job will be automatically retried with the same parameters.
+    /// The durable execution becomes failed, and the exception is recorded in its history.
+    /// If RetryCount is configured, the store durably requeues another attempt with the same parameters.
     /// </para>
     /// <para>
     /// <b>Timeout Handling:</b> If execution exceeds MaxExecutionTimeoutSeconds, the cancellation token
     /// will be signaled. Jobs that do not respect the cancellation token will continue to occupy
-    /// worker threads but will be marked as Failed in the metadata store.
+    /// worker capacity until they eventually exit; their lease cannot be safely completed by stale code.
     /// </para>
     /// <para>
-    /// <b>Concurrency:</b> Multiple instances of this job may execute concurrently based on the
-    /// MaxConcurrency setting. Ensure your implementation is thread-safe or set MaxConcurrency to 1.
+    /// <b>Concurrency:</b> Multiple instances of this logical job may execute concurrently based on the
+    /// MaxConcurrency setting. The scope-wide JobKey gate includes superseded owners and revisions that are still
+    /// stopping after catalog cutover. Ensure your implementation is thread-safe or set MaxConcurrency to 1.
     /// </para>
     /// <para>
-    /// <b>Parameter Validation:</b> Always validate the parameters object at the beginning of execution.
-    /// The parameter object may be null if the job was triggered without parameters, or may contain
-    /// invalid data if serialization/deserialization encountered issues.
+    /// <b>Parameter Validation:</b> Validate application-level values at the beginning of execution.
+    /// Scheduler admission requires a non-null serialized payload and deserialization must produce a non-null object.
     /// </para>
     /// </remarks>
     Task ExecuteAsync(TArgs parameters, CancellationToken cancellationToken);

@@ -1,0 +1,203 @@
+.executions-page {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    gap: var(--mo-page-section-gap);
+}
+
+.executions-page__filter-shell,
+.executions-page__ledger-shell {
+    min-width: 0;
+}
+
+.executions-page__filter-shell ::deep .executions-page__filters {
+    display: grid;
+    gap: 14px;
+}
+
+.executions-page__filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    align-items: end;
+    gap: 12px;
+    min-width: 0;
+}
+
+.executions-page__state-filter {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+    padding-block: 2px;
+}
+
+.executions-page__state-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+
+.executions-page__state-chips ::deep .mud-chipset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-width: 0;
+}
+
+.executions-page__state-chips ::deep .mud-chip {
+    margin: 0;
+}
+
+.executions-page__filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding-top: 2px;
+}
+
+.executions-page__ledger-shell ::deep .executions-page__ledger {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.executions-page__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.executions-page__heading > div {
+    min-width: 0;
+}
+
+.executions-page__table {
+    min-width: 0;
+}
+
+.executions-page__table ::deep .mud-table-container {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.executions-page__table ::deep .mud-table-root {
+    min-width: 72rem;
+}
+
+.executions-page__table ::deep .mud-table-head .mud-table-cell {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    white-space: nowrap;
+}
+
+.executions-page__table ::deep .mud-table-body .mud-table-cell {
+    vertical-align: middle;
+}
+
+.executions-page__table ::deep .executions-page__actions-heading {
+    text-align: right;
+}
+
+.execution-table__identity {
+    display: grid;
+    width: 100%;
+    max-width: 23rem;
+    min-width: 0;
+    gap: 2px;
+    color: inherit;
+    text-align: left;
+}
+
+.execution-table__identity strong,
+.execution-table__identity span,
+.execution-table__identity code,
+.execution-table__worker {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.execution-table__identity strong {
+    color: var(--mud-palette-text-primary);
+    font-size: 0.86rem;
+}
+
+.execution-table__identity span {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+}
+
+.execution-table__identity code,
+.execution-table__time,
+.execution-table__worker,
+.execution-table__duration,
+.execution-table__attempts {
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.73rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.execution-table__identity code,
+.execution-table__worker {
+    display: block;
+    max-width: 16rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.execution-table__time {
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+}
+
+.execution-table__duration,
+.execution-table__attempts {
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+}
+
+.execution-table__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    min-width: 5rem;
+}
+
+.executions-page__empty {
+    display: grid;
+    min-height: 12rem;
+    place-items: center;
+    align-content: center;
+    gap: 10px;
+    padding: 32px;
+    text-align: center;
+}
+
+@media (max-width: 700px) {
+    .executions-page__filter-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .executions-page__heading {
+        align-items: flex-start;
+        padding-inline: 13px 8px;
+    }
+}
+
+@media (max-width: 390px) {
+    .executions-page__filter-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .executions-page__filter-actions ::deep .mud-button-root {
+        min-width: 0;
+    }
+}

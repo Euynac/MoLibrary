@@ -9,12 +9,12 @@ namespace Monica.JobScheduler.Abstractions;
 /// <para>
 /// This base class supplies a type-specific <see cref="Logger"/> and the protected
 /// <see cref="RecordExecutionLogAsync"/> helper that appends curated entries to the current
-/// job instance history.
+/// durable execution history.
 /// </para>
 /// <para>
 /// Execution history logging is only available while the scheduler is actively invoking the
-/// current job instance. Derived jobs should use it for milestone and summary messages that
-/// are meaningful in the Job Instance detail view, not as a replacement for normal application logs.
+/// current execution. Derived jobs should use it for milestone and summary messages that
+/// are meaningful in the execution detail view, not as a replacement for normal application logs.
 /// </para>
 /// </remarks>
 public abstract class JobBase : IJobExecutionLogBindingTarget
@@ -36,11 +36,11 @@ public abstract class JobBase : IJobExecutionLogBindingTarget
     protected ILogger Logger { get; }
 
     /// <summary>
-    /// Writes a curated execution log entry into the current job instance history.
-    /// Use this for milestone and summary entries that should be visible from the Job Instance detail view.
-    /// This API is only available while the scheduler is actively executing the current job instance.
+    /// Writes a curated execution log entry into the current execution history.
+    /// Use this for milestone and summary entries that should be visible from the execution detail view.
+    /// This API is only available while the scheduler is actively running the current execution.
     /// </summary>
-    /// <param name="message">Developer-facing message to append to the job instance history.</param>
+    /// <param name="message">Developer-facing message to append to the execution history.</param>
     /// <param name="logLevel">Optional severity prefix stored with the entry. Information does not add a prefix.</param>
     /// <param name="exception">Optional exception details appended after the message.</param>
     /// <param name="cancellationToken">Cancellation token for the persistence operation.</param>
@@ -57,7 +57,7 @@ public abstract class JobBase : IJobExecutionLogBindingTarget
 
         var writer = _executionLogWriter
             ?? throw new InvalidOperationException(
-                "Job execution history logging is only available while the current job instance is executing.");
+                "Job execution history logging is only available while the current execution is running.");
 
         return writer.WriteAsync(message, logLevel, exception, cancellationToken);
     }

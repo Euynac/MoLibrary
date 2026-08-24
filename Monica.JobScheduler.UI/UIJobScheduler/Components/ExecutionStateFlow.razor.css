@@ -1,0 +1,204 @@
+.execution-flow {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
+    box-shadow: var(--mud-elevation-1);
+}
+
+.execution-flow__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.execution-flow__heading > div {
+    min-width: 0;
+}
+
+.execution-flow__body {
+    display: grid;
+    grid-template-columns: minmax(10.5rem, 13rem) minmax(11rem, 18rem);
+    align-items: center;
+    place-content: center;
+    gap: 16px;
+    min-width: 0;
+    padding: clamp(16px, 2vw, 24px);
+}
+
+.execution-flow__chart {
+    position: relative;
+    display: grid;
+    width: min(100%, 13rem);
+    aspect-ratio: 1;
+    place-items: center;
+    justify-self: center;
+}
+
+.execution-flow__chart svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    transform: rotate(-90deg);
+}
+
+.execution-flow__track,
+.execution-flow__segment {
+    fill: none;
+    stroke-width: 10;
+}
+
+.execution-flow__track {
+    stroke: var(--mud-palette-lines-default);
+}
+
+.execution-flow__segment {
+    stroke: var(--mud-palette-info);
+    stroke-linecap: round;
+}
+
+.execution-flow__segment--running {
+    stroke: var(--mud-palette-primary);
+}
+
+.execution-flow__segment--succeeded {
+    stroke: var(--mud-palette-success);
+}
+
+.execution-flow__segment--failed {
+    stroke: var(--mud-palette-error);
+}
+
+.execution-flow__segment--cancelled {
+    stroke: var(--mud-palette-text-secondary);
+}
+
+.execution-flow__segment--skipped {
+    stroke: var(--mud-palette-warning);
+}
+
+.execution-flow__total {
+    position: absolute;
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+}
+
+.execution-flow__total strong {
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-font-family-display);
+    font-size: clamp(1.65rem, 4vw, 2.35rem);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.execution-flow__total span {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.7rem;
+    font-weight: 650;
+    text-transform: uppercase;
+}
+
+.execution-flow__legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    min-width: 0;
+}
+
+.execution-flow__state {
+    --state-tone: var(--mud-palette-info);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    padding: 8px 9px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.execution-flow__state[data-state="running"] {
+    --state-tone: var(--mud-palette-primary);
+}
+
+.execution-flow__state[data-state="succeeded"] {
+    --state-tone: var(--mud-palette-success);
+}
+
+.execution-flow__state[data-state="failed"] {
+    --state-tone: var(--mud-palette-error);
+}
+
+.execution-flow__state[data-state="cancelled"] {
+    --state-tone: var(--mud-palette-text-secondary);
+}
+
+.execution-flow__state[data-state="skipped"] {
+    --state-tone: var(--mud-palette-warning);
+}
+
+.execution-flow__state:hover {
+    border-color: var(--mud-palette-lines-inputs);
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.execution-flow__state:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+.execution-flow__state-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--state-tone);
+}
+
+.execution-flow__state span {
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.74rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.execution-flow__state strong {
+    color: var(--state-tone);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+    .execution-flow__body {
+        grid-template-columns: minmax(0, 1fr);
+        padding-inline: 14px;
+    }
+
+    .execution-flow__chart {
+        width: min(68vw, 12rem);
+    }
+}
+
+@media (max-width: 390px) {
+    .execution-flow__legend {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .execution-flow__state {
+        transition-duration: 0.01ms;
+    }
+}

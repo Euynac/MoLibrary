@@ -1,0 +1,75 @@
+.boundary-editor {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.boundary-editor__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.boundary-editor__provenance {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr) minmax(0, 0.9fr);
+    gap: 10px;
+    min-width: 0;
+}
+
+.boundary-editor__provenance > div {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    min-width: 0;
+}
+
+.boundary-editor__provenance > div > span {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.69rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.boundary-editor__provenance strong,
+.boundary-editor__provenance code {
+    overflow-wrap: anywhere;
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.75rem;
+}
+
+.boundary-editor__provenance code {
+    color: var(--mud-palette-text-secondary);
+}
+
+.boundary-editor__operator {
+    padding: 8px;
+    border-radius: 6px;
+    background-color: var(--mud-palette-primary-hover);
+}
+
+.boundary-editor__inputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+
+@media (max-width: 1200px) {
+    .boundary-editor__provenance {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 390px) {
+    .boundary-editor__inputs {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

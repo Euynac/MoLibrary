@@ -1,0 +1,132 @@
+@using System.Globalization
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject TimeProvider TimeProvider
+
+<article class="boundary-editor">
+    <div class="boundary-editor__heading">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h5">@Label</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                       Size="Size.Small"
+                       Disabled="@(Disabled || !Draft.HasOverride)"
+                       OnClick="ResetAsync"
+                       aria-label="@L["Policy:Actions:ResetField"]" />
+    </div>
+    <div class="boundary-editor__provenance">
+        <div>
+            <span>@L["Policy:Provenance:Declared"]</span>
+            <strong>@FormatScheduleTime(DeclaredUtc)</strong>
+            <code>@FormatUtc(DeclaredUtc)</code>
+        </div>
+        <div class="boundary-editor__operator">
+            <span>@L["Policy:Provenance:Override"]</span>
+            <MudSelect T="CronBoundaryOverrideMode"
+                       Value="@Draft.Mode"
+                       ValueChanged="SetModeAsync"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Disabled="@Disabled"
+                       aria-label="@L["Policy:Schedule:BoundaryMode"]">
+                <MudSelectItem T="CronBoundaryOverrideMode" Value="CronBoundaryOverrideMode.Inherit">
+                    @L["Policy:BoundaryModes:Inherit"]
+                </MudSelectItem>
+                <MudSelectItem T="CronBoundaryOverrideMode" Value="CronBoundaryOverrideMode.None">
+                    @L["Policy:BoundaryModes:None"]
+                </MudSelectItem>
+                <MudSelectItem T="CronBoundaryOverrideMode" Value="CronBoundaryOverrideMode.Value">
+                    @L["Policy:BoundaryModes:Value"]
+                </MudSelectItem>
+            </MudSelect>
+            @if (Draft.Mode == CronBoundaryOverrideMode.Value)
+            {
+                <div class="boundary-editor__inputs">
+                    <MudDatePicker Date="@Draft.LocalDate"
+                                   DateChanged="SetDateAsync"
+                                   Label="@L["Policy:Schedule:BoundaryDate"]"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Disabled="@Disabled" />
+                    <MudTimePicker Time="@Draft.LocalTime"
+                                   TimeChanged="SetTimeAsync"
+                                   Label="@L["Policy:Schedule:BoundaryTime"]"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Disabled="@Disabled" />
+                </div>
+                @if (Draft.ValidationFailure != CronBoundaryValidationFailure.None)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Error">
+                        @L[$"Policy:Schedule:BoundaryFailures:{Draft.ValidationFailure}"]
+                    </MudText>
+                }
+                else if (Draft.IsAmbiguousLocalTime)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Warning">
+                        @L["Policy:Schedule:AmbiguousBoundary"]
+                    </MudText>
+                }
+            }
+        </div>
+        <div>
+            <span>@L["Policy:Provenance:Effective"]</span>
+            <strong>@FormatScheduleTime(EffectiveUtc)</strong>
+            <code>@FormatUtc(EffectiveUtc)</code>
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public DateTimeOffset? DeclaredUtc { get; set; }
+
+    [Parameter, EditorRequired]
+    public CronBoundaryDraft Draft { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public string TimeZoneId { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback Changed { get; set; }
+
+    private DateTimeOffset? EffectiveUtc => Draft.HasOverride ? Draft.OverrideUtc : DeclaredUtc;
+
+    private async Task SetModeAsync(CronBoundaryOverrideMode mode)
+    {
+        Draft.SetMode(mode, DeclaredUtc, TimeProvider.GetUtcNow());
+        await Changed.InvokeAsync();
+    }
+
+    private async Task SetDateAsync(DateTime? value)
+    {
+        Draft.LocalDate = value;
+        await Changed.InvokeAsync();
+    }
+
+    private async Task SetTimeAsync(TimeSpan? value)
+    {
+        Draft.LocalTime = value;
+        await Changed.InvokeAsync();
+    }
+
+    private async Task ResetAsync()
+    {
+        Draft.Reset(DeclaredUtc);
+        await Changed.InvokeAsync();
+    }
+
+    private string FormatScheduleTime(DateTimeOffset? value) => value is null
+        ? L["Common:NotAvailable"]
+        : TimeZoneInfo.ConvertTime(value.Value, TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId))
+            .ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.CurrentCulture);
+
+    private static string FormatUtc(DateTimeOffset? value) => value is null
+        ? "—"
+        : value.Value.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+}

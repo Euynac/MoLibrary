@@ -1,0 +1,55 @@
+@using Monica.JobScheduler.UI.Localization
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<div class="numeric-policy-row">
+    <div class="numeric-policy-row__label">@Label</div>
+    <div data-label="@L["Policy:Provenance:Declared"]"><code>@Declared</code></div>
+    <div class="numeric-policy-row__override" data-label="@L["Policy:Provenance:Override"]">
+        <MudNumericField T="int?"
+                         Value="@Value"
+                         ValueChanged="SetValueAsync"
+                         Min="@Minimum"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Disabled="@Disabled"
+                         Placeholder="@L["Policy:InheritDefault"]"
+                         HelperText="@ZeroHint"
+                         aria-label="@Label" />
+        <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                       Size="Size.Small"
+                       Disabled="@(Disabled || Value is null)"
+                       OnClick="ResetAsync"
+                       aria-label="@L["Policy:Actions:ResetField"]" />
+    </div>
+    <div data-label="@L["Policy:Provenance:Effective"]"><code>@Effective</code></div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public int Declared { get; set; }
+
+    [Parameter]
+    public int? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<int?> ValueChanged { get; set; }
+
+    [Parameter]
+    public int Effective { get; set; }
+
+    [Parameter]
+    public int Minimum { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string? ZeroHint { get; set; }
+
+    private Task SetValueAsync(int? value) => ValueChanged.InvokeAsync(value);
+
+    private Task ResetAsync() => ValueChanged.InvokeAsync(null);
+}

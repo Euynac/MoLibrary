@@ -33,9 +33,14 @@ builder.AddMonica(monica =>
     monica.AddProjectUnits();
 
     monica.AddJobScheduler()
-        .UseInMemoryMetadataRepository()
+        .AsStandalone()
+        .UseInMemoryStore()
         .UseSchedulerScope("orders")
-        .UseInMemoryProvider();
+        .UseCatalogRelease(
+            "orders:development",
+            deploymentGeneration: 1,
+            [new("Orders", "orders:development")])
+        .UseLocalWorkerIdentity("Orders", "orders:development");
 
     monica.AddJobSchedulerUI();
 });
@@ -45,6 +50,8 @@ app.UseMonica();
 app.MapMonica();
 app.Run();
 ```
+
+With a durable production store, leases provide at-least-once execution after a worker crash, while fencing rejects stale scheduler mutations. Concurrency gates use scheduler scope plus logical `JobKey`, so moving a job between owners or revisions cannot overlap a replacement with a superseded attempt that is still stopping. Jobs must still make external side effects idempotent or transactional; fencing does not turn arbitrary business effects into exactly-once operations.
 
 `AddMonica(...)` records and validates the complete module graph for this host before applying registrations. The composition is isolated from other hosts in the same process.
 

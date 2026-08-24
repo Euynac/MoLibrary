@@ -1,28 +1,70 @@
-.job-detail-card-grid ::deep .job-detail-card-row {
+.job-detail-page {
+    display: grid;
+    gap: var(--mo-page-section-gap);
+    min-width: 0;
+}
+
+.job-detail-page__breadcrumb {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+}
+
+.job-detail-page__breadcrumb > code {
+    max-width: min(55vw, 42rem);
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.76rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-detail-page__loading {
+    display: grid;
+    min-height: 20rem;
+    place-items: center;
+    align-content: center;
+    gap: 12px;
+}
+
+.job-detail-page__dossier {
+    display: grid;
+    gap: var(--mo-page-section-gap);
+    min-width: 0;
+}
+
+.job-detail-page__evidence-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
     align-items: stretch;
-}
-
-.job-detail-card-grid ::deep .job-detail-card-row > .job-detail-card-column {
-    display: flex;
-}
-
-.job-detail-card-frame {
-    display: flex;
-    width: 100%;
-    height: 100%;
+    gap: var(--mo-page-section-gap);
     min-width: 0;
 }
 
-.job-detail-card-frame ::deep .mud-card {
+.job-detail-page__freshness {
     display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
 }
 
-.job-detail-card-frame ::deep .mud-card-content {
-    flex: 1 1 auto;
+@media (max-width: 980px) {
+    .job-detail-page__evidence-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
-.scheduler-page-content {
-    min-width: 0;
+
+@media (max-width: 580px) {
+    .job-detail-page__breadcrumb {
+        align-items: flex-start;
+    }
+
+    .job-detail-page__breadcrumb > code {
+        max-width: 48vw;
+        padding-top: 9px;
+    }
 }

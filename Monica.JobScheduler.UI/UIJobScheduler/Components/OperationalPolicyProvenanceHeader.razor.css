@@ -1,0 +1,18 @@
+.policy-provenance-header {
+    display: grid;
+    grid-template-columns: minmax(9rem, 0.75fr) repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    min-width: 0;
+    padding: 0 12px;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 929px) {
+    .policy-provenance-header {
+        display: none;
+    }
+}

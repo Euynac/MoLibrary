@@ -1,0 +1,151 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<section class="catalog-filter" aria-label="@L["Catalog:Filters:AriaLabel"]">
+    <nav class="catalog-filter__types" aria-label="@L["Catalog:Filters:Type"]">
+        @foreach (var type in Enum.GetValues<JobType>())
+        {
+            <button type="button"
+                    class="catalog-filter__type @(SelectedJobType == type ? "is-active" : null)"
+                    aria-pressed="@(SelectedJobType == type)"
+                    disabled="@IsLoading"
+                    @onclick="@(() => JobTypeSelected.InvokeAsync(type))">
+                <MudIcon Icon="@GetJobTypeIcon(type)" Size="Size.Small" />
+                <span>@L[$"JobTypes:{type}"]</span>
+                <strong>@JobTypeCounts.GetValueOrDefault(type)</strong>
+            </button>
+        }
+    </nav>
+
+    <div class="catalog-filter__query">
+        <MudTextField T="string"
+                      Value="@SearchText"
+                      ValueChanged="SearchTextChanged"
+                      Label="@L["Catalog:Filters:Search"]"
+                      Placeholder="@L["Catalog:Filters:SearchPlaceholder"]"
+                      Immediate="true"
+                      Clearable="true"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="HandleSearchKeyDown" />
+        <MudSelect T="string"
+                   Value="@OwnerId"
+                   ValueChanged="OwnerIdChanged"
+                   Label="@L["Catalog:Filters:Owner"]"
+                   Clearable="true"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="string" Value="@((string?)null)">
+                @L["Catalog:Filters:AnyOwner"]
+            </MudSelectItem>
+            @foreach (var owner in OwnerFacets)
+            {
+                <MudSelectItem T="string" Value="@owner.Key">
+                    <span class="catalog-filter__owner-option">
+                        <span>@owner.Key</span>
+                        <strong>@owner.Value</strong>
+                    </span>
+                </MudSelectItem>
+            }
+        </MudSelect>
+        <div class="catalog-filter__actions">
+            <MudTooltip Text="@L["Catalog:Actions:Reset"]">
+                <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff"
+                               Disabled="@IsLoading"
+                               OnClick="ResetRequested"
+                               aria-label="@L["Catalog:Actions:Reset"]" />
+            </MudTooltip>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Search"
+                       Disabled="@IsLoading"
+                       OnClick="SearchRequested">
+                @L["Common:Search"]
+            </MudButton>
+        </div>
+    </div>
+
+    <div class="catalog-filter__states" role="group" aria-label="@L["Catalog:Filters:Policy"]">
+        <span class="catalog-filter__states-label">@L["Catalog:Filters:Policy"]</span>
+        @foreach (var option in PolicyOptions)
+        {
+            <button type="button"
+                    class="catalog-filter__state @(SelectedDisabledState == option.Value ? "is-active" : null)"
+                    aria-pressed="@(SelectedDisabledState == option.Value)"
+                    disabled="@IsLoading"
+                    @onclick="@(() => DisabledStateSelected.InvokeAsync(option.Value))">
+                <span class="catalog-filter__state-dot" data-tone="@option.Tone" aria-hidden="true"></span>
+                @option.Label
+            </button>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public string? SearchText { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public string? OwnerId { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> OwnerIdChanged { get; set; }
+
+    [Parameter]
+    public JobType? SelectedJobType { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyDictionary<JobType, int> JobTypeCounts { get; set; } =
+        new Dictionary<JobType, int>();
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<KeyValuePair<string, int>> OwnerFacets { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<JobType> JobTypeSelected { get; set; }
+
+    [Parameter]
+    public bool? SelectedDisabledState { get; set; }
+
+    [Parameter]
+    public EventCallback<bool?> DisabledStateSelected { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public EventCallback SearchRequested { get; set; }
+
+    [Parameter]
+    public EventCallback ResetRequested { get; set; }
+
+    private IReadOnlyList<PolicyOption> PolicyOptions =>
+    [
+        new(null, L["Catalog:Filters:AnyPolicy"], "neutral"),
+        new(false, L["Catalog:Enabled"], "success"),
+        new(true, L["Catalog:Disabled"], "warning")
+    ];
+
+    private async Task HandleSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !IsLoading)
+        {
+            await SearchRequested.InvokeAsync();
+        }
+    }
+
+    private static string GetJobTypeIcon(JobType type) => type switch
+    {
+        JobType.Recurring => Icons.Material.Filled.Update,
+        JobType.Triggered => Icons.Material.Filled.Bolt,
+        _ => Icons.Material.Filled.Work
+    };
+
+    private sealed record PolicyOption(bool? Value, string Label, string Tone);
+}

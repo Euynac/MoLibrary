@@ -1,4 +1,0 @@
-.job-list-wrapper ::deep .batch-job-list {
-    max-height: 300px;
-    overflow-y: auto;
-}

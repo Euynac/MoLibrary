@@ -1,0 +1,20 @@
+.policy-section-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.policy-section-heading > div:last-child {
+    min-width: 0;
+}
+
+.policy-section-heading__icon {
+    display: grid;
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    border-radius: 8px;
+    background-color: var(--mud-palette-primary-hover);
+}

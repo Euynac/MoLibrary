@@ -48,7 +48,11 @@ public class JobConfigAttribute : Attribute
     /// Gets or sets the maximum number of concurrent executions allowed for this job.
     /// Use this property in attribute declarations.
     /// If not specified, defaults to 1.
-    /// When the limit is reached, new job instances will be marked as Skipped.
+    /// Triggered and operator run-now executions wait durably when all leased slots are occupied. A scheduled recurring
+    /// occurrence is instead recorded as skipped when queued and running occurrences already reach this limit, which
+    /// prevents overdue schedules from building an unbounded replay backlog.
+    /// The limit applies to the scope-wide logical <c>JobKey</c> across catalog owners and revisions, including
+    /// superseded attempts that are still cooperatively stopping after a cutover.
     /// Set to higher values for jobs that can safely run concurrently.
     /// Example: [JobConfig(MaxConcurrency = 5)]
     /// </summary>
@@ -66,7 +70,7 @@ public class JobConfigAttribute : Attribute
     /// Gets or sets the number of automatic retry attempts on failure.
     /// Use this property in attribute declarations.
     /// If not specified, defaults to 0 (no retries).
-    /// Failed jobs will retry up to this count before being terminated.
+    /// Failed attempts are durably requeued up to this count before the execution becomes failed.
     /// Example: [JobConfig(RetryCount = 3)]
     /// </summary>
     public int RetryCount
@@ -83,7 +87,7 @@ public class JobConfigAttribute : Attribute
     /// Gets or sets the maximum execution timeout in seconds.
     /// Use this property in attribute declarations.
     /// If not specified, defaults to 3600 seconds (1 hour).
-    /// Jobs exceeding this duration will be cancelled via ICancellationManager.
+    /// Jobs exceeding this duration receive cooperative cancellation and the attempt is reported as timed out.
     /// Example: [JobConfig(MaxExecutionTimeoutSeconds = 300)] // 5 minutes
     /// </summary>
     public int MaxExecutionTimeoutSeconds

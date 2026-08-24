@@ -19,9 +19,12 @@ public interface ITriggeredJobManager
     );
 
     /// <summary>
-    ///     Cancels a scheduled job that has not yet started execution.
+    /// Cancels a queued execution immediately or requests cooperative cancellation from a running execution.
     /// </summary>
     /// <param name="instanceId">The instance ID returned from EnqueueAsync.</param>
-    /// <returns>True if cancelled successfully, false if job not found or already started.</returns>
-    Task<bool> CancelScheduledJobAsync(string instanceId);
+    /// <param name="cancellationToken">Cancellation token for the durable store operation.</param>
+    /// <returns>The durable cancellation outcome.</returns>
+    Task<Models.Execution.JobCancellationResult> CancelExecutionAsync(
+        string instanceId,
+        CancellationToken cancellationToken = default);
 }

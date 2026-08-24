@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageDescription>Job scheduler monitoring and management UI for Monica framework, providing visual interfaces for job configuration, execution history, and status monitoring.</PackageDescription>
+    <PackageDescription>Durable JobScheduler operations UI for catalog convergence, operator policy, and execution evidence.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>

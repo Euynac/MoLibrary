@@ -1,0 +1,105 @@
+@using Monica.UI.Localization
+@using Monica.UI.Shell.Support
+
+@inject IStringLocalizer<SharedResource> L
+@inject PageAccessEvaluator PageAccess
+
+@implements IDisposable
+
+@if (_accessState == RouteAccessState.Allowed)
+{
+    <RouteView RouteData="@RouteData" DefaultLayout="@DefaultLayout" />
+    <FocusOnNavigate RouteData="@RouteData" Selector="h1" />
+}
+else
+{
+    <LayoutView Layout="@DefaultLayout">
+        @if (_accessState == RouteAccessState.Checking)
+        {
+            <PageTitle>@L["RouteAccess:CheckingPageTitle"]</PageTitle>
+            <MudContainer MaxWidth="MaxWidth.Medium" Class="pa-6">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Lock" role="status">
+                    @L["RouteAccess:Checking"]
+                </MudAlert>
+            </MudContainer>
+        }
+        else
+        {
+            <PageTitle>@L["RouteAccess:DeniedPageTitle"]</PageTitle>
+            <MudContainer MaxWidth="MaxWidth.Medium" Class="pa-6">
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Lock" role="alert">
+                    <MudText Typo="Typo.h6">@L["RouteAccess:DeniedTitle"]</MudText>
+                    <MudText Typo="Typo.body1">@L["RouteAccess:DeniedDescription"]</MudText>
+                </MudAlert>
+            </MudContainer>
+        }
+    </LayoutView>
+}
+
+@code {
+    private CancellationTokenSource? _evaluationCancellation;
+    private long _evaluationVersion;
+    private int _disposed;
+    private RouteAccessState _accessState = RouteAccessState.Checking;
+
+    /// <summary>
+    /// Gets or sets the route selected by the Blazor router.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public RouteData RouteData { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the layout used for access-checking and denial states and as the routed page's default layout.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public Type DefaultLayout { get; set; } = null!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var evaluationVersion = Interlocked.Increment(ref _evaluationVersion);
+        _accessState = RouteAccessState.Checking;
+
+        using var evaluationCancellation = new CancellationTokenSource();
+        var previousEvaluation = Interlocked.Exchange(ref _evaluationCancellation, evaluationCancellation);
+        previousEvaluation?.Cancel();
+
+        try
+        {
+            var isAuthorized = await PageAccess.IsRouteAuthorizedAsync(
+                RouteData.PageType,
+                evaluationCancellation.Token);
+
+            if (Volatile.Read(ref _disposed) == 0 &&
+                !evaluationCancellation.IsCancellationRequested &&
+                evaluationVersion == Volatile.Read(ref _evaluationVersion))
+            {
+                _accessState = isAuthorized ? RouteAccessState.Allowed : RouteAccessState.Denied;
+            }
+        }
+        catch (OperationCanceledException) when (evaluationCancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            Interlocked.CompareExchange(ref _evaluationCancellation, null, evaluationCancellation);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Increment(ref _evaluationVersion);
+        Interlocked.Exchange(ref _evaluationCancellation, null)?.Cancel();
+    }
+
+    private enum RouteAccessState
+    {
+        Checking,
+        Allowed,
+        Denied
+    }
+}
