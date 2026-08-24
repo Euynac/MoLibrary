@@ -1,0 +1,115 @@
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="execution-history" aria-labelledby="execution-history-heading">
+    <div class="execution-history__heading">
+        <div>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h3" id="execution-history-heading">
+                @L["ExecutionDetail:History"]
+            </MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @L["ExecutionDetail:HistoryDescription"]
+            </MudText>
+        </div>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+            @L["ExecutionDetail:HistoryCount", Entries.Count]
+        </MudChip>
+    </div>
+    @if (Entries.Count == 0)
+    {
+        <div class="execution-history__empty">
+            <MudIcon Icon="@Icons.Material.Filled.HistoryToggleOff" Color="Color.Secondary" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ExecutionDetail:EmptyHistory"]</MudText>
+        </div>
+    }
+    else
+    {
+        <ol class="execution-history__timeline">
+            @foreach (var entry in Entries.OrderBy(entry => entry.TimestampUtc))
+            {
+                <li class="execution-history__entry">
+                    <span class="execution-history__rail" aria-hidden="true">
+                        <span class="execution-history__node">
+                            <MudIcon Icon="@GetEntryIcon(entry)"
+                                     Color="@GetEntryColor(entry)"
+                                     Size="Size.Small" />
+                        </span>
+                    </span>
+                    <article>
+                        <header class="execution-history__entry-heading">
+                            <div>
+                                <strong>@L[$"ExecutionHistoryKinds:{entry.Kind}"]</strong>
+                                <time datetime="@entry.TimestampUtc.ToString("O")">@TimePresentation.FormatTimestamp(entry.TimestampUtc)</time>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                     Color="@ExecutionUiPresentation.GetLogLevelColor(entry.LogLevel)">
+                                @L[$"LogLevels:{entry.LogLevel}"]
+                            </MudChip>
+                        </header>
+
+                        <p class="execution-history__message">@entry.Message</p>
+
+                        <footer class="execution-history__metadata">
+                            @if (entry.PreviousState is not null || entry.NewState is not null)
+                            {
+                                <span>
+                                    <MudIcon Icon="@Icons.Material.Filled.SyncAlt" Size="Size.Small" />
+                                    <span>@GetTransition(entry)</span>
+                                </span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(entry.WorkerInstanceId))
+                            {
+                                <span>
+                                    <MudIcon Icon="@Icons.Material.Filled.Computer" Size="Size.Small" />
+                                    <code title="@entry.WorkerInstanceId">@entry.WorkerInstanceId</code>
+                                </span>
+                            }
+                        </footer>
+                    </article>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets or sets the complete retained append-only history to render.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<JobExecutionHistoryEntry> Entries { get; set; } = [];
+
+    private string GetTransition(JobExecutionHistoryEntry entry)
+    {
+        if (entry.PreviousState is null && entry.NewState is null)
+        {
+            return "—";
+        }
+
+        var previous = entry.PreviousState.HasValue
+            ? L[$"ExecutionStates:{entry.PreviousState.Value}"].Value
+            : "∅";
+        var next = entry.NewState.HasValue
+            ? L[$"ExecutionStates:{entry.NewState.Value}"].Value
+            : "∅";
+        return $"{previous} → {next}";
+    }
+
+    private static string GetEntryIcon(JobExecutionHistoryEntry entry) => entry.Kind switch
+    {
+        JobExecutionHistoryKind.ExecutionLog => Icons.Material.Filled.Terminal,
+        JobExecutionHistoryKind.Cancellation => Icons.Material.Filled.CancelScheduleSend,
+        _ => entry.NewState switch
+        {
+            { } state => ExecutionUiPresentation.GetStateIcon(state),
+            _ => Icons.Material.Filled.Circle
+        }
+    };
+
+    private static Color GetEntryColor(JobExecutionHistoryEntry entry) => entry.NewState is { } state
+        ? JobSchedulerUiPresentation.GetStateColor(state)
+        : ExecutionUiPresentation.GetLogLevelColor(entry.LogLevel);
+}

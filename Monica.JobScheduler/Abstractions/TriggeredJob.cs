@@ -11,15 +11,15 @@ namespace Monica.JobScheduler.Abstractions;
 /// </summary>
 /// <typeparam name="TArgs">
 /// The type of parameter object passed to the job during execution.
-/// Must be a reference type (class) and should be JSON-serializable for persistence and event distribution.
+/// Must be a reference type (class) and should be JSON-serializable for durable queue persistence.
 /// Use simple POCO classes with public properties for best compatibility.
 /// </typeparam>
 /// <remarks>
 /// <para>
-/// TriggeredJob{TArgs} is designed for event-driven operations such as:
+/// TriggeredJob{TArgs} is designed for on-demand operations such as:
 /// - Processing business events (e.g., order placement, user registration)
 /// - Handling asynchronous workflows (e.g., email sending, document generation)
-/// - Responding to external triggers (e.g., webhook processing, queue messages)
+/// - Responding to external triggers (e.g., webhook processing, API requests)
 /// - Executing delayed operations (e.g., scheduled notifications, reminder emails)
 /// </para>
 /// <para>
@@ -29,11 +29,11 @@ namespace Monica.JobScheduler.Abstractions;
 /// <para>
 /// <b>Dependency Injection:</b> TriggeredJob{TArgs} supports primary constructor dependency injection.
 /// Any services registered in the DI container can be injected through the constructor.
-/// Job instances are created with a scoped lifetime for each execution.
+/// Job instances are transient and resolved inside one dependency-injection scope per execution.
 /// </para>
 /// <para>
-/// <b>Parameter Serialization:</b> Job parameters are serialized to JSON for persistence and
-/// distribution across workers via IEventBus. Ensure your parameter type is JSON-serializable
+/// <b>Parameter Serialization:</b> Job parameters are serialized to JSON in the durable execution queue.
+/// Ensure your parameter type is JSON-serializable
 /// and does not contain complex object graphs or circular references.
 /// </para>
 /// <para>

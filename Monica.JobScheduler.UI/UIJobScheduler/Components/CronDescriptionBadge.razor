@@ -1,0 +1,187 @@
+@using Microsoft.JSInterop
+@using Monica.JobScheduler.UI.Localization
+
+@implements IAsyncDisposable
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject IJSRuntime JsRuntime
+
+<span class="cron-description-badge">
+    @if (ShowExpression)
+    {
+        <code title="@Expression">@Expression</code>
+    }
+    <MudTooltip Text="@TooltipText" Placement="Placement.Top" Arrow="true">
+        <MudIconButton Icon="@Icons.Material.Outlined.Info"
+                       Size="Size.Small"
+                       aria-label="@TooltipText" />
+    </MudTooltip>
+</span>
+
+@code {
+    private const string REQUEST_KEY = "cron";
+
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private CronDescriptionSession? _session;
+    private Task? _loadTask;
+    private string? _fingerprint;
+    private string? _resolvedDescription;
+    private bool _resolutionComplete;
+    private bool _loadPending;
+    private bool _loadRunning;
+    private int _descriptionVersion;
+    private int _disposed;
+
+    /// <summary>
+    /// Gets the immutable Cron expression displayed beside the description affordance.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Expression { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets a description already resolved by an owning batched presentation, when available.
+    /// </summary>
+    [Parameter]
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets whether this badge should resolve its own localized description after first render.
+    /// </summary>
+    [Parameter]
+    public bool ResolveDescription { get; set; }
+
+    /// <summary>
+    /// Gets whether the Cron expression is rendered by this badge.
+    /// </summary>
+    [Parameter]
+    public bool ShowExpression { get; set; } = true;
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private string TooltipText => !string.IsNullOrWhiteSpace(Description)
+        ? Description
+        : ResolveDescription
+            ? _resolutionComplete
+                ? _resolvedDescription ?? L["Catalog:Cron:Unavailable"]
+                : L["Catalog:Cron:Parsing"]
+            : L["Catalog:Cron:Unavailable"];
+
+    protected override void OnParametersSet()
+    {
+        if (!ResolveDescription)
+        {
+            return;
+        }
+
+        _session ??= new CronDescriptionSession(JsRuntime);
+        var fingerprint = $"{CronDescriptionSession.ResolveCultureName()}\u001f{Expression}";
+        if (string.Equals(_fingerprint, fingerprint, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _fingerprint = fingerprint;
+        _resolvedDescription = null;
+        _resolutionComplete = false;
+        _loadPending = true;
+        _descriptionVersion++;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_loadPending || _loadRunning || IsDisposed)
+        {
+            return;
+        }
+
+        _loadRunning = true;
+        var loadTask = DrainAsync();
+        _loadTask = loadTask;
+        try
+        {
+            await loadTask;
+        }
+        finally
+        {
+            _loadRunning = false;
+            if (ReferenceEquals(_loadTask, loadTask))
+            {
+                _loadTask = null;
+            }
+        }
+    }
+
+    private async Task DrainAsync()
+    {
+        while (_loadPending && !IsDisposed)
+        {
+            _loadPending = false;
+            await ResolveAsync(_descriptionVersion);
+        }
+    }
+
+    private async Task ResolveAsync(int version)
+    {
+        var session = _session;
+        if (session is null || string.IsNullOrWhiteSpace(Expression))
+        {
+            return;
+        }
+
+        IReadOnlyList<CronDescriptionResult> results;
+        try
+        {
+            results = await session.DescribeAsync(
+                [new CronDescriptionRequest(REQUEST_KEY, Expression)],
+                CronDescriptionSession.ResolveCultureName(),
+                _lifetimeCancellation.Token);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (JSException)
+        {
+            results = [];
+        }
+
+        if (IsDisposed || version != _descriptionVersion)
+        {
+            return;
+        }
+
+        _resolvedDescription = results
+            .FirstOrDefault(result => string.Equals(result.Key, REQUEST_KEY, StringComparison.Ordinal))
+            ?.Description;
+        _resolutionComplete = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        await _lifetimeCancellation.CancelAsync();
+        if (_loadTask is { } loadTask)
+        {
+            try
+            {
+                await loadTask;
+            }
+            catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+            {
+            }
+        }
+
+        if (_session is not null)
+        {
+            await _session.DisposeAsync();
+        }
+
+        _lifetimeCancellation.Dispose();
+    }
+}

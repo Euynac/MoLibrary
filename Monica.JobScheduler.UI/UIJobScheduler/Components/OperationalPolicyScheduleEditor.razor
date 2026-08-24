@@ -1,0 +1,337 @@
+@using Monica.JobScheduler.UI.Localization
+
+<div class="schedule-editor">
+    <div class="schedule-editor__cadence" data-valid="@IsDraftValid.ToString().ToLowerInvariant()">
+        <div class="schedule-editor__cadence-heading">
+            <div>
+                <MudText Typo="Typo.subtitle1" HtmlTag="h4">@L["Policy:Schedule:CronTitle"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["Policy:Schedule:CronDescription"]
+                </MudText>
+            </div>
+            <MudSelect T="CronExpressionMode"
+                       Value="@Draft.Mode"
+                       ValueChanged="ChangeModeAsync"
+                       Label="@L["Policy:Schedule:Format"]"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Disabled="@Disabled"
+                       Class="schedule-editor__format">
+                <MudSelectItem T="CronExpressionMode" Value="CronExpressionMode.FiveFields">
+                    @L["Policy:Schedule:FiveFields"]
+                </MudSelectItem>
+                <MudSelectItem T="CronExpressionMode" Value="CronExpressionMode.SixFieldsWithSeconds">
+                    @L["Policy:Schedule:SixFields"]
+                </MudSelectItem>
+            </MudSelect>
+        </div>
+
+        <div class="schedule-editor__provenance schedule-editor__provenance--cron">
+            <div class="schedule-editor__column">
+                <span>@L["Policy:Provenance:Declared"]</span>
+                <code title="@Draft.DeclaredExpression">@Draft.DeclaredExpression</code>
+            </div>
+            <div class="schedule-editor__column schedule-editor__column--operator">
+                <div class="schedule-editor__column-heading">
+                    <span>@L["Policy:Provenance:Override"]</span>
+                    <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                                   Size="Size.Small"
+                                   Disabled="@(Disabled || Draft.OverrideExpression is null)"
+                                   OnClick="ResetExpressionAsync"
+                                   aria-label="@L["Policy:Actions:ResetField"]" />
+                </div>
+                <MudTextField T="string"
+                              Value="@Draft.OverrideExpression"
+                              ValueChanged="SetExpressionAsync"
+                              Label="@L["Policy:Schedule:CronExpression"]"
+                              Placeholder="@Draft.DeclaredExpression"
+                              HelperText="@L["Policy:Schedule:CronInputHelp"]"
+                              MaxLength="@JobDeclaration.CRON_EXPRESSION_MAX_LENGTH"
+                              Immediate="true"
+                              Error="@(!IsDraftValid)"
+                              ErrorText="@ValidationError"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Disabled="@Disabled"
+                               Class="schedule-editor__expression-input"
+                               aria-label="@L["Policy:Schedule:CronExpression"]" />
+            </div>
+            <div class="schedule-editor__column">
+                <span>@L["Policy:Provenance:Effective"]</span>
+                <code title="@Draft.EffectiveExpression">@Draft.EffectiveExpression</code>
+            </div>
+        </div>
+
+        @if (_conversionFailure is not null)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                @_conversionFailure
+            </MudAlert>
+        }
+
+        <div class="schedule-editor__parsed-fields" aria-label="@L["Policy:Schedule:ParsedFields"]">
+            @foreach (var field in Draft.Evaluation.Fields)
+            {
+                <div>
+                    <span>@FieldLabel(field.Kind)</span>
+                    <code title="@field.Value">@field.Value</code>
+                </div>
+            }
+        </div>
+
+        <MudAlert Severity="@(IsDraftValid ? Severity.Success : Severity.Error)"
+                  Variant="Variant.Outlined"
+                  Dense="true"
+                  Icon="@(IsDraftValid ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)">
+            @if (!IsDraftValid)
+            {
+                @ValidationError
+            }
+            else if (_descriptionPending)
+            {
+                @L["Policy:Schedule:DescriptionLoading"]
+            }
+            else
+            {
+                @(_description ?? L["Policy:Schedule:DescriptionUnavailable"])
+            }
+        </MudAlert>
+    </div>
+
+    <div class="schedule-editor__timezone">
+        <MudIcon Icon="@Icons.Material.Filled.LockClock" Color="Color.Info" />
+        <div>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Policy:Schedule:ConfiguredTimeZone"]</MudText>
+            <code>@Draft.TimeZoneId</code>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Policy:Schedule:TimeZoneLockedHelp"]</MudText>
+        </div>
+    </div>
+
+    <div class="schedule-editor__boundaries">
+        <OperationalPolicyBoundaryEditor Label="@L["Policy:Schedule:StartBoundary"]"
+                                         DeclaredUtc="@Draft.DeclaredStartTimeUtc"
+                                         Draft="@Draft.StartBoundary"
+                                         TimeZoneId="@Draft.TimeZoneId"
+                                         Disabled="@Disabled"
+                                         Changed="StartBoundaryChangedAsync" />
+        <OperationalPolicyBoundaryEditor Label="@L["Policy:Schedule:EndBoundary"]"
+                                         DeclaredUtc="@Draft.DeclaredEndTimeUtc"
+                                         Draft="@Draft.EndBoundary"
+                                         TimeZoneId="@Draft.TimeZoneId"
+                                         Disabled="@Disabled"
+                                         Changed="EndBoundaryChangedAsync" />
+    </div>
+
+    <MudExpansionPanels Elevation="0" Outlined="true" Dense="true" Class="schedule-editor__builders">
+        <MudExpansionPanel Text="@L["Policy:Schedule:SimpleSettings:Title"]">
+            <div class="schedule-editor__simple-settings">
+                <MudSelect T="CronSimpleScheduleMode"
+                           @bind-Value="@_simpleSettings.Mode"
+                           Label="@L["Policy:Schedule:SimpleSettings:Mode"]"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Disabled="@Disabled">
+                    @foreach (var mode in Enum.GetValues<CronSimpleScheduleMode>())
+                    {
+                        <MudSelectItem T="CronSimpleScheduleMode" Value="@mode">
+                            @L[$"Policy:Schedule:SimpleSettings:Modes:{mode}"]
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (_simpleSettings.Mode != CronSimpleScheduleMode.Custom
+                    && (Draft.Mode == CronExpressionMode.SixFieldsWithSeconds
+                        || _simpleSettings.Mode is CronSimpleScheduleMode.EveryDay
+                            or CronSimpleScheduleMode.EveryWeek
+                            or CronSimpleScheduleMode.EveryMonth))
+                {
+                    <div class="schedule-editor__simple-fields">
+                        @if (Draft.Mode == CronExpressionMode.SixFieldsWithSeconds)
+                        {
+                            <MudNumericField T="int" @bind-Value="@_simpleSettings.Second"
+                                             Label="@L["Policy:Schedule:Fields:Second"]" Min="0" Max="59"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled"
+                                             aria-label="@L["Policy:Schedule:Fields:Second"]" />
+                        }
+                        @if (_simpleSettings.Mode is CronSimpleScheduleMode.EveryDay
+                            or CronSimpleScheduleMode.EveryWeek
+                            or CronSimpleScheduleMode.EveryMonth)
+                        {
+                            <MudNumericField T="int" @bind-Value="@_simpleSettings.Hour"
+                                             Label="@L["Policy:Schedule:Fields:Hour"]" Min="0" Max="23"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                            <MudNumericField T="int" @bind-Value="@_simpleSettings.Minute"
+                                             Label="@L["Policy:Schedule:Fields:Minute"]" Min="0" Max="59"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                        }
+                        @if (_simpleSettings.Mode == CronSimpleScheduleMode.EveryWeek)
+                        {
+                            <MudSelect T="int" @bind-Value="@_simpleSettings.DayOfWeek"
+                                       Label="@L["Policy:Schedule:Fields:DayOfWeek"]"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled">
+                                @for (var day = 0; day < 7; day++)
+                                {
+                                    <MudSelectItem T="int" Value="@day">@L[$"Policy:Schedule:Weekdays:{day}"]</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        @if (_simpleSettings.Mode == CronSimpleScheduleMode.EveryMonth)
+                        {
+                            <MudNumericField T="int" @bind-Value="@_simpleSettings.DayOfMonth"
+                                             Label="@L["Policy:Schedule:Fields:DayOfMonth"]" Min="1" Max="31"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                        }
+                    </div>
+                }
+                else if (_simpleSettings.Mode == CronSimpleScheduleMode.Custom)
+                {
+                    <div class="schedule-editor__custom-fields">
+                        @if (Draft.Mode == CronExpressionMode.SixFieldsWithSeconds)
+                        {
+                            <MudTextField T="string" @bind-Value="@_simpleSettings.CustomSecond"
+                                          Label="@L["Policy:Schedule:Fields:Second"]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                        }
+                        <MudTextField T="string" @bind-Value="@_simpleSettings.CustomMinute"
+                                      Label="@L["Policy:Schedule:Fields:Minute"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                        <MudTextField T="string" @bind-Value="@_simpleSettings.CustomHour"
+                                      Label="@L["Policy:Schedule:Fields:Hour"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                        <MudTextField T="string" @bind-Value="@_simpleSettings.CustomDayOfMonth"
+                                      Label="@L["Policy:Schedule:Fields:DayOfMonth"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                        <MudTextField T="string" @bind-Value="@_simpleSettings.CustomMonth"
+                                      Label="@L["Policy:Schedule:Fields:Month"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                        <MudTextField T="string" @bind-Value="@_simpleSettings.CustomDayOfWeek"
+                                      Label="@L["Policy:Schedule:Fields:DayOfWeek"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                    </div>
+                }
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.AutoFixHigh"
+                           OnClick="ApplySimpleSettingsAsync" Disabled="@Disabled">
+                    @L["Policy:Schedule:SimpleSettings:Apply"]
+                </MudButton>
+            </div>
+        </MudExpansionPanel>
+
+        <MudExpansionPanel Text="@L["Policy:Schedule:Syntax:Title"]">
+            <div class="schedule-editor__syntax">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+                    @L["Policy:Schedule:Syntax:RuntimeContract"]
+                </MudAlert>
+                <div class="schedule-editor__syntax-scroll">
+                    <table aria-label="@L["Policy:Schedule:Syntax:FieldTable"]">
+                        <thead>
+                            <tr>
+                                <th>@L["Policy:Schedule:Syntax:Field"]</th>
+                                <th>@L["Policy:Schedule:Syntax:Range"]</th>
+                                <th>@L["Policy:Schedule:Syntax:Characters"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var field in SyntaxFields)
+                            {
+                                <tr>
+                                    <td>@FieldLabel(field.Kind)</td>
+                                    <td><code>@field.Range</code></td>
+                                    <td><code>@field.Characters</code></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <dl class="schedule-editor__tokens">
+                    @foreach (var token in SyntaxTokens)
+                    {
+                        <div><dt><code>@token</code></dt><dd>@L[$"Policy:Schedule:Syntax:Tokens:{TokenKey(token)}"]</dd></div>
+                    }
+                </dl>
+                <ul class="schedule-editor__semantics">
+                    <li>@L["Policy:Schedule:Syntax:Names"]</li>
+                    <li>@L["Policy:Schedule:Syntax:ReversedRanges"]</li>
+                    <li>@L["Policy:Schedule:Syntax:Steps"]</li>
+                    <li>@L["Policy:Schedule:Syntax:DayMatching"]</li>
+                </ul>
+                <div class="schedule-editor__examples">
+                    <div>
+                        <strong>@L["Policy:Schedule:FiveFields"]</strong>
+                        @foreach (var example in FiveFieldExamples)
+                        {
+                            <p><code>@example.Expression</code><span>@L[$"Policy:Schedule:Syntax:Examples:{example.Key}"]</span></p>
+                        }
+                    </div>
+                    <div>
+                        <strong>@L["Policy:Schedule:SixFields"]</strong>
+                        @foreach (var example in SixFieldExamples)
+                        {
+                            <p><code>@example.Expression</code><span>@L[$"Policy:Schedule:Syntax:Examples:{example.Key}"]</span></p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+
+    <div class="schedule-editor__prospective">
+        <div>
+            <span>@L["Policy:Schedule:AuthoritativeNext"]</span>
+            <strong>@FormatScheduleTime(Draft.AuthoritativeNextOccurrenceUtc)</strong>
+            <code>@FormatUtc(Draft.AuthoritativeNextOccurrenceUtc)</code>
+            <small>@L["Policy:Schedule:AuthoritativeObservedAt", FormatUtc(Draft.ObservedAtUtc)]</small>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Warning" />
+        <div>
+            <span>@L["Policy:Schedule:ProposedNext"]</span>
+            @if (IsPaused)
+            {
+                <strong>@L["Policy:Schedule:PreviewSuspended"]</strong>
+                <code>—</code>
+            }
+            else
+            {
+                <strong>@FormatScheduleTime(Draft.ProposedNextOccurrenceUtc)</strong>
+                <code>@FormatUtc(Draft.ProposedNextOccurrenceUtc)</code>
+            }
+        </div>
+    </div>
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true"
+              Icon="@Icons.Material.Filled.Update">
+        @L["Policy:Schedule:ProspectiveWarning"]
+    </MudAlert>
+
+    <div class="schedule-editor__preview-scroll">
+        <table aria-label="@L["Policy:Schedule:Preview:AriaLabel"]">
+            <thead>
+                <tr>
+                    <th>@L["Policy:Schedule:Preview:Sequence"]</th>
+                    <th>@L["Policy:Schedule:Preview:ConfiguredTime"]</th>
+                    <th>@L["Policy:Schedule:Preview:Utc"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (IsPaused)
+                {
+                    <tr>
+                        <td colspan="3">@L["Policy:Schedule:PreviewSuspendedDescription"]</td>
+                    </tr>
+                }
+                else
+                {
+                    @for (var index = 0; index < Draft.Evaluation.Occurrences.Count; index++)
+                    {
+                        var occurrence = Draft.Evaluation.Occurrences[index];
+                        <tr>
+                            <td>@(index + 1)</td>
+                            <td><code>@FormatScheduleTime(occurrence.Utc)</code></td>
+                            <td><code>@FormatUtc(occurrence.Utc)</code></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

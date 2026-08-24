@@ -1,569 +1,115 @@
 @attribute [Route(PAGE_URL)]
-@inject JobSchedulerFacade UIService
-@inject JobSchedulerQueryFacade QueryService
-@inject JobStateColorResolver ColorService
-@inject NavigationManager NavigationManager
-@inject ISnackbar Snackbar
-@inject IDialogService DialogService
-@inject IStringLocalizer<JobSchedulerResource> L
+
 @using Monica.JobScheduler.UI.Localization
-@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
+@using Monica.JobScheduler.UI.UIJobScheduler.Components
+@using Monica.JobScheduler.UI.UIJobScheduler.State
 
-<PageTitle>@L["Workspace:Pages:DefinitionDetail:Title"]</PageTitle>
+<PageTitle>@PageTitleText</PageTitle>
 
-<SchedulerWorkspace Title="@L["Workspace:Pages:DefinitionDetail:Title"]"
-                    Description="@L["Workspace:Pages:DefinitionDetail:Description"]">
-<div class="scheduler-page-content">
-    @if (_isLoading)
-    {
-        <MudStack AlignItems="AlignItems.Center" Spacing="2">
-            <MudProgressCircular Indeterminate="true" Size="Size.Large" />
-            <MudText Typo="Typo.h6">@L["Common:Status:Loading"]</MudText>
-        </MudStack>
-    }
-    else if (_error != null)
-    {
-        <MudAlert Severity="Severity.Error">@_error</MudAlert>
-    }
-    else if (_jobDefinition != null)
-    {
-        <!-- Title and action buttons -->
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-            <MudText Typo="Typo.h4" Style="overflow-wrap: anywhere;" title="@_jobDefinition.JobName">@_jobDefinition.JobName</MudText>
-            <MudStack Row="true" Spacing="2">
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.ArrowBack"
-                           OnClick="NavigateBack">
-                    @L["Common:Actions:Back"]
-                </MudButton>
-                @if (_jobDefinition.JobType == JobType.Recurring)
+<SchedulerWorkspace Title="@L["Workspace:Pages:JobDetail:Title"]"
+                    Description="@L["Workspace:Pages:JobDetail:Description"]"
+                    ActivePanelIndex="1">
+    <div class="job-detail-page">
+        <nav class="job-detail-page__breadcrumb" aria-label="@L["JobDetail:BreadcrumbAriaLabel"]">
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       Href="@JobCatalogPage.PAGE_URL">
+                @L["JobDetail:Actions:BackToCatalog"]
+            </MudButton>
+            <code title="@JobKey">@JobKey</code>
+        </nav>
+
+        @if (PageState is { } state)
+        {
+            <SchedulerAccessBoundary AccessChecked="@state.AccessChecked" IsAuthorized="@state.IsAuthorized">
+                @if (state.IsLoading && state.Summary is null)
                 {
-                    @if (_jobDefinition.IsDisabled)
-                    {
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Success"
-                                   StartIcon="@Icons.Material.Filled.PlayArrow"
-                                   OnClick="EnableJobAsync">
-                            @L["JobDetail:Actions:Enable"]
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Warning"
-                                   StartIcon="@Icons.Material.Filled.Pause"
-                                   OnClick="DisableJobAsync">
-                            @L["JobDetail:Actions:Disable"]
-                        </MudButton>
-                    }
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.PlayCircle"
-                               OnClick="ExecuteJobAsync">
-                        @L["JobDetail:Actions:ExecuteNow"]
-                    </MudButton>
+                    <div class="job-detail-page__loading" role="status">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                    </div>
                 }
-                @if (_jobDefinition.JobType == JobType.Triggered)
+                else if (state.Error is not null && state.Summary is null)
                 {
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.PlayCircle"
-                               OnClick="ExecuteJobAsync">
-                        @L["JobDetail:Actions:Execute"]
-                    </MudButton>
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @state.Error
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="state.RefreshAsync">
+                            @L["Common:Retry"]
+                        </MudButton>
+                    </MudAlert>
                 }
-            </MudStack>
-        </MudStack>
-
-        <!-- Basic information -->
-        <MudPaper Class="pa-4 mb-4" Elevation="2">
-            <MudText Typo="Typo.h6" Class="mb-3">@L["JobDetail:BasicInfo:Title"]</MudText>
-            <MudGrid>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:JobKey"]</MudText>
-                    <MudText Typo="Typo.body1" Style="overflow-wrap: anywhere;" title="@_jobDefinition.JobKey">@_jobDefinition.JobKey</MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:SourceProject"]</MudText>
-                    <MudText Typo="Typo.body1">@_jobDefinition.FromProject</MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:JobType"]</MudText>
-                    <MudChip T="string" Size="Size.Small" Color="@GetJobTypeColor(_jobDefinition.JobType)">
-                        @_jobDefinition.JobType
-                    </MudChip>
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:Status"]</MudText>
-                    <MudChip T="string" Size="Size.Small" Color="@GetDisabledStateColor(_jobDefinition.IsDisabled)">
-                        @(_jobDefinition.IsDisabled ? L["JobDefinitions:Status:Disabled"] : L["JobDefinitions:Status:Enabled"])
-                    </MudChip>
-                </MudItem>
-                @if (!string.IsNullOrEmpty(_jobDefinition.CronExpression))
+                else if (state.IsNotFound)
                 {
-                    <MudItem xs="12" sm="6">
-                        <div>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:CronExpression"]</MudText>
-                            <CronExpressionDisplay Expression="@_jobDefinition.CronExpression"
-                                                   DisplayMode="CronDisplayMode.Full"
-                                                   ChipColor="Color.Primary"
-                                                   OnClick="OpenCronEditorDialog" />
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                        @L["JobDetail:NotFound", state.JobKey]
+                    </MudAlert>
+                }
+                else if (state.Summary is { } summary)
+                {
+                    <div class="job-detail-page__dossier">
+                        @if (state.IsLoading)
+                        {
+                            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                        }
+
+                        @if (state.Error is not null)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                @L["JobDetail:RefreshFailed", state.Error]
+                            </MudAlert>
+                        }
+
+                        <JobDefinitionDetailHeader Summary="@summary"
+                                                   IsRefreshing="@state.IsLoading"
+                                                   IsMutating="@state.IsMutating"
+                                                   OnRefresh="state.RefreshAsync"
+                                                   OnInspectSchedule="OpenScheduleInspectorAsync"
+                                                   OnEditPolicy="OpenPolicyAsync"
+                                                   OnToggleDisabled="ToggleDisabledAsync"
+                                                   OnRunNow="RunRecurringNowAsync"
+                                                   OnTrigger="OpenTriggerAsync" />
+
+                        @if (state.AnalyticsError is not null)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                @L["JobDetail:Health:LoadFailed", state.AnalyticsError]
+                            </MudAlert>
+                        }
+
+                        @if (state.Analytics is { } analytics)
+                        {
+                            <JobHealthPanel Snapshot="@analytics"
+                                            DefinitionType="@summary.Definition.Declaration.JobType" />
+                        }
+
+                        <JobExecutionActivityPanel Running="@state.RunningActivity"
+                                                   Failures="@state.RecentFailureActivity"
+                                                   ObservedAtUtc="@(state.ObservedAtUtc ?? TimeProvider.GetUtcNow())"
+                                                   ExecutionSelected="OpenExecutionDetailsAsync" />
+
+                        <div class="job-detail-page__evidence-grid">
+                            <JobDefinitionSchedulePanel Summary="@summary"
+                                                        OnInspectSchedule="OpenScheduleInspectorAsync" />
+                            <JobDefinitionLatestExecutionPanel Execution="@summary.LatestExecution"
+                                                               ObservedAtUtc="@(state.ObservedAtUtc ?? TimeProvider.GetUtcNow())"
+                                                               ExecutionSelected="OpenExecutionDetailsAsync" />
                         </div>
-                    </MudItem>
-                }
-            </MudGrid>
-        </MudPaper>
 
-        <!-- Health Metrics and Statistics -->
-        <div class="job-detail-card-grid">
-            <MudGrid Spacing="4" Class="mb-4 job-detail-card-row">
-                <MudItem xs="12" md="6" Class="job-detail-card-column">
-                    <div class="job-detail-card-frame">
-                        <JobHealthMetricsCard JobKey="@JobKey" />
+                        <JobDefinitionContractPanel Definition="@summary.Definition" />
+
+                        @if (state.ObservedAtUtc is { } observedAtUtc)
+                        {
+                            <footer class="job-detail-page__freshness">
+                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @L["JobDetail:ObservedAt", TimePresentation.FormatTimestamp(observedAtUtc)]
+                                </MudText>
+                            </footer>
+                        }
                     </div>
-                </MudItem>
-                <MudItem xs="12" md="6" Class="job-detail-card-column">
-                    <div class="job-detail-card-frame">
-                        <JobStatisticsCard JobKey="@JobKey" />
-                    </div>
-                </MudItem>
-            </MudGrid>
-        </div>
-
-        <!-- Running instance -->
-        <MudPaper Class="pa-4 mb-4" Elevation="2">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h6">@L["JobDetail:RunningInstances:Title"]</MudText>
-                <MudStack Row="true" Spacing="2">
-                    <MudButton Variant="Variant.Text"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.List"
-                               OnClick="NavigateToAllInstances">
-                        @L["JobDetail:RunningInstances:ViewAll"]
-                    </MudButton>
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                   Color="Color.Primary"
-                                   Size="Size.Small"
-                                   OnClick="RefreshRunningInstancesAsync" />
-                </MudStack>
-            </MudStack>
-
-            @if (_runningInstancesLoading)
-            {
-                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-            }
-            else if (_runningInstances.Count > 0)
-            {
-                <MudTable T="JobInstance"
-                          Items="_runningInstances"
-                          Hover="true"
-                          Dense="true"
-                          Striped="true">
-                    <HeaderContent>
-                        <MudTh>@L["JobDetail:RunningInstances:Columns:InstanceId"]</MudTh>
-                        <MudTh>@L["JobDetail:RunningInstances:Columns:State"]</MudTh>
-                        <MudTh>@L["JobDetail:RunningInstances:Columns:CreatedTime"]</MudTh>
-                        <MudTh>@L["JobDetail:RunningInstances:Columns:StartTime"]</MudTh>
-                        <MudTh>@L["JobDetail:RunningInstances:Columns:Duration"]</MudTh>
-                        <MudTh>@L["JobDetail:RunningInstances:Columns:Actions"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@L["JobDetail:RunningInstances:Columns:InstanceId"]">
-                            <MudText Typo="Typo.body2" Style="font-family: monospace;">
-                                @context.InstanceId.Substring(0, Math.Min(8, context.InstanceId.Length))...
-                            </MudText>
-                        </MudTd>
-                        <MudTd DataLabel="@L["JobDetail:RunningInstances:Columns:State"]">
-                            <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(context.State)">
-                                @context.State
-                            </MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="@L["JobDetail:RunningInstances:Columns:CreatedTime"]">
-                            @context.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff")
-                        </MudTd>
-                        <MudTd DataLabel="@L["JobDetail:RunningInstances:Columns:StartTime"]">
-                            @(context.StartedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? "-")
-                        </MudTd>
-                        <MudTd DataLabel="@L["JobDetail:RunningInstances:Columns:Duration"]">
-                            @if (context.StartedAt.HasValue)
-                            {
-                                var duration = DateTime.UtcNow.FromUtcToLocal() - context.StartedAt.Value.FromUtcToLocal();
-                                <text>@FormatDuration(duration)</text>
-                            }
-                            else
-                            {
-                                <text>-</text>
-                            }
-                        </MudTd>
-                        <MudTd DataLabel="@L["JobDetail:RunningInstances:Columns:Actions"]">
-                            <MudTooltip Text="@L["Common:Actions:ViewDetails"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Info"
-                                               Color="Color.Info"
-                                               Size="Size.Small"
-                                               OnClick="@(async () => await OpenInstanceDetailDialog(context.InstanceId))" />
-                            </MudTooltip>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
-            else
-            {
-                <MudAlert Severity="Severity.Info" Dense="true" NoIcon="true">
-                    @L["JobDetail:RunningInstances:NoRunning"]
-                </MudAlert>
-            }
-        </MudPaper>
-
-        <!-- Summary of job information -->
-        <MudPaper Class="pa-4 mb-4" Elevation="2">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h6">@L["JobDetail:Configuration:Title"]</MudText>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Edit"
-                           Size="Size.Small"
-                           OnClick="OpenConfigEditorDialog">
-                    @L["Common:Actions:Edit"]
-                </MudButton>
-            </MudStack>
-            <MudGrid>
-                <MudItem xs="12" sm="6">
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:Configuration:MaxConcurrency"]</MudText>
-                        <MudTooltip Text="@L["JobDetail:Configuration:MaxConcurrencyTooltip"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Info"
-                                     Size="Size.Small"
-                                     Color="Color.Info"
-                                     Class="ml-1"
-                                     Style="font-size: 14px;" />
-                        </MudTooltip>
-                    </MudStack>
-                    <MudText Typo="Typo.body1">@_jobDefinition.MaxConcurrency</MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:Configuration:RetryCount"]</MudText>
-                        <MudTooltip Text="@L["JobDetail:Configuration:RetryCountTooltip"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Info"
-                                     Size="Size.Small"
-                                     Color="Color.Info"
-                                     Class="ml-1"
-                                     Style="font-size: 14px;" />
-                        </MudTooltip>
-                    </MudStack>
-                    <MudText Typo="Typo.body1">@_jobDefinition.RetryCount</MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:Configuration:MaxExecutionTimeout"]</MudText>
-                        <MudTooltip Text="@L["JobDetail:Configuration:MaxExecutionTimeoutTooltip"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Info"
-                                     Size="Size.Small"
-                                     Color="Color.Info"
-                                     Class="ml-1"
-                                     Style="font-size: 14px;" />
-                        </MudTooltip>
-                    </MudStack>
-                    <MudText Typo="Typo.body1">@_jobDefinition.MaxExecutionTimeout</MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:Configuration:MaxRetainedHistoryRecords"]</MudText>
-                        <MudTooltip Text="@L["JobDetail:Configuration:MaxRetainedHistoryRecordsTooltip"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Info"
-                                     Size="Size.Small"
-                                     Color="Color.Info"
-                                     Class="ml-1"
-                                     Style="font-size: 14px;" />
-                        </MudTooltip>
-                    </MudStack>
-                    <MudText Typo="Typo.body1">
-                        @(_jobDefinition.MaxRetainedHistoryRecords <= 0 ? L["JobDetail:Configuration:Unlimited"] : _jobDefinition.MaxRetainedHistoryRecords.ToString())
-                    </MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:Configuration:MaxRetentionDays"]</MudText>
-                        <MudTooltip Text="@L["JobDetail:Configuration:MaxRetentionDaysTooltip"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Info"
-                                     Size="Size.Small"
-                                     Color="Color.Info"
-                                     Class="ml-1"
-                                     Style="font-size: 14px;" />
-                        </MudTooltip>
-                    </MudStack>
-                    <MudText Typo="Typo.body1">
-                        @(_jobDefinition.MaxRetentionDays.HasValue ? $"{_jobDefinition.MaxRetentionDays.Value} {L["JobDetail:Configuration:Days"]}" : L["JobDetail:Configuration:NotSet"])
-                    </MudText>
-                </MudItem>
-                @if (_jobDefinition.JobType == JobType.Recurring)
-                {
-                    @if (_jobDefinition.StartTime.HasValue)
-                    {
-                        <MudItem xs="12" sm="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:Configuration:StartTime"]</MudText>
-                            <MudText Typo="Typo.body1">@_jobDefinition.StartTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                        </MudItem>
-                    }
-                    @if (_jobDefinition.EndTime.HasValue)
-                    {
-                        <MudItem xs="12" sm="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:Configuration:EndTime"]</MudText>
-                            <MudText Typo="Typo.body1">@_jobDefinition.EndTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                        </MudItem>
-                    }
                 }
-                @if (!string.IsNullOrEmpty(_jobDefinition.Description))
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:Description"]</MudText>
-                    <MudText Typo="Typo.body1" Style="white-space: pre-wrap; overflow-wrap: anywhere;">@_jobDefinition.Description</MudText>
-                </MudItem>
-                }
-            </MudGrid>
-        </MudPaper>
-    }
-</div>
+            </SchedulerAccessBoundary>
+        }
+    </div>
 </SchedulerWorkspace>
-
-@code {
-    public const string PAGE_URL = "/job-scheduler/definitions/{JobKey}";
-
-    [Parameter]
-    public string JobKey { get; set; } = string.Empty;
-
-    private JobDefinition? _jobDefinition;
-    private List<JobInstance> _runningInstances = new();
-
-    private bool _isLoading = true;
-    private bool _runningInstancesLoading = false;
-    private string? _error;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        await LoadJobDefinitionAsync();
-        await RefreshRunningInstancesAsync();
-    }
-
-    private async Task LoadJobDefinitionAsync()
-    {
-        _isLoading = true;
-        _error = null;
-
-        try
-        {
-            var result = await QueryService.GetJobDefinitionAsync(JobKey);
-            if (result.IsFailed(out var error, out var data))
-            {
-                _error = $"{L["JobDetail:Messages:LoadFailed"]}: {error.Message}";
-            }
-            else
-            {
-                _jobDefinition = data;
-            }
-        }
-        catch (Exception ex)
-        {
-            _error = $"{L["JobDetail:Messages:LoadFailed"]}: {ex.Message}";
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    private async Task RefreshRunningInstancesAsync()
-    {
-        _runningInstancesLoading = true;
-
-        try
-        {
-            var result = await QueryService.GetRunningInstancesAsync(JobKey);
-            if (result.IsFailed(out var error, out var data))
-            {
-                Snackbar.Add($"{L["JobDetail:Messages:LoadRunningInstancesFailed"]}: {error.Message}", Severity.Error);
-            }
-            else
-            {
-                _runningInstances = data.ToList();
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"{L["JobDetail:Messages:LoadRunningInstancesFailed"]}: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _runningInstancesLoading = false;
-        }
-
-        StateHasChanged();
-    }
-
-    private async Task DisableJobAsync()
-    {
-        var result = await UIService.PauseJobAsync(JobKey);
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add($"{L["JobDetail:Messages:DisableFailed"]}: {error.Message}", Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add(L["JobDetail:Messages:DisableSuccess"], Severity.Success);
-            await LoadJobDefinitionAsync();
-        }
-    }
-
-    private async Task EnableJobAsync()
-    {
-        var result = await UIService.ResumeJobAsync(JobKey);
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add($"{L["JobDetail:Messages:EnableFailed"]}: {error.Message}", Severity.Error);
-        }
-        else
-        {
-            Snackbar.Add(L["JobDetail:Messages:EnableSuccess"], Severity.Success);
-            await LoadJobDefinitionAsync();
-        }
-    }
-
-    private async Task ExecuteJobAsync()
-    {
-        if (_jobDefinition == null) return;
-
-        // Show execution confirmation dialog
-        var parameters = new DialogParameters<JobExecuteDialog>
-        {
-            { x => x.JobDefinition, _jobDefinition }
-        };
-
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseButton = true,
-            BackdropClick = false
-        };
-
-        var dialog = await DialogService.ShowAsync<JobExecuteDialog>(L["Dialogs:JobExecute:Title"], parameters, options);
-        var dialogResult = await dialog.Result;
-
-        // The execution results have been processed in the dialog box and the instance list is refreshed.
-        if (dialogResult is { Canceled: false })
-        {
-            await RefreshRunningInstancesAsync();
-        }
-    }
-
-    private void NavigateBack()
-    {
-        NavigationManager.NavigateTo("/job-scheduler/definitions");
-    }
-
-    private void NavigateToAllInstances()
-    {
-        NavigationManager.NavigateTo($"/job-scheduler/instances?jobKey={Uri.EscapeDataString(JobKey)}");
-    }
-
-    private async Task OpenInstanceDetailDialog(string instanceId)
-    {
-        var parameters = new DialogParameters<JobInstanceDetailDialog>
-        {
-            { x => x.InstanceId, instanceId },
-            { x => x.ShowJobDefinitionButton, false }
-        };
-
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true,
-            CloseButton = true,
-            BackdropClick = false,
-            Position = DialogPosition.Center
-        };
-
-        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["Dialogs:JobInstanceDetail:Title"], parameters, options);
-    }
-
-    private Color GetJobTypeColor(JobType jobType)
-    {
-        return jobType switch
-        {
-            JobType.Recurring => Color.Primary,
-            JobType.Triggered => Color.Secondary,
-            _ => Color.Default
-        };
-    }
-
-    private Color GetDisabledStateColor(bool isDisabled)
-    {
-        return isDisabled ? Color.Warning : Color.Success;
-    }
-
-    private string FormatDuration(TimeSpan duration)
-    {
-        if (duration.TotalHours >= 1)
-            return $"{duration.TotalHours:F2}h";
-        if (duration.TotalMinutes >= 1)
-            return $"{duration.TotalMinutes:F2}m";
-        if (duration.TotalSeconds >= 1)
-            return $"{duration.TotalSeconds:F2}s";
-        return $"{duration.TotalMilliseconds:F0}ms";
-    }
-
-    private async Task OpenCronEditorDialog()
-    {
-        if (_jobDefinition == null) return;
-
-        var parameters = new DialogParameters<CronEditorDialog>
-        {
-            { x => x.JobDefinition, _jobDefinition }
-        };
-
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseButton = true,
-            BackdropClick = true
-        };
-
-        var dialog = await DialogService.ShowAsync<CronEditorDialog>(L["Dialogs:CronEditor:Title"], parameters, options);
-        var result = await dialog.Result;
-
-        if (result is { Canceled: false })
-        {
-            // Refresh page data
-            await LoadJobDefinitionAsync();
-        }
-    }
-
-    private async Task OpenConfigEditorDialog()
-    {
-        if (_jobDefinition == null) return;
-
-        var parameters = new DialogParameters<JobConfigEditorDialog>
-        {
-            { x => x.JobDefinition, _jobDefinition }
-        };
-
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseButton = true,
-            BackdropClick = true
-        };
-
-        var dialog = await DialogService.ShowAsync<JobConfigEditorDialog>(L["Dialogs:JobConfigEditor:Title"], parameters, options);
-        var result = await dialog.Result;
-
-        if (result is { Canceled: false })
-        {
-            // Refresh page data
-            await LoadJobDefinitionAsync();
-        }
-    }
-}

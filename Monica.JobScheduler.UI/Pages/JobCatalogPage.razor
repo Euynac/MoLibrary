@@ -1,0 +1,371 @@
+@attribute [Route(PAGE_URL)]
+
+@using Monica.JobScheduler.UI.Localization
+
+@inject JobCatalogPageStateFactory PageStateFactory
+@inject IOptions<ModuleJobSchedulerUIOption> UiOptions
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
+
+@implements IAsyncDisposable
+
+<PageTitle>@L["Catalog:PageTitle"]</PageTitle>
+
+<SchedulerWorkspace Title="@L["Workspace:Pages:Catalog:Title"]"
+                    Description="@L["Workspace:Pages:Catalog:Description"]"
+                    ActivePanelIndex="1">
+    @if (_state is not null)
+    {
+        <SchedulerAccessBoundary AccessChecked="@_state.AccessChecked" IsAuthorized="@_state.IsAuthorized">
+            <div class="catalog-page">
+                <CatalogFilterBar SearchText="@_state.SearchText"
+                                  SearchTextChanged="@(value => _state.SearchText = value)"
+                                  OwnerId="@_state.OwnerId"
+                                  OwnerIdChanged="@(value => _state.OwnerId = value)"
+                                  OwnerFacets="@_state.OwnerFacets"
+                                  SelectedJobType="@_state.SelectedJobType"
+                                  JobTypeCounts="@_state.JobTypeCounts"
+                                  JobTypeSelected="SelectJobTypeAsync"
+                                  SelectedDisabledState="@_state.SelectedDisabledState"
+                                  DisabledStateSelected="SelectDisabledStateAsync"
+                                  IsLoading="@_state.IsLoading"
+                                  SearchRequested="SearchAsync"
+                                  ResetRequested="ResetAsync" />
+
+                @if (_state.Error is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_state.Error</MudAlert>
+                }
+
+                @if (_state.HasSelection)
+                {
+                    <MudPaper Outlined="true" Class="catalog-page__selection pa-3" role="region"
+                              aria-label="@L["Catalog:Selection:ToolbarLabel"]">
+                        <div class="catalog-page__selection-copy">
+                            <MudIcon Icon="@Icons.Material.Filled.Checklist" Color="Color.Primary" />
+                            <div>
+                                <MudText Typo="Typo.subtitle2">
+                                    @L["Catalog:Selection:Count", _state.SelectedRecurringSummaries.Count]
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @L["Catalog:Selection:Description"]
+                                </MudText>
+                                @if (_state.HasDebugOnlySuppressedSelection)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Info">
+                                        @L["Catalog:Selection:DebugPauseUnavailable"]
+                                    </MudText>
+                                }
+                            </div>
+                        </div>
+                        <div class="catalog-page__selection-actions">
+                            <MudButton Variant="Variant.Text"
+                                       Disabled="@_state.IsMutating"
+                                       OnClick="@(() => SetAllRecurringSelection(false))">
+                                @L["Catalog:Selection:Clear"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Warning"
+                                       StartIcon="@Icons.Material.Filled.PauseCircle"
+                                       Disabled="@_state.IsMutating"
+                                       OnClick="@(() => ApplyBatchDisabledAsync(true))">
+                                @L["Catalog:Actions:PauseSelected"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Success"
+                                       StartIcon="@Icons.Material.Filled.PlayCircle"
+                                       Disabled="@_state.IsMutating"
+                                       OnClick="@(() => ApplyBatchDisabledAsync(false))">
+                                @L["Catalog:Actions:ResumeSelected"]
+                            </MudButton>
+                        </div>
+                    </MudPaper>
+                }
+
+                <JobCatalogOperationalTable @ref="_catalogTable"
+                                            ServerData="@_state.LoadTableAsync"
+                                            SelectedJobKeys="@_state.SelectedJobKeys"
+                                            TotalCount="@_state.TotalCount"
+                                            PageSize="@_state.PageSize"
+                                            PageSizeOptions="@_state.PageSizeOptions"
+                                            IsMutating="@_state.IsMutating"
+                                            AllRecurringSelectionChanged="SetAllRecurringSelection"
+                                            SelectionToggled="ToggleSelection"
+                                            DisabledStateToggled="ToggleDisabledAsync"
+                                            RunRequested="RunJobAsync" />
+            </div>
+        </SchedulerAccessBoundary>
+    }
+</SchedulerWorkspace>
+
+@code {
+    public const string PAGE_URL = "/job-scheduler/catalog";
+
+    private JobCatalogPageState? _state;
+    private JobCatalogOperationalTable? _catalogTable;
+    private bool _disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _state = PageStateFactory.Create(UiOptions.Value.DefaultPageSize);
+        _state.Changed += OnStateChangedAsync;
+        await _state.InitializeAsync();
+    }
+
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    private async Task SearchAsync()
+    {
+        _state?.Search();
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task ResetAsync()
+    {
+        _state?.Reset();
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task SelectJobTypeAsync(JobType jobType)
+    {
+        _state?.SelectJobType(jobType);
+        await ReloadFromFirstPageAsync();
+    }
+
+    private async Task SelectDisabledStateAsync(bool? disabled)
+    {
+        _state?.SelectDisabledState(disabled);
+        await ReloadFromFirstPageAsync();
+    }
+
+    private Task ReloadFromFirstPageAsync() =>
+        _catalogTable is null || _disposed
+            ? Task.CompletedTask
+            : _catalogTable.ReloadFromFirstPageAsync();
+
+    private Task ReloadTableAsync() =>
+        _catalogTable is null || _disposed
+            ? Task.CompletedTask
+            : _catalogTable.ReloadAsync();
+
+    private void ToggleSelection(JobOperationalSummary summary)
+    {
+        _state?.ToggleSelection(summary);
+    }
+
+    private void SetAllRecurringSelection(bool selected)
+    {
+        _state?.SelectAllRecurring(selected);
+    }
+
+    private async Task ToggleDisabledAsync(JobOperationalSummary summary)
+    {
+        var state = _state;
+        if (state is null || _disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            var operatorPaused = JobSchedulerUiPresentation.IsOperatorPaused(summary);
+            var debugSuppressed = JobSchedulerUiPresentation.IsDebugSuppressed(summary);
+            if (!operatorPaused && debugSuppressed)
+            {
+                Snackbar.Add(L["Catalog:Messages:PauseUnavailableDebug"], Severity.Info);
+                return;
+            }
+
+            var disabled = !operatorPaused;
+            var result = await state.SetDisabledAsync(summary, disabled);
+            if (_disposed || _state != state)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:UpdateFailed"], Severity.Error);
+                return;
+            }
+
+            var message = !disabled && debugSuppressed
+                ? L["Catalog:Messages:ResumedDebugRemains"]
+                : disabled
+                    ? L["Catalog:Messages:Paused"]
+                    : L["Catalog:Messages:Resumed"];
+            Snackbar.Add(message, !disabled && debugSuppressed ? Severity.Info : Severity.Success);
+            await ReloadTableAsync();
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+        }
+    }
+
+    private async Task ApplyBatchDisabledAsync(bool disabled)
+    {
+        var state = _state;
+        var selected = state?.SelectedRecurringSummaries ?? [];
+        var selectedCount = selected.Count;
+        if (state is null || _disposed || selectedCount == 0)
+        {
+            return;
+        }
+
+        if (disabled && selected.Any(JobSchedulerUiPresentation.IsDebugOnlySuppressed))
+        {
+            Snackbar.Add(L["Catalog:Batch:PauseUnavailableDebug"], Severity.Info);
+            return;
+        }
+
+        var debugSuppressionRemains = !disabled
+                                      && selected.Any(JobSchedulerUiPresentation.IsDebugSuppressed);
+
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            disabled ? L["Catalog:Batch:PauseTitle"] : L["Catalog:Batch:ResumeTitle"],
+            disabled
+                ? L["Catalog:Batch:PauseMessage", selectedCount]
+                : L["Catalog:Batch:ResumeMessage", selectedCount],
+            yesText: disabled ? L["Catalog:Actions:PauseSelected"] : L["Catalog:Actions:ResumeSelected"],
+            cancelText: L["Common:Cancel"],
+            options: SmallDialogOptions);
+        if (confirmed != true || _disposed || _state != state)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await state.SetSelectedDisabledAsync(disabled);
+            if (_disposed || _state != state)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error, out var batch))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:UpdateFailed"], Severity.Error);
+                return;
+            }
+
+            var severity = batch.FailedCount > 0
+                ? Severity.Warning
+                : debugSuppressionRemains
+                    ? Severity.Info
+                    : Severity.Success;
+            var message = debugSuppressionRemains
+                ? L["Catalog:Batch:ResultDebugRemains", batch.SucceededCount, batch.FailedCount]
+                : L["Catalog:Batch:Result", batch.SucceededCount, batch.FailedCount];
+            Snackbar.Add(message, severity);
+            await ReloadTableAsync();
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+        }
+    }
+
+    private async Task RunJobAsync(JobOperationalSummary summary)
+    {
+        var state = _state;
+        if (state is null || _disposed)
+        {
+            return;
+        }
+
+        if (summary.Definition.Declaration.JobType == JobType.Triggered)
+        {
+            await OpenTriggerAsync(summary);
+            return;
+        }
+
+        try
+        {
+            var result = await state.RunRecurringNowAsync(summary);
+            if (_disposed || _state != state)
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error, out var execution))
+            {
+                Snackbar.Add(error.Message ?? L["Catalog:Messages:RunFailed"], Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(L["Catalog:Messages:Queued", execution.InstanceId], Severity.Success);
+            await ReloadTableAsync();
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+        }
+    }
+
+    private async Task OpenTriggerAsync(JobOperationalSummary summary)
+    {
+        var state = _state;
+        if (state is null || !await CanMutateAsync(state))
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<JobTriggerDialog>
+        {
+            { dialog => dialog.Definition, summary.Definition }
+        };
+        var dialog = await DialogService.ShowAsync<JobTriggerDialog>(L["Trigger:Title"], parameters, SmallDialogOptions);
+        var result = await dialog.Result;
+        if (_disposed || _state != state)
+        {
+            return;
+        }
+
+        if (result is { Canceled: false, Data: JobExecutionInstance execution })
+        {
+            Snackbar.Add(L["Trigger:Queued", execution.InstanceId], Severity.Success);
+            await ReloadTableAsync();
+        }
+    }
+
+    private async Task<bool> CanMutateAsync(JobCatalogPageState state)
+    {
+        if (_disposed || _state != state)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await state.ReauthorizeAsync() && !_disposed && _state == state;
+        }
+        catch (OperationCanceledException) when (_disposed || state.IsDisposed)
+        {
+            return false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        var state = _state;
+        _state = null;
+        if (state is not null)
+        {
+            state.Changed -= OnStateChangedAsync;
+            await state.DisposeAsync();
+        }
+    }
+
+    private static DialogOptions SmallDialogOptions { get; } = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small
+    };
+}

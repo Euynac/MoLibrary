@@ -1,0 +1,237 @@
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<MudDialog>
+    <TitleContent>
+        <div class="owner-detail__title">
+            <span class="owner-detail__title-icon" data-state="@(Owner.IsConverged ? "ready" : "attention")">
+                <MudIcon Icon="@(Owner.IsConverged ? Icons.Material.Filled.Verified : Icons.Material.Filled.PendingActions)" />
+            </span>
+            <div>
+                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Overview:Owners:Detail:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6" HtmlTag="h2" title="@Owner.OwnerId">@Owner.OwnerId</MudText>
+            </div>
+        </div>
+    </TitleContent>
+
+    <DialogContent>
+        <div class="owner-detail">
+            <section class="owner-detail__readiness"
+                     data-state="@(Owner.IsConverged ? "ready" : "attention")"
+                     aria-labelledby="owner-readiness-title">
+                <div class="owner-detail__readiness-heading">
+                    <div>
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">
+                            @L["Overview:Owners:Detail:ReadinessTitle"]
+                        </MudText>
+                        <MudText id="owner-readiness-title" Typo="Typo.h5" HtmlTag="h3">
+                            @(Owner.IsConverged
+                                ? L["Overview:Owners:Detail:Ready"]
+                                : L["Overview:Owners:Detail:Waiting"])
+                        </MudText>
+                    </div>
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Color="@(Owner.IsConverged ? Color.Success : Color.Warning)"
+                             Icon="@(Owner.IsConverged ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Schedule)">
+                        @(Owner.IsConverged ? L["Overview:Owners:Ready"] : L["Overview:Owners:NeedsAttention"])
+                    </MudChip>
+                </div>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @(Owner.IsConverged
+                        ? L["Overview:Owners:Detail:ReadyDescription"]
+                        : L["Overview:Owners:Detail:WaitingDescription"])
+                </MudText>
+            </section>
+
+            <div class="owner-detail__signals">
+                <article data-state="@(Owner.HasPublishedSnapshot ? "ready" : "attention")">
+                    <span class="owner-detail__signal-icon">
+                        <MudIcon Icon="@(Owner.HasPublishedSnapshot ? Icons.Material.Filled.Inventory : Icons.Material.Filled.Inventory2)" />
+                    </span>
+                    <div>
+                        <small>@L["Overview:Owners:Publication"]</small>
+                        <strong>@(Owner.HasPublishedSnapshot ? L["Overview:Owners:Published"] : L["Overview:Owners:Pending"])</strong>
+                        <span>@(Owner.HasPublishedSnapshot
+                            ? L["Overview:Owners:Detail:SnapshotReadyDescription"]
+                            : L["Overview:Owners:Detail:SnapshotWaitingDescription"])</span>
+                    </div>
+                </article>
+                <article data-state="@(Owner.ActiveWorkerCount > 0 ? "ready" : "attention")">
+                    <span class="owner-detail__signal-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.DeveloperBoard" />
+                    </span>
+                    <div>
+                        <small>@L["Overview:Owners:Workers"]</small>
+                        <strong>@Owner.ActiveWorkerCount</strong>
+                        <span>@L["Overview:Owners:Detail:WorkersDescription"]</span>
+                    </div>
+                </article>
+                <article data-state="neutral">
+                    <span class="owner-detail__signal-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Workspaces" />
+                    </span>
+                    <div>
+                        <small>@L["Overview:Owners:Definitions"]</small>
+                        <strong>@Owner.ActiveDefinitionCount</strong>
+                        <span>@L["Overview:Owners:Detail:DefinitionsDescription"]</span>
+                    </div>
+                </article>
+            </div>
+
+            <section class="owner-detail__revision" aria-labelledby="owner-revision-title">
+                <div>
+                    <MudText id="owner-revision-title" Typo="Typo.subtitle1" HtmlTag="h3">
+                        @L["Overview:Owners:Revision"]
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["Overview:Owners:Detail:RevisionDescription"]
+                    </MudText>
+                </div>
+                <code title="@Owner.WorkerRevisionId">@Owner.WorkerRevisionId</code>
+            </section>
+
+            <section class="owner-detail__release" aria-labelledby="owner-release-title">
+                <header>
+                    <div>
+                        <MudText id="owner-release-title" Typo="Typo.subtitle1" HtmlTag="h3">
+                            @L["Overview:Owners:Detail:ReleaseTitle"]
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @L["Overview:Owners:Detail:ReleaseDescription"]
+                        </MudText>
+                    </div>
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="@(IsDesiredReleaseActive ? Color.Success : Color.Warning)">
+                        @(IsDesiredReleaseActive
+                            ? L["Overview:Owners:Detail:DesiredReleaseActive"]
+                            : L["Overview:Owners:Detail:DesiredReleasePending"])
+                    </MudChip>
+                </header>
+                <div class="owner-detail__release-ids">
+                    <div>
+                        <small>@L["Overview:Release:Desired"]</small>
+                        <code title="@DesiredReleaseId">@DesiredReleaseId</code>
+                    </div>
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" aria-hidden="true" />
+                    <div>
+                        <small>@L["Overview:Release:Active"]</small>
+                        <code title="@ActiveReleaseId">@ActiveReleaseId</code>
+                    </div>
+                </div>
+            </section>
+
+            <section class="owner-detail__jobs" aria-labelledby="owner-jobs-title">
+                <header>
+                    <div>
+                        <MudText id="owner-jobs-title" Typo="Typo.subtitle1" HtmlTag="h3">
+                            @L["Overview:Owners:Detail:JobsTitle"]
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @L["Overview:Owners:Detail:JobsDescription"]
+                        </MudText>
+                    </div>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                        @MatchingDefinitions.Count
+                    </MudChip>
+                </header>
+
+                @if (MatchingDefinitions.Count == 0)
+                {
+                    <div class="owner-detail__jobs-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.WorkOff" />
+                        <span>@L["Overview:Owners:Detail:JobsEmpty"]</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="owner-detail__job-list">
+                        @foreach (var definition in MatchingDefinitions)
+                        {
+                            <article>
+                                <span class="owner-detail__job-icon" aria-hidden="true">
+                                    <MudIcon Icon="@(definition.Declaration.JobType == JobType.Recurring
+                                                       ? Icons.Material.Filled.EventRepeat
+                                                       : Icons.Material.Filled.Bolt)" />
+                                </span>
+                                <div>
+                                    <strong title="@definition.Declaration.JobName">@definition.Declaration.JobName</strong>
+                                    <code title="@definition.Declaration.JobKey">@definition.Declaration.JobKey</code>
+                                </div>
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Variant="Variant.Outlined"
+                                         Color="@(definition.Declaration.JobType == JobType.Recurring ? Color.Primary : Color.Info)">
+                                    @L[$"JobTypes:{definition.Declaration.JobType}"]
+                                </MudChip>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <footer class="owner-detail__captured">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                <span>@L["Overview:Owners:Detail:CapturedAt"]</span>
+                <time datetime="@Overview.CapturedAtUtc.ToString("O")">@TimePresentation.FormatTimestamp(Overview.CapturedAtUtc)</time>
+            </footer>
+        </div>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">
+            @L["Common:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    /// <summary>
+    /// Gets the scheduler overview that supplies release and active-catalog evidence.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobSchedulerOverview Overview { get; set; } = null!;
+
+    /// <summary>
+    /// Gets the owner projection to explain.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobOwnerConvergence Owner { get; set; } = null!;
+
+    private IReadOnlyList<ActiveJobDefinition> MatchingDefinitions =>
+        Overview.ActiveCatalog?.Definitions
+            .Where(definition =>
+                string.Equals(definition.OwnerId, Owner.OwnerId, StringComparison.Ordinal)
+                && string.Equals(definition.WorkerRevisionId, Owner.WorkerRevisionId, StringComparison.Ordinal))
+            .OrderBy(static definition => definition.Declaration.JobName, StringComparer.CurrentCulture)
+            .ThenBy(static definition => definition.Declaration.JobKey, StringComparer.Ordinal)
+            .ToArray()
+        ?? [];
+
+    private bool IsDesiredReleaseActive
+    {
+        get
+        {
+            var version = Overview.CatalogPublication.Version;
+            return version.DesiredReleaseId is not null
+                   && string.Equals(version.DesiredReleaseId, version.ActiveReleaseId, StringComparison.Ordinal)
+                   && !version.IsTransitionInProgress;
+        }
+    }
+
+    private string DesiredReleaseId => Overview.CatalogPublication.Version.DesiredReleaseId
+                                       ?? L["Common:NotAvailable"];
+
+    private string ActiveReleaseId => Overview.CatalogPublication.Version.ActiveReleaseId
+                                      ?? L["Common:NotAvailable"];
+
+    private void Close() => MudDialog.Close();
+}

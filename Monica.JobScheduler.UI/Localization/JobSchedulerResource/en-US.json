@@ -1,638 +1,831 @@
 {
   "Pages": {
-    "JobSchedulerDashboard": {
-      "Title": "Dashboard"
-    },
-    "JobSchedulerMonitor": {
-      "Title": "Real-time Monitor"
-    },
-    "JobDefinitions": {
-      "Title": "Job Definitions"
-    },
-    "JobInstances": {
-      "Title": "Job Instances"
-    },
-    "JobStatistics": {
-      "Title": "Statistics"
-    }
+    "Overview": { "Title": "Scheduler overview" },
+    "Catalog": { "Title": "Job catalog" },
+    "JobDetail": { "Title": "Job details" },
+    "Executions": { "Title": "Execution ledger" },
+    "Statistics": { "Title": "Scheduler analytics" }
   },
   "Workspace": {
-    "Eyebrow": "MONICA / SCHEDULING OPERATIONS",
-    "ControlPlaneLabel": "Scheduler control plane",
-    "ControlPlaneValue": "Plan · dispatch · evidence",
-    "NavigationLabel": "Scheduler sections",
+    "Eyebrow": "MONICA / DURABLE SCHEDULING",
+    "ContractLabel": "Correctness boundary",
+    "ContractValue": "Catalog · queue · leases",
+    "TimeZone": "Scheduler timezone · {0}",
     "Navigation": {
-      "Dashboard": "Control plane",
-      "Monitor": "Live monitor",
-      "Definitions": "Definitions",
-      "Instances": "Execution ledger",
-      "Statistics": "Statistics"
+      "Overview": "Overview",
+      "Catalog": "Catalog",
+      "Executions": "Executions",
+      "Statistics": "Analytics"
     },
     "Pages": {
-      "Dashboard": {
-        "Title": "Scheduling control plane",
-        "Description": "Coordinate definitions, active work, execution health, and recent outcomes from one operational view."
+      "Overview": {
+        "Title": "Scheduler operations",
+        "Description": "Follow workload volume, execution outcomes, recent activity, and attention signals before drilling into deployment evidence."
       },
-      "Monitor": {
-        "Title": "Live execution",
-        "Description": "Watch in-flight jobs, queue pressure, and concurrency ownership as the scheduler changes."
+      "Catalog": {
+        "Title": "Job catalog",
+        "Description": "Browse recurring and triggered work separately, read schedule health, and open a job's complete operational dossier."
       },
-      "Definitions": {
-        "Title": "Schedule registry",
-        "Description": "Inspect recurring and triggered definitions, their next dispatch, and their current control state."
+      "JobDetail": {
+        "Title": "Job operational dossier",
+        "Description": "Read one immutable declaration alongside its effective policy, schedule cursor, worker compatibility, and latest execution evidence."
       },
-      "DefinitionDetail": {
-        "Title": "Definition dossier",
-        "Description": "Review one schedule's identity, runtime health, active instances, and execution policy."
-      },
-      "Instances": {
-        "Title": "Execution ledger",
-        "Description": "Search the complete run record by state, time window, job key, or instance identity."
+      "Executions": {
+        "Title": "Durable execution ledger",
+        "Description": "Search queued and completed work, inspect fenced lease history, and request cancellation without relying on broker delivery."
       },
       "Statistics": {
-        "Title": "Throughput evidence",
-        "Description": "Compare volume, duration, failure concentration, and scheduler efficiency across a selected window."
+        "Title": "Scheduler analytics",
+        "Description": "Measure reliability, schedule fulfillment, throughput, duration percentiles, and workload concentration over bounded scheduler-time windows."
       }
     }
   },
+  "Access": {
+    "Checking": "Checking scheduler access…",
+    "DeniedTitle": "Scheduler access denied",
+    "DeniedDescription": "Your current account is not authorized to inspect or operate JobScheduler."
+  },
   "Common": {
-    "Actions": {
-      "Search": "Search",
-      "Reset": "Reset",
-      "Cancel": "Cancel",
-      "Confirm": "Confirm",
-      "Save": "Save",
-      "Close": "Close",
-      "Apply": "Apply",
-      "Execute": "Execute",
-      "Retry": "Retry",
-      "ViewAll": "View All",
-      "ViewDetails": "View Details",
-      "Edit": "Edit",
-      "Back": "Back to List",
-      "ClearSelection": "Clear Selection"
-    },
-    "Status": {
-      "Loading": "Loading...",
-      "Saving": "Saving...",
-      "Executing": "Executing..."
-    },
-    "Messages": {
-      "LoadFailed": "Load Failed",
-      "SaveFailed": "Save Failed",
-      "AndMore": "{0} more"
-    },
-    "Time": {
-      "JustNow": "Just Now",
-      "SecondsAgo": "{0} seconds ago",
-      "MinutesAgo": "{0} minutes ago",
-      "Days": "days",
-      "Hours": "hours",
-      "Minutes": "minutes",
-      "Seconds": "seconds",
-      "Milliseconds": "milliseconds"
+    "Loading": "Loading…",
+    "Retry": "Retry",
+    "Refresh": "Refresh",
+    "Search": "Search",
+    "Cancel": "Cancel",
+    "Save": "Save policy",
+    "Saving": "Saving…",
+    "Submitting": "Submitting…",
+    "Close": "Close",
+    "Keep": "Keep execution",
+    "NotAvailable": "Not available",
+    "RunningDuration": "{0} and running",
+    "Duration": {
+      "Seconds": "{0} s",
+      "Milliseconds": "{0} ms"
     }
   },
-  "JobStates": {
+  "ExecutionStates": {
+    "Queued": "Queued",
+    "Running": "Running",
     "Succeeded": "Succeeded",
     "Failed": "Failed",
-    "Terminated": "Terminated",
-    "Processing": "Processing",
-    "Enqueued": "Enqueued",
-    "Scheduled": "Scheduled",
-    "Skipped": "Skipped",
-    "Cancelled": "Cancelled"
+    "Cancelled": "Cancelled",
+    "Skipped": "Skipped"
   },
-  "Dashboard": {
-    "Title": "Job Scheduler - Dashboard",
-    "Metrics": {
-      "TotalJobsLabel": "Total Jobs",
-      "RecurringJobsShort": "Recurring",
-      "TriggeredJobsShort": "Triggered",
-      "DisabledJobs": "Disabled",
-      "RunningNowLabel": "Running Now",
-      "SuccessRateLabel": "Success Rate",
-      "ThroughputLabel": "Throughput",
-      "ThroughputUnit": "Executions per hour"
-    },
-    "StateDistribution": {
-      "Title": "State Distribution",
-      "NoData": "No execution data",
-      "Total": "Total"
-    },
-    "ProblemJobs": {
-      "Title": "Needs Attention",
-      "AllHealthy": "All Jobs Running Normally",
-      "ConsecutiveFailures": "Consecutive Failures",
-      "ConsecutiveFailuresDetail": "{0} consecutive failures",
-      "LongRunning": "Long Running",
-      "LongRunningDetail": "Running for {0} ({1}% timeout)",
-      "HighSkipRate": "High Skip Rate",
-      "HighSkipRateDetail": "Skip rate {0}% (Max concurrency: {1})"
-    },
-    "RecentActivity": {
-      "Title": "Recent Activity",
-      "NoActivity": "No Activity Records",
-      "Yesterday": "Yesterday"
-    },
-    "AutoRefresh": {
-      "Enabled": "Auto-refresh enabled (every {0} seconds)"
-    },
-    "TimeRange": {
-      "LastHours": "Last {0} hours",
-      "LastDays": "Last {0} days"
-    }
+  "JobTypes": {
+    "Recurring": "Recurring",
+    "Triggered": "Triggered"
   },
-  "JobDefinitions": {
-    "Title": "Job Definitions",
+  "ExecutionOrigins": {
+    "Triggered": "Triggered admission",
+    "RecurringSchedule": "Recurring schedule",
+    "RecurringRunNow": "Operator run now"
+  },
+  "ExecutionSkipReasons": {
+    "RecurringCapacityUnavailable": "Outstanding execution capacity was unavailable at this occurrence."
+  },
+  "Overview": {
+    "PageTitle": "Job Scheduler · Overview",
+    "Release": {
+      "AriaLabel": "Catalog release status",
+      "Desired": "Desired release",
+      "Active": "Active release",
+      "Generation": "Deployment generation",
+      "Intent": "Active / desired intent",
+      "Activation": "Activation epoch",
+      "Change": "Change epoch",
+      "Publication": "Publication epoch",
+      "Converged": "Converged",
+      "Transitioning": "Cutover in progress",
+      "WaitingWorkers": "Waiting for workers",
+      "TransitionMessage": "New execution admission and recurring materialization are paused until the complete desired release is activated.",
+      "ReadinessDescription": "Desired publication and exact worker revisions must converge before the release can become the active execution contract.",
+      "EpochAriaLabel": "Catalog epoch progression"
+    },
+    "Workload": {
+      "AriaLabel": "Scheduler workload summary",
+      "TotalJobs": "Total jobs",
+      "AcrossOwners": "Across {0} source project(s)",
+      "RecurringJobs": "Recurring jobs",
+      "RecurringDescription": "Schedule-driven workload",
+      "TriggeredJobs": "Triggered jobs",
+      "TriggeredDescription": "Operator or API admission",
+      "SuccessRate": "Success rate",
+      "CompletedSample": "Across {0} successful or failed run(s)"
+    },
+    "Queue": {
+      "Title": "Execution state",
+      "Description": "Current durable ledger distribution by lifecycle state.",
+      "Total": "Executions",
+      "AriaLabel": "Durable execution state counts"
+    },
+    "Attention": {
+      "Title": "Needs attention",
+      "Description": "Signals that may require an operator decision.",
+      "ClearTitle": "No immediate intervention",
+      "ClearDescription": "No failed or skipped executions and every source project is converged.",
+      "Failed": "Failed executions",
+      "FailedDescription": "Inspect errors and retry evidence.",
+      "Skipped": "Skipped occurrences",
+      "SkippedDescription": "Review overlap and schedule capacity.",
+      "Owners": "Unconverged source projects",
+      "OwnersDescription": "Publication or compatible workers are missing."
+    },
+    "Analytics": {
+      "Title": "Performance analytics",
+      "Description": "Explore throughput, outcome trends, duration percentiles, and the slowest jobs over a bounded time window.",
+      "Action": "Open analytics"
+    },
+    "Deployment": {
+      "Title": "Deployment evidence",
+      "Description": "Release epochs and worker convergence remain available below the workload pulse for deep operational diagnosis."
+    },
+    "Owners": {
+      "Title": "Owner convergence",
+      "Description": "A release is operational only when each expected declaration snapshot and matching worker revision are present.",
+      "Revision": "Worker revision",
+      "Publication": "Published",
+      "Workers": "Live workers",
+      "Definitions": "Active jobs",
+      "Published": "Published",
+      "Pending": "Pending",
+      "Empty": "No owners are present in the desired release.",
+      "Ready": "Ready",
+      "NeedsAttention": "Needs attention",
+      "OpenDetails": "Open details for {0}",
+      "SignalsAriaLabel": "Readiness signals for {0}",
+      "Detail": {
+        "Title": "Owner details",
+        "Eyebrow": "OWNER READINESS",
+        "ReadinessTitle": "Owner signals",
+        "Ready": "Runtime-ready",
+        "Waiting": "Waiting for evidence",
+        "ReadyDescription": "The required snapshot and matching worker revision are present. This owner signal does not by itself mean the desired release is active.",
+        "WaitingDescription": "A declaration snapshot or matching worker revision is still missing. Release activation is evaluated separately.",
+        "SnapshotReadyDescription": "The expected immutable declaration snapshot is available.",
+        "SnapshotWaitingDescription": "The expected declaration snapshot has not been published.",
+        "WorkersDescription": "Active leases matching the expected revision.",
+        "DefinitionsDescription": "Jobs from this exact owner revision in the active catalog.",
+        "RevisionDescription": "Worker capabilities must report this exact executable revision.",
+        "ReleaseTitle": "Release activation",
+        "ReleaseDescription": "Owner readiness and catalog activation are independent signals.",
+        "DesiredReleaseActive": "Desired release active",
+        "DesiredReleasePending": "Desired release not active",
+        "JobsTitle": "Matching active jobs",
+        "JobsDescription": "Definitions in the active catalog owned by this exact worker revision.",
+        "JobsEmpty": "No matching definitions are present in the active catalog.",
+        "CapturedAt": "Evidence captured"
+      }
+    },
+    "Recent": {
+      "Title": "Recent queue activity",
+      "Description": "The newest durable execution admissions across all jobs.",
+      "Empty": "No executions have been admitted yet."
+    },
+    "RefreshFailed": "The last refresh failed: {0}",
+    "LastRefreshed": "Last refreshed {0}"
+  },
+  "Catalog": {
+    "PageTitle": "Job Scheduler · Catalog",
+    "Title": "Job definitions",
+    "Count": "{0} definitions",
+    "Enabled": "Enabled",
+    "Disabled": "Disabled",
+    "OnDemand": "On demand",
+    "Empty": "No active definitions match the current filters.",
     "Filters": {
-      "Search": "Search",
-      "SearchPlaceholder": "Job key / job name / source project",
-      "SourceProject": "Source Project",
-      "SourceProjectSelected": "{0} sources selected",
-      "Badges": "Filters",
-      "LastExecutionFailed": "Last execution failed"
-    },
-    "Tabs": {
-      "RecurringJob": "Recurring Jobs",
-      "TriggerJob": "Triggered Jobs"
+      "AriaLabel": "Catalog search and filters",
+      "Search": "Definition",
+      "SearchPlaceholder": "Job name or key",
+      "Owner": "Source project",
+      "AnyOwner": "All source projects",
+      "Type": "Job type",
+      "Policy": "Operator policy",
+      "AnyPolicy": "Any policy",
+      "PageSize": "Rows per page"
     },
     "Columns": {
-      "SourceProject": "Source Project",
-      "JobKey": "Job Key",
-      "JobName": "Job Name",
-      "CronExpression": "Cron Expression",
-      "NextExecutionTime": "Next Execution",
-      "LastExecutionTime": "Last Execution",
-      "Status": "Status",
+      "Definition": "Definition",
+      "Owner": "Owner",
+      "Lifecycle": "Scheduling mode",
+      "Schedule": "Schedule",
+      "NextRun": "Next run",
+      "Readiness": "Readiness",
+      "LastRun": "Last run",
+      "Revision": "Job revision",
       "Actions": "Actions"
     },
     "Actions": {
-      "Pause": "Pause",
-      "Resume": "Resume",
-      "Execute": "Execute",
-      "ViewDetails": "Details",
-      "BatchPause": "Batch Pause",
-      "BatchResume": "Batch Resume"
+      "Run": "Run job now",
+      "Trigger": "Run through active catalog",
+      "Policy": "Edit operator policy",
+      "Details": "Open job details",
+      "Pause": "Pause recurring materialization",
+      "Resume": "Resume recurring materialization",
+      "PauseUnavailableDebug": "Automatic materialization is already suppressed by debug mode. Use Run job now for an explicit execution.",
+      "RunDuringDebug": "Run job now remains available because explicit admission does not advance the recurring cursor.",
+      "PauseSelected": "Pause selected",
+      "ResumeSelected": "Resume selected",
+      "Reset": "Reset filters"
     },
-    "Status": {
+    "Readiness": {
+      "Workers": "{0} compatible worker(s)",
+      "NoWorker": "No compatible worker"
+    },
+    "ScheduleStatus": {
+      "Awaiting": "Awaiting synchronization",
+      "Exhausted": "Schedule exhausted"
+    },
+    "Policy": {
+      "Enabled": "Policy enabled",
+      "Paused": "Policy paused"
+    },
+    "Lifecycle": {
+      "Automatic": "Automatic schedule",
+      "OperatorPaused": "Paused by policy",
+      "DebugSuppressed": "Manual run only",
+      "OperatorAndDebug": "Policy paused · debug mode",
+      "AutomaticDescription": "Automatic recurring materialization is active.",
+      "OperatorPausedDescription": "Operator policy prevents automatic recurring materialization.",
+      "DebugSuppressedDescription": "Debug mode suppresses automatic materialization; explicit Run job now remains available.",
+      "OperatorAndDebugDescription": "Operator policy and debug mode both suppress automatic recurring materialization.",
+      "AwaitingDescription": "The recurring cursor is waiting for the active declaration to synchronize.",
+      "ExhaustedDescription": "No automatic occurrence remains within the declared schedule boundaries.",
+      "TriggeredEnabledDescription": "Operator admission is enabled for this triggered job.",
+      "TriggeredDisabledDescription": "Operator policy blocks new admissions for this triggered job."
+    },
+    "NextRun": {
+      "In": "Runs in {0}",
+      "DueNow": "The next occurrence is due now."
+    },
+    "Cron": {
+      "Unavailable": "Description unavailable",
+      "Parsing": "Reading schedule…",
+      "ConfiguredTimeZone": "Deployment-configured timezone (read only)"
+    },
+    "Triggered": {
+      "Ready": "Ready for operator admission",
+      "NoArguments": "No argument contract"
+    },
+    "History": { "NeverRun": "Never run" },
+    "Activity": { "QueuedRunning": "{0} queued · {1} running" },
+    "Selection": {
+      "SelectAll": "Select all recurring jobs on this page",
+      "SelectPage": "Select page",
+      "SelectJob": "Select {0}",
+      "ToolbarLabel": "Selected recurring job operations",
+      "Count": "{0} recurring job(s) selected",
+      "Description": "Batch changes retain each job's independent retention policy and optimistic concurrency fence.",
+      "DebugPauseUnavailable": "One or more selected jobs already run in debug manual-only mode; quick Pause is unavailable for that selection.",
+      "Clear": "Clear selection"
+    },
+    "Messages": {
+      "Paused": "Recurring materialization is paused.",
+      "Resumed": "Recurring materialization will resume from the next future occurrence.",
+      "PauseUnavailableDebug": "Automatic materialization is already suppressed by debug mode. Run job now remains available.",
+      "ResumedDebugRemains": "Operator pause was cleared. Debug mode still keeps automatic materialization suppressed; Run job now remains available.",
+      "UpdateFailed": "The policy update failed.",
+      "RunFailed": "The job could not be queued.",
+      "Queued": "Execution {0} was queued."
+    },
+    "Batch": {
+      "Empty": "Select at least one recurring job.",
+      "PauseTitle": "Pause selected recurring jobs?",
+      "ResumeTitle": "Resume selected recurring jobs?",
+      "PauseMessage": "Pause new recurring occurrences for {0} selected job(s)? Existing queued and running executions are unchanged.",
+      "ResumeMessage": "Resume {0} selected job(s) from their next future occurrence? Disabled-period occurrences are not replayed.",
+      "PauseUnavailableDebug": "Quick Pause is unavailable because one or more selected jobs are already suppressed by debug mode without an operator pause.",
+      "Result": "{0} policy update(s) succeeded; {1} failed.",
+      "ResultDebugRemains": "{0} operator pause update(s) succeeded; {1} failed. Debug mode still suppresses automatic materialization where configured."
+    }
+  },
+  "Policy": {
+    "Title": "Operational policy workbench",
+    "ImmutableNotice": "Job key, job type, argument contract, owner, release, worker revision, job revision, and configured timezone remain deployment-owned. Policy changes affect future admission; queued and running executions preserve their captured configuration.",
+    "DisabledOverride": "Execution state override",
+    "InheritDefault": "Inherit code default",
+    "ForceEnabled": "Force enabled",
+    "ForceDisabled": "Force disabled",
+    "MaxRecords": "Maximum retained executions",
+    "MaxRecordsHelp": "Leave empty to inherit 100. Set zero to disable count-based retention.",
+    "MaxDays": "Maximum retention age (days)",
+    "MaxDaysHelp": "Leave empty to inherit no age limit.",
+    "Saved": "Operational policy saved.",
+    "UnsavedChanges": "Unsaved operator changes",
+    "NoChanges": "No policy changes",
+    "DriftWarning": "This sticky policy was reviewed against job revision {0}; the active release now uses {1}. Review the effective values before saving.",
+    "Provenance": {
+      "Declared": "Declared default",
+      "Override": "Operator override",
+      "Effective": "Effective value",
+      "Help": "Each row separates the immutable release default from operator intent and the behavior the scheduler will apply."
+    },
+    "Sections": {
+      "General": "General",
+      "GeneralHelp": "Control admission state and operator-facing job identity.",
+      "Schedule": "Schedule",
+      "ScheduleHelp": "Edit recurring cadence and boundaries in the configured deployment timezone.",
+      "Execution": "Execution",
+      "ExecutionHelp": "Control capacity and the retry/timeout snapshot captured by newly admitted work.",
+      "Retention": "Retention",
+      "RetentionHelp": "Bound terminal execution history by count and age."
+    },
+    "Fields": {
+      "Enabled": "Enabled state",
+      "DisplayName": "Display name",
+      "Description": "Description",
+      "DescriptionMode": "Description intent",
+      "MaxConcurrency": "Maximum concurrency",
+      "RetryCount": "Retry count",
+      "ExecutionTimeout": "Execution timeout",
+      "Hours": "Hours",
+      "Minutes": "Minutes",
+      "Seconds": "Seconds",
+      "MaxRecords": "Retained execution count",
+      "MaxDays": "Retention age (days)"
+    },
+    "Identity": {
+      "ArgumentContract": "Argument contract",
+      "ReviewedRevision": "Reviewed job revision",
+      "PolicyRevision": "Policy revision",
+      "UpdatedAt": "Policy updated (UTC)",
+      "Release": "Catalog release",
+      "WorkerRevision": "Worker revision",
+      "JobType": "Job type"
+    },
+    "DescriptionModes": {
+      "Inherit": "Inherit declared description",
+      "Clear": "Clear description",
+      "Value": "Use operator description"
+    },
+    "BoundaryModes": {
+      "Inherit": "Inherit declared boundary",
+      "None": "No boundary",
+      "Value": "Use operator boundary"
+    },
+    "Actions": {
+      "ResetField": "Reset this field to its declared default",
+      "ResetAll": "Reset all overrides",
+      "Override": "Add override"
+    },
+    "Values": {
       "Enabled": "Enabled",
-      "Disabled": "Disabled"
+      "Disabled": "Disabled",
+      "NoLimit": "No limit",
+      "Days": "{0} days",
+      "ReviewOutdated": "Review outdated"
     },
-    "BatchOperation": {
-      "Selected": "{0} jobs selected",
-      "ConfirmTitle": "Confirm Batch Operation",
-      "ResultTitle": "Batch Operation Result",
-      "Success": "Batch operation successful: {0} jobs updated",
-      "PartialSuccess": "Batch operation completed: {0} succeeded, {1} failed",
-      "AllFailed": "Batch operation failed: All operations failed"
+    "Validation": {
+      "DisplayNameRequired": "Enter a display name within the supported length, or reset the field to inherit its declared value.",
+      "DescriptionRequired": "Enter a description within the supported length, choose Clear, or inherit the declared value.",
+      "Timeout": "Enter a positive timeout within the supported duration range."
     },
-    "NextExecutionTimeTooltip": {
-      "Future": "Executes in {0}",
-      "Past": "Was due {0} ago",
-      "Now": "Due now"
+    "Conflict": {
+      "DraftsPreserved": "Another operator or release changed the policy baseline ({0} → {1}). Your unsaved edits are preserved while untouched fields adopt the latest policy; review before retrying.",
+      "ReloadFailed": "The policy changed, but the latest operational baseline could not be loaded. Close and reopen the workbench before retrying.",
+      "SameField": "The latest policy changed at least one field that you also edited. Your draft wins on those fields; review the declared, override, and effective columns before retrying.",
+      "ScheduleTypeChanged": "The job changed from recurring to triggered while this Cron draft was open. The hidden draft has not been submitted. Discard only that schedule intent before saving the remaining edits.",
+      "DiscardScheduleDraft": "Discard schedule draft"
     },
-    "RelativeTime": {
-      "DaysHours": "{0}d {1}h",
-      "HoursMinutes": "{0}h {1}m",
-      "MinutesSeconds": "{0}m {1}s",
-      "Seconds": "{0}s"
+    "Execution": {
+      "ProspectiveNotice": "Maximum concurrency governs new claims immediately without cancelling active work. Retry and timeout changes are captured only by newly admitted executions.",
+      "SubsecondPrecisionPreserved": "This existing timeout includes sub-second precision. Those fractional ticks are preserved when the whole-second fields are edited."
     },
-    "Messages": {
-      "NoRecurringJobs": "No matching recurring jobs found",
-      "NoTriggerJobs": "No matching triggered jobs found",
-      "PauseSuccess": "Job {0} paused",
-      "PauseFailed": "Pause failed",
-      "ResumeSuccess": "Job {0} resumed",
-      "ResumeFailed": "Resume failed",
-      "JobKeyCopied": "Job key copied"
-    }
-  },
-  "JobInstances": {
-    "Title": "Job Instances",
-    "Filters": {
-      "Search": "Search",
-      "SearchPlaceholder": "Job key / instance ID",
-      "State": "State",
-      "TimeRange": "Time Range",
-      "StartTime": "Start Time",
-      "EndTime": "End Time",
-      "Custom": "Custom",
-      "LastHour": "Last Hour",
-      "Last24Hours": "Last 24 Hours",
-      "Last7Days": "Last 7 Days",
-      "Last30Days": "Last 30 Days"
+    "Retention": {
+      "ZeroUnlimited": "Zero disables count-based retention."
     },
-    "Columns": {
-      "InstanceId": "Instance ID",
-      "JobKey": "Job Key",
-      "State": "State",
-      "CreatedTime": "Created Time",
-      "StartTime": "Start Time",
-      "EndTime": "End Time",
-      "Duration": "Duration",
-      "Actions": "Actions"
-    },
-    "Actions": {
-      "ViewDetails": "Details",
-      "CleanupHistory": "Cleanup History"
-    },
-    "Messages": {
-      "NoInstances": "No matching job instances found",
-      "Running": "Running",
-      "LoadFailed": "Load failed",
-      "CleanupConfirm": "Are you sure you want to cleanup history? This will delete old job instance records according to retention policy.",
-      "CleanupConfirmTitle": "Confirm Cleanup",
-      "CleanupSuccess": "Cleaned up {0} history records in {1} seconds",
-      "CleanupNoRecords": "No history records to cleanup",
-      "CleanupFailed": "Cleanup failed"
-    },
-    "TableHeader": {
-      "InstanceList": "Instance List"
+    "Schedule": {
+      "CronTitle": "Cadence contract",
+      "CronDescription": "The cadence band is a prospective view of the exact Cronos runtime contract.",
+      "Format": "Expression shape",
+      "FiveFields": "5 fields",
+      "SixFields": "6 fields with seconds",
+      "CronExpression": "Cron expression override",
+      "CronInputHelp": "A blank edited value is invalid. Use Reset to inherit the declared expression.",
+      "CronTooLong": "The Cron expression cannot exceed {0} characters.",
+      "ParsedFields": "Parsed Cron fields",
+      "ConfiguredTimeZone": "Configured timezone",
+      "TimeZoneLockedHelp": "Timezone is deployment configured and intentionally cannot be edited here.",
+      "StartBoundary": "Start boundary",
+      "EndBoundary": "End boundary",
+      "BoundaryMode": "Boundary intent",
+      "BoundaryDate": "Schedule-local date",
+      "BoundaryTime": "Schedule-local time",
+      "BoundaryValidationError": "Complete both boundary fields and choose a valid wall time in the configured timezone.",
+      "AmbiguousBoundary": "This wall time occurs twice during daylight-saving fallback. The earlier UTC instant is used deterministically.",
+      "BoundaryFailures": {
+        "Incomplete": "Choose both a date and a time.",
+        "InvalidLocalTime": "This wall time does not exist because the configured timezone advances its clock."
+      },
+      "ValidationError": "The expression is not accepted by the scheduler runtime.",
+      "DescriptionLoading": "Building a localized description…",
+      "DescriptionUnavailable": "A localized description is unavailable; runtime validation and preview remain authoritative.",
+      "NonZeroSecondsConversion": "This six-field expression has a non-zero seconds field. Correct it manually before switching to five fields so cadence is not silently changed.",
+      "InvalidConversion": "The current expression is invalid and cannot be converted.",
+      "AuthoritativeNext": "Authoritative next occurrence at load",
+      "AuthoritativeObservedAt": "Loaded from authoritative state observed at {0}",
+      "ProposedNext": "Proposed next occurrence",
+      "PreviewSuspended": "Suspended by effective policy",
+      "PreviewSuspendedDescription": "No occurrence will be scheduled while the effective policy is paused.",
+      "ProspectiveWarning": "Saving replaces the recurring cursor transactionally and schedules only the next occurrence strictly after database current time. Missed occurrences are never backfilled.",
+      "SimpleSettings": {
+        "Title": "Simple schedule builder",
+        "Mode": "Schedule pattern",
+        "Apply": "Apply to Cron override",
+        "Modes": {
+          "EveryMinute": "Every minute",
+          "EveryHour": "Every hour",
+          "EveryDay": "Every day at a selected time",
+          "EveryWeek": "Every week on a selected weekday and time",
+          "EveryMonth": "Every month on a selected day and time",
+          "Custom": "Custom fields"
+        }
+      },
+      "Fields": {
+        "Second": "Second",
+        "Minute": "Minute",
+        "Hour": "Hour",
+        "DayOfMonth": "Day of month",
+        "Month": "Month",
+        "DayOfWeek": "Day of week"
+      },
+      "Weekdays": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "Preview": {
+        "AriaLabel": "Next five prospective schedule occurrences",
+        "Sequence": "#",
+        "ConfiguredTime": "Configured-timezone time",
+        "Utc": "UTC timestamp"
+      },
+      "Syntax": {
+        "Title": "Cronos syntax guide",
+        "RuntimeContract": "Field order is minute, hour, day of month, month, day of week; six-field mode prepends seconds.",
+        "FieldTable": "Cron field ranges and special characters",
+        "Field": "Field",
+        "Range": "Allowed range",
+        "Characters": "Special characters",
+        "Names": "Months accept JAN–DEC and weekdays accept SUN–SAT, case-insensitively.",
+        "ReversedRanges": "Reversed ranges wrap across the field boundary, such as FRI-MON or 22-2.",
+        "Steps": "A step applies within its base range; */15 starts at the field minimum and advances by 15.",
+        "DayMatching": "When both day-of-month and day-of-week are constrained, Cronos requires both fields to match.",
+        "Tokens": {
+          "Star": "All allowed values",
+          "Comma": "List of values",
+          "Hyphen": "Inclusive range, including reversed ranges",
+          "Slash": "Step through a range",
+          "Question": "Any value for day-of-month or day-of-week",
+          "Last": "Last day of month or last named weekday",
+          "Weekday": "Nearest weekday to a day-of-month",
+          "Hash": "Nth weekday of the month"
+        },
+        "Examples": {
+          "EveryFiveMinutes": "Every five minutes",
+          "EveryDayNoon": "Every day at noon",
+          "WeekdaysNine": "Every weekday at 09:00",
+          "MonthlyFirst": "At midnight on the first day of every month"
+        }
+      }
     }
   },
   "JobDetail": {
-    "HealthMetrics": {
-      "Title": "Health Metrics (Last {0} days)",
-      "HealthScore": "Health Score",
-      "HealthScoreTooltip": "Health Score = (Total Executions - Skipped - Failed - Terminated) / Total Executions. Reflects the proportion of jobs successfully scheduled for execution.",
-      "ExecutionFailureRate": "Execution Failure Rate",
-      "ExecutionFailureRateTooltip": "Execution Failure Rate = Failed Count / Actual Completed Count. Actual Completed Count = Total Executions - Skipped - Cancelled - Running. Reflects the failure rate of job execution code.",
-      "TotalExecutions": "Total Executions",
-      "RecentFailures": "Recent Failures",
-      "NoFailuresInWindow": "No failures in monitoring window",
-      "InstanceDetailTitle": "Job Instance Details"
+    "PageTitle": "Job Scheduler · Job details",
+    "BreadcrumbAriaLabel": "Job catalog breadcrumb",
+    "NotFound": "No active catalog declaration exists for {0}.",
+    "RefreshFailed": "The latest refresh failed: {0}",
+    "ObservedAt": "Operational evidence observed {0}",
+    "Actions": {
+      "BackToCatalog": "Back to catalog",
+      "InspectSchedule": "Edit schedule policy"
     },
-    "Statistics": {
-      "Title": "Statistics",
-      "TotalExecutions": "Total Executions",
-      "FailedExecutions": "Failed Executions",
-      "AverageExecutionTime": "Average Execution Time",
-      "FastestExecutionTime": "Fastest Execution Time",
-      "SlowestExecutionTime": "Slowest Execution Time",
-      "LastExecutionTime": "Last Execution Time",
-      "LastExecutionState": "Last Execution State"
+    "Header": {
+      "NoCompatibleWorker": "No compatible worker",
+      "EvidenceAriaLabel": "Current job operational evidence",
+      "ActiveExecutions": "Active executions",
+      "QueuedExecutions": "Queued executions",
+      "RunningExecutions": "Running executions",
+      "CompatibleWorkers": "Compatible workers"
     },
-    "BasicInfo": {
-      "Title": "Basic Information",
-      "JobKey": "Job Key",
-      "SourceProject": "Source Project",
-      "JobType": "Job Type",
-      "Status": "Status",
-      "CronExpression": "Cron Expression",
-      "Description": "Description"
+    "Activity": {
+      "Eyebrow": "LIVE EXECUTION EVIDENCE",
+      "Title": "Execution activity",
+      "Description": "Newest running work and recent failures for this logical job.",
+      "Bounded": "Newest {0} shown per stream",
+      "RunningTitle": "Running now",
+      "RunningDescription": "Bounded active worker leases.",
+      "RunningLoadFailed": "Running executions could not be refreshed: {0}",
+      "RunningEmpty": "No execution is currently running.",
+      "FailuresTitle": "Recent failures",
+      "FailuresDescription": "Newest failed executions created during the 30-day health window.",
+      "FailuresLoadFailed": "Recent failures could not be refreshed: {0}",
+      "FailuresEmpty": "No recent failed execution was found.",
+      "OpenDetails": "Open execution details for {0}"
+    },
+    "Schedule": {
+      "Title": "Recurring schedule",
+      "Description": "The durable cursor uses this immutable schedule and the active policy to materialize occurrences.",
+      "NextOccurrence": "Next occurrence",
+      "CronExpression": "Cron expression",
+      "TimeZone": "Schedule timezone",
+      "StartBoundary": "Start boundary",
+      "EndBoundary": "End boundary",
+      "TriggeredTitle": "On-demand admission",
+      "TriggeredDescription": "This job has no recurring cursor. Operators admit an execution explicitly through the active catalog.",
+      "DebugManualOnly": "Debug mode is suppressing automatic occurrences. Run job now remains available and does not advance the recurring cursor.",
+      "StatusDescriptions": {
+        "NotRecurring": "No recurring cursor applies to an on-demand job.",
+        "AwaitingSynchronization": "The active declaration is waiting for the control plane to create its durable cursor.",
+        "Scheduled": "The durable cursor has a next occurrence ready for future materialization.",
+        "Suspended": "Operator policy has suspended new recurring occurrence materialization.",
+        "Exhausted": "No occurrence remains within the declared schedule boundaries."
+      },
+      "SuspensionDescriptions": {
+        "OperatorPolicy": "Operator policy has paused automatic recurring occurrence materialization.",
+        "DebugMode": "Debug mode suppresses automatic occurrence materialization while preserving explicit Run job now admission.",
+        "OperatorAndDebug": "Operator policy and debug mode both suppress automatic occurrence materialization. Clearing the operator pause leaves debug suppression active."
+      }
+    },
+    "Contract": {
+      "Title": "Declaration and policy contract",
+      "Description": "Code-owned declaration fields remain immutable; operator policy is stored independently and updated with optimistic concurrency.",
+      "Immutable": "Immutable declaration",
+      "DeclarationTitle": "Execution declaration",
+      "Owner": "Catalog owner",
+      "ArgumentsKey": "Arguments contract",
+      "MaxConcurrency": "Maximum concurrency",
+      "MaxConcurrencyHelp": "Caps concurrent worker leases; recurring materialization also uses it as the queued-and-running overlap limit.",
+      "RetryCount": "Allowed retries",
+      "RetryCountHelp": "Additional failed attempts allowed after the first attempt.",
+      "ExecutionTimeout": "Execution timeout",
+      "ExecutionTimeoutHelp": "Maximum duration allowed for one execution attempt.",
+      "DeclarationDefault": "Code default state",
+      "PolicyTitle": "Operator policy",
+      "EffectiveState": "Effective state",
+      "PolicyUpdated": "Policy updated",
+      "PolicyStamp": "Concurrency stamp",
+      "PolicyStampHelp": "Optimistic-concurrency token; policy updates must match it and receive a new stamp.",
+      "RevisionTitle": "Release and revision identity",
+      "SchedulerScope": "Scheduler scope",
+      "Release": "Catalog release",
+      "ReleaseHelp": "Immutable catalog release that supplied this active declaration.",
+      "ActivationEpoch": "Activation epoch",
+      "ActivationEpochHelp": "Monotonic epoch assigned when this release became the active execution contract.",
+      "WorkerRevision": "Worker revision",
+      "WorkerRevisionHelp": "Exact executable revision a compatible worker must advertise before it can claim this job.",
+      "JobRevision": "Job revision",
+      "JobRevisionHelp": "Content identity of the immutable declaration captured by new executions.",
+      "OverrideEffective": "Override: {0} · Effective: {1}"
+    },
+    "LatestExecution": {
+      "Title": "Latest execution",
+      "Description": "Newest durable execution evidence for this logical job across catalog revisions.",
+      "Empty": "This job has not produced any durable execution yet."
+    },
+    "Health": {
+      "Eyebrow": "30-DAY EXECUTION EVIDENCE",
+      "Title": "Job health",
+      "Description": "Reliability, schedule delivery, terminal outcomes, and attempt duration are measured independently.",
+      "Window": "Last 30 days",
+      "ReliabilityHelp": "{0} successful or failed run(s)",
+      "ReliabilityFormulaHelp": "Successful completions divided by successful plus failed completions; skipped and cancelled executions are excluded.",
+      "FulfillmentHelp": "{0} completed schedule disposition(s)",
+      "FulfillmentFormulaHelp": "Recurring schedule occurrences delivered to a worker, whether successful or failed, divided by delivered plus skipped occurrences. Triggered and operator run-now admissions are excluded.",
+      "TriggeredFulfillmentNotApplicable": "Triggered jobs have no automatic schedule to fulfill.",
+      "OutcomeAriaLabel": "Job execution outcomes created in the selected window",
+      "CohortTotal": "Created cohort",
+      "TerminalDispositions": "Terminal dispositions",
+      "ExecutedCompletions": "Executed completions",
+      "DurationSamples": "Duration samples",
+      "CohortNote": "Outcome tiles describe executions created in the window; reliability and duration use executions completed in the window.",
+      "LoadFailed": "Job health analytics could not be refreshed: {0}"
+    }
+  },
+  "RecurringScheduleStatuses": {
+    "NotRecurring": "On demand",
+    "AwaitingSynchronization": "Awaiting synchronization",
+    "Scheduled": "Scheduled",
+    "Suspended": "Suspended",
+    "Exhausted": "Exhausted"
+  },
+  "Trigger": {
+    "Title": "Admit execution",
+    "Revision": "Expected immutable job revision",
+    "InstanceId": "Idempotency instance",
+    "PayloadSection": "Execution payload",
+    "Arguments": "JSON arguments",
+    "ArgumentsType": "Declared argument type: {0}",
+    "ArgumentsUnknown": "Enter a JSON object matching the job's declared argument contract.",
+    "ArgumentsRequired": "JSON arguments are required.",
+    "InvalidJson": "Arguments must be valid JSON.",
+    "Action": "Queue execution",
+    "Queued": "Execution {0} was durably queued.",
+    "Delay": {
+      "Title": "Queue availability",
+      "Description": "Choose the first scheduler wall time at which a worker may claim this execution.",
+      "Enable": "Delay admission",
+      "Date": "Available date",
+      "Time": "Available time",
+      "TimeZoneHelp": "The selected wall time is interpreted in scheduler timezone {0} and persisted as UTC.",
+      "Required": "Choose both a date and time.",
+      "InvalidWallTime": "This wall time does not exist in scheduler timezone {0}. Choose another time.",
+      "Future": "Delayed availability must be in the future."
+    }
+  },
+  "Analytics": {
+    "PageTitle": "Job Scheduler · Analytics",
+    "RefreshFailed": "The latest analytics refresh failed: {0}",
+    "ObservedAt": "Analytics observed {0}",
+    "Range": {
+      "Title": "Analysis window",
+      "Description": "Calendar presets use scheduler timezone {0}; database aggregation remains bounded.",
+      "Today": "Today",
+      "Last24Hours": "Last 24 hours",
+      "Last7Days": "Last 7 days",
+      "Last30Days": "Last 30 days"
+    },
+    "Metrics": {
+      "AriaLabel": "Scheduler analytics summary",
+      "Reliability": "Reliability",
+      "Throughput": "Executed throughput",
+      "ScheduleFulfillment": "Schedule fulfillment",
+      "DecidedRuns": "{0} successful or failed run(s)",
+      "PerHour": "Terminal attempts per hour",
+      "ScheduledDispositions": "{0} completed schedule disposition(s)",
+      "DurationSample": "{0} measured terminal attempt(s)"
+    },
+    "Trend": {
+      "Eyebrow": "COMPLETION PULSE",
+      "Title": "Outcome trend",
+      "Description": "Completed outcomes across the selected range, presented in scheduler time.",
+      "LegendAriaLabel": "Outcome chart legend",
+      "ChartAriaLabel": "Scheduler completion outcome trend",
+      "ViewAriaLabel": "Outcome chart display",
+      "Bars": "Bars",
+      "Lines": "Lines",
+      "TotalsAriaLabel": "Completed outcome totals",
+      "Total": "Total executions",
+      "BucketTooltip": "{0}: {1} succeeded, {2} failed, {3} skipped, {4} cancelled"
+    },
+    "Duration": {
+      "Eyebrow": "LATENCY DOSSIER",
+      "Title": "Terminal-attempt duration",
+      "Description": "Measured from the latest attempt start to terminal completion; skips never enter this distribution.",
+      "Samples": "{0} samples",
+      "PercentilesAriaLabel": "Execution duration percentiles",
+      "Minimum": "Minimum",
+      "Average": "Average",
+      "P50": "P50",
+      "P50Description": "Half completed at or below",
+      "P90": "P90",
+      "P90Description": "Nine in ten completed at or below",
+      "P95": "P95",
+      "P95Description": "Tail-latency threshold",
+      "P99": "P99",
+      "P99Description": "Extreme-tail threshold",
+      "Maximum": "Maximum"
+    },
+    "Rankings": {
+      "Eyebrow": "WORKLOAD CONCENTRATION",
+      "Volume": "Execution count ranking",
+      "VolumeDescription": "Jobs with the most terminal completions in this window.",
+      "Failures": "Failure count ranking",
+      "FailuresDescription": "Jobs producing the most failed completions in this window.",
+      "TopTen": "Top 10",
+      "OpenJobWithMetric": "Rank {0}: open {1}; {2}: {3} ({4})",
+      "VolumeEmpty": "No terminal job activity completed in this window.",
+      "FailuresEmpty": "No failed executions completed in this window."
+    },
+    "Slowest": {
+      "Top": "Slowest executions · Top 10",
+      "Description": "The slowest measured terminal attempt for each job, linked back to its durable evidence.",
+      "Empty": "No measured terminal attempts completed in this window.",
+      "OpenDetails": "Rank {0}: inspect {1}, instance {2}; {3}; completed {4}; duration {5}"
+    },
+    "CohortNote": "State totals describe executions created in the window. Outcomes, throughput, trends, rankings, and durations describe executions completed in the window."
+  },
+  "Executions": {
+    "PageTitle": "Job Scheduler · Executions",
+    "Title": "Execution ledger",
+    "Count": "{0} executions",
+    "LastRefreshed": "Observed {0}",
+    "Empty": "No durable executions match the current filters.",
+    "Filters": {
+      "AriaLabel": "Execution search and filters",
+      "Search": "Execution",
+      "SearchPlaceholder": "Instance ID or job key",
+      "AnyState": "Any state",
+      "States": "States",
+      "TimeRange": "Enqueued within",
+      "StartDate": "Start date",
+      "EndDate": "End date",
+      "PageSize": "Rows per page",
+      "InvalidRange": "The end date must be on or after the start date."
+    },
+    "TimeRanges": {
+      "All": "All time",
+      "LastHour": "Last hour",
+      "Last24Hours": "Last 24 hours",
+      "Last7Days": "Last 7 days",
+      "Last30Days": "Last 30 days",
+      "Custom": "Custom range"
+    },
+    "Columns": {
+      "Definition": "Definition",
+      "Instance": "Instance",
+      "State": "State",
+      "Created": "Enqueued",
+      "Started": "Started",
+      "Completed": "Completed",
+      "Duration": "Duration",
+      "Attempts": "Attempts / retries",
+      "Worker": "Lease owner",
+      "Actions": "Actions"
     },
     "Actions": {
-      "Enable": "Enable",
-      "Disable": "Disable",
-      "ExecuteNow": "Execute Now",
-      "Execute": "Execute"
+      "Details": "Inspect execution",
+      "OpenDetailsFor": "Inspect execution for {0}, instance {1}",
+      "Cancel": "Request cancellation",
+      "Apply": "Apply filters",
+      "Reset": "Reset"
     },
-    "RunningInstances": {
-      "Title": "Running Instances",
-      "ViewAll": "View All Instances",
-      "NoRunning": "No running instances",
-      "Columns": {
-        "InstanceId": "Instance ID",
-        "State": "State",
-        "CreatedTime": "Created Time",
-        "StartTime": "Start Time",
-        "Duration": "Duration",
-        "Actions": "Actions"
-      }
-    },
-    "Configuration": {
-      "Title": "Job Configuration",
-      "MaxConcurrency": "Max Concurrency",
-      "MaxConcurrencyTooltip": "Number of concurrent executions for the same job key. Default is `1`. If exceeded, new execution requests will be `Skipped`",
-      "RetryCount": "Retry Count",
-      "RetryCountTooltip": "Default is `0`. Job will automatically retry immediately after exception, affected by max concurrency limit.",
-      "MaxExecutionTimeout": "Max Execution Timeout",
-      "MaxExecutionTimeoutTooltip": "When job exceeds this time without returning result, it's considered timeout failure. Worker will set `CancellationToken` to cancelled state to attempt termination (if job doesn't use cancellation token mechanism, the thread will remain occupied as .NET cannot force kill background processes). Default is `1 hour`.",
-      "MaxRetainedHistoryRecords": "Max Retained History Records",
-      "MaxRetainedHistoryRecordsTooltip": "Maximum number of historical execution records to retain. When exceeded, oldest records will be automatically cleaned. Set to 0 or negative for unlimited.",
-      "MaxRetentionDays": "Max Retention Days",
-      "MaxRetentionDaysTooltip": "Maximum days to retain historical execution records. Records older than this will be automatically cleaned. Not set means time-based cleanup is disabled.",
-      "StartTime": "Start Time",
-      "EndTime": "End Time",
-      "Unlimited": "Unlimited",
-      "NotSet": "Not Set",
-      "Days": "days"
-    },
-    "Messages": {
-      "LoadFailed": "Load failed",
-      "LoadRunningInstancesFailed": "Failed to load running instances",
-      "DisableSuccess": "Job disabled",
-      "DisableFailed": "Disable failed",
-      "EnableSuccess": "Job enabled",
-      "EnableFailed": "Enable failed",
-      "GetDefinitionFailed": "Failed to get job definition",
-      "DefinitionNotFound": "Job definition not found"
+    "Cancel": {
+      "Title": "Cancel execution?",
+      "Message": "Queued execution {0} will be cancelled immediately. A running execution receives a durable cooperative cancellation request.",
+      "Requested": "Cancellation was persisted.",
+      "Failed": "Cancellation could not be persisted.",
+      "Cancelled": "The queued execution was cancelled.",
+      "AlreadyTerminal": "The execution was already terminal.",
+      "NotFound": "The execution no longer exists."
     }
   },
-  "Monitor": {
-    "Title": "Job Scheduler - Real-time Monitor",
-    "LiveExecution": {
-      "Title": "Live Execution",
-      "ActiveCount": "{0} active",
-      "Columns": {
-        "Job": "Job",
-        "State": "State",
-        "ElapsedTime": "Elapsed",
-        "TimeoutProgress": "Timeout Progress",
-        "Actions": "Actions"
-      },
-      "Actions": {
-        "ViewDetails": "View Details",
-        "Cancel": "Cancel Execution"
-      },
-      "Messages": {
-        "NoExecutions": "No jobs currently executing",
-        "AllCompleted": "All jobs completed or waiting for schedule",
-        "Waiting": "Waiting...",
-        "CancelSuccess": "Job cancellation requested",
-        "CancelFailed": "Cancel failed"
-      }
-    },
-    "QueueStatus": {
-      "Title": "Queue Status",
-      "Processing": "Processing",
-      "Enqueued": "Enqueued",
-      "Scheduled": "Scheduled",
-      "ActiveTotal": "Active Total"
-    },
-    "ConcurrencyUtilization": {
-      "Title": "Concurrency Status",
-      "Reconcile": "Reconcile",
-      "Syncing": "Syncing...",
-      "ReconcileTooltip": "Display in-memory concurrency slot status",
-      "ReconcileSuccess": "Reconcile completed (duration: {0}ms, deviation: {1} -> {2})",
-      "ReconcileFailed": "Reconcile failed",
-      "NoJobs": "No active jobs",
-      "InconsistentState": "Inconsistent state (deviation: {0})",
-      "ShowDetails": "Details",
-      "HideDetails": "Hide",
-      "RunningDeviation": "Running: {0}",
-      "PendingDeviation": "Pending: {0}",
-      "AtCapacity": "Full",
-      "Running": "Running ({0})",
-      "Pending": "Pending ({0})",
-      "InstanceId": "Instance ID",
-      "Worker": "Worker",
-      "ElapsedTime": "Elapsed",
-      "WaitingTime": "Waiting Time"
-    },
-    "AutoRefresh": {
-      "Enable": "Auto-refresh",
-      "Interval": "Refresh Interval",
-      "LastRefresh": "Last Refresh",
-      "ManualRefresh": "Refresh",
-      "Refreshing": "Refreshing...",
-      "Intervals": {
-        "ThreeSeconds": "3 seconds",
-        "FiveSeconds": "5 seconds",
-        "TenSeconds": "10 seconds",
-        "ThirtySeconds": "30 seconds"
-      }
-    },
-    "Messages": {
-      "LoadFailed": "Failed to load data",
-      "RefreshFailed": "Refresh failed"
+  "ExecutionDetail": {
+    "Title": "Execution evidence",
+    "Eyebrow": "DURABLE EXECUTION / EVIDENCE",
+    "NotFound": "The execution no longer exists.",
+    "State": "State",
+    "Job": "Job key",
+    "Owner": "Owner",
+    "Release": "Catalog release",
+    "Activation": "Activation epoch",
+    "Attempts": "Attempts / retries",
+    "Origin": "Admission",
+    "Available": "Available at",
+    "Worker": "Running worker",
+    "Revision": "Exact executable identity",
+    "WorkerRevision": "Worker revision",
+    "JobRevision": "Job revision",
+    "Arguments": "Serialized arguments",
+    "History": "Append-only execution history",
+    "Identity": "Execution identity",
+    "Instance": "Instance ID",
+    "Scope": "Scheduler scope",
+    "Observed": "Snapshot observed",
+    "JobType": "Job type",
+    "ArgumentsType": "Arguments contract",
+    "PolicySnapshot": "Captured execution policy",
+    "MaxConcurrency": "Maximum concurrency",
+    "RetryCount": "Allowed retries",
+    "Timeout": "Execution timeout",
+    "Timing": "Timing evidence",
+    "Created": "Enqueued at",
+    "Started": "Started at",
+    "Completed": "Completed at",
+    "Duration": "Duration",
+    "ScheduledOccurrence": "Scheduled occurrence",
+    "CancellationRequested": "Cancellation requested",
+    "Runtime": "Lease and recovery",
+    "LeaseLosses": "Recovered lease losses",
+    "LeaseExpires": "Lease expires",
+    "NoArguments": "No serialized arguments were captured.",
+    "SkipReason": "Skip reason",
+    "HistoryCount": "{0} retained entries",
+    "HistoryDescription": "Durable state transitions, worker logs, and operator cancellation evidence.",
+    "EmptyHistory": "No retained history entries are available.",
+    "CancellationPending": "A cooperative cancellation request has been pending since {0}.",
+    "Copied": "Diagnostics copied to the clipboard.",
+    "CopyFailed": "Diagnostics could not be copied.",
+    "Actions": {
+      "ViewCatalog": "Open job details",
+      "CopyDiagnostics": "Copy diagnostics"
     }
   },
-  "Statistics": {
-    "Title": "Job Scheduler - Statistics",
-    "TimeRange": {
-      "Today": "Today",
-      "Last24Hours": "24 Hours",
-      "Last7Days": "7 Days",
-      "Last30Days": "30 Days",
-      "Custom": "Custom",
-      "Label": "Time Range"
-    },
-    "ExecutionTrend": {
-      "Title": "Execution Trend",
-      "Legend": {
-        "Success": "Success",
-        "Failed": "Failed",
-        "Skipped": "Skipped"
-      },
-      "Summary": {
-        "TotalExecutions": "Total Executions",
-        "Success": "Success",
-        "Failed": "Failed",
-        "Skipped": "Skipped"
-      },
-      "NoData": "No trend data"
-    },
-    "DurationPercentiles": {
-      "Title": "Execution Duration Distribution",
-      "Sample": "Sample",
-      "P50": "P50",
-      "P90": "P90",
-      "P95": "P95",
-      "P99": "P99",
-      "P50Desc": "Median",
-      "P90Desc": "90th Percentile",
-      "P95Desc": "95th Percentile",
-      "P99Desc": "99th Percentile",
-      "Average": "Average",
-      "Fastest": "Fastest",
-      "Slowest": "Slowest",
-      "SlowestInstances": "Slowest Instances Top {0}",
-      "SlowestTooltip": "Statistics of slowest execution instances for different jobs (only showing the slowest one per job)",
-      "NoData": "No duration data"
-    },
-    "TopJobs": {
-      "ExecutionCount": "Top Jobs by Execution Count",
-      "FailureCount": "Top Jobs by Failure Count",
-      "TopN": "Top {0}",
-      "NoData": "No ranking data"
-    },
-    "FailureAnalysis": {
-      "Title": "Failure Analysis",
-      "TotalFailures": "Total Failures",
-      "TotalTerminated": "Total Terminated",
-      "RetrySuccessRate": "Retry Success Rate",
-      "ByJob": "By Job Distribution",
-      "FailureCount": "{0} failures",
-      "NoFailures": "No failures in this time period",
-      "AllNormal": "All jobs executing normally"
-    },
-    "Messages": {
-      "LoadFailed": "Failed to load statistics"
-    }
+  "ExecutionHistoryKinds": {
+    "StateTransition": "State transition",
+    "ExecutionLog": "Execution log",
+    "Cancellation": "Cancellation"
   },
-  "Dialogs": {
-    "JobInstanceDetail": {
-      "Title": "Job Instance Details",
-      "BasicInfo": "Basic Information",
-      "InstanceId": "Instance ID",
-      "JobKey": "Job Key",
-      "State": "State",
-      "CreatedTime": "Created Time",
-      "StartTime": "Start Time",
-      "EndTime": "End Time",
-      "Duration": "Duration",
-      "RetryCount": "Retry Count",
-      "ViewJobDefinition": "View Job Definition",
-      "LoadFailed": "Load failed",
-      "RunningClient": "Running Client",
-      "ScheduledExecutionTime": "Scheduled Execution Time",
-      "JobArgs": "Job Args",
-      "CancelJob": "Cancel Job",
-      "CancelConfirmTitle": "Confirm Cancel",
-      "CancelConfirmMessage": "Are you sure you want to cancel job instance {0}?",
-      "CancelSuccess": "Job cancelled",
-      "CancelFailed": "Cancel failed",
-      "InstanceIdCopied": "Instance ID copied"
-    },
-    "JobExecute": {
-      "Title": "Execute Job",
-      "JobName": "Job Name",
-      "ExecuteSuccess": "Job submitted for execution",
-      "ExecuteFailed": "Execute failed",
-      "ArgsType": "Args Type",
-      "JsonArgs": "JSON Args",
-      "ValidationSuccess": "JSON validation passed, ready to execute",
-      "NoArgsRequired": "This job requires no arguments, click execute to trigger immediately",
-      "TypeReference": "Type Reference"
-    },
-    "CronEditor": {
-      "Title": "Edit Cron Expression",
-      "SaveSuccess": "Cron expression updated",
-      "EmptyExpression": "Cron expression cannot be empty"
-    },
-    "JobConfigEditor": {
-      "Title": "Edit Job Configuration",
-      "JobName": "Job Name",
-      "JobNameHelper": "Readable name for the job",
-      "JobNameRequired": "Job name cannot be empty",
-      "Description": "Description",
-      "DescriptionHelper": "Detailed description of the job (optional)",
-      "MaxConcurrency": "Max Concurrency",
-      "MaxConcurrencyHelper": "Number of concurrent executions for the same job key, default is 1",
-      "MaxConcurrencyRequired": "Max concurrency must be greater than or equal to 1",
-      "RetryCount": "Retry Count",
-      "RetryCountHelper": "Number of automatic retries after exception, default is 0",
-      "RetryCountRequired": "Retry count must be greater than or equal to 0",
-      "TimeoutHours": "Timeout (Hours)",
-      "TimeoutMinutes": "Minutes",
-      "TimeoutRequired": "Timeout must be greater than 0",
-      "CurrentTimeout": "Current timeout: {0} hours {1} minutes (default: 1 hour)",
-      "HistoryRetentionPolicy": "History Retention Policy",
-      "HistoryRetentionTooltip": "These two settings jointly control automatic cleanup of job execution history. Records exceeding the maximum count or retention days will be automatically deleted",
-      "MaxRetainedHistoryRecords": "Max Retained History Records",
-      "MaxRetainedHistoryRecordsHelper": "Maximum number of historical execution records to retain. Default is 100, set to 0 or negative for unlimited",
-      "MaxRetainedHistoryRecordsRequired": "Max retained history records cannot be empty",
-      "MaxRetentionDays": "Max Retention Days",
-      "MaxRetentionDaysHelper": "Maximum days to retain historical execution records. Leave empty to disable time-based cleanup",
-      "StartTime": "Start Time",
-      "StartTimeHelper": "Earliest execution time for the job (optional)",
-      "EndTime": "End Time",
-      "EndTimeHelper": "Latest execution time for the job (optional)",
-      "SaveSuccess": "Configuration updated",
-      "SaveFailed": "Save failed",
-      "ValidationJobNameEmpty": "Job name cannot be empty",
-      "ValidationMaxConcurrency": "Max concurrency must be greater than or equal to 1",
-      "ValidationTimeout": "Timeout must be greater than 0",
-      "ValidationRetentionDays": "Retention days must be greater than or equal to 1"
-    },
-    "BatchOperationConfirm": {
-      "Message": "Are you sure you want to {1} the following {0} jobs?"
-    },
-    "BatchOperationResult": {
-      "Success": "Success",
-      "Failed": "Failed",
-      "Total": "Total",
-      "FailedDetails": "Failed Items Details"
-    },
-    "StateHistory": {
-      "Title": "State History",
-      "NoHistory": "No history records",
-      "SourceClientTooltip": "State changed by client: {0}"
-    }
-  },
-  "Services": {
-    "Errors": {
-      "ExpressionEmpty": "Expression cannot be empty",
-      "ExpressionFormatError": "Expression format error: {0}",
-      "CountRange": "Count must be between 1 and 100",
-      "CalculateOccurrencesFailed": "Failed to calculate execution times: {0}",
-      "ParseFailed": "Parse failed",
-      "JsInvokeFailed": "JavaScript invocation failed: {0}",
-      "ParseFailedWithMessage": "Parse failed: {0}",
-      "UnknownSettingsType": "Unknown settings type",
-      "GeneratedExpressionInvalid": "Generated expression is invalid: {0}",
-      "BuildExpressionFailed": "Failed to build expression: {0}",
-      "SourceExpressionInvalid": "Source expression is invalid: {0}",
-      "QuartzFormatMustHave6Parts": "Quartz format must contain exactly 6 parts.",
-      "FormatConversionFailed": "Format conversion failed: {0}"
-    }
-  },
-  "Components": {
-    "CronExpressionEditor": {
-      "Title": "Cron Expression Editor",
-      "FormatStandard": "Standard (5 fields)",
-      "FormatQuartz": "Quartz (6 fields)",
-      "ExpressionLabel": "Cron Expression",
-      "Parsing": "Parsing...",
-      "DescriptionPrefix": "Description: ",
-      "NextOccurrencesTitle": "Next 5 Execution Times",
-      "ShowToggle": "Show {0}",
-      "HideToggle": "Hide {0}",
-      "SimpleSettingsToggleTarget": "Simple Settings",
-      "SyntaxGuideToggleTarget": "Syntax Guide",
-      "SimpleSettingsTitle": "Simple Settings",
-      "TypeLabel": "Type",
-      "SimpleTypeEveryMinute": "Every minute",
-      "SimpleTypeEveryHour": "Every hour",
-      "SimpleTypeEveryDay": "Every day",
-      "SimpleTypeEveryWeek": "Every week",
-      "SimpleTypeEveryMonth": "Every month",
-      "SimpleTypeCustom": "Custom",
-      "FieldSecond": "Second",
-      "FieldMinute": "Minute",
-      "FieldHour": "Hour",
-      "FieldWeekday": "Weekday",
-      "FieldDate": "Date",
-      "FieldDay": "Day",
-      "FieldMonth": "Month",
-      "FieldWeek": "Week",
-      "WeekdayHelper": "0-6 (0=Sunday)",
-      "DayOfMonthHelper": "1-31",
-      "ApplySettings": "Apply Settings",
-      "SyntaxGuideTitle": "Cron Expression Syntax Guide",
-      "QuartzSyntaxPrefix": "Quartz format (6 fields): ",
-      "QuartzSyntaxFields": "second minute hour day month week",
-      "StandardSyntaxPrefix": "Standard format (5 fields): ",
-      "StandardSyntaxFields": "minute hour day month week",
-      "FieldColumn": "Field",
-      "AllowedValuesColumn": "Allowed Values",
-      "SpecialCharsColumn": "Special Characters",
-      "SpecialCharsTitle": "Special Characters:",
-      "SpecialCharAll": "all values",
-      "SpecialCharNoSpecificValue": "no specific value (day and week fields only)",
-      "SpecialCharRange": "range, for example: 10-12",
-      "SpecialCharList": "list, for example: 1,3,5",
-      "SpecialCharIncrement": "increment, for example: */5 means every 5 units",
-      "ExamplesTitle": "Examples:",
-      "ExampleEveryFiveMinutes": "Runs every 5 minutes",
-      "ExampleEveryDayNoon": "Runs every day at 12:00",
-      "ExampleWeekdaysNine": "Runs on weekdays at 09:00",
-      "ExampleMonthlyFirst": "Runs on the 1st day of every month at 00:00",
-      "QuartzFormatHelper": "Format: second minute hour day month week",
-      "StandardFormatHelper": "Format: minute hour day month week",
-      "QuartzMonthAllowedValues": "1-12 or JAN-DEC",
-      "QuartzWeekAllowedValues": "0-6 or SUN-SAT",
-      "StandardWeekAllowedValues": "0-7 (0 or 7=Sunday)",
-      "FormatConversionFailed": "Format conversion failed: {0}",
-      "DescriptionParseFailed": "Failed to parse description: {0}",
-      "CalculateOccurrencesFailed": "Failed to calculate execution times: {0}",
-      "BuildExpressionFailed": "Failed to build expression"
-    },
-    "CronExpressionDisplay": {
-      "Parsing": "Parsing..."
-    }
+  "LogLevels": {
+    "Trace": "Trace",
+    "Debug": "Debug",
+    "Information": "Information",
+    "Warning": "Warning",
+    "Error": "Error",
+    "Critical": "Critical",
+    "None": "None"
   }
 }

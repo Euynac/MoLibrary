@@ -1,0 +1,146 @@
+@attribute [Route(PAGE_URL)]
+
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Components
+@using Monica.JobScheduler.UI.UIJobScheduler.State
+
+@inject SchedulerOverviewPageStateFactory PageStateFactory
+@inject IOptions<ModuleJobSchedulerUIOption> UiOptions
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+@implements IAsyncDisposable
+
+<PageTitle>@L["Overview:PageTitle"]</PageTitle>
+
+<SchedulerWorkspace Title="@L["Workspace:Pages:Overview:Title"]"
+                    Description="@L["Workspace:Pages:Overview:Description"]"
+                    ActivePanelIndex="0">
+    @if (_state is not null)
+    {
+        <SchedulerAccessBoundary AccessChecked="@_state.AccessChecked" IsAuthorized="@_state.IsAuthorized">
+            <div class="overview-page">
+                @if (_state.IsLoading && _state.Overview is null)
+                {
+                    <div class="overview-page__loading" role="status">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                    </div>
+                }
+                else if (_state.Error is not null && _state.Overview is null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @_state.Error
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="_state.RefreshAsync">
+                            @L["Common:Retry"]
+                        </MudButton>
+                    </MudAlert>
+                }
+                else if (_state.Overview is { } overview)
+                {
+                    <SchedulerWorkloadSummary Overview="@overview" />
+
+                    @if (_state.Error is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                            @L["Overview:RefreshFailed", _state.Error]
+                        </MudAlert>
+                    }
+
+                    <div class="overview-page__pulse-grid">
+                        <ExecutionStateFlow Counts="@overview.ExecutionStateCounts" />
+                        <RecentExecutionsPanel Executions="@overview.RecentExecutions"
+                                               IsRefreshing="@_state.IsLoading"
+                                               OnRefresh="_state.RefreshAsync" />
+                    </div>
+
+                    <div class="overview-page__attention-grid">
+                        <SchedulerAttentionPanel Overview="@overview" />
+                        <aside class="overview-page__insight" aria-labelledby="overview-insight-title">
+                            <span class="overview-page__insight-icon" aria-hidden="true">
+                                <MudIcon Icon="@Icons.Material.Filled.Insights" />
+                            </span>
+                            <div>
+                                <MudText id="overview-insight-title" Typo="Typo.h6" HtmlTag="h2">
+                                    @L["Overview:Analytics:Title"]
+                                </MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @L["Overview:Analytics:Description"]
+                                </MudText>
+                            </div>
+                            <MudButton Href="@SchedulerStatisticsPage.PAGE_URL"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                                @L["Overview:Analytics:Action"]
+                            </MudButton>
+                        </aside>
+                    </div>
+
+                    <section id="deployment-evidence" class="overview-page__deployment">
+                        <header class="overview-page__deployment-heading">
+                            <div>
+                                <MudText Typo="Typo.h6" HtmlTag="h2">@L["Overview:Deployment:Title"]</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @L["Overview:Deployment:Description"]
+                                </MudText>
+                            </div>
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Variant="Variant.Outlined"
+                                     Color="@(overview.IsConverged ? Color.Success : Color.Warning)">
+                                @(overview.IsConverged
+                                    ? L["Overview:Release:Converged"]
+                                    : L["Overview:Release:WaitingWorkers"])
+                            </MudChip>
+                        </header>
+                        <div class="overview-page__deployment-grid">
+                            <ReleaseReadinessBand Overview="@overview" />
+                            <OwnerConvergencePanel Overview="@overview" />
+                        </div>
+                    </section>
+
+                    <footer class="overview-page__freshness">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Overview:LastRefreshed", TimePresentation.FormatTimestamp(_state.LastRefreshedUtc ?? overview.CapturedAtUtc)]
+                        </MudText>
+                    </footer>
+                }
+            </div>
+        </SchedulerAccessBoundary>
+    }
+</SchedulerWorkspace>
+
+@code {
+    public const string PAGE_URL = "/job-scheduler";
+
+    private SchedulerOverviewPageState? _state;
+    private bool _disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _state = PageStateFactory.Create(UiOptions.Value.AutoRefreshInterval);
+        _state.Changed += OnStateChangedAsync;
+        await _state.InitializeAsync();
+    }
+
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        var state = _state;
+        _state = null;
+        if (state is not null)
+        {
+            state.Changed -= OnStateChangedAsync;
+            await state.DisposeAsync();
+        }
+    }
+}

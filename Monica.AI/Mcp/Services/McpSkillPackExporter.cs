@@ -19,7 +19,7 @@ namespace Monica.AI.Mcp.Services;
 internal sealed class McpSkillPackExporter
 {
     private const string SKILL_FILE = "SKILL.md";
-    private const string TOOL_REFERENCE_FILE = "references/tools.md";
+    private const string TOOL_REFERENCE_DIRECTORY = "references/tools";
     private const string BASH_SCRIPT_FILE = "scripts/mcp-call.sh";
     private const string POWERSHELL_SCRIPT_FILE = "scripts/mcp-call.ps1";
 
@@ -79,7 +79,9 @@ internal sealed class McpSkillPackExporter
             tools.Count,
         [
             new McpSkillPackFile(SKILL_FILE, RenderSkillMarkdown(entry, tools, endpointUrl, digest)),
-            new McpSkillPackFile(TOOL_REFERENCE_FILE, RenderToolReference(entry, tools, digest)),
+            .. tools.Select(tool => new McpSkillPackFile(
+                $"{TOOL_REFERENCE_DIRECTORY}/{tool.Name}.md",
+                RenderToolFile(tool))),
             new McpSkillPackFile(BASH_SCRIPT_FILE, RenderBashScript(entry, endpointUrl)),
             new McpSkillPackFile(POWERSHELL_SCRIPT_FILE, RenderPowerShellScript(entry, endpointUrl))
         ]);
@@ -211,8 +213,8 @@ internal sealed class McpSkillPackExporter
 
         builder
             .Append("## Tool catalog\n\n")
-            .Append(tools.Count).Append(" tools, sorted by name. One-line index below; full descriptions and input schemas in `")
-            .Append(TOOL_REFERENCE_FILE).Append("`.\n\n");
+            .Append(tools.Count).Append(" tools, sorted by name. One-line index below; each tool's full description and input schema in `")
+            .Append(TOOL_REFERENCE_DIRECTORY).Append("/<tool-name>.md`.\n\n");
         foreach (var tool in tools)
         {
             builder
@@ -230,31 +232,20 @@ internal sealed class McpSkillPackExporter
         return builder.ToString();
     }
 
-    private static string RenderToolReference(
-        LocalMcpServerEntry entry,
-        IReadOnlyList<McpServerToolDescriptor> tools,
-        string digest)
+    private static string RenderToolFile(McpServerToolDescriptor tool)
     {
         var builder = new StringBuilder()
-            .Append("# ").Append(entry.Definition.Name).Append(" tool reference\n\n")
-            .Append("Server version ").Append(entry.Definition.Version).Append("; tool schema digest `")
-            .Append(digest).Append("`. Tools are sorted by name. Each block shows the tool's MCP input schema.\n");
+            .Append("# ").Append(tool.Name).Append("\n\n")
+            .Append(ToSingleLine(tool.Description))
+            .Append('\n');
 
-        foreach (var tool in tools)
+        var schema = AgentCapabilitySchemaParser.FormatSchema(tool.SdkTool.ProtocolTool.InputSchema);
+        if (!string.IsNullOrWhiteSpace(schema))
         {
             builder
-                .Append("\n## `").Append(tool.Name).Append("`\n\n")
-                .Append(ToSingleLine(tool.Description))
-                .Append('\n');
-
-            var schema = AgentCapabilitySchemaParser.FormatSchema(tool.SdkTool.ProtocolTool.InputSchema);
-            if (!string.IsNullOrWhiteSpace(schema))
-            {
-                builder
-                    .Append("\nInput schema:\n\n```json\n")
-                    .Append(schema.Trim())
-                    .Append("\n```\n");
-            }
+                .Append("\nInput schema:\n\n```json\n")
+                .Append(schema.Trim())
+                .Append("\n```\n");
         }
 
         return builder.ToString();

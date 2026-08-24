@@ -1,0 +1,178 @@
+.job-detail-header {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+    padding: clamp(18px, 3vw, 28px);
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.job-detail-header:hover {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
+    box-shadow: var(--mud-elevation-2);
+}
+
+.job-detail-header__main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    min-width: 0;
+}
+
+.job-detail-header__identity {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.job-detail-header__title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.job-detail-header__symbol {
+    display: grid;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    color: var(--mud-palette-primary);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-lines-default));
+    border-radius: 10px;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 9%, var(--mud-palette-surface));
+    place-items: center;
+}
+
+.job-detail-header__chips,
+.job-detail-header__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.job-detail-header__description {
+    max-width: 62rem;
+}
+
+.job-detail-header__identity > code {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-font-family-mono);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-detail-header__actions {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+}
+
+.job-detail-header__evidence {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.job-detail-header__evidence > div {
+    --metric-tone: var(--mud-palette-primary);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--metric-tone) 20%, var(--mud-palette-lines-default));
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--metric-tone) 6%, var(--mud-palette-surface));
+}
+
+.job-detail-header__evidence > div[data-tone="success"] {
+    --metric-tone: var(--mud-palette-success);
+}
+
+.job-detail-header__evidence > div[data-tone="info"] {
+    --metric-tone: var(--mud-palette-info);
+}
+
+.job-detail-header__evidence > div[data-tone="secondary"] {
+    --metric-tone: var(--mud-palette-secondary);
+}
+
+.job-detail-header__evidence > div[data-tone="error"] {
+    --metric-tone: var(--mud-palette-error);
+}
+
+.job-detail-header__evidence dt {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.job-detail-header__evidence dt > span:first-child {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    color: var(--metric-tone);
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--metric-tone) 11%, transparent);
+    place-items: center;
+}
+
+.job-detail-header__evidence dt > span:last-child {
+    overflow: hidden;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-detail-header__evidence dd {
+    margin: 0;
+    font-family: var(--mo-font-family-mono);
+    font-size: 1.3rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 820px) {
+    .job-detail-header__main {
+        display: grid;
+    }
+
+    .job-detail-header__actions {
+        justify-content: flex-start;
+    }
+
+    .job-detail-header__evidence {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .job-detail-header__actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .job-detail-header__evidence {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .job-detail-header {
+        transition-duration: 0.01ms;
+    }
+}

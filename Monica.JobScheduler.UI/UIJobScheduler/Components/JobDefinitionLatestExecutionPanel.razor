@@ -1,0 +1,105 @@
+@using Monica.JobScheduler.Models.Execution
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="job-latest-panel" aria-labelledby="job-latest-heading">
+    <header class="job-latest-panel__heading">
+        <div>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="job-latest-heading">
+                @L["JobDetail:LatestExecution:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["JobDetail:LatestExecution:Description"]
+            </MudText>
+        </div>
+        @if (Execution is { } headingExecution)
+        {
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Variant="Variant.Outlined"
+                     Color="@JobSchedulerUiPresentation.GetStateColor(headingExecution.State)">
+                @L[$"ExecutionStates:{headingExecution.State}"]
+            </MudChip>
+        }
+    </header>
+
+    @if (Execution is null)
+    {
+        <div class="job-latest-panel__empty">
+            <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Color="Color.Secondary" Size="Size.Large" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["JobDetail:LatestExecution:Empty"]
+            </MudText>
+        </div>
+    }
+    else if (Execution is { } execution)
+    {
+        <div class="job-latest-panel__instance">
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @L["Executions:Columns:Instance"]
+                </MudText>
+                <code title="@execution.InstanceId">@execution.InstanceId</code>
+            </div>
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Primary"
+                       EndIcon="@Icons.Material.Filled.OpenInFull"
+                       OnClick="() => OpenAsync(execution.InstanceId)">
+                @L["Executions:Actions:Details"]
+            </MudButton>
+        </div>
+
+        <dl class="job-latest-panel__facts">
+            <div>
+                <dt>@L["Executions:Columns:Created"]</dt>
+                <dd>@TimePresentation.FormatTimestamp(execution.CreatedAtUtc)</dd>
+            </div>
+            <div>
+                <dt>@L["Executions:Columns:Started"]</dt>
+                <dd>@TimePresentation.FormatTimestamp(execution.StartedAtUtc)</dd>
+            </div>
+            <div>
+                <dt>@L["Executions:Columns:Completed"]</dt>
+                <dd>@TimePresentation.FormatTimestamp(execution.CompletedAtUtc)</dd>
+            </div>
+            <div>
+                <dt>@L["Executions:Columns:Duration"]</dt>
+                <dd>@TimePresentation.FormatExecutionDuration(execution, ObservedAtUtc)</dd>
+            </div>
+            <div>
+                <dt>@L["Executions:Columns:Attempts"]</dt>
+                <dd>@execution.ExecutionAttempt / @execution.RetryAttempt</dd>
+            </div>
+            <div>
+                <dt>@L["Executions:Columns:Worker"]</dt>
+                <dd><code>@Display(execution.RunningWorkerInstanceId)</code></dd>
+            </div>
+        </dl>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the newest execution for the logical job, or <see langword="null"/> when the job has never run.
+    /// </summary>
+    [Parameter]
+    public JobExecutionInstance? Execution { get; set; }
+
+    /// <summary>
+    /// Gets the snapshot observation time used to calculate an in-progress duration.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public DateTimeOffset ObservedAtUtc { get; set; }
+
+    /// <summary>
+    /// Gets the callback that opens durable execution evidence in place.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> ExecutionSelected { get; set; }
+
+    private Task OpenAsync(string instanceId) => ExecutionSelected.InvokeAsync(instanceId);
+
+    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

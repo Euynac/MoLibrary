@@ -1,0 +1,403 @@
+@using System.Text.Json
+@using Monica.JobScheduler.UI.Localization
+
+@inject JobSchedulerFacade Facade
+@inject IJobSchedulerUiAccess Access
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject TimeProvider TimeProvider
+@inject SchedulerTimePresentation TimePresentation
+
+@implements IAsyncDisposable
+
+<MudDialog>
+    <TitleContent>
+        <div class="trigger-dialog__title">
+            <MudText Typo="Typo.h6">@L["Trigger:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@Definition.EffectiveConfiguration.JobName</MudText>
+            <code title="@Definition.Declaration.JobKey">@Definition.Declaration.JobKey</code>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="trigger-dialog">
+            <dl class="trigger-dialog__identity">
+                <div>
+                    <dt>@L["Trigger:Revision"]</dt>
+                    <dd>
+                        <code title="@Definition.JobRevisionId">
+                            @JobSchedulerUiPresentation.ShortIdentity(Definition.JobRevisionId, 20)
+                        </code>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@L["Trigger:InstanceId"]</dt>
+                    <dd>
+                        <code title="@_instanceId">@JobSchedulerUiPresentation.ShortIdentity(_instanceId, 20)</code>
+                    </dd>
+                </div>
+            </dl>
+
+            <section class="trigger-dialog__payload" aria-labelledby="trigger-payload-heading">
+                <MudText Typo="Typo.subtitle2" id="trigger-payload-heading">@L["Trigger:PayloadSection"]</MudText>
+                <div class="trigger-dialog__json-field">
+                    <MudTextField T="string"
+                                  Value="@_jobArgs"
+                                  ValueChanged="SetJobArgs"
+                                  Label="@L["Trigger:Arguments"]"
+                                  HelperText="@GetArgumentsHelp()"
+                                  Error="@(_argumentsError is not null)"
+                                  ErrorText="@_argumentsError"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Lines="7"
+                                  Immediate="true"
+                                  Disabled="@_isSubmitting" />
+                </div>
+            </section>
+
+            <section class="trigger-dialog__availability" aria-labelledby="trigger-availability-heading">
+                <div class="trigger-dialog__availability-heading">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" id="trigger-availability-heading">
+                            @L["Trigger:Delay:Title"]
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Trigger:Delay:Description"]
+                        </MudText>
+                    </div>
+                    <MudSwitch T="bool"
+                               Value="@_delayEnabled"
+                               ValueChanged="SetDelayEnabled"
+                               Color="Color.Primary"
+                               Disabled="@_isSubmitting"
+                               aria-label="@L["Trigger:Delay:Enable"]">
+                        @L["Trigger:Delay:Enable"]
+                    </MudSwitch>
+                </div>
+
+                @if (_delayEnabled)
+                {
+                    <div class="trigger-dialog__availability-fields">
+                        <MudDatePicker Date="@_availableDate"
+                                       DateChanged="SetAvailableDate"
+                                       Label="@L["Trigger:Delay:Date"]"
+                                       DateFormat="yyyy-MM-dd"
+                                       MinDate="@TimePresentation.ToSchedulerWallTime(TimeProvider.GetUtcNow()).Date"
+                                       Clearable="true"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Disabled="@_isSubmitting"
+                                       Error="@(_availabilityError is not null)" />
+                        <MudTimePicker Time="@_availableTime"
+                                       TimeChanged="SetAvailableTime"
+                                       Label="@L["Trigger:Delay:Time"]"
+                                       Clearable="true"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Disabled="@_isSubmitting"
+                                       Error="@(_availabilityError is not null)" />
+                    </div>
+                    @if (_availabilityError is not null)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error" role="alert">@_availabilityError</MudText>
+                    }
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @L["Trigger:Delay:TimeZoneHelp", TimePresentation.TimeZoneId]
+                    </MudText>
+                }
+            </section>
+
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <div class="trigger-dialog__actions">
+            <MudButton Variant="Variant.Text"
+                       Disabled="@_isSubmitting"
+                       OnClick="Cancel"
+                       aria-label="@L["Common:Cancel"]">
+                @L["Common:Cancel"]
+            </MudButton>
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       Disabled="@_isSubmitting"
+                       OnClick="TriggerAsync"
+                       aria-label="@L["Trigger:Action"]">
+                @(_isSubmitting ? L["Common:Submitting"] : L["Trigger:Action"])
+            </MudButton>
+        </div>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly CancellationToken _lifetimeToken;
+    private readonly object _operationSync = new();
+    private readonly string _instanceId = Guid.NewGuid().ToString("N");
+    private TaskCompletionSource? _operationCompletion;
+    private int _disposed;
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public ActiveJobDefinition Definition { get; set; } = null!;
+
+    private string? _jobArgs;
+    private string? _argumentsError;
+    private bool _delayEnabled;
+    private DateTime? _availableDate;
+    private TimeSpan? _availableTime;
+    private string? _availabilityError;
+    private bool _isSubmitting;
+    private string? _error;
+
+    public JobTriggerDialog()
+    {
+        _lifetimeToken = _lifetimeCancellation.Token;
+    }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    protected override void OnInitialized()
+    {
+        if (Definition.Declaration.JobType != JobType.Triggered)
+        {
+            throw new InvalidOperationException("Only triggered definitions can open the execution admission dialog.");
+        }
+
+        _jobArgs = "{}";
+    }
+
+    private async Task TriggerAsync()
+    {
+        if (!TryBeginSubmission())
+        {
+            return;
+        }
+
+        try
+        {
+            if (!TryValidateArguments() || !TryBuildAvailableAtUtc(out var availableAtUtc))
+            {
+                return;
+            }
+
+            var isAuthorized = await Access.IsAuthorizedAsync(_lifetimeToken);
+            if (ShouldStop())
+            {
+                return;
+            }
+
+            if (!isAuthorized)
+            {
+                _error = L["Access:DeniedDescription"];
+                return;
+            }
+
+            var result = await Facade.TriggerAsync(
+                new JobTriggerRequest
+                {
+                    JobKey = Definition.Declaration.JobKey,
+                    JobArgs = _jobArgs,
+                    AvailableAtUtc = availableAtUtc,
+                    InstanceId = _instanceId,
+                    ExpectedOwnerId = Definition.OwnerId,
+                    ExpectedJobRevisionId = Definition.JobRevisionId
+                },
+                _lifetimeToken);
+            if (ShouldStop())
+            {
+                return;
+            }
+
+            if (result.IsFailed(out var error, out var execution))
+            {
+                _error = error.Message;
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(execution));
+        }
+        catch (OperationCanceledException) when (_lifetimeToken.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            CompleteSubmission();
+        }
+    }
+
+    private bool TryValidateArguments()
+    {
+        if (string.IsNullOrWhiteSpace(_jobArgs))
+        {
+            _argumentsError = L["Trigger:ArgumentsRequired"];
+            return false;
+        }
+
+        try
+        {
+            using var _ = JsonDocument.Parse(_jobArgs);
+            return true;
+        }
+        catch (JsonException)
+        {
+            _argumentsError = L["Trigger:InvalidJson"];
+            return false;
+        }
+    }
+
+    private bool TryBuildAvailableAtUtc(out DateTimeOffset? availableAtUtc)
+    {
+        availableAtUtc = null;
+        if (!_delayEnabled)
+        {
+            return true;
+        }
+
+        if (_availableDate is null || _availableTime is null)
+        {
+            _availabilityError = L["Trigger:Delay:Required"];
+            return false;
+        }
+
+        var schedulerWallTime = _availableDate.Value.Date.Add(_availableTime.Value);
+        if (!TimePresentation.TryConvertSchedulerWallTimeToUtc(schedulerWallTime, out var requestedAvailability))
+        {
+            _availabilityError = L["Trigger:Delay:InvalidWallTime", TimePresentation.TimeZoneId];
+            return false;
+        }
+
+        if (requestedAvailability <= TimeProvider.GetUtcNow())
+        {
+            _availabilityError = L["Trigger:Delay:Future"];
+            return false;
+        }
+
+        availableAtUtc = requestedAvailability;
+        return true;
+    }
+
+    private bool TryBeginSubmission()
+    {
+        lock (_operationSync)
+        {
+            if (IsDisposed || _operationCompletion is not null)
+            {
+                return false;
+            }
+
+            _operationCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _isSubmitting = true;
+            _argumentsError = null;
+            _availabilityError = null;
+            _error = null;
+            return true;
+        }
+    }
+
+    private void CompleteSubmission()
+    {
+        TaskCompletionSource? completion;
+        lock (_operationSync)
+        {
+            completion = _operationCompletion;
+            _operationCompletion = null;
+            if (!IsDisposed)
+            {
+                _isSubmitting = false;
+            }
+        }
+
+        completion?.TrySetResult();
+    }
+
+    private void SetJobArgs(string? value)
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        _jobArgs = value;
+        _argumentsError = null;
+    }
+
+    private void SetDelayEnabled(bool enabled)
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        _delayEnabled = enabled;
+        _availabilityError = null;
+        if (!enabled || (_availableDate is not null && _availableTime is not null))
+        {
+            return;
+        }
+
+        var defaultAvailability = TimePresentation.ToSchedulerWallTime(TimeProvider.GetUtcNow().AddMinutes(15));
+        _availableDate = defaultAvailability.Date;
+        _availableTime = new TimeSpan(defaultAvailability.Hour, defaultAvailability.Minute, 0);
+    }
+
+    private void SetAvailableDate(DateTime? value)
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        _availableDate = value;
+        _availabilityError = null;
+    }
+
+    private void SetAvailableTime(TimeSpan? value)
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        _availableTime = value;
+        _availabilityError = null;
+    }
+
+    private string GetArgumentsHelp() => string.IsNullOrWhiteSpace(Definition.Declaration.JobArgsKey)
+        ? L["Trigger:ArgumentsUnknown"]
+        : L["Trigger:ArgumentsType", Definition.Declaration.JobArgsKey];
+
+    private bool ShouldStop() => IsDisposed || _lifetimeToken.IsCancellationRequested;
+
+    private void Cancel()
+    {
+        if (!IsDisposed)
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        _lifetimeCancellation.Cancel();
+
+        Task activeOperation;
+        lock (_operationSync)
+        {
+            activeOperation = _operationCompletion?.Task ?? Task.CompletedTask;
+        }
+
+        await activeOperation.ConfigureAwait(false);
+        _lifetimeCancellation.Dispose();
+    }
+}

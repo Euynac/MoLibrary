@@ -10,9 +10,9 @@ namespace Monica.JobScheduler.Services;
 
 /// <summary>
 /// Executes one scheduler-owned job attempt through the shared execution pipeline.
-/// The orchestrator remains responsible for state, timeout, concurrency, and retry policy.
+/// The durable store and worker remain responsible for state, timeout, concurrency, retry, and fencing.
 /// </summary>
-public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
+public sealed class JobExecutor
 {
     private static readonly ConcurrentDictionary<Type, Func<JobExecutor, object, JobExecutionContext, Task>>
         TRIGGERED_EXECUTORS = new();
@@ -124,7 +124,7 @@ public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
     {
         var features = new ExecutionFeatureCollection();
         features.Set(new JobExecutionFeature(jobContext.InstanceId, jobType));
-        BindExecutionLogWriter(job, jobContext.InstanceId);
+        BindExecutionLogWriter(job, jobContext);
         try
         {
             await jobContext.ServiceProvider.GetRequiredService<IExecutionPipeline>()
@@ -143,7 +143,7 @@ public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
         }
     }
 
-    private void BindExecutionLogWriter(object job, string instanceId)
+    private static void BindExecutionLogWriter(object job, JobExecutionContext context)
     {
         if (job is not IJobExecutionLogBindingTarget target)
         {
@@ -151,14 +151,8 @@ public sealed class JobExecutor(JobInstanceManager jobInstanceManager)
         }
 
         target.BindExecutionLogWriter(new JobExecutionLogWriter(
-            instanceId,
-            (message, logLevel, exception, cancellationToken) =>
-                jobInstanceManager.AppendExecutionLogAsync(
-                    instanceId,
-                    message,
-                    logLevel,
-                    exception,
-                    cancellationToken)));
+            context.InstanceId,
+            context.WriteExecutionLogAsync));
     }
 
     private static void ClearExecutionLogWriter(object job)

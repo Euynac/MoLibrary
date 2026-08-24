@@ -12,6 +12,45 @@ namespace Monica.UI.Shell.Support;
 public sealed class PageAccessEvaluator(IPageCatalog pageCatalog, IServiceProvider services)
 {
     /// <summary>
+    /// Determines whether the current circuit may render a component selected by the Blazor router.
+    /// </summary>
+    /// <param name="pageComponentType">The component type selected for the current route.</param>
+    /// <param name="cancellationToken">Cancels the current access evaluation.</param>
+    /// <returns>
+    /// <see langword="true"/> when the component is not registered with the Monica page catalog, when every matching
+    /// registration is public, or when every distinct registered policy allows access; otherwise
+    /// <see langword="false"/>.
+    /// </returns>
+    /// <remarks>
+    /// Unregistered components remain available because the shell also owns framework routes such as error and
+    /// not-found pages. When one component intentionally owns multiple registered aliases, every distinct policy is
+    /// enforced so an unprotected alias cannot bypass a protected registration.
+    /// </remarks>
+    public async Task<bool> IsRouteAuthorizedAsync(
+        Type pageComponentType,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(pageComponentType);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var protectedRegistrations = pageCatalog.GetRegisteredPages()
+            .Where(page => page.ComponentType == pageComponentType && page.AccessPolicyType is not null)
+            .GroupBy(page => page.AccessPolicyType)
+            .Select(static registrations => registrations.First());
+
+        foreach (var page in protectedRegistrations)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!await IsAuthorizedAsync(page, cancellationToken))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Determines whether the current circuit may access a registered route.
     /// </summary>
     /// <param name="route">The route registered with the UI shell.</param>

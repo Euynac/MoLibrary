@@ -4,47 +4,40 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
-using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
+using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.UI.Pages;
 using Monica.Modules;
+using Monica.UI.Shell.Support;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.UI.Modules;
 
-public class ModuleJobSchedulerUITests
+public sealed class ModuleJobSchedulerUITests
 {
     [Fact]
-    public async Task Composition_ShouldRegisterUiSupportHelpersWithExpectedLifetimes()
+    public void Options_WhenNoPagePolicyIsConfigured_ShouldInheritShellPolicy()
     {
-        await using var host = ComposeJobSchedulerUI(useConvenienceEntry: false);
-        using var firstScope = host.Services.CreateScope();
-        using var secondScope = host.Services.CreateScope();
-
-        firstScope.ServiceProvider.GetRequiredService<JobStateColorResolver>().Should()
-            .NotBeSameAs(secondScope.ServiceProvider.GetRequiredService<JobStateColorResolver>());
-        firstScope.ServiceProvider.GetRequiredService<JobArgsJsonSchemaSupport>().Should()
-            .BeSameAs(secondScope.ServiceProvider.GetRequiredService<JobArgsJsonSchemaSupport>());
-        firstScope.ServiceProvider.GetRequiredService<CronExpressionSupport>().Should()
-            .BeSameAs(secondScope.ServiceProvider.GetRequiredService<CronExpressionSupport>());
+        new ModuleJobSchedulerUIOption().AuthorizationPolicyOverride.Should().BeNull();
     }
 
     [Fact]
-    public async Task AddJobSchedulerUI_ShouldComposeRuntimeAndUiDependencies()
+    public async Task AddJobSchedulerUi_ShouldComposeOnlyItsRuntimeLocalizationAndShellDependencies()
     {
-        await using var host = ComposeJobSchedulerUI(useConvenienceEntry: true);
+        await using var host = ComposeJobSchedulerUi(useConvenienceEntry: true);
         var application = host.Services.GetRequiredService<MonicaApplication>();
         var dependencies = GetDirectDependencyTypes(application, typeof(ModuleJobSchedulerUI));
 
         dependencies.Should().Contain(typeof(ModuleLocalization));
         dependencies.Should().Contain(typeof(ModuleJobScheduler));
-        dependencies.Should().Contain(typeof(ModuleStackTraceUI));
         dependencies.Should().Contain(typeof(ModuleShellUI));
+        dependencies.Should().NotContain(typeof(ModuleStackTraceUI));
     }
 
     [Fact]
     public async Task DirectAndTransitiveComposition_ShouldDeclareEquivalentIntrinsicDependencies()
     {
-        await using var directHost = ComposeJobSchedulerUI(useConvenienceEntry: true);
-        await using var transitiveHost = ComposeJobSchedulerUI(useConvenienceEntry: false);
+        await using var directHost = ComposeJobSchedulerUi(useConvenienceEntry: true);
+        await using var transitiveHost = ComposeJobSchedulerUi(useConvenienceEntry: false);
         var directDependencies = GetDirectDependencyTypes(
             directHost.Services.GetRequiredService<MonicaApplication>(),
             typeof(ModuleJobSchedulerUI));
@@ -53,15 +46,49 @@ public class ModuleJobSchedulerUITests
             typeof(ModuleJobSchedulerUI));
 
         transitiveDependencies.Should().BeEquivalentTo(directDependencies);
-        transitiveDependencies.Should().Contain(typeof(ModuleJobScheduler));
-        transitiveDependencies.Should().Contain(typeof(ModuleLocalization));
-        transitiveDependencies.Should().Contain(typeof(ModuleStackTraceUI));
-        transitiveDependencies.Should().Contain(typeof(ModuleShellUI));
     }
 
-    private static WebApplication ComposeJobSchedulerUI(bool useConvenienceEntry)
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Composition_ShouldProtectEverySchedulerRoute(bool useConvenienceEntry)
     {
-        var builder = WebApplication.CreateBuilder();
+        await using var app = ComposeJobSchedulerUi(useConvenienceEntry, configurePipeline: true);
+        var pages = app.Services.GetRequiredService<IPageCatalog>().GetRegisteredPages()
+            .Where(page => page.ComponentType == typeof(SchedulerOverviewPage)
+                           || page.ComponentType == typeof(JobCatalogPage)
+                           || page.ComponentType == typeof(JobDefinitionDetailPage)
+                           || page.ComponentType == typeof(JobExecutionsPage))
+            .ToArray();
+
+        pages.Should().HaveCount(4);
+        pages.Should().OnlyContain(page =>
+            page.AccessPolicyType == typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
+    }
+
+    [Fact]
+    public async Task Composition_ShouldRegisterSchedulerAccessPolicyAsScoped()
+    {
+        await using var app = ComposeJobSchedulerUi(useConvenienceEntry: true);
+        using var firstScope = app.Services.CreateScope();
+        using var secondScope = app.Services.CreateScope();
+        var first = firstScope.ServiceProvider
+            .GetRequiredService<OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>>();
+
+        firstScope.ServiceProvider
+            .GetRequiredService<OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>>()
+            .Should().BeSameAs(first);
+        secondScope.ServiceProvider
+            .GetRequiredService<OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>>()
+            .Should().NotBeSameAs(first);
+    }
+
+    private static WebApplication ComposeJobSchedulerUi(bool useConvenienceEntry, bool configurePipeline = false)
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            ApplicationName = typeof(ModuleJobSchedulerUI).Assembly.GetName().Name
+        });
         builder.AddMonica(monica =>
         {
             monica.ConfigureTypeDiscovery(options =>
@@ -72,13 +99,15 @@ public class ModuleJobSchedulerUITests
                     typeof(ModuleJobScheduler).Assembly,
                     typeof(ModuleShellUI).Assembly);
             });
-            monica.AddServiceDiscovery()
-                .AsStandalone()
-                .UseMemoryStorage();
             monica.AddJobScheduler()
+                .UseInMemoryStore()
                 .UseSchedulerScope("job-ui-tests")
-                .UseInMemoryProvider()
-                .UseInMemoryMetadataRepository();
+                .UseCatalogRelease(
+                    "job-ui-tests-release",
+                    1,
+                    [new JobCatalogOwnerManifest("job-ui-tests", "job-ui-tests-revision")])
+                .UseLocalWorkerIdentity("job-ui-tests", "job-ui-tests-revision")
+                .AsStandalone();
             if (useConvenienceEntry)
             {
                 monica.AddJobSchedulerUI();
@@ -89,7 +118,14 @@ public class ModuleJobSchedulerUITests
             }
         });
 
-        return builder.Build();
+        var app = builder.Build();
+        if (configurePipeline)
+        {
+            app.UseMonica();
+            app.MapMonica();
+        }
+
+        return app;
     }
 
     private static IReadOnlySet<Type> GetDirectDependencyTypes(

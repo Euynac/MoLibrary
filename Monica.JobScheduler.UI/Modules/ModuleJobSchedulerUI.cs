@@ -1,10 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.Pages;
-using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
+using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
+using Monica.JobScheduler.UI.UIJobScheduler.Shared;
+using Monica.JobScheduler.UI.UIJobScheduler.State;
+using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using Monica.UI.Shell.Models;
 using Monica.UI.Shell.Support;
 using MudBlazor;
@@ -17,7 +21,7 @@ public static class ModuleJobSchedulerUIBuilderExtensions
     extension(IMonicaBuilder builder)
     {
         /// <summary>
-        /// Configure the JobSchedulerUI module
+        /// Adds the localized JobScheduler operational workspace.
         /// </summary>
         public ModuleRegistration<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption> AddJobSchedulerUI(
             Action<ModuleJobSchedulerUIOption>? action = null)
@@ -25,20 +29,17 @@ public static class ModuleJobSchedulerUIBuilderExtensions
             return builder.AddModule<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption>(action);
         }
     }
-
 }
 
 /// <summary>
-/// JobScheduler UI module implementation
-/// Provides a job scheduling management interface based on Blazor
+/// Registers the JobScheduler catalog, convergence, and durable-execution user interface.
 /// </summary>
-public class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOption>, IUIModule
+public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOption>, IUIModule
 {
     /// <inheritdoc />
     public override void Describe(ModuleDescriptor module)
     {
         module.Require<ModuleJobScheduler, ModuleJobSchedulerOption>();
-        module.Require<ModuleStackTraceUI, ModuleStackTraceUIOption>();
         module.Require<ModuleLocalization, ModuleLocalizationOption>(
             static option => option.AddResource<JobSchedulerResource>());
         module.Require<ModuleShellUI, ModuleShellUIOption>(
@@ -47,85 +48,81 @@ public class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOption>, IU
 
     private static void RegisterNavigation(INavigationRegistryBuilder registry)
     {
-        registry.RegisterLocalizedPage<DashboardPage, JobSchedulerResource>(
-            DashboardPage.PAGE_URL,
-            "Pages:JobSchedulerDashboard:Title",
-            Icons.Material.Filled.Dashboard,
+        registry.RegisterLocalizedPage<SchedulerOverviewPage, JobSchedulerResource>(
+            SchedulerOverviewPage.PAGE_URL,
+            "Pages:Overview:Title",
+            Icons.Material.Filled.SpaceDashboard,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
-            navOrder: 99);
-        registry.RegisterLocalizedPage<MonitorPage, JobSchedulerResource>(
-            MonitorPage.PAGE_URL,
-            "Pages:JobSchedulerMonitor:Title",
-            Icons.Material.Filled.Monitor,
+            navOrder: 99,
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
+        registry.RegisterLocalizedPage<JobCatalogPage, JobSchedulerResource>(
+            JobCatalogPage.PAGE_URL,
+            "Pages:Catalog:Title",
+            Icons.Material.Filled.Inventory2,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
-            navOrder: 100);
-        registry.RegisterLocalizedPage<JobDefinitionsPage, JobSchedulerResource>(
-            JobDefinitionsPage.PAGE_URL,
-            "Pages:JobDefinitions:Title",
-            Icons.Material.Filled.WorkOutline,
+            navOrder: 100,
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
+        registry.RegisterLocalizedPage<JobExecutionsPage, JobSchedulerResource>(
+            JobExecutionsPage.PAGE_URL,
+            "Pages:Executions:Title",
+            Icons.Material.Filled.ReceiptLong,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
-            navOrder: 101);
-        registry.RegisterLocalizedPage<JobInstancesPage, JobSchedulerResource>(
-            JobInstancesPage.PAGE_URL,
-            "Pages:JobInstances:Title",
-            Icons.Material.Filled.PlaylistPlay,
+            navOrder: 101,
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
+        registry.RegisterLocalizedPage<SchedulerStatisticsPage, JobSchedulerResource>(
+            SchedulerStatisticsPage.PAGE_URL,
+            "Pages:Statistics:Title",
+            Icons.Material.Filled.QueryStats,
             BuiltInNavigationCategoryIds.TaskScheduling,
             addToNav: true,
-            navOrder: 102);
-        registry.RegisterLocalizedPage<StatisticsPage, JobSchedulerResource>(
-            StatisticsPage.PAGE_URL,
-            "Pages:JobStatistics:Title",
-            Icons.Material.Filled.Analytics,
+            navOrder: 102,
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
+        registry.RegisterLocalizedPage<JobDefinitionDetailPage, JobSchedulerResource>(
+            JobDefinitionDetailPage.PAGE_URL,
+            "Pages:JobDetail:Title",
+            Icons.Material.Filled.WorkHistory,
             BuiltInNavigationCategoryIds.TaskScheduling,
-            addToNav: true,
-            navOrder: 103);
+            addToNav: false,
+            navOrder: 103,
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
     }
 
+    /// <inheritdoc />
     public override void ConfigureServices(ModuleContext<ModuleJobSchedulerUIOption> context)
     {
-        var services = context.Services;
-        // Register UI-only support helpers.
-        services.AddScoped<JobStateColorResolver>();
-        services.AddSingleton<JobArgsJsonSchemaSupport>();
-        services.AddSingleton<CronExpressionSupport>();
-        // StackTraceParser is now registered by ModuleStackTraceUI.
+        context.Services.TryAddScoped<OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>>();
+        context.Services.TryAddScoped<IJobSchedulerUiAccess, JobSchedulerUiAccess>();
+        context.Services.TryAddScoped<SchedulerTimePresentation>();
+        context.Services.TryAddScoped<SchedulerOverviewPageStateFactory>();
+        context.Services.TryAddScoped<JobCatalogPageStateFactory>();
+        context.Services.TryAddScoped<JobDefinitionDetailPageStateFactory>();
+        context.Services.TryAddScoped<JobExecutionsStateFactory>();
+        context.Services.TryAddScoped<SchedulerStatisticsPageStateFactory>();
     }
-
 }
 
 /// <summary>
-/// JobScheduler UI module configuration options
+/// Configures the JobScheduler operational workspace.
 /// </summary>
-public class ModuleJobSchedulerUIOption : ModuleOptions<ModuleJobSchedulerUI>
+public sealed class ModuleJobSchedulerUIOption : ModuleOptions<ModuleJobSchedulerUI>, IOperationalPageAccessOptions
 {
     /// <summary>
-    /// Health indicator time window (default 30 days)
-    /// Configure statistics for health in the past x time
+    /// Gets or sets the host authorization policy that overrides the shell-wide operational policy for every
+    /// JobScheduler page and mutation. A missing value inherits the shell policy. Outside Development, a missing
+    /// effective policy denies access.
     /// </summary>
-    public TimeSpan HealthMetricsWindow { get; set; } = TimeSpan.FromDays(30);
+    public string? AuthorizationPolicyOverride { get; set; }
 
     /// <summary>
-    /// Number of recent failed instances shown in health metrics (default 5)
-    /// Configuration displays the latest x failed instance records
-    /// </summary>
-    public int HealthMetricsFailedInstancesLimit { get; set; } = 5;
-
-    /// <summary>
-    /// Table default page size (default 20)
-    /// </summary>
-    public int DefaultPageSize { get; set; } = 20;
-
-    /// <summary>
-    /// Auto refresh interval (default 5 seconds)
-    /// Set to a higher value (like 10 seconds) to reduce server load
+    /// Gets or sets the overview refresh interval. The default is five seconds.
     /// </summary>
     public TimeSpan AutoRefreshInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Auto-refresh is enabled by default
+    /// Gets or sets the default catalog and execution page size. The default is 20.
     /// </summary>
-    public bool EnableAutoRefreshByDefault { get; set; } = true;
+    public int DefaultPageSize { get; set; } = 20;
 }

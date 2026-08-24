@@ -1,0 +1,127 @@
+@attribute [Route(PAGE_URL)]
+
+@using Monica.JobScheduler.UI.Localization
+
+@inject SchedulerStatisticsPageStateFactory PageStateFactory
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+@implements IAsyncDisposable
+
+<PageTitle>@L["Analytics:PageTitle"]</PageTitle>
+
+<SchedulerWorkspace Title="@L["Workspace:Pages:Statistics:Title"]"
+                    Description="@L["Workspace:Pages:Statistics:Description"]"
+                    ActivePanelIndex="3">
+    @if (_state is not null)
+    {
+        <SchedulerAccessBoundary AccessChecked="@_state.AccessChecked" IsAuthorized="@_state.IsAuthorized">
+            <div class="statistics-page">
+                <MudPaper Outlined="true" Class="statistics-page__toolbar pa-3">
+                    <div>
+                        <MudText Typo="Typo.subtitle1">@L["Analytics:Range:Title"]</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Analytics:Range:Description", TimePresentation.TimeZoneId]
+                        </MudText>
+                    </div>
+                    <MudChipSet T="SchedulerAnalyticsTimeRange"
+                                SelectedValue="@_state.TimeRange"
+                                SelectedValueChanged="@_state.SetTimeRangeAsync"
+                                SelectionMode="SelectionMode.SingleSelection"
+                                CheckMark="true"
+                                Color="Color.Primary">
+                        @foreach (var range in Enum.GetValues<SchedulerAnalyticsTimeRange>())
+                        {
+                            <MudChip T="SchedulerAnalyticsTimeRange" Value="@range" Size="Size.Small">
+                                @L[$"Analytics:Range:{range}"]
+                            </MudChip>
+                        }
+                    </MudChipSet>
+                    <MudTooltip Text="@L["Common:Refresh"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Outlined"
+                                       Disabled="@_state.IsLoading"
+                                       OnClick="@_state.RefreshAsync"
+                                       aria-label="@L["Common:Refresh"]" />
+                    </MudTooltip>
+                </MudPaper>
+
+                @if (_state.IsLoading && _state.Snapshot is null)
+                {
+                    <div class="statistics-page__loading" role="status">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                    </div>
+                }
+                else if (_state.Error is not null && _state.Snapshot is null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @_state.Error
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@_state.RefreshAsync">
+                            @L["Common:Retry"]
+                        </MudButton>
+                    </MudAlert>
+                }
+                else if (_state.Snapshot is { } snapshot)
+                {
+                    @if (_state.IsLoading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                    }
+
+                    @if (_state.Error is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                            @L["Analytics:RefreshFailed", _state.Error]
+                        </MudAlert>
+                    }
+
+                    <SchedulerAnalyticsDashboard Snapshot="@snapshot" />
+
+                    <footer class="statistics-page__freshness">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                        <span>@L["Analytics:ObservedAt", TimePresentation.FormatTimestamp(_state.ObservedAtUtc)]</span>
+                    </footer>
+                }
+            </div>
+        </SchedulerAccessBoundary>
+    }
+</SchedulerWorkspace>
+
+@code {
+    /// <summary>
+    /// Gets the route for cross-job scheduler analytics.
+    /// </summary>
+    public const string PAGE_URL = "/job-scheduler/statistics";
+
+    private SchedulerStatisticsPageState? _state;
+    private bool _disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _state = PageStateFactory.Create();
+        _state.Changed += OnStateChangedAsync;
+        await _state.InitializeAsync();
+    }
+
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        var state = _state;
+        _state = null;
+        if (state is not null)
+        {
+            state.Changed -= OnStateChangedAsync;
+            await state.DisposeAsync();
+        }
+    }
+}
