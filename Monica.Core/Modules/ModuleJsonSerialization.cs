@@ -41,12 +41,12 @@ public class ModuleJsonSerialization : MonicaModule<ModuleJsonSerializationOptio
         services.AddSingleton(plan);
         services.AddSingleton(serializerOptions);
         services.AddSingleton<IJsonSerializerOptionsProvider>(provider);
-        services.Configure<JsonOptions>(options =>
+        services.PostConfigure<JsonOptions>(options =>
         {
             plan.ApplyTo(options.SerializerOptions);
             options.SerializerOptions.MakeReadOnly();
         });
-        services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+        services.PostConfigure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
         {
             plan.ApplyTo(options.JsonSerializerOptions);
             options.JsonSerializerOptions.MakeReadOnly();

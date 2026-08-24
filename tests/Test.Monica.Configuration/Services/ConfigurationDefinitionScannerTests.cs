@@ -74,6 +74,18 @@ public class ConfigurationDefinitionScannerTests
     }
 
     [Fact]
+    public void Scan_WhenRangeUsesDoubleMaxValue_ShouldClampToDecimalMaximum()
+    {
+        var scanner = CreateScanner();
+
+        var definition = scanner.Scan(typeof(WideDoubleOptions));
+        var value = definition.Root.Children.Single(x => x.Name == nameof(WideDoubleOptions.Value));
+
+        value.ValidationRules.Should().ContainSingle()
+            .Which.Should().Be(new RangeRule(0, decimal.MaxValue));
+    }
+
+    [Fact]
     public void Scan_WhenListItemPropertyIsMarkedAsKey_ShouldUsePropertyConfigurationNameAsItemKey()
     {
         var scanner = CreateScanner();
@@ -248,6 +260,13 @@ public class ConfigurationDefinitionScannerTests
             NodeKey = "sample.apiKey",
             ReloadBehavior = ConfigurationReloadBehavior.RequiresRestart)]
         public string? ApiKey { get; set; }
+    }
+
+    [Configuration("Sample:WideDouble")]
+    private sealed class WideDoubleOptions
+    {
+        [Range(0d, double.MaxValue)]
+        public double Value { get; set; }
     }
 
     [Configuration("Sample:List", DefinitionKey = "test.list")]

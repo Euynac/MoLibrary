@@ -479,7 +479,40 @@ internal sealed class ConfigurationDefinitionScanner(
 
     private static decimal? ToDecimal(object? value)
     {
-        return value is null ? null : Convert.ToDecimal(value);
+        if (value is null)
+        {
+            return null;
+        }
+
+        // RangeAttribute accepts floating-point bounds, while configuration
+        // validation stores numeric limits as decimals. Preserve unbounded
+        // finite double/float limits without failing schema discovery.
+        if (value is double doubleValue)
+        {
+            if (doubleValue >= (double)decimal.MaxValue)
+            {
+                return decimal.MaxValue;
+            }
+
+            if (doubleValue <= (double)decimal.MinValue)
+            {
+                return decimal.MinValue;
+            }
+        }
+        else if (value is float floatValue)
+        {
+            if (floatValue >= (float)decimal.MaxValue)
+            {
+                return decimal.MaxValue;
+            }
+
+            if (floatValue <= (float)decimal.MinValue)
+            {
+                return decimal.MinValue;
+            }
+        }
+
+        return Convert.ToDecimal(value, CultureInfo.InvariantCulture);
     }
 
     private static ConfigurationReloadBehavior? ResolveReloadBehavior(OptionSettingAttribute? option)
