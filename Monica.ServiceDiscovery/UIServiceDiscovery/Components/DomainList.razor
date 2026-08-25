@@ -8,15 +8,15 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 
-<MudStack Spacing="4" Class="domain-list">
+<div class="domain-list">
     <MudPaper Class="domain-list__header" Elevation="0" Outlined="true">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <div class="domain-list__header-row">
             <MudText Typo="Typo.h6">@L["DomainList:Title"]</MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshDomainsAsync" Disabled="@_isLoading">
                 <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
                 @L["Shared:Actions:Refresh"]
             </MudButton>
-        </MudStack>
+        </div>
     </MudPaper>
 
     @if (_isLoading)
@@ -49,7 +49,7 @@
                              @onkeydown="args => HandleDomainKeyDownAsync(args, domain)">
                         <MudCardContent>
                             <MudStack Spacing="2">
-                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <div class="domain-card__header">
                                     <div class="domain-card__identity">
                                         <span class="domain-card__icon" aria-hidden="true">
                                             <MudIcon Icon="@Icons.Material.Filled.Domain" />
@@ -58,14 +58,14 @@
                                             @(domain.DisplayName ?? domain.Name)
                                         </MudText>
                                     </div>
-                                    <MudStack AlignItems="AlignItems.End" Spacing="1">
+                                    <div class="domain-card__counts">
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Text="@L["DomainList:Counts:OwnedServices", GetOwnedServiceCount(domain.Name)]" />
                                         @if (GetRelatedServiceCount(domain.Name) > 0)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainList:Counts:RelatedDependencies", GetRelatedServiceCount(domain.Name)]" />
                                         }
-                                    </MudStack>
-                                </MudStack>
+                                    </div>
+                                </div>
 
                                 @if (!string.IsNullOrEmpty(domain.Description))
                                 {
@@ -97,7 +97,7 @@
             }
         </MudGrid>
     }
-</MudStack>
+</div>
 
 @code {
     [Parameter] public EventCallback<DomainInfo> OnDomainSelected { get; set; }

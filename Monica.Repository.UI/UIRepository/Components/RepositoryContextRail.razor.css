@@ -34,6 +34,7 @@
 }
 
 .context-list {
+    flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
     display: flex;
