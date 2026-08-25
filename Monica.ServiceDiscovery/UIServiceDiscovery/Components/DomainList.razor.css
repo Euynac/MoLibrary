@@ -8,10 +8,17 @@
 
 .domain-list ::deep .domain-list__header,
 .domain-list ::deep .domain-list__state {
-    background: var(--mud-palette-surface);
     border-color: var(--mud-palette-divider);
     border-radius: 8px;
     padding: 1rem;
+}
+
+.domain-list ::deep .domain-list__header {
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+}
+
+.domain-list ::deep .domain-list__state {
+    background: var(--mud-palette-surface);
 }
 
 .domain-list__header-row {
@@ -34,13 +41,13 @@
 
 .domain-list ::deep .domain-card {
     --domain-card-color: var(--mud-palette-text-secondary);
-    background: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--domain-card-color) 2%, var(--mud-palette-surface));
     border: 1px solid var(--mud-palette-divider);
     border-radius: 8px;
     flex: 1 1 auto;
     height: 100%;
     min-width: 0;
-    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
     width: 100%;
 }
 
@@ -51,6 +58,7 @@
 
 .domain-list ::deep .domain-card:hover,
 .domain-list ::deep .domain-card:focus-visible {
+    background: color-mix(in srgb, var(--domain-card-color) 5%, var(--mud-palette-surface));
     border-color: color-mix(in srgb, var(--domain-card-color) 42%, var(--mud-palette-divider));
     box-shadow: 0 12px 28px color-mix(in srgb, var(--mud-palette-text-primary) 7%, transparent) !important;
     transform: translateY(-1px);

@@ -4,7 +4,7 @@
 }
 
 .service-filter-panel ::deep .service-filter-panel__surface {
-    background: color-mix(in srgb, var(--mud-palette-primary) 2%, var(--mud-palette-surface));
+    background: var(--mud-palette-surface);
     border-color: var(--mud-palette-divider);
     border-radius: 8px;
     overflow: hidden;
@@ -13,9 +13,8 @@
 
 .service-filter-panel__main {
     display: grid;
-    gap: 1.25rem;
+    gap: 0;
     grid-template-columns: minmax(16rem, 0.9fr) repeat(2, minmax(0, 1fr));
-    padding: 1rem;
 }
 
 .service-filter-panel__search,
@@ -24,7 +23,17 @@
     min-width: 0;
 }
 
+.service-filter-panel__search,
 .service-filter-panel__filter {
+    padding: 1rem;
+}
+
+.service-filter-panel__search {
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+}
+
+.service-filter-panel__filter {
+    border-inline-start: 1px solid var(--mud-palette-divider);
     display: flex;
     flex-direction: column;
     gap: 0.625rem;
@@ -41,6 +50,7 @@
     flex-wrap: wrap;
     gap: 0.5rem 0.75rem;
     justify-content: space-between;
+    min-height: 1.75rem;
     min-width: 0;
 }
 
@@ -72,7 +82,7 @@
 }
 
 .service-filter-panel__footer {
-    background: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 52%, var(--mud-palette-surface));
     border-top: 1px solid var(--mud-palette-divider);
     min-width: 0;
     padding: 0.625rem 1rem;
@@ -89,19 +99,33 @@
     }
 
     .service-filter-panel__search {
+        border-bottom: 1px solid var(--mud-palette-divider);
         grid-column: 1 / -1;
+    }
+
+    .service-filter-panel__search + .service-filter-panel__filter {
+        border-inline-start: 0;
     }
 }
 
 @media (max-width: 599.98px) {
     .service-filter-panel__main {
-        gap: 1rem;
         grid-template-columns: minmax(0, 1fr);
-        padding: 0.875rem;
     }
 
     .service-filter-panel__search {
+        border-bottom: 0;
         grid-column: auto;
+    }
+
+    .service-filter-panel__search,
+    .service-filter-panel__filter {
+        padding: 0.875rem;
+    }
+
+    .service-filter-panel__filter {
+        border-inline-start: 0;
+        border-top: 1px solid var(--mud-palette-divider);
     }
 
     .service-filter-panel__filter-actions {

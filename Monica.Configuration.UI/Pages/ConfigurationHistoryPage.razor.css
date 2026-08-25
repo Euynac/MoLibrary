@@ -17,6 +17,8 @@
 .configuration-history-filters ::deep .mud-paper {
     width: 100%;
     min-width: 0;
+    border-color: var(--mud-palette-divider);
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
 }
 
 .configuration-history-filters ::deep .configuration-history-filter-grid {

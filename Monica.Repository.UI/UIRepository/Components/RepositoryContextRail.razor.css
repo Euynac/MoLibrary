@@ -6,7 +6,7 @@
     padding: 14px;
     border-radius: 8px;
     border: 1px solid var(--mud-palette-lines-default);
-    background: var(--mud-palette-surface);
+    background: color-mix(in srgb, var(--mud-palette-background-gray) 48%, var(--mud-palette-surface));
 }
 
 .rail-header {
@@ -14,6 +14,8 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--mud-palette-divider);
 }
 
 ::deep .rail-eyebrow {
@@ -47,7 +49,7 @@
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
     padding: 10px;
-    background: var(--mud-palette-background-gray);
+    background: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
     display: flex;
     flex-direction: column;
