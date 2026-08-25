@@ -14,9 +14,8 @@
     gap: 16px;
     padding: 18px;
     border-radius: 8px;
-    border: 1px solid var(--mud-palette-lines-default);
-    background: var(--mud-palette-surface);
-    transition: border-color 160ms ease, box-shadow 160ms ease;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 18%, var(--mud-palette-lines-default));
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
 }
 
 .dashboard-banner__copy,
@@ -42,9 +41,19 @@
     justify-content: flex-end;
 }
 
+.dashboard-banner__metrics ::deep .mud-chip {
+    background: var(--mud-palette-surface);
+}
+
 .detail-header__actions {
+    box-sizing: border-box;
+    gap: 6px;
     min-width: 0;
     max-width: 100%;
+    padding: 4px;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
 }
 
 .detail-header__actions ::deep .mud-tooltip-root {
@@ -88,13 +97,6 @@
     border-radius: 8px;
     border: 1px solid var(--mud-palette-lines-default);
     background: var(--mud-palette-surface);
-    transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.dashboard-banner:hover,
-.detail-header:hover {
-    border-color: var(--mud-palette-lines-inputs);
-    box-shadow: var(--mud-elevation-1);
 }
 
 .dashboard-state {
@@ -136,11 +138,8 @@
     .repository-dashboard-page {
         gap: 14px;
     }
-}
 
-@media (prefers-reduced-motion: reduce) {
-    .dashboard-banner,
-    .detail-header {
-        transition-duration: 0.01ms;
+    .detail-header__actions {
+        width: 100%;
     }
 }
