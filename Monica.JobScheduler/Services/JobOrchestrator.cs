@@ -30,9 +30,9 @@ public sealed class JobOrchestrator(
     {
         ArgumentNullException.ThrowIfNull(lease);
         var execution = lease.Execution;
-        var jobType = jobRegistry.GetJobClrType(execution.Template.Revision.JobKey)
+        var jobType = jobRegistry.GetJobClrType(execution.Template.JobKey)
                       ?? throw new InvalidOperationException(
-                          $"Local worker does not contain job '{execution.Template.Revision.JobKey}'.");
+                          $"Local worker does not contain job '{execution.Template.JobKey}'.");
 
         try
         {
@@ -73,7 +73,7 @@ public sealed class JobOrchestrator(
             logger.LogError(
                 exception,
                 "Job {JobKey} instance {InstanceId} failed: {Message}",
-                execution.Template.Revision.JobKey,
+                execution.Template.JobKey,
                 execution.InstanceId,
                 exception.GetMessageRecursively());
             return new JobAttemptResult(JobAttemptOutcome.Failed, exception.ToString());

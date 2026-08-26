@@ -64,7 +64,7 @@ internal static class JobSchedulerUiPresentation
     {
         ArgumentNullException.ThrowIfNull(template);
         return string.IsNullOrWhiteSpace(template.JobName)
-            ? GetJobKeyLabel(template.Revision.JobKey)
+            ? GetJobKeyLabel(template.JobKey)
             : template.JobName;
     }
 }

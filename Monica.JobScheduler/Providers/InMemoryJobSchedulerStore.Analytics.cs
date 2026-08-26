@@ -21,11 +21,13 @@ public sealed partial class InMemoryJobSchedulerStore
         {
             var scoped = _executionInstances.Values.Where(execution =>
                 string.Equals(
-                    execution.Template.Revision.SchedulerScopeKey,
+                    execution.Template.SchedulerScopeKey,
                     schedulerScopeKey,
                     StringComparison.Ordinal)
+                && (query.OwnerKey is null
+                    || string.Equals(execution.Template.OwnerKey, query.OwnerKey, StringComparison.Ordinal))
                 && (query.JobKey is null
-                    || string.Equals(execution.Template.Revision.JobKey, query.JobKey, StringComparison.Ordinal)));
+                    || string.Equals(execution.Template.JobKey, query.JobKey, StringComparison.Ordinal)));
             var cohort = scoped.Where(execution =>
                 execution.CreatedAtUtc >= range.StartTimeUtc && execution.CreatedAtUtc < range.EndTimeUtc);
             var cohortGroups = cohort
@@ -89,7 +91,7 @@ public sealed partial class InMemoryJobSchedulerStore
                     requirePositiveMetric: true),
                 SlowestExecutions = measurableExecutions
                     .GroupBy(
-                        static execution => execution.Template.Revision.JobKey,
+                        static execution => execution.Template.JobKey,
                         StringComparer.Ordinal)
                     .Select(static group => group
                         .OrderByDescending(static execution =>
@@ -104,7 +106,7 @@ public sealed partial class InMemoryJobSchedulerStore
                     {
                         InstanceId = execution.InstanceId,
                         JobName = execution.Template.JobName,
-                        JobKey = execution.Template.Revision.JobKey,
+                        JobKey = execution.Template.JobKey,
                         State = execution.State,
                         StartedAtUtc = execution.StartedAtUtc!.Value,
                         CompletedAtUtc = execution.CompletedAtUtc!.Value
@@ -179,7 +181,7 @@ public sealed partial class InMemoryJobSchedulerStore
         bool requirePositiveMetric)
     {
         var rows = completions
-            .GroupBy(static execution => execution.Template.Revision.JobKey, StringComparer.Ordinal)
+            .GroupBy(static execution => execution.Template.JobKey, StringComparer.Ordinal)
             .Select(group => new JobExecutionAnalyticsJobRank
             {
                 JobName = group

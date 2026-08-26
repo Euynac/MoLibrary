@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 
@@ -11,14 +11,20 @@ public sealed partial class EfCoreJobSchedulerStore
     /// <inheritdoc />
     public async Task<JobOperationalSummary?> GetOperationalSummaryAsync(
         string schedulerScopeKey,
-        string jobKey,
+        JobId jobId,
         CancellationToken cancellationToken = default)
     {
         ValidateIdentity(schedulerScopeKey, nameof(schedulerScopeKey));
-        JobSchedulerIdentity.ValidateJobKey(jobKey, nameof(jobKey));
+        jobId.Validate();
         var page = await QueryOperationalSummariesAsync(
             schedulerScopeKey,
-            new JobCatalogQuery { JobKey = jobKey, PageNumber = 1, PageSize = 1 },
+            new JobDefinitionQuery
+            {
+                OwnerKey = jobId.OwnerKey,
+                JobKey = jobId.JobKey,
+                PageNumber = 1,
+                PageSize = 1
+            },
             cancellationToken);
         return page.Items.SingleOrDefault();
     }
@@ -26,7 +32,7 @@ public sealed partial class EfCoreJobSchedulerStore
     /// <inheritdoc />
     public Task<QueryResult<JobOperationalSummary>> QueryOperationalSummariesAsync(
         string schedulerScopeKey,
-        JobCatalogQuery query,
+        JobDefinitionQuery query,
         CancellationToken cancellationToken = default)
     {
         ValidateIdentity(schedulerScopeKey, nameof(schedulerScopeKey));
@@ -38,93 +44,69 @@ public sealed partial class EfCoreJobSchedulerStore
 
         return ReadAsync(async (dbContext, token) =>
         {
-            var scope = await dbContext.CatalogScopes.AsNoTracking().SingleOrDefaultAsync(
-                item => item.SchedulerScopeKey == schedulerScopeKey,
-                token);
-            if (scope is null || scope.ActiveReleaseId is null)
-            {
-                return new QueryResult<JobOperationalSummary>([], 0);
-            }
-
-            var filtered = FilterDefinitions(
-                await ProjectActiveDefinitionsAsync(dbContext, scope, token),
-                query);
-
-            var ordered = filtered.ApplyCatalogOrdering(query).ToArray();
-            var definitions = ordered
+            var filtered = FilterDefinitions(dbContext, schedulerScopeKey, query);
+            var totalCount = await filtered.CountAsync(token);
+            var ordered = OrderDefinitions(filtered, query);
+            var entities = await ordered
                 .Skip((query.PageNumber - 1) * query.PageSize)
                 .Take(query.PageSize)
-                .ToArray();
+                .ToListAsync(token);
+            var definitions = entities.Select(ToDefinition).ToArray();
             if (definitions.Length == 0)
             {
-                return new QueryResult<JobOperationalSummary>([], ordered.Length);
+                return new QueryResult<JobOperationalSummary>([], totalCount);
             }
 
+            var ownerKeys = definitions.Select(static definition => definition.OwnerKey).Distinct().ToArray();
             var jobKeys = definitions.Select(static definition => definition.Declaration.JobKey).ToArray();
             var executionQuery = dbContext.Executions.AsNoTracking().Where(execution =>
                 execution.SchedulerScopeKey == schedulerScopeKey
+                && ownerKeys.Contains(execution.OwnerKey)
                 && jobKeys.Contains(execution.JobKey));
             var latestExecutionEntities = await executionQuery
                 .Where(candidate => candidate.InstanceId == executionQuery
-                    .Where(execution => execution.JobKey == candidate.JobKey)
+                    .Where(execution => execution.OwnerKey == candidate.OwnerKey
+                                        && execution.JobKey == candidate.JobKey)
                     .OrderByDescending(execution => execution.CreatedAtUtcTicks)
                     .ThenByDescending(execution => execution.InstanceId)
                     .Select(execution => execution.InstanceId)
                     .First())
                 .ToArrayAsync(token);
             var latestExecutions = latestExecutionEntities.ToDictionary(
-                static execution => execution.JobKey,
-                ToExecution,
-                StringComparer.Ordinal);
+                static execution => new JobId(execution.OwnerKey, execution.JobKey),
+                ToExecution);
             var activeCountRows = await executionQuery
                 .Where(execution =>
                     execution.State == JobExecutionState.Queued
                     || execution.State == JobExecutionState.Running)
-                .GroupBy(execution => new { execution.JobKey, execution.State })
+                .GroupBy(execution => new { execution.OwnerKey, execution.JobKey, execution.State })
                 .Select(group => new
                 {
+                    group.Key.OwnerKey,
                     group.Key.JobKey,
                     group.Key.State,
                     Count = group.Count()
                 })
                 .ToArrayAsync(token);
             var activeCounts = activeCountRows.ToDictionary(
-                static row => (row.JobKey, row.State),
+                static row => (new JobId(row.OwnerKey, row.JobKey), row.State),
                 static row => row.Count);
 
-            var jobRevisionIds = definitions.Select(static definition => definition.JobRevisionId).ToArray();
             var cursorEntities = await dbContext.RecurringCursors.AsNoTracking()
-                .Where(cursor =>
-                    cursor.SchedulerScopeKey == schedulerScopeKey
-                    && cursor.ActivationEpoch == scope.ActivationEpoch
-                    && jobRevisionIds.Contains(cursor.JobRevisionId))
+                .Where(cursor => cursor.SchedulerScopeKey == schedulerScopeKey
+                                 && ownerKeys.Contains(cursor.OwnerKey)
+                                 && jobKeys.Contains(cursor.JobKey))
                 .ToArrayAsync(token);
             var cursors = cursorEntities.ToDictionary(
-                static cursor => cursor.JobRevisionId,
-                ToRecurringCursor,
-                StringComparer.Ordinal);
-
-            var nowTicks = ToTicks(await GetUtcNowAsync(dbContext, token));
-            var ownerIds = definitions.Select(static definition => definition.OwnerId).Distinct().ToArray();
-            var workerRevisionIds = definitions
-                .Select(static definition => definition.WorkerRevisionId)
-                .Distinct()
-                .ToArray();
-            var capabilityEntities = await dbContext.WorkerCapabilities.AsNoTracking()
-                .Where(capability =>
-                    capability.SchedulerScopeKey == schedulerScopeKey
-                    && capability.LeaseExpiresAtUtcTicks > nowTicks
-                    && ownerIds.Contains(capability.OwnerKey)
-                    && workerRevisionIds.Contains(capability.WorkerRevisionId))
-                .ToArrayAsync(token);
-            var capabilities = capabilityEntities.Select(ToCapability).ToArray();
+                static cursor => new JobId(cursor.OwnerKey, cursor.JobKey),
+                ToCursor);
 
             var summaries = definitions.Select(definition =>
             {
-                cursors.TryGetValue(definition.JobRevisionId, out var cursor);
+                var jobId = definition.Id;
+                cursors.TryGetValue(jobId, out var cursor);
                 var suspensionReasons = GetRecurringSuspensionReasons(definition, cursor);
                 var recurringStatus = GetOperationalRecurringStatus(definition, cursor, suspensionReasons);
-                var jobKey = definition.Declaration.JobKey;
                 return new JobOperationalSummary
                 {
                     Definition = definition,
@@ -133,67 +115,33 @@ public sealed partial class EfCoreJobSchedulerStore
                     NextOccurrenceUtc = recurringStatus == JobRecurringScheduleStatus.Scheduled
                         ? cursor!.NextOccurrenceUtc
                         : null,
-                    LatestExecution = latestExecutions.GetValueOrDefault(jobKey),
-                    QueuedExecutionCount = activeCounts.GetValueOrDefault((jobKey, JobExecutionState.Queued)),
-                    RunningExecutionCount = activeCounts.GetValueOrDefault((jobKey, JobExecutionState.Running)),
-                    CompatibleWorkerCount = capabilities.Count(capability =>
-                        string.Equals(
-                            capability.Capability.OwnerKey,
-                            definition.OwnerId,
-                            StringComparison.Ordinal)
-                        && string.Equals(
-                            capability.Capability.WorkerRevisionId,
-                            definition.WorkerRevisionId,
-                            StringComparison.Ordinal)
-                        && capability.Capability.JobRevisionIds.Contains(
-                            definition.JobRevisionId,
-                            StringComparer.Ordinal))
+                    LatestExecution = latestExecutions.GetValueOrDefault(jobId),
+                    QueuedExecutionCount = activeCounts.GetValueOrDefault((jobId, JobExecutionState.Queued)),
+                    RunningExecutionCount = activeCounts.GetValueOrDefault((jobId, JobExecutionState.Running))
                 };
             }).ToList();
 
-            return new QueryResult<JobOperationalSummary>(summaries, ordered.Length);
+            return new QueryResult<JobOperationalSummary>(summaries, totalCount);
         }, cancellationToken);
     }
 
-    private static IEnumerable<ActiveJobDefinition> FilterDefinitions(
-        IEnumerable<ActiveJobDefinition> definitions,
-        JobCatalogQuery query)
+    private static JobRecurringScheduleSuspensionReason GetRecurringSuspensionReasons(
+        JobDefinition definition,
+        RecurringScheduleCursor? cursor)
     {
-        if (!string.IsNullOrWhiteSpace(query.JobKey))
+        if (definition.Declaration.JobType != JobType.Recurring)
         {
-            definitions = definitions.Where(item =>
-                string.Equals(item.Declaration.JobKey, query.JobKey, StringComparison.Ordinal));
-        }
-        if (!string.IsNullOrWhiteSpace(query.OwnerId))
-        {
-            definitions = definitions.Where(item =>
-                string.Equals(item.OwnerId, query.OwnerId, StringComparison.Ordinal));
-        }
-        if (!string.IsNullOrWhiteSpace(query.SearchText))
-        {
-            definitions = definitions.Where(item =>
-                item.Declaration.JobKey.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase)
-                || item.EffectiveConfiguration.JobName.Contains(
-                    query.SearchText,
-                    StringComparison.OrdinalIgnoreCase)
-                || item.EffectiveConfiguration.Description?.Contains(
-                    query.SearchText,
-                    StringComparison.OrdinalIgnoreCase) == true);
-        }
-        if (query.JobType is { } jobType)
-        {
-            definitions = definitions.Where(item => item.Declaration.JobType == jobType);
-        }
-        if (query.IsDisabled is { } isDisabled)
-        {
-            definitions = definitions.Where(item => item.IsDisabled == isDisabled);
+            return JobRecurringScheduleSuspensionReason.None;
         }
 
-        return definitions;
+        var reasons = cursor?.SuspensionReasons ?? JobRecurringScheduleSuspensionReason.None;
+        return definition.IsDisabled
+            ? reasons | JobRecurringScheduleSuspensionReason.OperatorPolicy
+            : reasons;
     }
 
     private static JobRecurringScheduleStatus GetOperationalRecurringStatus(
-        ActiveJobDefinition definition,
+        JobDefinition definition,
         RecurringScheduleCursor? cursor,
         JobRecurringScheduleSuspensionReason suspensionReasons)
     {
@@ -213,20 +161,5 @@ public sealed partial class EfCoreJobSchedulerStore
         return cursor.NextOccurrenceUtc is null
             ? JobRecurringScheduleStatus.Exhausted
             : JobRecurringScheduleStatus.Scheduled;
-    }
-
-    private static JobRecurringScheduleSuspensionReason GetRecurringSuspensionReasons(
-        ActiveJobDefinition definition,
-        RecurringScheduleCursor? cursor)
-    {
-        if (definition.Declaration.JobType != JobType.Recurring)
-        {
-            return JobRecurringScheduleSuspensionReason.None;
-        }
-
-        var reasons = cursor?.SuspensionReasons ?? JobRecurringScheduleSuspensionReason.None;
-        return definition.IsDisabled
-            ? reasons | JobRecurringScheduleSuspensionReason.OperatorPolicy
-            : reasons;
     }
 }

@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.UI.Components;
 using Monica.JobScheduler.UI.Pages;
@@ -141,7 +142,7 @@ public sealed class SchedulerTimeAndTitlePresentationTests
             timeProvider: clock);
         var summary = await context.Store.GetOperationalSummaryAsync(
             JobSchedulerUiTestContext.SCOPE,
-            context.RecurringDefinition.Declaration.JobKey,
+            new JobId(JobSchedulerUiTestContext.OWNER, context.RecurringDefinition.Declaration.JobKey),
             Xunit.TestContext.Current.CancellationToken);
         var dialogService = context.Services.GetRequiredService<IDialogService>();
 
@@ -191,8 +192,7 @@ public sealed class SchedulerTimeAndTitlePresentationTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = instanceId,
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}"
         },
         Xunit.TestContext.Current.CancellationToken);

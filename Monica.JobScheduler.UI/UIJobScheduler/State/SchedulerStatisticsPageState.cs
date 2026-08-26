@@ -195,7 +195,8 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
         SchedulerAnalyticsTimeRange range,
         DateTimeOffset now,
         SchedulerTimePresentation timePresentation,
-        string? jobKey = null)
+        string? jobKey = null,
+        string? ownerKey = null)
     {
         ArgumentNullException.ThrowIfNull(timePresentation);
         var end = now.ToUniversalTime();
@@ -222,6 +223,7 @@ public sealed class SchedulerStatisticsPageState : IAsyncDisposable
             StartTimeUtc = start,
             EndTimeUtc = end,
             BucketSize = bucketSize,
+            OwnerKey = ownerKey,
             JobKey = jobKey,
             TopJobLimit = 10,
             SlowestExecutionLimit = 10

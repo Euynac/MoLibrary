@@ -34,15 +34,6 @@
                     @L["Policy:ImmutableNotice"]
                 </MudAlert>
 
-                @if (_state.Definition.IsPolicyReviewOutdated)
-                {
-                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                        @L["Policy:DriftWarning",
-                            JobSchedulerUiPresentation.ShortIdentity(_state.Definition.Policy.ReviewedAgainstJobRevisionId, 16),
-                            JobSchedulerUiPresentation.ShortIdentity(_state.Definition.JobRevisionId, 16)]
-                    </MudAlert>
-                }
-
                 @if (_state.HasConflict)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true"

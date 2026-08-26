@@ -8,19 +8,18 @@ using Monica.Core.HostedService.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
 using Monica.JobScheduler.Models.Execution;
 using Monica.Modules;
 
 namespace Monica.JobScheduler.Services.Support;
 
 /// <summary>
-/// Publishes the local owner snapshot, advertises exact executable revisions, and polls the durable queue for fenced
-/// leases. No broker delivery or process-local execution projection participates in correctness.
+/// Claims this host's own owner's queued work and executes it under fenced leases with timeout, cooperative
+/// cancellation, and retry handling. No broker delivery or process-local execution projection participates in
+/// correctness.
 /// </summary>
-internal sealed class JobWorkerHostedService(
+internal sealed class JobExecutionWorkerHostedService(
     IJobSchedulerStore store,
-    JobSchedulerHostIdentity identity,
     IReadOnlyList<LocalJobDefinition> localDefinitions,
     JobOrchestrator orchestrator,
     JobSchedulerRuntimeState runtimeState,
@@ -30,14 +29,12 @@ internal sealed class JobWorkerHostedService(
     IObservableInstanceRegistry observableRegistry,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IServiceScopeFactory serviceScopeFactory,
-    ILogger<JobWorkerHostedService> logger)
+    ILogger<JobExecutionWorkerHostedService> logger)
     : MoBackgroundService(observableRegistry, hostedServiceOptions, serviceScopeFactory, logger)
 {
     private readonly ConcurrentDictionary<string, Task> _executions = new(StringComparer.Ordinal);
     private readonly ModuleJobSchedulerOption _options = schedulerOptions.Value;
     private readonly CancellationTokenSource _workerStop = new();
-    private WorkerCapabilityLease? _capability;
-    private long _capabilityRenewedTimestamp;
 
     public override string? ServiceGroupId => nameof(ModuleJobScheduler);
 
@@ -55,16 +52,14 @@ internal sealed class JobWorkerHostedService(
         {
             try
             {
-                await EnsurePublishedAndRegisteredAsync(workerToken);
-                await RenewCapabilityIfNeededAsync(workerToken);
                 ObserveCompletedExecutions();
                 await ClaimAvailableWorkAsync(workerToken);
                 if (runtimeState.SetWorker(
                         true,
-                        $"Worker capability is active for {localDefinitions.Count} local job(s)."))
+                        $"Worker is active for {_options.GetProjectName()} with {localDefinitions.Count} local job(s)."))
                 {
                     RecordState(
-                        $"Worker capability active with {_executions.Count} in-flight execution(s)",
+                        $"Worker active with {_executions.Count} in-flight execution(s)",
                         HostedServiceState.Running);
                 }
             }
@@ -110,7 +105,7 @@ internal sealed class JobWorkerHostedService(
                     logLevel: LogLevel.Warning);
                 // Host shutdown is not a logical job cancellation. The linked execution token has already been
                 // cancelled; a cooperative attempt releases its lease and requeues, while an uncooperative attempt
-                // remains fenced until its lease expires and the control plane recovers it.
+                // remains fenced until its lease expires and the scheduling plane recovers it.
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -125,90 +120,22 @@ internal sealed class JobWorkerHostedService(
                 ObserveCompletedExecutions();
             }
         }
-
-        if (_executions.IsEmpty && _capability is { } capability)
-        {
-            await store.ReleaseWorkerCapabilityAsync(capability.LeaseKey, cancellationToken);
-        }
     }
 
-    internal async Task EnsurePublishedAndRegisteredAsync(CancellationToken cancellationToken)
+    internal async Task ClaimAvailableWorkAsync(CancellationToken workerToken)
     {
-        if (_capability is not null)
-        {
-            return;
-        }
-
-        var manifest = identity.ReleaseStage.Manifest;
-        var ownerId = identity.LocalOwnerId
-                      ?? throw new InvalidOperationException("Worker owner identity is missing.");
-        var workerRevision = identity.LocalWorkerRevisionId
-                             ?? throw new InvalidOperationException("Worker revision identity is missing.");
-        await store.StageReleaseAsync(identity.ReleaseStage, cancellationToken);
-        await store.PublishOwnerSnapshotAsync(new JobOwnerCatalogSnapshot(
-            manifest.SchedulerScopeKey,
-            manifest.ReleaseId,
-            ownerId,
-            workerRevision,
-            localDefinitions.Select(static definition => definition.Declaration).ToArray()), cancellationToken);
-
-        var jobRevisionIds = localDefinitions
-            .Select(definition => JobCatalogHash.ComputeJobRevision(
-                ownerId,
-                workerRevision,
-                definition.Declaration))
-            .ToArray();
-        _capability = await store.RegisterWorkerCapabilityAsync(new WorkerCapabilityRegistration
-        {
-            SchedulerScopeKey = manifest.SchedulerScopeKey,
-            OwnerKey = ownerId,
-            WorkerRevisionId = workerRevision,
-            WorkerInstanceId = identity.WorkerInstanceId,
-            JobRevisionIds = jobRevisionIds
-        }, _options.WorkerCapabilityLeaseDuration, cancellationToken);
-        _capabilityRenewedTimestamp = timeProvider.GetTimestamp();
-    }
-
-    internal async Task RenewCapabilityIfNeededAsync(CancellationToken cancellationToken)
-    {
-        if (_capability is not { } capability
-            || timeProvider.GetElapsedTime(_capabilityRenewedTimestamp, timeProvider.GetTimestamp())
-            < _options.WorkerCapabilityRenewInterval)
-        {
-            return;
-        }
-
-        var renewedCapability = await store.RenewWorkerCapabilityAsync(
-            capability.LeaseKey,
-            _options.WorkerCapabilityLeaseDuration,
-            cancellationToken);
-        if (renewedCapability is null)
-        {
-            _capability = null;
-            _capabilityRenewedTimestamp = 0;
-            throw new InvalidOperationException("Worker capability was fenced and will be registered again.");
-        }
-
-        _capability = renewedCapability;
-        _capabilityRenewedTimestamp = timeProvider.GetTimestamp();
-    }
-
-    private async Task ClaimAvailableWorkAsync(CancellationToken workerToken)
-    {
-        if (_capability is not { } capability)
-        {
-            return;
-        }
-
         var availableSlots = _options.MaxWorkerExecutionThreads - _executions.Count;
-        if (availableSlots <= 0)
+        if (availableSlots <= 0 || localDefinitions.Count == 0)
         {
             return;
         }
 
         var leases = await store.ClaimAsync(new JobClaimRequest
         {
-            CapabilityLeaseKey = capability.LeaseKey,
+            SchedulerScopeKey = _options.SchedulerScopeKey,
+            OwnerKey = _options.GetProjectName(),
+            WorkerInstanceId = _options.WorkerInstanceId,
+            JobKeys = localDefinitions.Select(static definition => definition.Declaration.JobKey).ToArray(),
             LeaseDuration = _options.ExecutionLeaseDuration,
             MaxCount = Math.Min(availableSlots, _options.MaxClaimBatchSize)
         }, workerToken);

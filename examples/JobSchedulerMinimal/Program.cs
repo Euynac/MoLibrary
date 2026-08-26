@@ -11,13 +11,7 @@ builder.AddMonica(monica =>
 {
     monica.AddJobScheduler()
         .UseInMemoryStore()
-        .UseSchedulerScope("job-scheduler-minimal")
-        .UseCatalogRelease(
-            "job-scheduler-minimal:development",
-            deploymentGeneration: 1,
-            [new("job-scheduler-minimal", "job-scheduler-minimal:development")])
-        .AsStandalone()
-        .UseLocalWorkerIdentity("job-scheduler-minimal", "job-scheduler-minimal:development");
+        .UseSchedulerScope("job-scheduler-minimal");
     monica.AddJobSchedulerUI();
 });
 

@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Results;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.State;
@@ -23,8 +23,7 @@ public sealed class JobSchedulerNativeTableStateTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "execution-table-state-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}",
             AvailableAtUtc = DateTimeOffset.UtcNow
         }, Xunit.TestContext.Current.CancellationToken);
@@ -62,7 +61,7 @@ public sealed class JobSchedulerNativeTableStateTests
         {
             Page = 0,
             PageSize = 10,
-            SortLabel = nameof(JobCatalogSortField.OwnerId),
+            SortLabel = nameof(JobDefinitionSortField.OwnerKey),
             SortDirection = SortDirection.Descending
         }, Xunit.TestContext.Current.CancellationToken);
 
@@ -71,7 +70,7 @@ public sealed class JobSchedulerNativeTableStateTests
         result.TotalItems.Should().Be(1);
         state.PageNumber.Should().Be(1);
         state.PageSize.Should().Be(10);
-        state.SortField.Should().Be(JobCatalogSortField.OwnerId);
+        state.SortField.Should().Be(JobDefinitionSortField.OwnerKey);
         state.SortDescending.Should().BeTrue();
     }
 
@@ -105,8 +104,7 @@ public sealed class JobSchedulerNativeTableStateTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "execution-invalid-range-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}",
             AvailableAtUtc = DateTimeOffset.UtcNow
         }, Xunit.TestContext.Current.CancellationToken);
@@ -160,7 +158,7 @@ public sealed class JobSchedulerNativeTableStateTests
         var tableState = new TableState
         {
             PageSize = 20,
-            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortLabel = nameof(JobDefinitionSortField.JobName),
             SortDirection = SortDirection.Ascending
         };
         var initial = await state.LoadTableAsync(tableState, Xunit.TestContext.Current.CancellationToken);
@@ -177,8 +175,6 @@ public sealed class JobSchedulerNativeTableStateTests
     public async Task CatalogBatchUpdate_WhenOnePolicyIsStale_ShouldRetainOnlyFailedSelectionAfterReload()
     {
         await using var context = new JobSchedulerUiTestContext();
-        const string releaseId = "release-partial-batch";
-        const string workerRevision = "sha256:worker-partial-batch";
         JobDeclaration[] declarations =
         [
             context.RecurringDefinition.Declaration with
@@ -192,26 +188,10 @@ public sealed class JobSchedulerNativeTableStateTests
                 JobName = "Partial batch beta"
             }
         ];
-        await context.Store.StageReleaseAsync(
-            new JobCatalogReleaseStage(
-                new JobCatalogReleaseManifest(
-                    JobSchedulerUiTestContext.SCOPE,
-                    releaseId,
-                    [new JobCatalogOwnerManifest(JobSchedulerUiTestContext.OWNER, workerRevision)]),
-                2),
-            Xunit.TestContext.Current.CancellationToken);
-        await context.Store.PublishOwnerSnapshotAsync(
-            new JobOwnerCatalogSnapshot(
-                JobSchedulerUiTestContext.SCOPE,
-                releaseId,
-                JobSchedulerUiTestContext.OWNER,
-                workerRevision,
-                declarations),
-            Xunit.TestContext.Current.CancellationToken);
-        await context.Store.TryActivateReleaseAsync(
+        await context.Store.SyncOwnerSnapshotAsync(new JobOwnerSnapshot(
             JobSchedulerUiTestContext.SCOPE,
-            releaseId,
-            Xunit.TestContext.Current.CancellationToken);
+            JobSchedulerUiTestContext.OWNER,
+            declarations), Xunit.TestContext.Current.CancellationToken);
 
         await using var state = context.Services
             .GetRequiredService<JobCatalogPageStateFactory>()
@@ -220,7 +200,7 @@ public sealed class JobSchedulerNativeTableStateTests
         var tableState = new TableState
         {
             PageSize = 20,
-            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortLabel = nameof(JobDefinitionSortField.JobName),
             SortDirection = SortDirection.Ascending
         };
         var initial = await state.LoadTableAsync(tableState, Xunit.TestContext.Current.CancellationToken);
@@ -229,7 +209,7 @@ public sealed class JobSchedulerNativeTableStateTests
         var staleDefinition = initial.Items.First().Definition;
         await context.Store.UpdatePolicyAsync(
             JobSchedulerUiTestContext.SCOPE,
-            staleDefinition.OwnerId,
+            staleDefinition.OwnerKey,
             staleDefinition.Declaration.JobKey,
             new JobPolicyChange
             {
@@ -263,7 +243,7 @@ public sealed class JobSchedulerNativeTableStateTests
         var tableState = new TableState
         {
             PageSize = 20,
-            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortLabel = nameof(JobDefinitionSortField.JobName),
             SortDirection = SortDirection.Ascending
         };
         var initial = await state.LoadTableAsync(tableState, Xunit.TestContext.Current.CancellationToken);

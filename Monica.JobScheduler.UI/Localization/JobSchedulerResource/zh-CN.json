@@ -1,10 +1,20 @@
 {
   "Pages": {
-    "Overview": { "Title": "调度总览" },
-    "Catalog": { "Title": "作业目录" },
-    "JobDetail": { "Title": "作业详情" },
-    "Executions": { "Title": "执行账本" },
-    "Statistics": { "Title": "调度统计分析" }
+    "Overview": {
+      "Title": "调度总览"
+    },
+    "Catalog": {
+      "Title": "作业目录"
+    },
+    "JobDetail": {
+      "Title": "作业详情"
+    },
+    "Executions": {
+      "Title": "执行账本"
+    },
+    "Statistics": {
+      "Title": "调度统计分析"
+    }
   },
   "Workspace": {
     "Eyebrow": "MONICA / 持久化调度",
@@ -85,22 +95,6 @@
   },
   "Overview": {
     "PageTitle": "任务调度 · 总览",
-    "Release": {
-      "AriaLabel": "目录发布状态",
-      "Desired": "期望发布",
-      "Active": "活动发布",
-      "Generation": "部署代次",
-      "Intent": "活动 / 期望意图",
-      "Activation": "激活纪元",
-      "Change": "变更纪元",
-      "Publication": "发布纪元",
-      "Converged": "已收敛",
-      "Transitioning": "切换中",
-      "WaitingWorkers": "等待工作节点",
-      "TransitionMessage": "在完整的期望发布激活前，新执行准入与周期实例物化将暂停。",
-      "ReadinessDescription": "期望发布与精确工作节点版本全部收敛后，该发布才能成为活动执行契约。",
-      "EpochAriaLabel": "目录纪元推进状态"
-    },
     "Workload": {
       "AriaLabel": "调度工作负载摘要",
       "TotalJobs": "作业总数",
@@ -127,54 +121,13 @@
       "FailedDescription": "检查错误与重试证据。",
       "Skipped": "跳过的执行时点",
       "SkippedDescription": "检查重叠执行与调度容量。",
-      "Owners": "未收敛的来源项目",
-      "OwnersDescription": "缺少声明发布或兼容工作节点。"
+      "Absent": "缺席定义",
+      "AbsentDescription": "未出现在所有者最新快照中的作业"
     },
     "Analytics": {
       "Title": "统计分析",
       "Description": "在有界时间范围内分析吞吐量、执行结果趋势、耗时分位数与慢作业。",
       "Action": "打开统计分析"
-    },
-    "Deployment": {
-      "Title": "部署证据",
-      "Description": "发布纪元与工作节点收敛信息下移保留，用于深入的运行诊断。"
-    },
-    "Owners": {
-      "Title": "所有者收敛",
-      "Description": "仅当每个预期定义快照和匹配的工作节点版本都存在时，发布才具备运行条件。",
-      "Revision": "工作节点版本",
-      "Publication": "已发布",
-      "Workers": "在线节点",
-      "Definitions": "活动作业",
-      "Published": "已发布",
-      "Pending": "待发布",
-      "Empty": "期望发布中没有所有者。",
-      "Ready": "已就绪",
-      "NeedsAttention": "需要关注",
-      "OpenDetails": "查看 {0} 的详情",
-      "SignalsAriaLabel": "{0} 的就绪信号",
-      "Detail": {
-        "Title": "所有者详情",
-        "Eyebrow": "所有者就绪状态",
-        "ReadinessTitle": "所有者信号",
-        "Ready": "运行条件已就绪",
-        "Waiting": "等待就绪证据",
-        "ReadyDescription": "所需快照与匹配的工作节点版本均已存在。此所有者信号本身并不表示期望发布已激活。",
-        "WaitingDescription": "仍缺少定义快照或匹配的工作节点版本；发布激活会单独评估。",
-        "SnapshotReadyDescription": "预期的不可变定义快照已可用。",
-        "SnapshotWaitingDescription": "预期的定义快照尚未发布。",
-        "WorkersDescription": "与预期版本匹配的在线工作节点。",
-        "DefinitionsDescription": "活动目录中来自此所有者精确版本的作业。",
-        "RevisionDescription": "工作节点能力必须报告此精确的可执行版本。",
-        "ReleaseTitle": "发布激活",
-        "ReleaseDescription": "所有者就绪与目录激活是两个独立信号。",
-        "DesiredReleaseActive": "期望发布已激活",
-        "DesiredReleasePending": "期望发布尚未激活",
-        "JobsTitle": "匹配的活动作业",
-        "JobsDescription": "活动目录中由此精确工作节点版本拥有的定义。",
-        "JobsEmpty": "活动目录中没有匹配的定义。",
-        "CapturedAt": "证据采集于"
-      }
     },
     "Recent": {
       "Title": "最近队列活动",
@@ -211,7 +164,6 @@
       "NextRun": "下次执行",
       "Readiness": "运行就绪",
       "LastRun": "上次执行",
-      "Revision": "作业版本",
       "Actions": "操作"
     },
     "Actions": {
@@ -226,10 +178,6 @@
       "PauseSelected": "暂停所选",
       "ResumeSelected": "继续所选",
       "Reset": "重置筛选"
-    },
-    "Readiness": {
-      "Workers": "{0} 个兼容工作节点",
-      "NoWorker": "没有兼容工作节点"
     },
     "ScheduleStatus": {
       "Awaiting": "等待同步",
@@ -266,8 +214,12 @@
       "Ready": "可由运维人员触发",
       "NoArguments": "无需参数契约"
     },
-    "History": { "NeverRun": "从未执行" },
-    "Activity": { "QueuedRunning": "排队 {0} · 执行中 {1}" },
+    "History": {
+      "NeverRun": "从未执行"
+    },
+    "Activity": {
+      "QueuedRunning": "排队 {0} · 执行中 {1}"
+    },
     "Selection": {
       "SelectAll": "选择本页全部周期作业",
       "SelectPage": "选择本页",
@@ -296,6 +248,10 @@
       "PauseUnavailableDebug": "所选作业中至少有一个仅由调试模式抑制且没有运维暂停，因此不能快速暂停。",
       "Result": "{0} 项策略更新成功，{1} 项失败。",
       "ResultDebugRemains": "{0} 项运维暂停更新成功，{1} 项失败；已配置调试模式的作业仍会抑制自动物化。"
+    },
+    "Readiness": {
+      "Present": "所有者在线",
+      "Absent": "所有者缺席"
     }
   },
   "Policy": {
@@ -312,7 +268,6 @@
     "Saved": "运维策略已保存。",
     "UnsavedChanges": "存在未保存的运维变更",
     "NoChanges": "没有策略变更",
-    "DriftWarning": "此粘性策略上次针对作业修订 {0} 审核，当前发布已使用 {1}。保存前请检查生效值。",
     "Provenance": {
       "Declared": "声明默认值",
       "Override": "运维覆盖值",
@@ -345,12 +300,10 @@
     },
     "Identity": {
       "ArgumentContract": "参数契约",
-      "ReviewedRevision": "已审核作业修订",
       "PolicyRevision": "策略修订",
       "UpdatedAt": "策略更新时间（UTC）",
-      "Release": "目录发布",
-      "WorkerRevision": "工作节点修订",
-      "JobType": "作业类型"
+      "JobType": "作业类型",
+      "LastObserved": "所有者最近上报"
     },
     "DescriptionModes": {
       "Inherit": "继承声明描述",
@@ -371,8 +324,7 @@
       "Enabled": "已启用",
       "Disabled": "已禁用",
       "NoLimit": "不限制",
-      "Days": "{0} 天",
-      "ReviewOutdated": "审核已过期"
+      "Days": "{0} 天"
     },
     "Validation": {
       "DisplayNameRequired": "请输入长度符合限制的显示名称，或重置该字段以继承声明值。",
@@ -504,12 +456,13 @@
       "InspectSchedule": "编辑调度策略"
     },
     "Header": {
-      "NoCompatibleWorker": "没有兼容工作节点",
       "EvidenceAriaLabel": "当前作业运行证据",
       "ActiveExecutions": "活动执行",
       "QueuedExecutions": "排队中",
       "RunningExecutions": "执行中",
-      "CompatibleWorkers": "兼容工作节点"
+      "OwnerAbsent": "所有者缺席",
+      "OwnerPresence": "所有者状态",
+      "OwnerPresent": "在线"
     },
     "Activity": {
       "Eyebrow": "实时执行证据",
@@ -571,15 +524,12 @@
       "PolicyStampHelp": "乐观并发令牌；策略更新必须匹配当前值，并在成功后获得新值。",
       "RevisionTitle": "发布与版本身份",
       "SchedulerScope": "调度范围",
-      "Release": "目录发布",
-      "ReleaseHelp": "提供当前生效声明的不可变目录发布。",
-      "ActivationEpoch": "激活纪元",
-      "ActivationEpochHelp": "此发布成为活动执行契约时分配的单调递增纪元。",
-      "WorkerRevision": "工作节点版本",
-      "WorkerRevisionHelp": "兼容工作节点认领此作业前必须声明的精确可执行修订。",
-      "JobRevision": "作业版本",
-      "JobRevisionHelp": "新执行实例所捕获的不可变声明内容标识。",
-      "OverrideEffective": "覆盖值：{0} · 生效值：{1}"
+      "OverrideEffective": "覆盖值：{0} · 生效值：{1}",
+      "Absent": "已移除",
+      "JobKey": "作业键",
+      "OwnerObserved": "所有者最近上报",
+      "Presence": "在位状态",
+      "Present": "在位"
     },
     "LatestExecution": {
       "Title": "最近执行",
@@ -614,7 +564,6 @@
   },
   "Trigger": {
     "Title": "准入执行",
-    "Revision": "预期的不可变作业版本",
     "InstanceId": "幂等执行标识",
     "PayloadSection": "执行参数载荷",
     "Arguments": "JSON 参数",
@@ -770,15 +719,11 @@
     "State": "状态",
     "Job": "作业键",
     "Owner": "所有者",
-    "Release": "目录发布",
-    "Activation": "激活纪元",
     "Attempts": "执行 / 重试次数",
     "Origin": "准入方式",
     "Available": "可执行时间",
     "Worker": "执行节点",
     "Revision": "精确执行身份",
-    "WorkerRevision": "工作节点版本",
-    "JobRevision": "作业版本",
     "Arguments": "序列化参数",
     "History": "追加式执行历史",
     "Identity": "执行身份",

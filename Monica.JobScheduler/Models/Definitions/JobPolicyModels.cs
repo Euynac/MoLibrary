@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Monica.JobScheduler.Models.Execution;
 
-namespace Monica.JobScheduler.Models.Catalog;
+namespace Monica.JobScheduler.Models.Definitions;
 
 /// <summary>
 /// Represents an explicit nullable description override.
@@ -34,8 +34,8 @@ public sealed record JobScheduleBoundaryOverride
 }
 
 /// <summary>
-/// Holds operator-owned recurring schedule fields. The deployment-configured timezone is intentionally absent and
-/// always remains owned by <see cref="JobDeclaration.TimeZoneId"/>.
+/// Holds operator-owned recurring schedule fields. The host-configured timezone is intentionally absent and always
+/// remains owned by <see cref="JobDeclaration.TimeZoneId"/>.
 /// </summary>
 public sealed record JobScheduleOverride
 {
@@ -86,7 +86,7 @@ public sealed record JobScheduleOverride
 }
 
 /// <summary>
-/// Holds only operator-owned overrides for one scope-wide logical job. Null override properties inherit immutable
+/// Holds only operator-owned overrides for one owner-scoped job. Null override properties inherit immutable
 /// declaration or scheduler defaults and therefore remain sticky without copying code-owned values into policy state.
 /// </summary>
 public sealed record JobPolicyOverrides
@@ -109,7 +109,7 @@ public sealed record JobPolicyOverrides
     public JobDescriptionOverride? DescriptionOverride { get; init; }
 
     /// <summary>
-    /// Gets the scope-wide claim and recurring-admission capacity override.
+    /// Gets the owner-scoped claim and recurring-admission capacity override.
     /// </summary>
     public int? MaxConcurrencyOverride { get; init; }
 
@@ -263,7 +263,7 @@ public sealed record JobPolicyOverrides
             && ScheduleOverride != currentOverrides?.ScheduleOverride)
         {
             throw new ArgumentException(
-                "A recurring schedule override cannot be introduced or changed while the active job is triggered. "
+                "A recurring schedule override cannot be introduced or changed while the job is triggered. "
                 + "An unchanged dormant override may be retained, or it may be reset.",
                 nameof(ScheduleOverride));
         }
@@ -307,8 +307,7 @@ public sealed record JobPolicyOverrides
 }
 
 /// <summary>
-/// Holds operator-owned behavior for one scope-wide logical job independently of immutable code declarations and the
-/// worker owner currently responsible for that job.
+/// Holds operator-owned behavior for one owner-scoped job independently of the immutable code declaration.
 /// </summary>
 public sealed record JobPolicy
 {
@@ -323,51 +322,15 @@ public sealed record JobPolicy
     public required JobPolicyOverrides Overrides { get; init; }
 
     /// <summary>
-    /// Gets the opaque policy-editor fence captured by future execution templates. It rotates after an explicit
-    /// operator save and whenever activation changes the logical job's active code revision.
+    /// Gets the opaque optimistic-concurrency fence rotated after every successful operator save. It is captured by
+    /// future execution templates and gates concurrent policy editors.
     /// </summary>
     public required string ConcurrencyStamp { get; init; }
 
     /// <summary>
-    /// Gets the immutable job revision against which an operator last saved these overrides. A different active job
-    /// revision exposes release drift without discarding the sticky logical-job policy.
-    /// </summary>
-    public string? ReviewedAgainstJobRevisionId { get; init; }
-
-    /// <summary>
-    /// Gets the exclusive store-time boundary after which a first recurring cursor may calculate occurrences when a
-    /// schedule replacement or resume was saved before that cursor existed. Null preserves the activation boundary.
-    /// </summary>
-    public DateTimeOffset? RecurringScheduleEffectiveFromUtc { get; init; }
-
-    /// <summary>
-    /// Gets when the policy revision was persisted in UTC.
+    /// Gets when the policy was persisted in UTC.
     /// </summary>
     public DateTimeOffset UpdatedAtUtc { get; init; }
-
-    /// <summary>
-    /// Preserves the current first-occurrence boundary unless a recurring schedule changes or a disabled schedule
-    /// resumes. Those transitions become prospective from the supplied store time.
-    /// </summary>
-    internal DateTimeOffset? ResolveRecurringScheduleEffectiveFromUtc(
-        JobDeclaration declaration,
-        JobPolicyOverrides replacementOverrides,
-        DateTimeOffset updatedAtUtc)
-    {
-        ArgumentNullException.ThrowIfNull(declaration);
-        ArgumentNullException.ThrowIfNull(replacementOverrides);
-        if (declaration.JobType != JobType.Recurring)
-        {
-            return RecurringScheduleEffectiveFromUtc;
-        }
-
-        var current = Overrides.Resolve(declaration);
-        var replacement = replacementOverrides.Resolve(declaration);
-        return current.Schedule != replacement.Schedule
-               || current.IsDisabled && !replacement.IsDisabled
-            ? updatedAtUtc
-            : RecurringScheduleEffectiveFromUtc;
-    }
 }
 
 /// <summary>
@@ -407,7 +370,7 @@ public sealed record EffectiveJobConfiguration
     public bool IsDisabled { get; init; }
 
     /// <summary>
-    /// Gets the effective scope-wide capacity for new claims and recurring admission.
+    /// Gets the effective owner-scoped capacity for new claims and recurring admission.
     /// </summary>
     public int MaxConcurrency { get; init; }
 

@@ -13,24 +13,19 @@ public sealed record JobEnqueueRequest
     public required string InstanceId { get; init; }
 
     /// <summary>
-    /// Gets the scheduler scope whose active catalog must resolve the job.
+    /// Gets the scheduler scope whose definitions resolve the job.
     /// </summary>
     public required string SchedulerScopeKey { get; init; }
 
     /// <summary>
-    /// Gets the logical job key resolved atomically from the current active catalog.
+    /// Gets the owner of the job definition that resolves the job.
+    /// </summary>
+    public required string OwnerKey { get; init; }
+
+    /// <summary>
+    /// Gets the owner-scoped logical job key resolved atomically from the persisted definition.
     /// </summary>
     public required string JobKey { get; init; }
-
-    /// <summary>
-    /// Gets an optional expected owner identity used to reject an incompatible catalog cutover.
-    /// </summary>
-    public string? ExpectedOwnerId { get; init; }
-
-    /// <summary>
-    /// Gets an optional expected immutable job revision used by application callers to fence rolling upgrades.
-    /// </summary>
-    public string? ExpectedJobRevisionId { get; init; }
 
     /// <summary>
     /// Gets the serialized triggered-job arguments.
@@ -53,6 +48,7 @@ public sealed record JobEnqueueRequest
     {
         JobSchedulerIdentity.ValidateStandard(InstanceId, nameof(InstanceId));
         JobSchedulerIdentity.ValidateStandard(SchedulerScopeKey, nameof(SchedulerScopeKey));
+        JobSchedulerIdentity.ValidateStandard(OwnerKey, nameof(OwnerKey));
         JobSchedulerIdentity.ValidateJobKey(JobKey, nameof(JobKey));
         ArgumentException.ThrowIfNullOrWhiteSpace(EnqueueReason);
 
@@ -62,21 +58,11 @@ public sealed record JobEnqueueRequest
                 "An explicitly supplied availability time cannot be the default value.",
                 nameof(AvailableAtUtc));
         }
-
-        if (ExpectedOwnerId is not null)
-        {
-            JobSchedulerIdentity.ValidateStandard(ExpectedOwnerId, nameof(ExpectedOwnerId));
-        }
-
-        if (ExpectedJobRevisionId is not null)
-        {
-            JobSchedulerIdentity.ValidateHash(ExpectedJobRevisionId, nameof(ExpectedJobRevisionId));
-        }
     }
 }
 
 /// <summary>
-/// Describes an operator request to run one active recurring job immediately without moving its schedule cursor.
+/// Describes an operator request to run one recurring job immediately without moving its schedule cursor.
 /// </summary>
 public sealed record JobRecurringRunNowCommand
 {
@@ -86,40 +72,26 @@ public sealed record JobRecurringRunNowCommand
     public required string InstanceId { get; init; }
 
     /// <summary>
-    /// Gets the scheduler scope whose active catalog must resolve the recurring job.
+    /// Gets the scheduler scope whose definitions resolve the recurring job.
     /// </summary>
     public required string SchedulerScopeKey { get; init; }
 
     /// <summary>
-    /// Gets the active logical recurring job key.
+    /// Gets the owner of the recurring job definition.
+    /// </summary>
+    public required string OwnerKey { get; init; }
+
+    /// <summary>
+    /// Gets the owner-scoped logical recurring job key.
     /// </summary>
     public required string JobKey { get; init; }
-
-    /// <summary>
-    /// Gets an optional expected owner identity used to reject an incompatible catalog cutover.
-    /// </summary>
-    public string? ExpectedOwnerId { get; init; }
-
-    /// <summary>
-    /// Gets an optional expected immutable job revision used to fence rolling upgrades.
-    /// </summary>
-    public string? ExpectedJobRevisionId { get; init; }
 
     internal void Validate()
     {
         JobSchedulerIdentity.ValidateStandard(InstanceId, nameof(InstanceId));
         JobSchedulerIdentity.ValidateStandard(SchedulerScopeKey, nameof(SchedulerScopeKey));
+        JobSchedulerIdentity.ValidateStandard(OwnerKey, nameof(OwnerKey));
         JobSchedulerIdentity.ValidateJobKey(JobKey, nameof(JobKey));
-
-        if (ExpectedOwnerId is not null)
-        {
-            JobSchedulerIdentity.ValidateStandard(ExpectedOwnerId, nameof(ExpectedOwnerId));
-        }
-
-        if (ExpectedJobRevisionId is not null)
-        {
-            JobSchedulerIdentity.ValidateHash(ExpectedJobRevisionId, nameof(ExpectedJobRevisionId));
-        }
     }
 }
 

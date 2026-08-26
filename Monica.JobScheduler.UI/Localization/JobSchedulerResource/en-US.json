@@ -1,10 +1,20 @@
 {
   "Pages": {
-    "Overview": { "Title": "Scheduler overview" },
-    "Catalog": { "Title": "Job catalog" },
-    "JobDetail": { "Title": "Job details" },
-    "Executions": { "Title": "Execution ledger" },
-    "Statistics": { "Title": "Scheduler analytics" }
+    "Overview": {
+      "Title": "Scheduler overview"
+    },
+    "Catalog": {
+      "Title": "Job catalog"
+    },
+    "JobDetail": {
+      "Title": "Job details"
+    },
+    "Executions": {
+      "Title": "Execution ledger"
+    },
+    "Statistics": {
+      "Title": "Scheduler analytics"
+    }
   },
   "Workspace": {
     "Eyebrow": "MONICA / DURABLE SCHEDULING",
@@ -85,22 +95,6 @@
   },
   "Overview": {
     "PageTitle": "Job Scheduler · Overview",
-    "Release": {
-      "AriaLabel": "Catalog release status",
-      "Desired": "Desired release",
-      "Active": "Active release",
-      "Generation": "Deployment generation",
-      "Intent": "Active / desired intent",
-      "Activation": "Activation epoch",
-      "Change": "Change epoch",
-      "Publication": "Publication epoch",
-      "Converged": "Converged",
-      "Transitioning": "Cutover in progress",
-      "WaitingWorkers": "Waiting for workers",
-      "TransitionMessage": "New execution admission and recurring materialization are paused until the complete desired release is activated.",
-      "ReadinessDescription": "Desired publication and exact worker revisions must converge before the release can become the active execution contract.",
-      "EpochAriaLabel": "Catalog epoch progression"
-    },
     "Workload": {
       "AriaLabel": "Scheduler workload summary",
       "TotalJobs": "Total jobs",
@@ -127,54 +121,13 @@
       "FailedDescription": "Inspect errors and retry evidence.",
       "Skipped": "Skipped occurrences",
       "SkippedDescription": "Review overlap and schedule capacity.",
-      "Owners": "Unconverged source projects",
-      "OwnersDescription": "Publication or compatible workers are missing."
+      "Absent": "Absent definitions",
+      "AbsentDescription": "Jobs missing from their owner's latest snapshot"
     },
     "Analytics": {
       "Title": "Performance analytics",
       "Description": "Explore throughput, outcome trends, duration percentiles, and the slowest jobs over a bounded time window.",
       "Action": "Open analytics"
-    },
-    "Deployment": {
-      "Title": "Deployment evidence",
-      "Description": "Release epochs and worker convergence remain available below the workload pulse for deep operational diagnosis."
-    },
-    "Owners": {
-      "Title": "Owner convergence",
-      "Description": "A release is operational only when each expected declaration snapshot and matching worker revision are present.",
-      "Revision": "Worker revision",
-      "Publication": "Published",
-      "Workers": "Live workers",
-      "Definitions": "Active jobs",
-      "Published": "Published",
-      "Pending": "Pending",
-      "Empty": "No owners are present in the desired release.",
-      "Ready": "Ready",
-      "NeedsAttention": "Needs attention",
-      "OpenDetails": "Open details for {0}",
-      "SignalsAriaLabel": "Readiness signals for {0}",
-      "Detail": {
-        "Title": "Owner details",
-        "Eyebrow": "OWNER READINESS",
-        "ReadinessTitle": "Owner signals",
-        "Ready": "Runtime-ready",
-        "Waiting": "Waiting for evidence",
-        "ReadyDescription": "The required snapshot and matching worker revision are present. This owner signal does not by itself mean the desired release is active.",
-        "WaitingDescription": "A declaration snapshot or matching worker revision is still missing. Release activation is evaluated separately.",
-        "SnapshotReadyDescription": "The expected immutable declaration snapshot is available.",
-        "SnapshotWaitingDescription": "The expected declaration snapshot has not been published.",
-        "WorkersDescription": "Active leases matching the expected revision.",
-        "DefinitionsDescription": "Jobs from this exact owner revision in the active catalog.",
-        "RevisionDescription": "Worker capabilities must report this exact executable revision.",
-        "ReleaseTitle": "Release activation",
-        "ReleaseDescription": "Owner readiness and catalog activation are independent signals.",
-        "DesiredReleaseActive": "Desired release active",
-        "DesiredReleasePending": "Desired release not active",
-        "JobsTitle": "Matching active jobs",
-        "JobsDescription": "Definitions in the active catalog owned by this exact worker revision.",
-        "JobsEmpty": "No matching definitions are present in the active catalog.",
-        "CapturedAt": "Evidence captured"
-      }
     },
     "Recent": {
       "Title": "Recent queue activity",
@@ -211,7 +164,6 @@
       "NextRun": "Next run",
       "Readiness": "Readiness",
       "LastRun": "Last run",
-      "Revision": "Job revision",
       "Actions": "Actions"
     },
     "Actions": {
@@ -226,10 +178,6 @@
       "PauseSelected": "Pause selected",
       "ResumeSelected": "Resume selected",
       "Reset": "Reset filters"
-    },
-    "Readiness": {
-      "Workers": "{0} compatible worker(s)",
-      "NoWorker": "No compatible worker"
     },
     "ScheduleStatus": {
       "Awaiting": "Awaiting synchronization",
@@ -266,8 +214,12 @@
       "Ready": "Ready for operator admission",
       "NoArguments": "No argument contract"
     },
-    "History": { "NeverRun": "Never run" },
-    "Activity": { "QueuedRunning": "{0} queued · {1} running" },
+    "History": {
+      "NeverRun": "Never run"
+    },
+    "Activity": {
+      "QueuedRunning": "{0} queued · {1} running"
+    },
     "Selection": {
       "SelectAll": "Select all recurring jobs on this page",
       "SelectPage": "Select page",
@@ -296,6 +248,10 @@
       "PauseUnavailableDebug": "Quick Pause is unavailable because one or more selected jobs are already suppressed by debug mode without an operator pause.",
       "Result": "{0} policy update(s) succeeded; {1} failed.",
       "ResultDebugRemains": "{0} operator pause update(s) succeeded; {1} failed. Debug mode still suppresses automatic materialization where configured."
+    },
+    "Readiness": {
+      "Present": "Owner present",
+      "Absent": "Owner absent"
     }
   },
   "Policy": {
@@ -312,7 +268,6 @@
     "Saved": "Operational policy saved.",
     "UnsavedChanges": "Unsaved operator changes",
     "NoChanges": "No policy changes",
-    "DriftWarning": "This sticky policy was reviewed against job revision {0}; the active release now uses {1}. Review the effective values before saving.",
     "Provenance": {
       "Declared": "Declared default",
       "Override": "Operator override",
@@ -345,12 +300,10 @@
     },
     "Identity": {
       "ArgumentContract": "Argument contract",
-      "ReviewedRevision": "Reviewed job revision",
       "PolicyRevision": "Policy revision",
       "UpdatedAt": "Policy updated (UTC)",
-      "Release": "Catalog release",
-      "WorkerRevision": "Worker revision",
-      "JobType": "Job type"
+      "JobType": "Job type",
+      "LastObserved": "Owner last observed"
     },
     "DescriptionModes": {
       "Inherit": "Inherit declared description",
@@ -371,8 +324,7 @@
       "Enabled": "Enabled",
       "Disabled": "Disabled",
       "NoLimit": "No limit",
-      "Days": "{0} days",
-      "ReviewOutdated": "Review outdated"
+      "Days": "{0} days"
     },
     "Validation": {
       "DisplayNameRequired": "Enter a display name within the supported length, or reset the field to inherit its declared value.",
@@ -504,12 +456,13 @@
       "InspectSchedule": "Edit schedule policy"
     },
     "Header": {
-      "NoCompatibleWorker": "No compatible worker",
       "EvidenceAriaLabel": "Current job operational evidence",
       "ActiveExecutions": "Active executions",
       "QueuedExecutions": "Queued executions",
       "RunningExecutions": "Running executions",
-      "CompatibleWorkers": "Compatible workers"
+      "OwnerAbsent": "Owner absent",
+      "OwnerPresence": "Owner presence",
+      "OwnerPresent": "Present"
     },
     "Activity": {
       "Eyebrow": "LIVE EXECUTION EVIDENCE",
@@ -571,15 +524,12 @@
       "PolicyStampHelp": "Optimistic-concurrency token; policy updates must match it and receive a new stamp.",
       "RevisionTitle": "Release and revision identity",
       "SchedulerScope": "Scheduler scope",
-      "Release": "Catalog release",
-      "ReleaseHelp": "Immutable catalog release that supplied this active declaration.",
-      "ActivationEpoch": "Activation epoch",
-      "ActivationEpochHelp": "Monotonic epoch assigned when this release became the active execution contract.",
-      "WorkerRevision": "Worker revision",
-      "WorkerRevisionHelp": "Exact executable revision a compatible worker must advertise before it can claim this job.",
-      "JobRevision": "Job revision",
-      "JobRevisionHelp": "Content identity of the immutable declaration captured by new executions.",
-      "OverrideEffective": "Override: {0} · Effective: {1}"
+      "OverrideEffective": "Override: {0} · Effective: {1}",
+      "Absent": "Absent",
+      "JobKey": "Job key",
+      "OwnerObserved": "Owner last observed",
+      "Presence": "Presence",
+      "Present": "Present"
     },
     "LatestExecution": {
       "Title": "Latest execution",
@@ -614,7 +564,6 @@
   },
   "Trigger": {
     "Title": "Admit execution",
-    "Revision": "Expected immutable job revision",
     "InstanceId": "Idempotency instance",
     "PayloadSection": "Execution payload",
     "Arguments": "JSON arguments",
@@ -770,15 +719,11 @@
     "State": "State",
     "Job": "Job key",
     "Owner": "Owner",
-    "Release": "Catalog release",
-    "Activation": "Activation epoch",
     "Attempts": "Attempts / retries",
     "Origin": "Admission",
     "Available": "Available at",
     "Worker": "Running worker",
     "Revision": "Exact executable identity",
-    "WorkerRevision": "Worker revision",
-    "JobRevision": "Job revision",
     "Arguments": "Serialized arguments",
     "History": "Append-only execution history",
     "Identity": "Execution identity",

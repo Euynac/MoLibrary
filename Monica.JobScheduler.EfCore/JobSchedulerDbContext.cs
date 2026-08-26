@@ -2,79 +2,73 @@ using Microsoft.EntityFrameworkCore;
 using Monica.DependencyInjection.Abstractions;
 using Monica.JobScheduler.EfCore.Entities;
 using Monica.JobScheduler.Models;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.Repository.Persistence.Services;
 
 namespace Monica.JobScheduler.EfCore;
 
 /// <summary>
-/// Owns the relational correctness boundary for the job catalog and durable execution queue.
+/// Owns the relational correctness boundary for job definitions and the durable execution queue.
 /// </summary>
 public sealed class JobSchedulerDbContext(
     DbContextOptions<JobSchedulerDbContext> options,
     ICachedServiceProvider serviceProvider)
     : RepositoryDbContext<JobSchedulerDbContext>(options, serviceProvider)
 {
-    internal DbSet<JobCatalogScopeEntity> CatalogScopes => Set<JobCatalogScopeEntity>();
-    internal DbSet<JobCatalogReleaseEntity> CatalogReleases => Set<JobCatalogReleaseEntity>();
-    internal DbSet<JobCatalogActivationEntity> CatalogActivations => Set<JobCatalogActivationEntity>();
-    internal DbSet<JobPolicyEntity> JobPolicies => Set<JobPolicyEntity>();
+    internal DbSet<JobDefinitionEntity> Definitions => Set<JobDefinitionEntity>();
     internal DbSet<JobExecutionEntity> Executions => Set<JobExecutionEntity>();
     internal DbSet<JobExecutionHistoryEntity> ExecutionHistory => Set<JobExecutionHistoryEntity>();
     internal DbSet<JobExecutionGateEntity> ExecutionGates => Set<JobExecutionGateEntity>();
-    internal DbSet<JobWorkerCapabilityEntity> WorkerCapabilities => Set<JobWorkerCapabilityEntity>();
     internal DbSet<JobRecurringCursorEntity> RecurringCursors => Set<JobRecurringCursorEntity>();
 
     protected override void OnModelCreatingExtend(ModelBuilder modelBuilder)
     {
         base.OnModelCreatingExtend(modelBuilder);
-        ConfigureCatalog(modelBuilder);
+        ConfigureDefinitions(modelBuilder);
         ConfigureExecution(modelBuilder);
         RemoveInheritedStringDefaults(modelBuilder);
     }
 
-    private static void ConfigureCatalog(ModelBuilder modelBuilder)
+    private static void ConfigureDefinitions(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<JobCatalogScopeEntity>(entity =>
+        modelBuilder.Entity<JobDefinitionEntity>(entity =>
         {
-            entity.ToTable("JobCatalogScopes");
-            entity.HasKey(item => item.SchedulerScopeKey);
+            entity.ToTable("JobDefinitions");
+            entity.HasKey(item => new { item.SchedulerScopeKey, item.OwnerKey, item.JobKey });
             entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.DesiredReleaseId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.LastSeenDeploymentReleaseId)
-                .HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.ActiveReleaseId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
-        });
-
-        modelBuilder.Entity<JobCatalogReleaseEntity>(entity =>
-        {
-            entity.ToTable("JobCatalogReleases");
-            entity.HasKey(item => new { item.SchedulerScopeKey, item.ReleaseId });
-            entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.ReleaseId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.ManifestContentHash).HasMaxLength(JobSchedulerIdentity.HASH_LENGTH);
-            entity.Property(item => item.PayloadJson).HasColumnType("text");
-            entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
-        });
-
-        modelBuilder.Entity<JobCatalogActivationEntity>(entity =>
-        {
-            entity.ToTable("JobCatalogActivations");
-            entity.HasKey(item => new { item.SchedulerScopeKey, item.ActivationEpoch });
-            entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.ReleaseId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.HasIndex(item => new { item.SchedulerScopeKey, item.ReleaseId });
-        });
-
-        modelBuilder.Entity<JobPolicyEntity>(entity =>
-        {
-            entity.ToTable("JobPolicies");
-            entity.HasKey(item => new { item.SchedulerScopeKey, item.JobKey });
-            entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
+            entity.Property(item => item.OwnerKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
             entity.Property(item => item.JobKey).HasMaxLength(JobSchedulerIdentity.JOB_KEY_MAX_LENGTH);
-            entity.Property(item => item.OverridesJson).HasColumnType("text");
-            entity.Property(item => item.ConcurrencyStamp).HasMaxLength(32);
-            entity.Property(item => item.ReviewedAgainstJobRevisionId).HasMaxLength(JobSchedulerIdentity.HASH_LENGTH);
+            entity.Property(item => item.DeclarationJson).HasColumnType("text");
+            entity.Property(item => item.PolicyOverridesJson).HasColumnType("text");
+            entity.Property(item => item.PolicyConcurrencyStamp).HasMaxLength(32);
+            entity.Property(item => item.JobName).HasMaxLength(JobDeclaration.JOB_NAME_MAX_LENGTH);
+            entity.Property(item => item.Description).HasColumnType("text");
+            entity.Property(item => item.JobType).HasConversion<string>().HasMaxLength(16);
+            entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
+            entity.HasIndex(item => new { item.SchedulerScopeKey, item.OwnerKey });
+        });
+
+        modelBuilder.Entity<JobRecurringCursorEntity>(entity =>
+        {
+            entity.ToTable("JobRecurringCursors");
+            entity.HasKey(item => new { item.SchedulerScopeKey, item.OwnerKey, item.JobKey });
+            entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
+            entity.Property(item => item.OwnerKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
+            entity.Property(item => item.JobKey).HasMaxLength(JobSchedulerIdentity.JOB_KEY_MAX_LENGTH);
+            entity.Property(item => item.TemplateJson).HasColumnType("text");
+            entity.Property(item => item.ScheduleJson).HasColumnType("text");
+            entity.Property(item => item.SuspensionReasons).HasConversion<int>();
+            entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
+            entity.HasIndex(item => new { item.SchedulerScopeKey, item.OwnerKey, item.NextOccurrenceUtcTicks });
+        });
+
+        modelBuilder.Entity<JobExecutionGateEntity>(entity =>
+        {
+            entity.ToTable("JobExecutionGates");
+            entity.HasKey(item => new { item.SchedulerScopeKey, item.OwnerKey, item.JobKey });
+            entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
+            entity.Property(item => item.OwnerKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
+            entity.Property(item => item.JobKey).HasMaxLength(JobSchedulerIdentity.JOB_KEY_MAX_LENGTH);
             entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
         });
     }
@@ -88,10 +82,7 @@ public sealed class JobSchedulerDbContext(
             entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
             entity.Property(item => item.InstanceId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
             entity.Property(item => item.TemplateJson).HasColumnType("text");
-            entity.Property(item => item.CatalogReleaseId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
             entity.Property(item => item.OwnerKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.WorkerRevisionId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.JobRevisionId).HasMaxLength(JobSchedulerIdentity.HASH_LENGTH);
             entity.Property(item => item.JobKey).HasMaxLength(JobSchedulerIdentity.JOB_KEY_MAX_LENGTH);
             entity.Property(item => item.JobArgs).HasColumnType("text");
             entity.Property(item => item.Origin).HasConversion<string>().HasMaxLength(30);
@@ -99,7 +90,6 @@ public sealed class JobSchedulerDbContext(
             entity.Property(item => item.State).HasConversion<string>().HasMaxLength(20);
             entity.Property(item => item.RunningWorkerInstanceId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
             entity.Property(item => item.ExecutionLeaseToken).HasMaxLength(32);
-            entity.Property(item => item.CapabilityLeaseToken).HasMaxLength(32);
             entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
             entity.HasIndex(item => new
             {
@@ -108,9 +98,8 @@ public sealed class JobSchedulerDbContext(
                 item.AvailableAtUtcTicks,
                 item.OwnerKey
             });
-            entity.HasIndex(item => new { item.SchedulerScopeKey, item.State, item.ActivationEpoch });
-            entity.HasIndex(item => new { item.SchedulerScopeKey, item.JobKey, item.State });
-            entity.HasIndex(item => new { item.SchedulerScopeKey, item.JobKey, item.CreatedAtUtcTicks });
+            entity.HasIndex(item => new { item.SchedulerScopeKey, item.OwnerKey, item.JobKey, item.State });
+            entity.HasIndex(item => new { item.SchedulerScopeKey, item.OwnerKey, item.JobKey, item.CreatedAtUtcTicks });
             entity.HasMany(item => item.History)
                 .WithOne(item => item.Execution)
                 .HasForeignKey(item => new { item.SchedulerScopeKey, item.InstanceId })
@@ -129,44 +118,6 @@ public sealed class JobSchedulerDbContext(
             entity.Property(item => item.LogLevel).HasConversion<string>().HasMaxLength(20);
             entity.Property(item => item.Message).HasColumnType("text");
             entity.Property(item => item.WorkerInstanceId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-        });
-
-        modelBuilder.Entity<JobExecutionGateEntity>(entity =>
-        {
-            entity.ToTable("JobExecutionGates");
-            entity.HasKey(item => new { item.SchedulerScopeKey, item.JobKey });
-            entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.JobKey).HasMaxLength(JobSchedulerIdentity.JOB_KEY_MAX_LENGTH);
-            entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
-        });
-
-        modelBuilder.Entity<JobWorkerCapabilityEntity>(entity =>
-        {
-            entity.ToTable("JobWorkerCapabilities");
-            entity.HasKey(item => new { item.SchedulerScopeKey, item.WorkerInstanceId });
-            entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.WorkerInstanceId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.OwnerKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.WorkerRevisionId).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.JobRevisionIdsJson).HasColumnType("text");
-            entity.Property(item => item.LeaseToken).HasMaxLength(32);
-            entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
-            entity.HasIndex(item => new { item.SchedulerScopeKey, item.LeaseExpiresAtUtcTicks });
-            entity.HasIndex(item => new { item.SchedulerScopeKey, item.OwnerKey, item.LeaseExpiresAtUtcTicks });
-        });
-
-        modelBuilder.Entity<JobRecurringCursorEntity>(entity =>
-        {
-            entity.ToTable("JobRecurringCursors");
-            entity.HasKey(item => new { item.SchedulerScopeKey, item.ActivationEpoch, item.JobRevisionId });
-            entity.Property(item => item.SchedulerScopeKey).HasMaxLength(JobSchedulerIdentity.STANDARD_MAX_LENGTH);
-            entity.Property(item => item.JobRevisionId).HasMaxLength(JobSchedulerIdentity.HASH_LENGTH);
-            entity.Property(item => item.TemplateJson).HasColumnType("text");
-            entity.Property(item => item.ScheduleJson).HasColumnType("text");
-            entity.Property(item => item.AppliedPolicyRevision).HasMaxLength(32);
-            entity.Property(item => item.SuspensionReasons).HasConversion<int>();
-            entity.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
-            entity.HasIndex(item => new { item.SchedulerScopeKey, item.ActivationEpoch, item.NextOccurrenceUtcTicks });
         });
     }
 

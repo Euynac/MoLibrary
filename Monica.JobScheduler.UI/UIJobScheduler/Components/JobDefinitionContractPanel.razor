@@ -1,5 +1,5 @@
 @using System.Globalization
-@using Monica.JobScheduler.Models.Catalog
+@using Monica.JobScheduler.Models.Definitions
 @using Monica.JobScheduler.UI.Localization
 
 @inject IStringLocalizer<JobSchedulerResource> L
@@ -32,7 +32,7 @@
             <dl>
                 <div>
                     <dt>@L["JobDetail:Contract:Owner"]</dt>
-                    <dd><code>@Definition.OwnerId</code></dd>
+                    <dd><code>@Definition.OwnerKey</code></dd>
                 </div>
                 <div>
                     <dt>@L["JobDetail:Contract:ArgumentsKey"]</dt>
@@ -155,16 +155,8 @@
                     <dd>@TimePresentation.FormatTimestamp(Definition.Policy.UpdatedAtUtc)</dd>
                 </div>
                 <div>
-                    <dt>@L["Policy:Identity:ReviewedRevision"]</dt>
-                    <dd>
-                        <code>@Display(Definition.Policy.ReviewedAgainstJobRevisionId)</code>
-                        @if (Definition.IsPolicyReviewOutdated)
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                @L["Policy:Values:ReviewOutdated"]
-                            </MudChip>
-                        }
-                    </dd>
+                    <dt>@L["JobDetail:Contract:OwnerObserved"]</dt>
+                    <dd>@TimePresentation.FormatTimestamp(Definition.LastObservedAtUtc)</dd>
                 </div>
                 <div>
                     <dt class="job-contract-panel__term-with-help">
@@ -191,48 +183,29 @@
                 <dd><code>@Definition.SchedulerScopeKey</code></dd>
             </div>
             <div>
-                <dt class="job-contract-panel__term-with-help">
-                    <span>@L["JobDetail:Contract:Release"]</span>
-                    <MudTooltip Text="@L["JobDetail:Contract:ReleaseHelp"]" Placement="Placement.Top" Arrow="true">
-                        <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:ReleaseHelp"]">
-                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
-                        </button>
-                    </MudTooltip>
-                </dt>
-                <dd><code>@Definition.ReleaseId</code></dd>
-            </div>
-            <div>
-                <dt class="job-contract-panel__term-with-help">
-                    <span>@L["JobDetail:Contract:ActivationEpoch"]</span>
-                    <MudTooltip Text="@L["JobDetail:Contract:ActivationEpochHelp"]" Placement="Placement.Top" Arrow="true">
-                        <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:ActivationEpochHelp"]">
-                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
-                        </button>
-                    </MudTooltip>
-                </dt>
-                <dd>@Definition.ActivationEpoch</dd>
-            </div>
-            <div>
-                <dt class="job-contract-panel__term-with-help">
-                    <span>@L["JobDetail:Contract:WorkerRevision"]</span>
-                    <MudTooltip Text="@L["JobDetail:Contract:WorkerRevisionHelp"]" Placement="Placement.Top" Arrow="true">
-                        <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:WorkerRevisionHelp"]">
-                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
-                        </button>
-                    </MudTooltip>
-                </dt>
-                <dd><code>@Definition.WorkerRevisionId</code></dd>
+                <dt>@L["JobDetail:Contract:Owner"]</dt>
+                <dd><code>@Definition.OwnerKey</code></dd>
             </div>
             <div class="job-contract-panel__revision-wide">
-                <dt class="job-contract-panel__term-with-help">
-                    <span>@L["JobDetail:Contract:JobRevision"]</span>
-                    <MudTooltip Text="@L["JobDetail:Contract:JobRevisionHelp"]" Placement="Placement.Top" Arrow="true">
-                        <button type="button" class="job-contract-panel__help" aria-label="@L["JobDetail:Contract:JobRevisionHelp"]">
-                            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
-                        </button>
-                    </MudTooltip>
-                </dt>
-                <dd><code>@Definition.JobRevisionId</code></dd>
+                <dt>@L["JobDetail:Contract:JobKey"]</dt>
+                <dd><code>@Definition.Declaration.JobKey</code></dd>
+            </div>
+            <div>
+                <dt>@L["JobDetail:Contract:Presence"]</dt>
+                <dd>
+                    @if (Definition.IsPresent)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                            @L["JobDetail:Contract:Present"]
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                            @L["JobDetail:Contract:Absent"]
+                        </MudChip>
+                    }
+                </dd>
             </div>
         </dl>
     </section>
@@ -243,7 +216,7 @@
     /// Gets the active definition whose code declaration, operator policy, and revision evidence are rendered.
     /// </summary>
     [Parameter, EditorRequired]
-    public ActiveJobDefinition Definition { get; set; } = null!;
+    public JobDefinition Definition { get; set; } = null!;
 
     private string FormatDisabledOverride(bool? disabledOverride) => disabledOverride switch
     {

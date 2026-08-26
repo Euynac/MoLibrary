@@ -1,13 +1,13 @@
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 
 namespace Monica.JobScheduler.Models;
 
 /// <summary>
-/// Binds one immutable code declaration to the CLR types available in the current worker process.
+/// Binds one immutable code declaration to the CLR types available in the current host process.
 /// </summary>
 /// <remarks>
-/// This model is process-local and is never persisted. Durable catalog and execution records use stable string
-/// identities so control-plane hosts never need to load worker assemblies.
+/// This model is process-local and is never persisted. Durable definition and execution records use stable string
+/// identities so any host can present the full operational view without loading worker assemblies.
 /// </remarks>
 public sealed record LocalJobDefinition
 {

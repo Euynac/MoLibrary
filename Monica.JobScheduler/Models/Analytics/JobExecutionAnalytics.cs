@@ -55,7 +55,12 @@ public sealed record JobExecutionAnalyticsQuery
     public JobExecutionAnalyticsBucketSize BucketSize { get; init; } = JobExecutionAnalyticsBucketSize.Hour;
 
     /// <summary>
-    /// Gets an optional exact logical job key. When omitted, the complete scheduler scope is aggregated.
+    /// Gets an optional exact owner filter. When omitted, every owner in the scheduler scope is aggregated.
+    /// </summary>
+    public string? OwnerKey { get; init; }
+
+    /// <summary>
+    /// Gets an optional exact logical job key. When omitted, the complete filtered scope is aggregated.
     /// </summary>
     public string? JobKey { get; init; }
 
@@ -74,6 +79,11 @@ public sealed record JobExecutionAnalyticsQuery
         if (!Enum.IsDefined(BucketSize))
         {
             throw new ArgumentOutOfRangeException(nameof(BucketSize), BucketSize, "Analytics bucket size is not supported.");
+        }
+
+        if (OwnerKey is not null)
+        {
+            JobSchedulerIdentity.ValidateStandard(OwnerKey, nameof(OwnerKey));
         }
 
         if (JobKey is not null)

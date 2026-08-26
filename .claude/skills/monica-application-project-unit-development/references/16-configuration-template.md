@@ -72,13 +72,6 @@ public sealed class DomainOrderApproval(
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 var workerCount = builder.Configuration.GetValue<int?>("Ordering:WorkerCount") ?? 4;
-var releaseId = builder.Configuration["JobScheduler:ReleaseId"]
-                ?? throw new InvalidOperationException("JobScheduler:ReleaseId is required.");
-var deploymentGeneration = builder.Configuration.GetValue<long?>("JobScheduler:DeploymentGeneration")
-                           ?? throw new InvalidOperationException(
-                               "JobScheduler:DeploymentGeneration is required.");
-var workerRevisionId = builder.Configuration["JobScheduler:WorkerRevisionId"]
-                       ?? throw new InvalidOperationException("JobScheduler:WorkerRevisionId is required.");
 
 builder.AddMonica(monica =>
 {
@@ -88,14 +81,8 @@ builder.AddMonica(monica =>
             options.ProjectName = "Ordering";
             options.MaxWorkerExecutionThreads = workerCount;
         })
-        .AsStandalone()
         .UseInMemoryStore()
-        .UseSchedulerScope("ordering")
-        .UseCatalogRelease(
-            releaseId,
-            deploymentGeneration,
-            [new("Ordering", workerRevisionId)])
-        .UseLocalWorkerIdentity("Ordering", workerRevisionId);
+        .UseSchedulerScope("ordering");
 });
 ```
 
@@ -104,5 +91,6 @@ builder.AddMonica(monica =>
 - Use configuration for environment- or host-specific behavior, not for domain constants that belong in code.
 - Keep option names explicit and developer-facing.
 - Do not build a temporary service provider or resolve `IOptions<T>` during composition. Runtime code should use normal typed options injection.
-- `UseInMemoryStore()` is the single unified catalog-and-execution store for local standalone hosts. Production replicas must select one shared durable `IJobSchedulerStore`, normally through `UseEfCoreStore(...)` with PostgreSQL.
-- Treat the release ID, deployment generation, complete owner manifest, and worker revision as deployment identity. Every host in one release must receive identical manifest values, and the deployment generation must increase monotonically for the lifetime of the scheduler database.
+- `UseInMemoryStore()` is the process-local store for single-host development and deterministic tests. Production hosts must select one shared durable `IJobSchedulerStore`, normally through `UseEfCoreStore(...)` with PostgreSQL.
+- Every host schedules and executes the jobs it discovers under its `ProjectName` owner identity inside `UseSchedulerScope(...)`. Multiple replicas of one host are safe: definition snapshot sync, recurring cursor materialization, and queue claims are all store-level compare-and-swap operations. Different services may reuse the same job key because definitions, cursors, and gates are keyed by `(SchedulerScopeKey, OwnerKey, JobKey)`.
+- No deployment identity (release IDs, deployment generations, owner manifests, worker revisions) is required. A host that starts with a stable scope starts scheduling immediately; definitions absent from its latest snapshot are marked absent and reject new admission while their operator policy is retained for audit.

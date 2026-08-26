@@ -4,53 +4,26 @@ using Monica.JobScheduler.Models.Execution;
 
 namespace Monica.JobScheduler.EfCore.Entities;
 
-internal sealed class JobCatalogScopeEntity
+/// <summary>
+/// Persists one owner-published job definition: the immutable declaration snapshot, the sticky operator policy, and
+/// searchable projections of the effective configuration. Projection columns are refreshed on snapshot sync and
+/// policy edits so definition queries never deserialize payloads.
+/// </summary>
+internal sealed class JobDefinitionEntity
 {
     public string SchedulerScopeKey { get; set; } = string.Empty;
-    public string? DesiredReleaseId { get; set; }
-    public string? LastSeenDeploymentReleaseId { get; set; }
-    public long LastSeenDeploymentGeneration { get; set; }
-    public long DesiredIntentEpoch { get; set; }
-    public string? ActiveReleaseId { get; set; }
-    public long ActiveIntentEpoch { get; set; }
-    public long PublicationEpoch { get; set; }
-    public long ActivationEpoch { get; set; }
-    public long ChangeEpoch { get; set; }
-    public Guid ConcurrencyToken { get; set; }
-}
-
-internal sealed class JobCatalogReleaseEntity
-{
-    public string SchedulerScopeKey { get; set; } = string.Empty;
-    public string ReleaseId { get; set; } = string.Empty;
-    public string ManifestContentHash { get; set; } = string.Empty;
-    public string PayloadJson { get; set; } = string.Empty;
-    public Guid ConcurrencyToken { get; set; }
-}
-
-internal sealed class JobCatalogActivationEntity
-{
-    public string SchedulerScopeKey { get; set; } = string.Empty;
-    public long ActivationEpoch { get; set; }
-    public string ReleaseId { get; set; } = string.Empty;
-    public long ActivatedAtUtcTicks { get; set; }
-    public long DesiredIntentEpoch { get; set; }
-    public bool IsExplicitReactivation { get; set; }
-    public int RetiredQueuedExecutionCount { get; set; }
-    public int RunningCancellationRequestCount { get; set; }
-}
-
-// Operator policy follows the scope-wide logical JobKey across owner transfers and release reactivation. Owner is an
-// update fence resolved from the active catalog, not part of the durable policy identity.
-internal sealed class JobPolicyEntity
-{
-    public string SchedulerScopeKey { get; set; } = string.Empty;
+    public string OwnerKey { get; set; } = string.Empty;
     public string JobKey { get; set; } = string.Empty;
-    public string OverridesJson { get; set; } = string.Empty;
-    public string ConcurrencyStamp { get; set; } = string.Empty;
-    public string? ReviewedAgainstJobRevisionId { get; set; }
-    public long? RecurringScheduleEffectiveFromUtcTicks { get; set; }
-    public long UpdatedAtUtcTicks { get; set; }
+    public string DeclarationJson { get; set; } = string.Empty;
+    public string PolicyOverridesJson { get; set; } = string.Empty;
+    public string PolicyConcurrencyStamp { get; set; } = string.Empty;
+    public long PolicyUpdatedAtUtcTicks { get; set; }
+    public string JobName { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public JobType JobType { get; set; }
+    public bool IsDisabled { get; set; }
+    public bool IsPresent { get; set; }
+    public long LastObservedAtUtcTicks { get; set; }
     public Guid ConcurrencyToken { get; set; }
 }
 
@@ -59,11 +32,7 @@ internal sealed class JobExecutionEntity
     public string SchedulerScopeKey { get; set; } = string.Empty;
     public string InstanceId { get; set; } = string.Empty;
     public string TemplateJson { get; set; } = string.Empty;
-    public string CatalogReleaseId { get; set; } = string.Empty;
-    public long ActivationEpoch { get; set; }
     public string OwnerKey { get; set; } = string.Empty;
-    public string WorkerRevisionId { get; set; } = string.Empty;
-    public string JobRevisionId { get; set; } = string.Empty;
     public string JobKey { get; set; } = string.Empty;
     public string? JobArgs { get; set; }
     public JobExecutionOrigin Origin { get; set; }
@@ -79,7 +48,6 @@ internal sealed class JobExecutionEntity
     public int LeaseLossCount { get; set; }
     public string? RunningWorkerInstanceId { get; set; }
     public string? ExecutionLeaseToken { get; set; }
-    public string? CapabilityLeaseToken { get; set; }
     public long? LeaseExpiresAtUtcTicks { get; set; }
     public long? CancellationRequestedAtUtcTicks { get; set; }
     public int NextHistorySequence { get; set; } = 1;
@@ -102,42 +70,29 @@ internal sealed class JobExecutionHistoryEntity
     public JobExecutionEntity Execution { get; set; } = null!;
 }
 
-// A gate belongs to the scope-wide logical job and owns both its live lease count and current admission capacity.
-// Owner and revision remain execution-routing identities only; including them here would let a replacement owner
-// overlap work that is still cooperatively stopping after catalog cutover.
+/// <summary>
+/// A gate belongs to one owner-scoped definition and owns both its live lease count and current admission capacity.
+/// </summary>
 internal sealed class JobExecutionGateEntity
 {
     public string SchedulerScopeKey { get; set; } = string.Empty;
+    public string OwnerKey { get; set; } = string.Empty;
     public string JobKey { get; set; } = string.Empty;
     public int ActiveCount { get; set; }
     public int MaxConcurrency { get; set; }
     public Guid ConcurrencyToken { get; set; }
 }
 
-internal sealed class JobWorkerCapabilityEntity
-{
-    public string SchedulerScopeKey { get; set; } = string.Empty;
-    public string WorkerInstanceId { get; set; } = string.Empty;
-    public string OwnerKey { get; set; } = string.Empty;
-    public string WorkerRevisionId { get; set; } = string.Empty;
-    public string JobRevisionIdsJson { get; set; } = string.Empty;
-    public string LeaseToken { get; set; } = string.Empty;
-    public long LeaseExpiresAtUtcTicks { get; set; }
-    public Guid ConcurrencyToken { get; set; }
-}
-
 internal sealed class JobRecurringCursorEntity
 {
     public string SchedulerScopeKey { get; set; } = string.Empty;
-    public long ActivationEpoch { get; set; }
-    public string JobRevisionId { get; set; } = string.Empty;
+    public string OwnerKey { get; set; } = string.Empty;
+    public string JobKey { get; set; } = string.Empty;
     public string TemplateJson { get; set; } = string.Empty;
     public string ScheduleJson { get; set; } = string.Empty;
-    public string AppliedPolicyRevision { get; set; } = string.Empty;
     public long? NextOccurrenceUtcTicks { get; set; }
     public long CursorVersion { get; set; }
     public long UpdatedAtUtcTicks { get; set; }
     public JobRecurringScheduleSuspensionReason SuspensionReasons { get; set; }
-    public long LastSynchronizedChangeEpoch { get; set; }
     public Guid ConcurrencyToken { get; set; }
 }

@@ -1,34 +1,27 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
-using Monica.Modules;
 
 namespace Monica.JobScheduler.Services.Support;
 
 /// <summary>
-/// Reports whether the local scheduler responsibilities have reached a usable state.
+/// Reports whether the local scheduling and execution responsibilities have reached a usable state.
 /// </summary>
-internal sealed class JobSchedulerHealthCheck(
-    JobSchedulerRuntimeState runtimeState,
-    IOptions<ModuleJobSchedulerOption> options) : IHealthCheck
+internal sealed class JobSchedulerHealthCheck(JobSchedulerRuntimeState runtimeState) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var role = options.Value.Role;
-        var controlReady = role == JobSchedulerRole.Worker || runtimeState.ControlPlaneReady;
-        var workerReady = role == JobSchedulerRole.ControlPlane || runtimeState.WorkerReady;
-        if (controlReady && workerReady)
+        if (runtimeState.SchedulingReady && runtimeState.WorkerReady)
         {
             return Task.FromResult(HealthCheckResult.Healthy(
-                $"JobScheduler {role} responsibilities are ready."));
+                "JobScheduler scheduling and execution responsibilities are ready."));
         }
 
         var reasons = new[]
             {
-                controlReady ? null : runtimeState.ControlPlaneMessage ?? "Control plane has not initialized.",
-                workerReady ? null : runtimeState.WorkerMessage ?? "Worker has not initialized."
+                runtimeState.SchedulingReady ? null : runtimeState.SchedulingMessage ?? "Scheduling has not initialized.",
+                runtimeState.WorkerReady ? null : runtimeState.WorkerMessage ?? "Worker has not initialized."
             }
             .Where(static reason => reason is not null);
         return Task.FromResult(HealthCheckResult.Unhealthy(string.Join(" ", reasons)));

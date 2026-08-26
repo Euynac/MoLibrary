@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Localization;
@@ -282,7 +282,7 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
             : L["Catalog:Cron:Parsing"];
 
     private static string GetCronDescriptionKey(JobOperationalSummary summary) =>
-        $"{summary.Definition.JobRevisionId}\u001e{summary.Definition.Policy.ConcurrencyStamp}";
+        $"{summary.Definition.OwnerKey}\u001e{summary.Definition.Declaration.JobKey}\u001e{summary.Definition.Policy.ConcurrencyStamp}";
 
     private string GetNextRunStatusLabel(JobOperationalSummary summary) => summary.RecurringScheduleStatus switch
     {
@@ -425,7 +425,7 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
     };
 
     private static string GetDetailHref(JobOperationalSummary summary) =>
-        $"/job-scheduler/catalog/{Uri.EscapeDataString(summary.Definition.Declaration.JobKey)}";
+        $"/job-scheduler/catalog/{Uri.EscapeDataString(summary.Definition.OwnerKey)}/{Uri.EscapeDataString(summary.Definition.Declaration.JobKey)}";
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()

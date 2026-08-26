@@ -21,11 +21,9 @@
         <div class="trigger-dialog">
             <dl class="trigger-dialog__identity">
                 <div>
-                    <dt>@L["Trigger:Revision"]</dt>
+                    <dt>@L["Catalog:Columns:Owner"]</dt>
                     <dd>
-                        <code title="@Definition.JobRevisionId">
-                            @JobSchedulerUiPresentation.ShortIdentity(Definition.JobRevisionId, 20)
-                        </code>
+                        <code title="@Definition.OwnerKey">@Definition.OwnerKey</code>
                     </dd>
                 </div>
                 <div>
@@ -144,7 +142,7 @@
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter, EditorRequired]
-    public ActiveJobDefinition Definition { get; set; } = null!;
+    public JobDefinition Definition { get; set; } = null!;
 
     private string? _jobArgs;
     private string? _argumentsError;
@@ -201,12 +199,11 @@
             var result = await Facade.TriggerAsync(
                 new JobTriggerRequest
                 {
+                    OwnerKey = Definition.OwnerKey,
                     JobKey = Definition.Declaration.JobKey,
                     JobArgs = _jobArgs,
                     AvailableAtUtc = availableAtUtc,
-                    InstanceId = _instanceId,
-                    ExpectedOwnerId = Definition.OwnerId,
-                    ExpectedJobRevisionId = Definition.JobRevisionId
+                    InstanceId = _instanceId
                 },
                 _lifetimeToken);
             if (ShouldStop())

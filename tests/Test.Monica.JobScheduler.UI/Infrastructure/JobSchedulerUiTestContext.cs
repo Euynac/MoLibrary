@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Providers;
 using Monica.JobScheduler.UI.Localization;
@@ -26,7 +26,6 @@ public sealed class JobSchedulerUiTestContext : BunitContext
 {
     public const string SCOPE = "job-scheduler-ui-tests";
     public const string OWNER = "worker-a";
-    public const string WORKER_REVISION = "sha256:worker-a";
 
     public JobSchedulerUiTestContext(
         bool isAuthorized = true,
@@ -42,9 +41,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         var schedulerOptions = new ModuleJobSchedulerOption
         {
             SchedulerScopeKey = SCOPE,
-            CatalogReleaseId = "release-1",
-            DeploymentGeneration = 1,
-            Role = JobSchedulerRole.ControlPlane,
+            ProjectName = OWNER,
             CronTimeZone = configuredTimeZone
         };
         var facade = new JobSchedulerFacade(
@@ -82,22 +79,15 @@ public sealed class JobSchedulerUiTestContext : BunitContext
 
     internal TestJobSchedulerUiAccess Access { get; }
 
-    public ActiveJobDefinition TriggeredDefinition { get; private set; } = null!;
+    public JobDefinition TriggeredDefinition { get; private set; } = null!;
 
-    public ActiveJobDefinition RecurringDefinition { get; private set; } = null!;
+    public JobDefinition RecurringDefinition { get; private set; } = null!;
 
     private void SeedStore(TimeZoneInfo configuredTimeZone)
     {
-        var manifest = new JobCatalogReleaseManifest(
+        Store.SyncOwnerSnapshotAsync(new JobOwnerSnapshot(
             SCOPE,
-            "release-1",
-            [new JobCatalogOwnerManifest(OWNER, WORKER_REVISION)]);
-        Store.StageReleaseAsync(new JobCatalogReleaseStage(manifest, 1)).GetAwaiter().GetResult();
-        Store.PublishOwnerSnapshotAsync(new JobOwnerCatalogSnapshot(
-            SCOPE,
-            "release-1",
             OWNER,
-            WORKER_REVISION,
             [
                 new JobDeclaration
                 {
@@ -117,35 +107,20 @@ public sealed class JobSchedulerUiTestContext : BunitContext
                     MaxConcurrency = 2
                 }
             ])).GetAwaiter().GetResult();
-        Store.TryActivateReleaseAsync(SCOPE, "release-1").GetAwaiter().GetResult();
-        var activeCatalog = Store.GetActiveCatalogAsync(SCOPE).GetAwaiter().GetResult()!;
-        TriggeredDefinition = activeCatalog.Definitions.Single(definition =>
-            definition.Declaration.JobType == JobType.Triggered);
-        RecurringDefinition = activeCatalog.Definitions.Single(definition =>
-            definition.Declaration.JobType == JobType.Recurring);
+        TriggeredDefinition = Store.GetDefinitionAsync(SCOPE, OWNER, "Sample.Jobs.GenerateReport")
+            .GetAwaiter().GetResult()!;
+        RecurringDefinition = Store.GetDefinitionAsync(SCOPE, OWNER, "Sample.Jobs.RecurringCleanup")
+            .GetAwaiter().GetResult()!;
         Store.SynchronizeRecurringScheduleAsync(new RecurringScheduleSynchronization
         {
-            Template = RecurringDefinition.CreateExecutionTemplate(),
-            Schedule = new RecurringScheduleDefinition
-            {
-                CronExpression = RecurringDefinition.Declaration.CronExpression!,
-                TimeZoneId = RecurringDefinition.Declaration.TimeZoneId!,
-                StartTimeUtc = RecurringDefinition.Declaration.StartTimeUtc,
-                EndTimeUtc = RecurringDefinition.Declaration.EndTimeUtc
-            },
-            ChangeEpoch = activeCatalog.Version.ChangeEpoch,
-            SuspensionReasons = JobRecurringScheduleSuspensionReason.None
-        }).GetAwaiter().GetResult();
-        Store.RegisterWorkerCapabilityAsync(
-            new WorkerCapabilityRegistration
+            CursorKey = new RecurringScheduleCursorKey
             {
                 SchedulerScopeKey = SCOPE,
                 OwnerKey = OWNER,
-                WorkerRevisionId = WORKER_REVISION,
-                WorkerInstanceId = "worker-a-pod-1",
-                JobRevisionIds = activeCatalog.Definitions.Select(definition => definition.JobRevisionId).ToArray()
+                JobKey = RecurringDefinition.Declaration.JobKey
             },
-            TimeSpan.FromMinutes(5)).GetAwaiter().GetResult();
+            HostSuspensionReasons = JobRecurringScheduleSuspensionReason.None
+        }).GetAwaiter().GetResult();
     }
 
     internal sealed class TestJobSchedulerUiAccess(bool isAuthorized) : IJobSchedulerUiAccess

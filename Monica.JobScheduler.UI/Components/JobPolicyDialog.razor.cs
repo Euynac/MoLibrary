@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
@@ -44,7 +44,7 @@ public partial class JobPolicyDialog : IAsyncDisposable
     /// Gets the active definition used as the initial optimistic policy baseline.
     /// </summary>
     [Parameter, EditorRequired]
-    public ActiveJobDefinition Definition { get; set; } = null!;
+    public JobDefinition Definition { get; set; } = null!;
 
     /// <summary>
     /// Gets the optional authoritative operational projection used by schedule preview.
@@ -64,17 +64,14 @@ public partial class JobPolicyDialog : IAsyncDisposable
         ? []
         :
         [
-            new(L["Catalog:Columns:Owner"], _state.Definition.OwnerId),
-            new(L["Policy:Identity:Release"], _state.Definition.ReleaseId),
-            new(L["Policy:Identity:WorkerRevision"], _state.Definition.WorkerRevisionId),
-            new(L["Catalog:Columns:Revision"], _state.Definition.JobRevisionId),
+            new(L["Catalog:Columns:Owner"], _state.Definition.OwnerKey),
             new(L["Policy:Identity:PolicyRevision"], _state.Definition.Policy.ConcurrencyStamp),
             new(
                 L["Policy:Identity:UpdatedAt"],
                 _state.Definition.Policy.UpdatedAtUtc.UtcDateTime.ToString("u", CultureInfo.CurrentCulture)),
             new(
-                L["Policy:Identity:ReviewedRevision"],
-                _state.Definition.Policy.ReviewedAgainstJobRevisionId ?? L["Common:NotAvailable"]),
+                L["Policy:Identity:LastObserved"],
+                _state.Definition.LastObservedAtUtc.UtcDateTime.ToString("u", CultureInfo.CurrentCulture)),
             new(L["Policy:Identity:JobType"], L[$"JobTypes:{_state.Definition.Declaration.JobType}"]),
             new(
                 L["Policy:Identity:ArgumentContract"],
@@ -111,7 +108,7 @@ public partial class JobPolicyDialog : IAsyncDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
             var result = await Facade.UpdatePolicyAsync(
-                state.Definition.OwnerId,
+                state.Definition.OwnerKey,
                 state.Definition.Declaration.JobKey,
                 state.CreateChange(),
                 cancellationToken);
@@ -151,7 +148,7 @@ public partial class JobPolicyDialog : IAsyncDisposable
         CancellationToken cancellationToken)
     {
         var latestResult = await Facade.GetOperationalSummaryAsync(
-            state.Definition.Declaration.JobKey,
+            state.Definition.Id,
             cancellationToken);
         if (ShouldStop())
         {

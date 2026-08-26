@@ -49,6 +49,10 @@ public sealed partial class EfCoreJobSchedulerStore
     {
         var scoped = dbContext.Executions.AsNoTracking()
             .Where(item => item.SchedulerScopeKey == schedulerScopeKey);
+        if (query.OwnerKey is not null)
+        {
+            scoped = scoped.Where(item => item.OwnerKey == query.OwnerKey);
+        }
         if (query.JobKey is not null)
         {
             scoped = scoped.Where(item => item.JobKey == query.JobKey);

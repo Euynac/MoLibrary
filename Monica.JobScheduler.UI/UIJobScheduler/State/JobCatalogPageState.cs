@@ -2,7 +2,7 @@ using Microsoft.Extensions.Localization;
 using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Localization;
@@ -71,7 +71,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     internal int PageSize { get; private set; }
     internal int[] PageSizeOptions { get; }
     internal int TotalCount { get; private set; }
-    internal JobCatalogSortField SortField { get; private set; } = JobCatalogSortField.JobName;
+    internal JobDefinitionSortField SortField { get; private set; } = JobDefinitionSortField.JobName;
     internal bool SortDescending { get; private set; }
     internal bool HasSelection => _selectedJobKeys.Count > 0;
     internal bool HasDebugOnlySuppressedSelection =>
@@ -257,7 +257,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
 
             var definition = summary.Definition;
             var result = await _facade.UpdatePolicyAsync(
-                definition.OwnerId,
+                definition.OwnerKey,
                 definition.Declaration.JobKey,
                 new JobPolicyChange
                 {
@@ -303,9 +303,8 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             return await _facade.RunRecurringNowAsync(
                 new JobRecurringRunNowRequest
                 {
-                    JobKey = definition.Declaration.JobKey,
-                    ExpectedOwnerId = definition.OwnerId,
-                    ExpectedJobRevisionId = definition.JobRevisionId
+                    OwnerKey = definition.OwnerKey,
+                    JobKey = definition.Declaration.JobKey
                 },
                 cancellationToken);
         }
@@ -351,7 +350,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
                 {
                     Items = selected.Select(summary => new JobPolicyBatchUpdateItem
                     {
-                        OwnerId = summary.Definition.OwnerId,
+                        OwnerKey = summary.Definition.OwnerKey,
                         JobKey = summary.Definition.Declaration.JobKey,
                         Overrides = summary.Definition.Policy.Overrides with { DisabledOverride = disabled },
                         ExpectedConcurrencyStamp = summary.Definition.Policy.ConcurrencyStamp
@@ -421,10 +420,13 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
                 return;
             }
 
-            var result = await _facade.QueryOperationalSummariesAsync(new JobCatalogQuery
+            var result = await _facade.QueryOperationalSummariesAsync(new JobDefinitionQuery
             {
                 SearchText = SearchText,
-                OwnerId = OwnerId,
+                OwnerKey = OwnerId,
+                // The operator catalog defaults to definitions their owners currently publish; absent definitions
+                // stay visible in the overview attention panel and through explicit queries.
+                IsPresent = true,
                 JobType = SelectedJobType,
                 IsDisabled = SelectedDisabledState,
                 SortField = SortField,
@@ -478,13 +480,13 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             return;
         }
 
-        var activeDefinitions = overview.ActiveCatalog?.Definitions ?? [];
-        OwnerFacets = activeDefinitions
-            .GroupBy(static definition => definition.OwnerId, StringComparer.Ordinal)
+        var presentDefinitions = overview.Definitions.Where(static definition => definition.IsPresent).ToArray();
+        OwnerFacets = presentDefinitions
+            .GroupBy(static definition => definition.OwnerKey, StringComparer.Ordinal)
             .OrderBy(static group => group.Key, StringComparer.Ordinal)
             .Select(static group => KeyValuePair.Create(group.Key, group.Count()))
             .ToArray();
-        JobTypeCounts = activeDefinitions
+        JobTypeCounts = presentDefinitions
             .GroupBy(static definition => definition.Declaration.JobType)
             .ToDictionary(static group => group.Key, static group => group.Count());
     }
@@ -507,10 +509,10 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         _selectedJobKeys.IntersectWith(visibleRecurringJobKeys);
     }
 
-    private static JobCatalogSortField ResolveSortField(string? sortLabel) =>
-        Enum.TryParse<JobCatalogSortField>(sortLabel, ignoreCase: false, out var field)
+    private static JobDefinitionSortField ResolveSortField(string? sortLabel) =>
+        Enum.TryParse<JobDefinitionSortField>(sortLabel, ignoreCase: false, out var field)
             ? field
-            : JobCatalogSortField.JobName;
+            : JobDefinitionSortField.JobName;
 
     private async Task<bool> EnsureAuthorizedAsync(CancellationToken cancellationToken)
     {

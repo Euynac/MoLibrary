@@ -2,7 +2,7 @@ using Monica.Core.Results;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Operations;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Analytics;
 using Microsoft.Extensions.Localization;
@@ -56,8 +56,8 @@ internal sealed class JobDefinitionDetailPageStateFactory(
     /// <summary>
     /// Creates a fresh detail state owned by one rendered route instance.
     /// </summary>
-    public JobDefinitionDetailPageState Create(string jobKey) =>
-        new(facade, access, timeProvider, timePresentation, localizer, jobKey);
+    public JobDefinitionDetailPageState Create(JobId jobId) =>
+        new(facade, access, timeProvider, timePresentation, localizer, jobId);
 }
 
 /// <summary>
@@ -81,15 +81,15 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
         TimeProvider timeProvider,
         SchedulerTimePresentation timePresentation,
         IStringLocalizer<JobSchedulerResource> localizer,
-        string jobKey)
+        JobId jobId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
+        jobId.Validate();
         _facade = facade;
         _access = access;
         _timeProvider = timeProvider;
         _timePresentation = timePresentation;
         _localizer = localizer;
-        JobKey = jobKey;
+        JobId = jobId;
     }
 
     /// <summary>
@@ -98,9 +98,14 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
     public event Func<Task>? Changed;
 
     /// <summary>
+    /// Gets the exact definition identity represented by this state instance.
+    /// </summary>
+    public JobId JobId { get; }
+
+    /// <summary>
     /// Gets the exact logical job key represented by this state instance.
     /// </summary>
-    public string JobKey { get; }
+    public string JobKey => JobId.JobKey;
 
     /// <summary>
     /// Gets the latest bounded operational projection.
@@ -197,12 +202,13 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             }
 
             var now = _timeProvider.GetUtcNow();
-            var summaryTask = _facade.GetOperationalSummaryAsync(JobKey, cancellationToken);
+            var summaryTask = _facade.GetOperationalSummaryAsync(JobId, cancellationToken);
             var analyticsQuery = SchedulerStatisticsPageState.CreateQuery(
                 SchedulerAnalyticsTimeRange.Last30Days,
                 now,
                 _timePresentation,
-                JobKey);
+                JobKey,
+                JobId.OwnerKey);
             var analyticsTask = _facade.GetExecutionAnalyticsAsync(analyticsQuery, cancellationToken);
             var runningTask = QueryExecutionsAsync(
                 JobExecutionState.Running,
@@ -295,7 +301,7 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
 
             var definition = summary.Definition;
             var result = await _facade.UpdatePolicyAsync(
-                definition.OwnerId,
+                definition.OwnerKey,
                 definition.Declaration.JobKey,
                 new JobPolicyChange
                 {
@@ -365,9 +371,8 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             var result = await _facade.RunRecurringNowAsync(
                 new JobRecurringRunNowRequest
                 {
-                    JobKey = definition.Declaration.JobKey,
-                    ExpectedOwnerId = definition.OwnerId,
-                    ExpectedJobRevisionId = definition.JobRevisionId
+                    OwnerKey = definition.OwnerKey,
+                    JobKey = definition.Declaration.JobKey
                 },
                 cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
@@ -426,6 +431,7 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
         _facade.QueryExecutionsAsync(new JobExecutionQuery
         {
             SchedulerScopeKey = string.Empty,
+            OwnerKey = JobId.OwnerKey,
             JobKey = JobKey,
             States = [state],
             CreatedAfterUtc = createdAfterUtc,

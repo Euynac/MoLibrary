@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Results;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Analytics;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Components;
@@ -33,7 +33,7 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
-    public async Task Overview_ShouldExposeReleaseIntentAndWorkerConvergence()
+    public async Task Overview_ShouldExposeWorkloadAndQueueActivity()
     {
         await using var context = new JobSchedulerUiTestContext();
 
@@ -41,9 +41,7 @@ public sealed class SchedulerOperationalPagesTests
 
         cut.WaitForAssertion(() =>
         {
-            cut.Markup.Should().Contain("release-1");
-            cut.Markup.Should().Contain(JobSchedulerUiTestContext.OWNER);
-            cut.Markup.Should().Contain("Overview:Release:Converged");
+            cut.Markup.Should().Contain("Overview:Workload:AcrossOwners");
             cut.Markup.Should().Contain("Overview:Workload:TotalJobs");
             cut.Markup.Should().Contain("Overview:Attention:Title");
             cut.Markup.Should().Contain("execution-flow__chart");
@@ -68,24 +66,6 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
-    public async Task CatalogOwnerFacets_DuringRollingRelease_ShouldDescribeTheActiveCatalog()
-    {
-        await using var context = new JobSchedulerUiTestContext();
-        await context.Store.StageReleaseAsync(new JobCatalogReleaseStage(
-            new JobCatalogReleaseManifest(
-                JobSchedulerUiTestContext.SCOPE,
-                "release-2",
-                [new JobCatalogOwnerManifest(JobSchedulerUiTestContext.OWNER, "sha256:worker-b")]),
-            2), Xunit.TestContext.Current.CancellationToken);
-        await using var state = context.Services.GetRequiredService<JobCatalogPageStateFactory>().Create(20);
-
-        await state.InitializeAsync();
-
-        state.OwnerFacets.Should().ContainSingle()
-            .Which.Should().Be(KeyValuePair.Create(JobSchedulerUiTestContext.OWNER, 2));
-    }
-
-    [Fact]
     public async Task CatalogState_ShouldPauseAndResumeRecurringMaterializationWithoutChangingDeclaration()
     {
         await using var context = new JobSchedulerUiTestContext();
@@ -94,7 +74,7 @@ public sealed class SchedulerOperationalPagesTests
         await state.LoadTableAsync(new TableState
         {
             PageSize = 20,
-            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortLabel = nameof(JobDefinitionSortField.JobName),
             SortDirection = SortDirection.Ascending
         }, Xunit.TestContext.Current.CancellationToken);
         var recurring = state.Summaries.Single(summary =>
@@ -105,8 +85,9 @@ public sealed class SchedulerOperationalPagesTests
                                         recurring.Definition.Declaration.JobKey)
             .RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Suspended);
 
-        var persisted = await context.Store.GetActiveDefinitionAsync(
+        var persisted = await context.Store.GetDefinitionAsync(
             JobSchedulerUiTestContext.SCOPE,
+            JobSchedulerUiTestContext.OWNER,
             recurring.Definition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken);
         persisted!.IsDisabled.Should().BeTrue();
@@ -122,7 +103,7 @@ public sealed class SchedulerOperationalPagesTests
         await state.LoadTableAsync(new TableState
         {
             PageSize = 20,
-            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortLabel = nameof(JobDefinitionSortField.JobName),
             SortDirection = SortDirection.Ascending
         }, Xunit.TestContext.Current.CancellationToken);
         var recurring = state.Summaries.Single();
@@ -147,7 +128,7 @@ public sealed class SchedulerOperationalPagesTests
         await state.LoadTableAsync(new TableState
         {
             PageSize = 20,
-            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortLabel = nameof(JobDefinitionSortField.JobName),
             SortDirection = SortDirection.Ascending
         }, Xunit.TestContext.Current.CancellationToken);
         var recurring = state.Summaries.Single();
@@ -162,8 +143,9 @@ public sealed class SchedulerOperationalPagesTests
 
         var runNow = await state.RunRecurringNowAsync(recurring);
         runNow.Status.Should().Be(ResStatus.Ok);
-        var persisted = await context.Store.GetActiveDefinitionAsync(
+        var persisted = await context.Store.GetDefinitionAsync(
             JobSchedulerUiTestContext.SCOPE,
+            JobSchedulerUiTestContext.OWNER,
             recurring.Definition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken);
         persisted!.IsDisabled.Should().BeFalse();
@@ -197,7 +179,7 @@ public sealed class SchedulerOperationalPagesTests
         await state.LoadTableAsync(new TableState
         {
             PageSize = 20,
-            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortLabel = nameof(JobDefinitionSortField.JobName),
             SortDirection = SortDirection.Ascending
         }, Xunit.TestContext.Current.CancellationToken);
         var recurring = state.Summaries.Single();
@@ -206,7 +188,7 @@ public sealed class SchedulerOperationalPagesTests
         await state.LoadTableAsync(new TableState
         {
             PageSize = 20,
-            SortLabel = nameof(JobCatalogSortField.JobName),
+            SortLabel = nameof(JobDefinitionSortField.JobName),
             SortDirection = SortDirection.Ascending
         }, Xunit.TestContext.Current.CancellationToken);
         recurring = state.Summaries.Single();
@@ -227,6 +209,7 @@ public sealed class SchedulerOperationalPagesTests
         await SetDebugSuppressionAsync(context);
 
         var cut = context.Render<JobDefinitionDetailPage>(parameters => parameters
+            .Add(page => page.OwnerKey, JobSchedulerUiTestContext.OWNER)
             .Add(page => page.JobKey, context.RecurringDefinition.Declaration.JobKey));
 
         cut.WaitForAssertion(() =>
@@ -244,8 +227,9 @@ public sealed class SchedulerOperationalPagesTests
 
         pause.Click();
 
-        var persisted = await context.Store.GetActiveDefinitionAsync(
+        var persisted = await context.Store.GetDefinitionAsync(
             JobSchedulerUiTestContext.SCOPE,
+            JobSchedulerUiTestContext.OWNER,
             context.RecurringDefinition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken);
         persisted!.IsDisabled.Should().BeFalse();
@@ -260,8 +244,7 @@ public sealed class SchedulerOperationalPagesTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "overview-activity-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}"
         }, Xunit.TestContext.Current.CancellationToken);
 
@@ -299,8 +282,7 @@ public sealed class SchedulerOperationalPagesTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "overview-refresh-after-detail-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}"
         }, Xunit.TestContext.Current.CancellationToken);
         var refreshCount = 0;
@@ -459,8 +441,7 @@ public sealed class SchedulerOperationalPagesTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "analytics-slow-execution-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}"
         }, Xunit.TestContext.Current.CancellationToken);
         var completedAtUtc = new DateTimeOffset(2026, 8, 14, 2, 0, 0, TimeSpan.Zero);
@@ -481,7 +462,7 @@ public sealed class SchedulerOperationalPagesTests
                 {
                     InstanceId = execution.InstanceId,
                     JobName = execution.Template.JobName,
-                    JobKey = execution.Template.Revision.JobKey,
+                    JobKey = execution.Template.JobKey,
                     State = JobExecutionState.Succeeded,
                     StartedAtUtc = completedAtUtc.AddSeconds(-4),
                     CompletedAtUtc = completedAtUtc
@@ -498,7 +479,7 @@ public sealed class SchedulerOperationalPagesTests
         activity.GetAttribute("aria-label").Should().Contain(execution.InstanceId);
         activity.GetAttribute("aria-label").Should().Contain("4");
         activity.TextContent.Should().Contain(execution.Template.JobName);
-        activity.TextContent.Should().Contain(execution.Template.Revision.JobKey);
+        activity.TextContent.Should().Contain(execution.Template.JobKey);
         await activity.ClickAsync();
 
         context.DialogProvider.WaitForAssertion(() =>
@@ -517,6 +498,7 @@ public sealed class SchedulerOperationalPagesTests
         await using var context = new JobSchedulerUiTestContext();
 
         var cut = context.Render<JobDefinitionDetailPage>(parameters => parameters
+            .Add(page => page.OwnerKey, JobSchedulerUiTestContext.OWNER)
             .Add(page => page.JobKey, context.RecurringDefinition.Declaration.JobKey));
 
         cut.WaitForAssertion(() =>
@@ -524,7 +506,7 @@ public sealed class SchedulerOperationalPagesTests
             cut.Markup.Should().Contain(context.RecurringDefinition.Declaration.JobKey);
             cut.Markup.Should().Contain("JobDetail:Schedule:NextOccurrence");
             cut.Markup.Should().Contain("JobDetail:Contract:PolicyTitle");
-            cut.Markup.Should().Contain("JobDetail:Contract:JobRevision");
+            cut.Markup.Should().Contain("JobDetail:Contract:JobKey");
             cut.Markup.Should().Contain("RecurringScheduleStatuses:Scheduled");
             cut.Markup.Should().Contain("JobDetail:Health:Title");
         });
@@ -536,7 +518,7 @@ public sealed class SchedulerOperationalPagesTests
         await using var context = new JobSchedulerUiTestContext();
         var summary = (await context.Store.GetOperationalSummaryAsync(
             JobSchedulerUiTestContext.SCOPE,
-            context.RecurringDefinition.Declaration.JobKey,
+            new JobId(JobSchedulerUiTestContext.OWNER, context.RecurringDefinition.Declaration.JobKey),
             Xunit.TestContext.Current.CancellationToken))!;
         var dialogService = context.Services.GetRequiredService<IDialogService>();
         await dialogService.ShowAsync<JobPolicyDialog>(
@@ -563,8 +545,9 @@ public sealed class SchedulerOperationalPagesTests
                 .GetAttribute("value").Should().Be("not-a-cron");
         });
 
-        var persisted = await context.Store.GetActiveDefinitionAsync(
+        var persisted = await context.Store.GetDefinitionAsync(
             JobSchedulerUiTestContext.SCOPE,
+            JobSchedulerUiTestContext.OWNER,
             context.RecurringDefinition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken);
         persisted!.Declaration.CronExpression.Should().Be("0 */5 * * * *");
@@ -603,7 +586,7 @@ public sealed class SchedulerOperationalPagesTests
         await using var context = new JobSchedulerUiTestContext();
         await context.Store.UpdatePolicyAsync(
             JobSchedulerUiTestContext.SCOPE,
-            context.RecurringDefinition.OwnerId,
+            context.RecurringDefinition.OwnerKey,
             context.RecurringDefinition.Declaration.JobKey,
             new()
             {
@@ -613,7 +596,7 @@ public sealed class SchedulerOperationalPagesTests
             Xunit.TestContext.Current.CancellationToken);
         var summary = (await context.Store.GetOperationalSummaryAsync(
             JobSchedulerUiTestContext.SCOPE,
-            context.RecurringDefinition.Declaration.JobKey,
+            new JobId(JobSchedulerUiTestContext.OWNER, context.RecurringDefinition.Declaration.JobKey),
             Xunit.TestContext.Current.CancellationToken))!;
         var dialogService = context.Services.GetRequiredService<IDialogService>();
 
@@ -658,8 +641,9 @@ public sealed class SchedulerOperationalPagesTests
             .Click();
 
         provider.WaitForAssertion(() => provider.Markup.Should().Contain("Access:DeniedDescription"));
-        var definition = await context.Store.GetActiveDefinitionAsync(
+        var definition = await context.Store.GetDefinitionAsync(
             JobSchedulerUiTestContext.SCOPE,
+            JobSchedulerUiTestContext.OWNER,
             context.TriggeredDefinition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken);
         definition!.Policy.ConcurrencyStamp.Should().Be(context.TriggeredDefinition.Policy.ConcurrencyStamp);
@@ -689,8 +673,9 @@ public sealed class SchedulerOperationalPagesTests
         await saveTask.WaitAsync(Xunit.TestContext.Current.CancellationToken);
         provider.WaitForAssertion(() => provider.FindComponents<JobPolicyDialog>().Should().BeEmpty());
 
-        var definition = await context.Store.GetActiveDefinitionAsync(
+        var definition = await context.Store.GetDefinitionAsync(
             JobSchedulerUiTestContext.SCOPE,
+            JobSchedulerUiTestContext.OWNER,
             context.TriggeredDefinition.Declaration.JobKey,
             Xunit.TestContext.Current.CancellationToken);
         definition!.Policy.ConcurrencyStamp.Should().Be(context.TriggeredDefinition.Policy.ConcurrencyStamp);
@@ -706,8 +691,7 @@ public sealed class SchedulerOperationalPagesTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "execution-detail-test-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{\"report\":\"daily\"}",
             AvailableAtUtc = DateTimeOffset.UtcNow
         }, Xunit.TestContext.Current.CancellationToken);
@@ -757,8 +741,7 @@ public sealed class SchedulerOperationalPagesTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "execution-deep-link-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}",
             AvailableAtUtc = DateTimeOffset.UtcNow
         }, Xunit.TestContext.Current.CancellationToken);
@@ -788,8 +771,7 @@ public sealed class SchedulerOperationalPagesTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "execution-cancel-test-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}",
             AvailableAtUtc = DateTimeOffset.UtcNow
         }, Xunit.TestContext.Current.CancellationToken);
@@ -820,23 +802,16 @@ public sealed class SchedulerOperationalPagesTests
 
     private static async Task SetDebugSuppressionAsync(JobSchedulerUiTestContext context)
     {
-        var catalog = await context.Store.GetActiveCatalogAsync(
-            JobSchedulerUiTestContext.SCOPE,
-            Xunit.TestContext.Current.CancellationToken);
-        var definition = await context.Store.GetActiveDefinitionAsync(
-            JobSchedulerUiTestContext.SCOPE,
-            context.RecurringDefinition.Declaration.JobKey,
-            Xunit.TestContext.Current.CancellationToken)
-            ?? throw new InvalidOperationException("The recurring test definition is no longer active.");
-        var schedule = definition.EffectiveConfiguration.Schedule
-                       ?? throw new InvalidOperationException("The recurring test definition has no effective schedule.");
         await context.Store.SynchronizeRecurringScheduleAsync(
             new RecurringScheduleSynchronization
             {
-                Template = definition.CreateExecutionTemplate(),
-                Schedule = schedule,
-                ChangeEpoch = catalog!.Version.ChangeEpoch,
-                SuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode
+                CursorKey = new RecurringScheduleCursorKey
+                {
+                    SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
+                    OwnerKey = JobSchedulerUiTestContext.OWNER,
+                    JobKey = context.RecurringDefinition.Declaration.JobKey
+                },
+                HostSuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode
             },
             Xunit.TestContext.Current.CancellationToken);
     }

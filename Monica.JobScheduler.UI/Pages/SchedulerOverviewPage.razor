@@ -77,29 +77,6 @@
                         </aside>
                     </div>
 
-                    <section id="deployment-evidence" class="overview-page__deployment">
-                        <header class="overview-page__deployment-heading">
-                            <div>
-                                <MudText Typo="Typo.h6" HtmlTag="h2">@L["Overview:Deployment:Title"]</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                    @L["Overview:Deployment:Description"]
-                                </MudText>
-                            </div>
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Variant="Variant.Outlined"
-                                     Color="@(overview.IsConverged ? Color.Success : Color.Warning)">
-                                @(overview.IsConverged
-                                    ? L["Overview:Release:Converged"]
-                                    : L["Overview:Release:WaitingWorkers"])
-                            </MudChip>
-                        </header>
-                        <div class="overview-page__deployment-grid">
-                            <ReleaseReadinessBand Overview="@overview" />
-                            <OwnerConvergencePanel Overview="@overview" />
-                        </div>
-                    </section>
-
                     <footer class="overview-page__freshness">
                         <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
                         <MudText Typo="Typo.caption" Color="Color.Secondary">

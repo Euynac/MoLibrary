@@ -3,10 +3,10 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.Exceptions.Catalog;
+using Monica.JobScheduler.Exceptions;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Analytics;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.Modules;
@@ -14,11 +14,11 @@ using Monica.Modules;
 namespace Monica.JobScheduler.Facades;
 
 /// <summary>
-/// Exposes the durable scheduler control surface to host APIs and the JobScheduler UI.
+/// Exposes the durable scheduler operational surface to host APIs and the JobScheduler UI.
 /// </summary>
 /// <remarks>
 /// The facade never reconstructs scheduler state from events or caches. Every operation delegates to the unified
-/// scheduler store, which owns admission, catalog, policy, execution, lease, and cancellation atomicity.
+/// scheduler store, which owns admission, definition, policy, execution, lease, and cancellation atomicity.
 /// </remarks>
 public sealed class JobSchedulerFacade(
     IJobSchedulerStore store,
@@ -28,23 +28,28 @@ public sealed class JobSchedulerFacade(
 {
     private const int MAX_PAGE_SIZE = 200;
     private const int RECENT_EXECUTION_COUNT = 12;
+    private const int OVERVIEW_DEFINITION_LIMIT = 500;
 
     private readonly string _schedulerScopeKey = options.Value.SchedulerScopeKey;
 
     /// <summary>
-    /// Captures desired catalog publication, active catalog, worker convergence, and queue activity.
+    /// Captures persisted definitions, queue state, and recent execution activity for the configured scope.
     /// </summary>
     /// <param name="cancellationToken">Cancels snapshot loading.</param>
     /// <returns>A result containing one bounded operational snapshot.</returns>
     public Task<Res<JobSchedulerOverview>> GetOverviewAsync(CancellationToken cancellationToken = default) =>
         ExecuteAsync(async () =>
         {
-            var publicationTask = store.GetCatalogPublicationStatusAsync(_schedulerScopeKey, cancellationToken);
-            var catalogTask = store.GetActiveCatalogAsync(_schedulerScopeKey, cancellationToken);
-            var statisticsTask = store.GetExecutionStateStatisticsAsync(
+            var definitionsTask = store.QueryDefinitionsAsync(
                 _schedulerScopeKey,
-                cancellationToken: cancellationToken);
-            var workersTask = store.GetActiveWorkerCapabilitiesAsync(
+                new JobDefinitionQuery
+                {
+                    PageNumber = 1,
+                    PageSize = OVERVIEW_DEFINITION_LIMIT,
+                    SortField = JobDefinitionSortField.OwnerKey
+                },
+                cancellationToken);
+            var statisticsTask = store.GetExecutionStateStatisticsAsync(
                 _schedulerScopeKey,
                 cancellationToken: cancellationToken);
             var recentTask = store.QueryExecutionsAsync(
@@ -58,66 +63,41 @@ public sealed class JobSchedulerFacade(
                 },
                 cancellationToken);
 
-            await Task.WhenAll(publicationTask, catalogTask, statisticsTask, workersTask, recentTask);
-            var publication = await publicationTask;
-            var activeCatalog = await catalogTask;
-            var activeWorkers = await workersTask;
-            var owners = publication.Owners.Select(owner => new JobOwnerConvergence
-            {
-                OwnerId = owner.OwnerId,
-                WorkerRevisionId = owner.WorkerRevisionId,
-                HasPublishedSnapshot = owner.IsPublished,
-                ActiveWorkerCount = activeWorkers.Count(worker =>
-                    string.Equals(worker.Capability.OwnerKey, owner.OwnerId, StringComparison.Ordinal)
-                    && string.Equals(
-                        worker.Capability.WorkerRevisionId,
-                        owner.WorkerRevisionId,
-                        StringComparison.Ordinal)),
-                ActiveDefinitionCount = activeCatalog?.Definitions.Count(definition =>
-                    string.Equals(definition.OwnerId, owner.OwnerId, StringComparison.Ordinal)
-                    && string.Equals(
-                        definition.WorkerRevisionId,
-                        owner.WorkerRevisionId,
-                        StringComparison.Ordinal)) ?? 0
-            }).ToArray();
-
+            await Task.WhenAll(definitionsTask, statisticsTask, recentTask);
             return new JobSchedulerOverview
             {
-                CatalogPublication = publication,
-                ActiveCatalog = activeCatalog,
+                Definitions = (await definitionsTask).Items,
                 ExecutionStateCounts = await statisticsTask,
-                Owners = owners,
                 RecentExecutions = (await recentTask).Items,
                 CapturedAtUtc = timeProvider.GetUtcNow()
             };
         }, "load the scheduler overview", cancellationToken);
 
     /// <summary>
-    /// Queries immutable active definitions together with their independent operator policies.
+    /// Queries persisted definitions together with their independent operator policies.
     /// </summary>
-    public Task<Res<QueryResult<ActiveJobDefinition>>> QueryDefinitionsAsync(
-        JobCatalogQuery query,
+    public Task<Res<QueryResult<JobDefinition>>> QueryDefinitionsAsync(
+        JobDefinitionQuery query,
         CancellationToken cancellationToken = default)
     {
-        var bounded = BoundCatalogQuery(query);
+        var bounded = BoundDefinitionQuery(query);
         return ExecuteAsync(
-            () => store.QueryActiveDefinitionsAsync(_schedulerScopeKey, bounded, cancellationToken),
-            "query active job definitions",
+            () => store.QueryDefinitionsAsync(_schedulerScopeKey, bounded, cancellationToken),
+            "query job definitions",
             cancellationToken);
     }
 
     /// <summary>
-    /// Queries active definitions together with recurring, latest-execution, active-queue, and compatible-worker
-    /// operational signals.
+    /// Queries definitions together with recurring, latest-execution, and active-queue operational signals.
     /// </summary>
-    /// <param name="query">Catalog filters and page bounds.</param>
+    /// <param name="query">Definition filters and page bounds.</param>
     /// <param name="cancellationToken">Cancels the read operation.</param>
     /// <returns>A result containing the bounded operational page.</returns>
     public Task<Res<QueryResult<JobOperationalSummary>>> QueryOperationalSummariesAsync(
-        JobCatalogQuery query,
+        JobDefinitionQuery query,
         CancellationToken cancellationToken = default)
     {
-        var bounded = BoundCatalogQuery(query);
+        var bounded = BoundDefinitionQuery(query);
         return ExecuteAsync(
             () => store.QueryOperationalSummariesAsync(_schedulerScopeKey, bounded, cancellationToken),
             "query job operational summaries",
@@ -125,42 +105,40 @@ public sealed class JobSchedulerFacade(
     }
 
     /// <summary>
-    /// Gets the operational projection for one exact active logical job key.
+    /// Gets the operational projection for one exact job definition.
     /// </summary>
-    /// <param name="jobKey">The globally unique logical job key.</param>
+    /// <param name="jobId">The definition identity.</param>
     /// <param name="cancellationToken">Cancels the read operation.</param>
-    /// <returns>
-    /// A result containing the projection, or <see langword="null"/> when the key is absent from the active catalog.
-    /// </returns>
+    /// <returns>A result containing the projection, or <see langword="null"/> when the identity is unknown.</returns>
     public Task<Res<JobOperationalSummary?>> GetOperationalSummaryAsync(
-        string jobKey,
+        JobId jobId,
         CancellationToken cancellationToken = default) =>
         ExecuteAsync(
-            () => store.GetOperationalSummaryAsync(_schedulerScopeKey, jobKey, cancellationToken),
+            () => store.GetOperationalSummaryAsync(_schedulerScopeKey, jobId, cancellationToken),
             "load a job operational summary",
             cancellationToken);
 
     /// <summary>
-    /// Gets one active definition by its globally unique logical job key.
+    /// Gets one definition by its exact identity.
     /// </summary>
-    public Task<Res<ActiveJobDefinition?>> GetDefinitionAsync(
-        string jobKey,
+    public Task<Res<JobDefinition?>> GetDefinitionAsync(
+        JobId jobId,
         CancellationToken cancellationToken = default) =>
         ExecuteAsync(
-            () => store.GetActiveDefinitionAsync(_schedulerScopeKey, jobKey, cancellationToken),
-            "load an active job definition",
+            () => store.GetDefinitionAsync(_schedulerScopeKey, jobId.OwnerKey, jobId.JobKey, cancellationToken),
+            "load a job definition",
             cancellationToken);
 
     /// <summary>
     /// Replaces only operator-owned policy fields using optimistic concurrency.
     /// </summary>
     public Task<Res<JobPolicy>> UpdatePolicyAsync(
-        string ownerId,
+        string ownerKey,
         string jobKey,
         JobPolicyChange change,
         CancellationToken cancellationToken = default) =>
         ExecutePolicyUpdateAsync(
-            () => store.UpdatePolicyAsync(_schedulerScopeKey, ownerId, jobKey, change, cancellationToken),
+            () => store.UpdatePolicyAsync(_schedulerScopeKey, ownerKey, jobKey, change, cancellationToken),
             jobKey,
             cancellationToken);
 
@@ -183,7 +161,7 @@ public sealed class JobSchedulerFacade(
             cancellationToken);
 
     /// <summary>
-    /// Admits one execution through the active catalog and durable queue.
+    /// Admits one execution for a present definition through the durable queue.
     /// </summary>
     public Task<Res<JobExecutionInstance>> TriggerAsync(
         JobTriggerRequest request,
@@ -193,15 +171,14 @@ public sealed class JobSchedulerFacade(
         var enqueueRequest = new JobEnqueueRequest
         {
             SchedulerScopeKey = _schedulerScopeKey,
+            OwnerKey = request.OwnerKey,
+            JobKey = request.JobKey,
             InstanceId = string.IsNullOrWhiteSpace(request.InstanceId)
                 ? Guid.NewGuid().ToString("N")
                 : request.InstanceId,
-            JobKey = request.JobKey,
-            ExpectedOwnerId = request.ExpectedOwnerId,
-            ExpectedJobRevisionId = request.ExpectedJobRevisionId,
             JobArgs = request.JobArgs,
             AvailableAtUtc = request.AvailableAtUtc,
-            EnqueueReason = "Operator-triggered execution admitted through the active catalog"
+            EnqueueReason = "Operator-triggered execution admitted"
         };
         return ExecuteAsync(
             () => store.EnqueueAsync(enqueueRequest, cancellationToken),
@@ -210,7 +187,7 @@ public sealed class JobSchedulerFacade(
     }
 
     /// <summary>
-    /// Queues one immediate execution of an active recurring job without changing its recurring schedule cursor.
+    /// Queues one immediate execution of a recurring job without changing its recurring schedule cursor.
     /// A paused schedule remains eligible for this explicit operator action.
     /// </summary>
     public Task<Res<JobExecutionInstance>> RunRecurringNowAsync(
@@ -221,12 +198,11 @@ public sealed class JobSchedulerFacade(
         var command = new JobRecurringRunNowCommand
         {
             SchedulerScopeKey = _schedulerScopeKey,
+            OwnerKey = request.OwnerKey,
+            JobKey = request.JobKey,
             InstanceId = string.IsNullOrWhiteSpace(request.InstanceId)
                 ? Guid.NewGuid().ToString("N")
-                : request.InstanceId,
-            JobKey = request.JobKey,
-            ExpectedOwnerId = request.ExpectedOwnerId,
-            ExpectedJobRevisionId = request.ExpectedJobRevisionId
+                : request.InstanceId
         };
         return ExecuteAsync(
             () => store.RunRecurringNowAsync(command, cancellationToken),
@@ -257,7 +233,7 @@ public sealed class JobSchedulerFacade(
     /// <summary>
     /// Gets bounded execution analytics for the configured scheduler scope.
     /// </summary>
-    /// <param name="query">The required time range, interval, optional job key, and ranking bounds.</param>
+    /// <param name="query">The required time range, interval, optional owner and job filters, and ranking bounds.</param>
     /// <param name="cancellationToken">Cancels analytics loading.</param>
     /// <returns>A result containing cohort, outcome, duration, trend, ranking, and slow-attempt analytics.</returns>
     public Task<Res<JobExecutionAnalyticsSnapshot>> GetExecutionAnalyticsAsync(
@@ -271,7 +247,7 @@ public sealed class JobSchedulerFacade(
             cancellationToken);
     }
 
-    private static JobCatalogQuery BoundCatalogQuery(JobCatalogQuery query)
+    private static JobDefinitionQuery BoundDefinitionQuery(JobDefinitionQuery query)
     {
         ArgumentNullException.ThrowIfNull(query);
         return query with
@@ -304,13 +280,13 @@ public sealed class JobSchedulerFacade(
             {
                 var policy = await store.UpdatePolicyAsync(
                     _schedulerScopeKey,
-                    item.OwnerId,
+                    item.OwnerKey,
                     item.JobKey,
                     item.ToChange(),
                     cancellationToken);
                 results.Add(new JobPolicyBatchUpdateItemResult
                 {
-                    OwnerId = item.OwnerId,
+                    OwnerKey = item.OwnerKey,
                     JobKey = item.JobKey,
                     Policy = policy
                 });
@@ -323,12 +299,12 @@ public sealed class JobSchedulerFacade(
             {
                 logger.LogWarning(
                     exception,
-                    "Failed to update policy for job {JobKey} owned by {OwnerId} in a batch.",
+                    "Failed to update policy for job {JobKey} owned by {OwnerKey} in a batch.",
                     item.JobKey,
-                    item.OwnerId);
+                    item.OwnerKey);
                 results.Add(new JobPolicyBatchUpdateItemResult
                 {
-                    OwnerId = item.OwnerId,
+                    OwnerKey = item.OwnerKey,
                     JobKey = item.JobKey,
                     Error = exception.GetMessageRecursively(),
                     FailureStatus = ResolvePolicyFailureStatus(exception)
@@ -364,21 +340,6 @@ public sealed class JobSchedulerFacade(
                 reason ?? "Cancellation requested by an operator",
                 cancellationToken),
             "cancel a job execution",
-            cancellationToken);
-
-    /// <summary>
-    /// Explicitly selects a fully published immutable release as a new activation intent.
-    /// </summary>
-    /// <remarks>
-    /// Normal deployments use monotonic deployment generation. This operation exists for deliberate operator
-    /// rollback and appends a new activation epoch rather than mutating history.
-    /// </remarks>
-    public Task<Res<JobCatalogActivation>> ReactivateReleaseAsync(
-        string releaseId,
-        CancellationToken cancellationToken = default) =>
-        ExecuteAsync(
-            () => store.ReactivateReleaseAsync(_schedulerScopeKey, releaseId, cancellationToken),
-            "reactivate a catalog release",
             cancellationToken);
 
     private async Task<Res<T>> ExecuteAsync<T>(
@@ -419,7 +380,7 @@ public sealed class JobSchedulerFacade(
             logger.LogWarning(exception, "Policy update for job {JobKey} lost optimistic concurrency.", jobKey);
             return new Res<JobPolicy>(exception.GetMessageRecursively(), ResStatus.Conflict);
         }
-        catch (JobCatalogNotFoundException exception)
+        catch (JobDefinitionNotFoundException exception)
         {
             logger.LogWarning(exception, "Policy update target {JobKey} was not found.", jobKey);
             return new Res<JobPolicy>(exception.GetMessageRecursively(), ResStatus.NotFound);
@@ -441,7 +402,7 @@ public sealed class JobSchedulerFacade(
     private static ResStatus ResolvePolicyFailureStatus(Exception exception) => exception switch
     {
         JobPolicyConcurrencyException => ResStatus.Conflict,
-        JobCatalogNotFoundException => ResStatus.NotFound,
+        JobDefinitionNotFoundException => ResStatus.NotFound,
         ArgumentException => ResStatus.BadRequest,
         _ => ResStatus.InternalError
     };

@@ -5,18 +5,18 @@ namespace Monica.JobScheduler.Services.Support;
 /// </summary>
 internal sealed class JobSchedulerRuntimeState
 {
-    private int _controlPlaneReady;
+    private int _schedulingReady;
     private int _workerReady;
-    private string? _controlPlaneMessage;
+    private string? _schedulingMessage;
     private string? _workerMessage;
 
-    internal bool ControlPlaneReady => Volatile.Read(ref _controlPlaneReady) != 0;
+    internal bool SchedulingReady => Volatile.Read(ref _schedulingReady) != 0;
     internal bool WorkerReady => Volatile.Read(ref _workerReady) != 0;
-    internal string? ControlPlaneMessage => Volatile.Read(ref _controlPlaneMessage);
+    internal string? SchedulingMessage => Volatile.Read(ref _schedulingMessage);
     internal string? WorkerMessage => Volatile.Read(ref _workerMessage);
 
-    internal bool SetControlPlane(bool ready, string message) =>
-        SetState(ref _controlPlaneReady, ref _controlPlaneMessage, ready, message);
+    internal bool SetScheduling(bool ready, string message) =>
+        SetState(ref _schedulingReady, ref _schedulingMessage, ready, message);
 
     internal bool SetWorker(bool ready, string message) =>
         SetState(ref _workerReady, ref _workerMessage, ready, message);

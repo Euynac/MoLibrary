@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.UI.Pages;
 using Monica.Modules;
 using Monica.UI.Shell.Support;
@@ -101,13 +101,7 @@ public sealed class ModuleJobSchedulerUITests
             });
             monica.AddJobScheduler()
                 .UseInMemoryStore()
-                .UseSchedulerScope("job-ui-tests")
-                .UseCatalogRelease(
-                    "job-ui-tests-release",
-                    1,
-                    [new JobCatalogOwnerManifest("job-ui-tests", "job-ui-tests-revision")])
-                .UseLocalWorkerIdentity("job-ui-tests", "job-ui-tests-revision")
-                .AsStandalone();
+                .UseSchedulerScope("job-ui-tests");
             if (useConvenienceEntry)
             {
                 monica.AddJobSchedulerUI();

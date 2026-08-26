@@ -1,34 +1,36 @@
-using Microsoft.Extensions.Logging;
+using Monica.JobScheduler.Exceptions;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Execution;
 
 namespace Monica.JobScheduler.Abstractions;
 
 /// <summary>
-/// Defines the atomic persistence boundary for durable, revision-aware job execution.
+/// Defines the atomic persistence boundary for durable job execution.
 /// </summary>
 /// <remarks>
-/// Implementations own queue availability, distributed concurrency gates, worker capabilities, execution leases,
-/// fencing, retries, cancellation, recurring cursor materialization, and history. Callers must not emulate these
-/// operations with read-modify-write sequences. A concurrency gate is identified by scheduler scope and logical job
-/// key, so it continues to fence overlapping work when a catalog activation moves that job to another owner or code
-/// revision.
+/// Implementations own queue availability, distributed concurrency gates, execution leases, fencing, retries,
+/// cancellation, recurring cursor materialization, and history. Callers must not emulate these operations with
+/// read-modify-write sequences. A concurrency gate is identified by scheduler scope, owner, and job key, so it fences
+/// overlapping work for one owner-scoped definition.
 /// </remarks>
 public interface IJobExecutionStore
 {
     /// <summary>
-    /// Durably enqueues an execution. Repeating an identical request is idempotent. When availability is omitted, the
-    /// store captures its authoritative current time only for the initial insert and ignores availability on retries.
+    /// Durably enqueues an execution against a present definition. Repeating an identical request is idempotent. When
+    /// availability is omitted, the store captures its authoritative current time only for the initial insert and
+    /// ignores availability on retries.
     /// </summary>
+    /// <exception cref="JobDefinitionNotFoundException">The addressed definition is unknown or absent.</exception>
     Task<JobExecutionInstance> EnqueueAsync(
         JobEnqueueRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Durably queues an immediate operator execution of an active recurring job without advancing or otherwise
-    /// changing its recurring schedule cursor. Schedule suspension does not reject this explicit operator action.
-    /// Repeating an identical command is idempotent.
+    /// Durably queues an immediate operator execution of a recurring job without advancing or otherwise changing its
+    /// recurring schedule cursor. Schedule suspension does not reject this explicit operator action. Repeating an
+    /// identical command is idempotent.
     /// </summary>
+    /// <exception cref="JobDefinitionNotFoundException">The addressed definition is unknown or absent.</exception>
     Task<JobExecutionInstance> RunRecurringNowAsync(
         JobRecurringRunNowCommand command,
         CancellationToken cancellationToken = default);
@@ -59,12 +61,13 @@ public interface IJobExecutionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets at most one newest execution summary for every distinct requested logical job key. Durable providers keep
-    /// each per-key read bounded, and returned snapshots omit audit history.
+    /// Gets at most one newest execution summary for every distinct requested job key of one owner. Durable providers
+    /// keep each per-key read bounded, and returned snapshots omit audit history.
     /// </summary>
-    Task<IReadOnlyDictionary<string, JobExecutionInstance?>> GetLatestExecutionsAsync(
+    Task<IReadOnlyDictionary<JobId, JobExecutionInstance?>> GetLatestExecutionsAsync(
         string schedulerScopeKey,
-        IEnumerable<string> jobKeys,
+        string ownerKey,
+        IEnumerable<JobId> jobIds,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -72,11 +75,12 @@ public interface IJobExecutionStore
     /// </summary>
     /// <remarks>
     /// The returned collection never exceeds <paramref name="maxDeletions"/>. A positive bound is required so durable
-    /// providers can evaluate arbitrarily large histories without materializing the entire terminal set.
+    /// providers can evaluate arbitrarily large histories without materializing the entire terminal set. Definitions
+    /// without a supplied retention policy fall back to the orphan-retention bound.
     /// </remarks>
     Task<IReadOnlyList<string>> GetExecutionCleanupCandidatesAsync(
         string schedulerScopeKey,
-        IReadOnlyDictionary<string, JobHistoryRetentionPolicy> retentionPolicies,
+        IReadOnlyDictionary<JobId, JobHistoryRetentionPolicy> retentionPolicies,
         int maxRetainedOrphanedExecutions,
         int maxDeletions,
         CancellationToken cancellationToken = default);
@@ -90,41 +94,12 @@ public interface IJobExecutionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Creates a new capability lease, fences any previous registration for the same worker identifier, and prunes
-    /// expired capability rows from the same scheduler scope using the store's authoritative time.
+    /// Atomically claims due work owned by the requesting host's owner while enforcing the distributed concurrency
+    /// gate for each <c>(SchedulerScopeKey, OwnerKey, JobKey)</c> definition identity.
     /// </summary>
-    Task<WorkerCapabilityLease> RegisterWorkerCapabilityAsync(
-        WorkerCapabilityRegistration registration,
-        TimeSpan leaseDuration,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Renews an existing worker capability lease, returning <see langword="null"/> when it has been fenced or expired.
-    /// </summary>
-    Task<WorkerCapabilityLease?> RenewWorkerCapabilityAsync(
-        WorkerCapabilityLeaseKey leaseKey,
-        TimeSpan leaseDuration,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Releases a current worker capability lease.
-    /// </summary>
-    Task<bool> ReleaseWorkerCapabilityAsync(
-        WorkerCapabilityLeaseKey leaseKey,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets currently active worker capabilities for operational convergence reporting.
-    /// </summary>
-    Task<IReadOnlyList<WorkerCapabilityLease>> GetActiveWorkerCapabilitiesAsync(
-        string schedulerScopeKey,
-        string? ownerKey = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Atomically claims due compatible work while enforcing the distributed concurrency gate for each
-    /// <c>(SchedulerScopeKey, JobKey)</c> logical job identity across owners, releases, and worker revisions.
-    /// </summary>
+    /// <remarks>
+    /// Only queued executions whose owner matches the request and whose job key is locally executable are claimable.
+    /// </remarks>
     Task<IReadOnlyList<JobExecutionLease>> ClaimAsync(
         JobClaimRequest request,
         CancellationToken cancellationToken = default);
@@ -169,35 +144,39 @@ public interface IJobExecutionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Requeues expired running work, or cancels it when a cancellation request was already persisted.
+    /// Requeues expired running work of every owner in the scope, or cancels it when a cancellation request was
+    /// already persisted.
     /// </summary>
     Task<IReadOnlyList<JobExecutionInstance>> RecoverExpiredLeasesAsync(
         ExpiredLeaseRecoveryRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Synchronizes one recurring cursor with the observed catalog epoch and host-owned automatic-materialization
-    /// reasons. Implementations must compare effective suspension reasons even when the catalog epoch is unchanged,
-    /// because host mode may change independently across restarts. The store calculates a new active cursor from the
-    /// durable activation boundary and a resumed cursor from its authoritative current time.
+    /// Reconciles one recurring cursor with the persisted definition and the host-owned suspension reasons.
     /// </summary>
+    /// <remarks>
+    /// The store derives the effective execution template and schedule from the definition, so the host reports only
+    /// its own debug-mode state. A created cursor starts from the store's authoritative current time; a schedule
+    /// replacement or resume is prospective and never replays suppressed time. An absent or triggered definition
+    /// removes its stale cursor.
+    /// </remarks>
     Task<RecurringScheduleSynchronizationResult> SynchronizeRecurringScheduleAsync(
         RecurringScheduleSynchronization synchronization,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets due recurring cursors belonging to the current activation in deterministic occurrence-time order. A
-    /// caller may repeatedly query after advancing cursors to share a global materialization budget fairly across the
-    /// overdue set.
+    /// Gets due recurring cursors of one owner in deterministic occurrence-time order. A caller may repeatedly query
+    /// after advancing cursors to share a materialization budget fairly across the overdue set.
     /// </summary>
     Task<IReadOnlyList<RecurringScheduleCursor>> GetDueRecurringSchedulesAsync(
         string schedulerScopeKey,
+        string ownerKey,
         int maxCount,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Atomically materializes one recurring occurrence and compare-and-swap advances its cursor.
-    /// Repeated attempts after a successful cursor advance return a stale-cursor result.
+    /// Atomically materializes one recurring occurrence and compare-and-swap advances its cursor. Repeated attempts
+    /// after a successful cursor advance return a stale-cursor result.
     /// </summary>
     Task<RecurringMaterializationResult> TryMaterializeRecurringOccurrenceAsync(
         RecurringOccurrenceMaterialization materialization,

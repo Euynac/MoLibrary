@@ -1,5 +1,5 @@
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.UIJobScheduler.Support;
 
@@ -35,7 +35,7 @@ internal sealed class JobPolicyEditorState
     private long _timeoutSubsecondTicks;
 
     private JobPolicyEditorState(
-        ActiveJobDefinition definition,
+        JobDefinition definition,
         JobOperationalSummary? operationalSummary,
         DateTimeOffset observedAtUtc)
     {
@@ -63,7 +63,7 @@ internal sealed class JobPolicyEditorState
             : null;
     }
 
-    internal ActiveJobDefinition Definition { get; private set; }
+    internal JobDefinition Definition { get; private set; }
 
     internal bool? DisabledOverride { get; set; }
 
@@ -157,15 +157,14 @@ internal sealed class JobPolicyEditorState
             || Schedule.OverrideExpression.Length <= JobDeclaration.CRON_EXPRESSION_MAX_LENGTH)
         && (Schedule is null || Schedule.AreBoundariesValid && Schedule.Evaluation.IsValid);
 
-    // Server-side review acknowledgement and preserved schedule intent both count as unsaved work.
+    // Preserved schedule intent counts as unsaved work.
     internal bool HasChanges => HasScheduleTypeConflict
-                                || Definition.IsPolicyReviewOutdated
                                 || CreateOverrides() != Definition.Policy.Overrides;
 
     internal bool CanSave => IsValid && HasChanges && !HasScheduleTypeConflict;
 
     internal static JobPolicyEditorState Create(
-        ActiveJobDefinition definition,
+        JobDefinition definition,
         JobOperationalSummary? operationalSummary,
         DateTimeOffset observedAtUtc)
     {
@@ -232,7 +231,7 @@ internal sealed class JobPolicyEditorState
     }
 
     internal void RebaseAfterConflict(
-        ActiveJobDefinition latestDefinition,
+        JobDefinition latestDefinition,
         JobOperationalSummary? operationalSummary,
         DateTimeOffset observedAtUtc)
     {
@@ -354,7 +353,7 @@ internal sealed class JobPolicyEditorState
     }
 
     private static CronPolicyDraft? CreateScheduleDraft(
-        ActiveJobDefinition definition,
+        JobDefinition definition,
         JobOperationalSummary? operationalSummary,
         DateTimeOffset observedAtUtc)
     {

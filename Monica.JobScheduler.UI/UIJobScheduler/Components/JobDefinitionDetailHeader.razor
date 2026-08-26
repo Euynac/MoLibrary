@@ -1,5 +1,5 @@
 @using Monica.JobScheduler.Models
-@using Monica.JobScheduler.Models.Catalog
+@using Monica.JobScheduler.Models.Definitions
 @using Monica.JobScheduler.Models.Operations
 @using Monica.JobScheduler.UI.Localization
 
@@ -31,14 +31,14 @@
                         </MudChip>
                     </MudTooltip>
                 }
-                @if (!Summary.HasCompatibleWorker)
+                @if (!Summary.Definition.IsPresent)
                 {
                     <MudChip T="string"
                              Size="Size.Small"
                              Variant="Variant.Outlined"
-                             Color="Color.Error"
-                             Icon="@Icons.Material.Filled.PortableWifiOff">
-                        @L["JobDetail:Header:NoCompatibleWorker"]
+                             Color="Color.Warning"
+                             Icon="@Icons.Material.Filled.CloudOff">
+                        @L["JobDetail:Header:OwnerAbsent"]
                     </MudChip>
                 }
             </div>
@@ -142,12 +142,12 @@
         </div>
         <div class="job-detail-header__metric"
              data-metric="workers"
-             data-tone="@(Summary.HasCompatibleWorker ? "success" : "error")">
+             data-tone="@(Summary.Definition.IsPresent ? "success" : "warning")">
             <dt>
                 <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Small" /></span>
-                <span>@L["JobDetail:Header:CompatibleWorkers"]</span>
+                <span>@L["JobDetail:Header:OwnerPresence"]</span>
             </dt>
-            <dd>@Summary.CompatibleWorkerCount</dd>
+            <dd>@(Summary.Definition.IsPresent ? L["JobDetail:Header:OwnerPresent"] : L["JobDetail:Header:OwnerAbsent"])</dd>
         </div>
     </dl>
 </header>
@@ -207,7 +207,7 @@
     [Parameter]
     public EventCallback OnTrigger { get; set; }
 
-    private ActiveJobDefinition Definition => Summary.Definition;
+    private JobDefinition Definition => Summary.Definition;
 
     private bool IsPolicyDisabled => Definition.IsDisabled;
 

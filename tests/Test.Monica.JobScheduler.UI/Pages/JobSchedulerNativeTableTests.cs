@@ -40,7 +40,6 @@ public sealed class JobSchedulerNativeTableTests
         table.TextContent.Should().Contain("Catalog:Columns:LastRun");
         table.TextContent.Should().Contain("Catalog:Columns:Readiness");
         table.TextContent.Should().Contain("Catalog:Columns:Actions");
-        table.TextContent.Should().NotContain(JobSchedulerUiTestContext.WORKER_REVISION);
         cut.FindAll(".catalog-item").Should().BeEmpty();
         table.QuerySelector("th.catalog-table__definition-heading").Should().NotBeNull();
 
@@ -107,8 +106,7 @@ public sealed class JobSchedulerNativeTableTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "execution-native-table-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}",
             AvailableAtUtc = DateTimeOffset.UtcNow
         }, Xunit.TestContext.Current.CancellationToken);

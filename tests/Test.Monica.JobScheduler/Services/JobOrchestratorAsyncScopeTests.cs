@@ -8,7 +8,7 @@ using Monica.Core.Modularity.Extensions;
 using Monica.JobScheduler;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Services;
 using Monica.Modules;
@@ -20,7 +20,6 @@ namespace Test.Monica.JobScheduler.Services;
 public sealed class JobOrchestratorAsyncScopeTests
 {
     private const string SCHEDULER_SCOPE = "async-scope-tests";
-    private const string JOB_REVISION = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     [Fact]
     public async Task ExecuteAsync_WhenAttemptScopeHasAsyncDisposables_ShouldAwaitTheirDisposal()
@@ -106,17 +105,9 @@ public sealed class JobOrchestratorAsyncScopeTests
     {
         var template = new JobExecutionTemplate
         {
-            Revision = new JobRevisionIdentity
-            {
-                SchedulerScopeKey = SCHEDULER_SCOPE,
-                CatalogReleaseId = "release-1",
-                ActivationEpoch = 1,
-                OwnerKey = "owner-a",
-                WorkerRevisionId = "worker-r1",
-                JobRevisionId = JOB_REVISION,
-                JobKey = jobKey
-            },
-            AppliedPolicyRevision = "00000000000000000000000000000000",
+            SchedulerScopeKey = SCHEDULER_SCOPE,
+            OwnerKey = "owner-a",
+            JobKey = jobKey,
             JobName = jobKey,
             JobType = JobType.Recurring,
             MaxConcurrency = 1,

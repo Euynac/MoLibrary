@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
+using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Execution;
 using Monica.Modules;
 
@@ -9,7 +10,7 @@ namespace Monica.JobScheduler.Providers;
 /// Volatile implementation of the unified scheduler store for development and deterministic tests.
 /// </summary>
 /// <remarks>
-/// Every catalog and execution mutation shares one synchronization boundary so compound operations have the same
+/// Every definition and execution mutation shares one synchronization boundary so compound operations have the same
 /// atomicity contract as a relational implementation.
 /// </remarks>
 public sealed partial class InMemoryJobSchedulerStore(
@@ -23,13 +24,9 @@ public sealed partial class InMemoryJobSchedulerStore(
         ?? JobExecutionHistoryLimits.DEFAULT_MAX_ENTRIES,
         options?.Value.MaxExecutionHistoryMessageLength
         ?? JobExecutionHistoryLimits.DEFAULT_MAX_MESSAGE_LENGTH);
-    private readonly Dictionary<string, CatalogScopeState> _catalogScopes = new(StringComparer.Ordinal);
 
-    private bool IsStableActivation(string schedulerScopeKey, long activationEpoch)
-    {
-        return _catalogScopes.TryGetValue(schedulerScopeKey, out var scope)
-               && scope.ActiveReleaseId is not null
-               && scope.ActivationEpoch == activationEpoch
-               && scope.ActiveIntentEpoch == scope.DesiredIntentEpoch;
-    }
+    private DateTimeOffset UtcNow => _timeProvider.GetUtcNow().ToUniversalTime();
+
+    private static void ValidateIdentity(string value, string parameterName) =>
+        JobSchedulerIdentity.ValidateStandard(value, parameterName);
 }

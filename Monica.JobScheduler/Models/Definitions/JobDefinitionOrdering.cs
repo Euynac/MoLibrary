@@ -1,56 +1,56 @@
-namespace Monica.JobScheduler.Models.Catalog;
+namespace Monica.JobScheduler.Models.Definitions;
 
 /// <summary>
-/// Keeps stable catalog ordering identical across persistence providers.
+/// Keeps stable definition ordering identical across persistence providers.
 /// </summary>
-internal static class JobCatalogOrdering
+internal static class JobDefinitionOrdering
 {
-    internal static IOrderedEnumerable<ActiveJobDefinition> ApplyCatalogOrdering(
-        this IEnumerable<ActiveJobDefinition> definitions,
-        JobCatalogQuery query)
+    internal static IOrderedEnumerable<JobDefinition> ApplyDefinitionOrdering(
+        this IEnumerable<JobDefinition> definitions,
+        JobDefinitionQuery query)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(query);
 
         var ordered = query.SortField switch
         {
-            JobCatalogSortField.JobName => Order(
+            JobDefinitionSortField.JobName => Order(
                 definitions,
                 static definition => definition.EffectiveConfiguration.JobName,
                 query.SortDescending,
                 StringComparer.OrdinalIgnoreCase),
-            JobCatalogSortField.JobKey => Order(
+            JobDefinitionSortField.JobKey => Order(
                 definitions,
                 static definition => definition.Declaration.JobKey,
                 query.SortDescending,
                 StringComparer.Ordinal),
-            JobCatalogSortField.OwnerId => Order(
+            JobDefinitionSortField.OwnerKey => Order(
                 definitions,
-                static definition => definition.OwnerId,
+                static definition => definition.OwnerKey,
                 query.SortDescending,
                 StringComparer.Ordinal),
-            JobCatalogSortField.JobType => Order(
+            JobDefinitionSortField.JobType => Order(
                 definitions,
                 static definition => definition.Declaration.JobType,
                 query.SortDescending),
-            JobCatalogSortField.IsDisabled => Order(
+            JobDefinitionSortField.IsDisabled => Order(
                 definitions,
                 static definition => definition.IsDisabled,
                 query.SortDescending),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(query),
                 query.SortField,
-                "Catalog sort field is not supported.")
+                "Definition sort field is not supported.")
         };
 
-        return query.SortField == JobCatalogSortField.JobKey
+        return query.SortField == JobDefinitionSortField.JobKey
             ? ordered
             : ordered.ThenBy(static definition => definition.Declaration.JobKey, StringComparer.Ordinal);
     }
 
-    private static IOrderedEnumerable<ActiveJobDefinition> Order<TKey>(
-        IEnumerable<ActiveJobDefinition> definitions,
-        Func<ActiveJobDefinition, TKey> selector,
+    private static IOrderedEnumerable<JobDefinition> Order<TKey>(
+        IEnumerable<JobDefinition> definitions,
+        Func<JobDefinition, TKey> selector,
         bool descending,
         IComparer<TKey>? comparer = null) =>
         descending

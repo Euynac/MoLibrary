@@ -43,14 +43,14 @@
                 </MudTh>
                 <MudTh Class="catalog-table__definition-heading">
                     <MudTableSortLabel T="JobOperationalSummary"
-                                       SortLabel="@nameof(JobCatalogSortField.JobName)"
+                                       SortLabel="@nameof(JobDefinitionSortField.JobName)"
                                        InitialDirection="SortDirection.Ascending">
                         @L["Catalog:Columns:Definition"]
                     </MudTableSortLabel>
                 </MudTh>
                 <MudTh>
                     <MudTableSortLabel T="JobOperationalSummary"
-                                       SortLabel="@nameof(JobCatalogSortField.OwnerId)">
+                                       SortLabel="@nameof(JobDefinitionSortField.OwnerKey)">
                         @L["Catalog:Filters:Owner"]
                     </MudTableSortLabel>
                 </MudTh>
@@ -97,9 +97,9 @@
                     </div>
                 </MudTd>
                 <MudTd DataLabel="@L["Catalog:Filters:Owner"]">
-                    <div class="catalog-table__owner" title="@definition.OwnerId">
+                    <div class="catalog-table__owner" title="@definition.OwnerKey">
                         <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" />
-                        <span>@definition.OwnerId</span>
+                        <span>@definition.OwnerKey</span>
                     </div>
                 </MudTd>
                 <MudTd DataLabel="@L["Catalog:Columns:Lifecycle"]">
@@ -178,12 +178,12 @@
                 <MudTd DataLabel="@L["Catalog:Columns:Readiness"]">
                     <div class="catalog-table__readiness">
                         <span>@L["Catalog:Activity:QueuedRunning", context.QueuedExecutionCount, context.RunningExecutionCount]</span>
-                        <span data-ready="@context.HasCompatibleWorker.ToString().ToLowerInvariant()">
-                            <MudIcon Icon="@(context.HasCompatibleWorker ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)"
+                        <span data-ready="@definition.IsPresent.ToString().ToLowerInvariant()">
+                            <MudIcon Icon="@(definition.IsPresent ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.CloudOff)"
                                      Size="Size.Small" />
-                            @(context.HasCompatibleWorker
-                                ? L["Catalog:Readiness:Workers", context.CompatibleWorkerCount]
-                                : L["Catalog:Readiness:NoWorker"])
+                            @(definition.IsPresent
+                                ? L["Catalog:Readiness:Present"]
+                                : L["Catalog:Readiness:Absent"])
                         </span>
                     </div>
                 </MudTd>

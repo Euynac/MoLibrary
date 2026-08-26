@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.UIJobScheduler.State;
 using Test.Monica.JobScheduler.UI.Infrastructure;
@@ -23,9 +23,9 @@ public sealed class JobPolicyEditorStateTests
 
         var update = await context.Store.UpdatePolicyAsync(
             JobSchedulerUiTestContext.SCOPE,
-            initial.Definition.OwnerId,
+            initial.Definition.OwnerKey,
             initial.Definition.Declaration.JobKey,
-            new()
+            new JobPolicyChange
             {
                 Overrides = initial.Definition.Policy.Overrides with { MaxRetentionDays = 30 },
                 ExpectedConcurrencyStamp = initial.Definition.Policy.ConcurrencyStamp
@@ -104,64 +104,6 @@ public sealed class JobPolicyEditorStateTests
     }
 
     [Fact]
-    public async Task CreateChange_WhenOnlyPolicyReviewIsOutdated_ShouldAcknowledgeCurrentJobRevision()
-    {
-        await using var context = new JobSchedulerUiTestContext();
-        var initial = await GetRecurringSummaryAsync(context);
-        var overriddenPolicy = await context.Store.UpdatePolicyAsync(
-            JobSchedulerUiTestContext.SCOPE,
-            initial.Definition.OwnerId,
-            initial.Definition.Declaration.JobKey,
-            new()
-            {
-                Overrides = initial.Definition.Policy.Overrides with { MaxRetentionDays = 30 },
-                ExpectedConcurrencyStamp = initial.Definition.Policy.ConcurrencyStamp
-            },
-            Xunit.TestContext.Current.CancellationToken);
-        const string releaseId = "release-policy-review";
-        const string workerRevision = "sha256:worker-policy-review";
-        await context.Store.StageReleaseAsync(
-            new JobCatalogReleaseStage(
-                new JobCatalogReleaseManifest(
-                    JobSchedulerUiTestContext.SCOPE,
-                    releaseId,
-                    [new JobCatalogOwnerManifest(JobSchedulerUiTestContext.OWNER, workerRevision)]),
-                2),
-            Xunit.TestContext.Current.CancellationToken);
-        await context.Store.PublishOwnerSnapshotAsync(
-            new JobOwnerCatalogSnapshot(
-                JobSchedulerUiTestContext.SCOPE,
-                releaseId,
-                JobSchedulerUiTestContext.OWNER,
-                workerRevision,
-                [initial.Definition.Declaration with { JobName = "Recurring cleanup v2" }]),
-            Xunit.TestContext.Current.CancellationToken);
-        await context.Store.TryActivateReleaseAsync(
-            JobSchedulerUiTestContext.SCOPE,
-            releaseId,
-            Xunit.TestContext.Current.CancellationToken);
-        var drifted = await GetRecurringSummaryAsync(context);
-        var state = JobPolicyEditorState.Create(drifted.Definition, drifted, OBSERVED_AT);
-
-        drifted.Definition.IsPolicyReviewOutdated.Should().BeTrue();
-        state.HasChanges.Should().BeTrue();
-        var acknowledgement = state.CreateChange();
-        acknowledgement.Overrides.Should().Be(drifted.Definition.Policy.Overrides);
-
-        var reviewedPolicy = await context.Store.UpdatePolicyAsync(
-            JobSchedulerUiTestContext.SCOPE,
-            drifted.Definition.OwnerId,
-            drifted.Definition.Declaration.JobKey,
-            acknowledgement,
-            Xunit.TestContext.Current.CancellationToken);
-        var reviewed = await GetRecurringSummaryAsync(context);
-
-        reviewedPolicy.ConcurrencyStamp.Should().NotBe(overriddenPolicy.ConcurrencyStamp);
-        reviewedPolicy.ReviewedAgainstJobRevisionId.Should().Be(drifted.Definition.JobRevisionId);
-        reviewed.Definition.IsPolicyReviewOutdated.Should().BeFalse();
-    }
-
-    [Fact]
     public async Task RebaseAfterConflict_WhenRecurringJobBecomesTriggered_ShouldRequireExplicitScheduleDiscard()
     {
         await using var context = new JobSchedulerUiTestContext();
@@ -171,7 +113,6 @@ public sealed class JobPolicyEditorStateTests
         state.MaxRetentionDays = 45;
         var latestDefinition = initial.Definition with
         {
-            WorkerRevisionId = "sha256:triggered-revision",
             Declaration = initial.Definition.Declaration with
             {
                 JobType = JobType.Triggered,
@@ -208,6 +149,8 @@ public sealed class JobPolicyEditorStateTests
         JobSchedulerUiTestContext context) =>
         (await context.Store.GetOperationalSummaryAsync(
             JobSchedulerUiTestContext.SCOPE,
-            context.RecurringDefinition.Declaration.JobKey,
+            new JobId(
+                JobSchedulerUiTestContext.OWNER,
+                context.RecurringDefinition.Declaration.JobKey),
             Xunit.TestContext.Current.CancellationToken))!;
 }

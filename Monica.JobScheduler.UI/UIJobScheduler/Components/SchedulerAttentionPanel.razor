@@ -5,8 +5,8 @@
 @{
     var failedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Failed);
     var skippedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Skipped);
-    var ownerCount = Overview.Owners.Count(static owner => !owner.IsConverged);
-    var attentionCount = failedCount + skippedCount + ownerCount;
+    var absentCount = Overview.Definitions.Count(static definition => !definition.IsPresent);
+    var attentionCount = failedCount + skippedCount + absentCount;
 }
 
 <section class="attention-panel" aria-labelledby="attention-panel-title">
@@ -57,15 +57,15 @@
                     <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
                 </a>
             }
-            @if (ownerCount > 0)
+            @if (absentCount > 0)
             {
-                <a href="#deployment-evidence" class="attention-panel__item" data-tone="info">
+                <a href="/job-scheduler/catalog?present=false" class="attention-panel__item" data-tone="info">
                     <span aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Small" /></span>
                     <span>
-                        <strong>@L["Overview:Attention:Owners"]</strong>
-                        <small>@L["Overview:Attention:OwnersDescription"]</small>
+                        <strong>@L["Overview:Attention:Absent"]</strong>
+                        <small>@L["Overview:Attention:AbsentDescription"]</small>
                     </span>
-                    <b>@ownerCount</b>
+                    <b>@absentCount</b>
                     <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
                 </a>
             }

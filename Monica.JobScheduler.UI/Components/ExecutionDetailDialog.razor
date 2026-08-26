@@ -193,7 +193,7 @@
     private void OpenJobDetails()
     {
         MudDialog.Close();
-        var jobKey = DetailState.Execution?.Template.Revision.JobKey;
+        var jobKey = DetailState.Execution?.Template.JobKey;
         Navigation.NavigateTo(string.IsNullOrWhiteSpace(jobKey)
             ? JobCatalogPage.PAGE_URL
             : $"/job-scheduler/catalog/{Uri.EscapeDataString(jobKey)}");

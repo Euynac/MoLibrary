@@ -1,5 +1,5 @@
 using Cronos;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Utils;
 
 namespace Monica.JobScheduler.UI.UIJobScheduler.Support;

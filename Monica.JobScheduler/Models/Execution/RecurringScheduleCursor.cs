@@ -1,3 +1,4 @@
+using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Utils;
 
 namespace Monica.JobScheduler.Models.Execution;
@@ -14,7 +15,7 @@ public enum JobRecurringScheduleSuspensionReason
     None = 0,
 
     /// <summary>
-    /// The active definition's effective policy, including its declaration default and operator override, prevents
+    /// The definition's effective policy, including its declaration default and operator override, prevents
     /// automatic materialization.
     /// </summary>
     OperatorPolicy = 1 << 0,
@@ -30,7 +31,7 @@ public enum JobRecurringScheduleSuspensionReason
 /// </summary>
 /// <remarks>
 /// Cron evaluation uses the persisted timezone identifier. The optional boundaries are absolute UTC instants, so a
-/// different control-plane replica evaluates the same immutable schedule deterministically.
+/// different host replica evaluates the same immutable schedule deterministically.
 /// </remarks>
 public sealed record RecurringScheduleDefinition
 {
@@ -118,7 +119,7 @@ public sealed record RecurringScheduleDefinition
 }
 
 /// <summary>
-/// Identifies one durable recurring schedule cursor within an activation epoch.
+/// Identifies one durable recurring schedule cursor for an owner-scoped job.
 /// </summary>
 public sealed record RecurringScheduleCursorKey
 {
@@ -128,142 +129,86 @@ public sealed record RecurringScheduleCursorKey
     public required string SchedulerScopeKey { get; init; }
 
     /// <summary>
-    /// Gets the activation epoch that owns the cursor.
+    /// Gets the owner of the recurring job.
     /// </summary>
-    public long ActivationEpoch { get; init; }
+    public required string OwnerKey { get; init; }
 
     /// <summary>
-    /// Gets the immutable job revision represented by the cursor.
+    /// Gets the owner-scoped logical job key represented by the cursor.
     /// </summary>
-    public required string JobRevisionId { get; init; }
+    public required string JobKey { get; init; }
 
     internal void Validate()
     {
         JobSchedulerIdentity.ValidateStandard(SchedulerScopeKey, nameof(SchedulerScopeKey));
-        JobSchedulerIdentity.ValidateHash(JobRevisionId, nameof(JobRevisionId));
-
-        if (ActivationEpoch < 1)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(ActivationEpoch),
-                ActivationEpoch,
-                "An activation epoch must be greater than zero.");
-        }
+        JobSchedulerIdentity.ValidateStandard(OwnerKey, nameof(OwnerKey));
+        JobSchedulerIdentity.ValidateJobKey(JobKey, nameof(JobKey));
     }
 }
 
 /// <summary>
-/// Synchronizes the durable cursor for a recurring declaration with an observed catalog version.
+/// Reconciles the durable cursor of one recurring job with the host-owned suspension reasons.
 /// </summary>
 /// <remarks>
-/// A newer change epoch may change policy-owned suspension, while a host-owned suspension reason may change at the
-/// same epoch. The store calculates an active cursor's initial occurrence from the durable catalog activation boundary,
-/// so delayed control-plane synchronization cannot skip already-due work. Resuming a suspended cursor starts after the
-/// store's authoritative current time instead of replaying suppressed time. When the reasons have not changed,
-/// synchronization preserves the cursor's current occurrence so unrelated policy changes cannot skip or duplicate work.
+/// The store derives the effective execution template, schedule, and operator-policy suspension directly from the
+/// persisted definition, so the host only reports its own debug-mode state. Creating a cursor calculates its first
+/// occurrence from the store's authoritative current time. Resuming a suspended cursor, or replacing a schedule,
+/// starts strictly after the store's current time instead of replaying suppressed time. When nothing changed, the
+/// cursor is preserved so unrelated edits cannot skip or duplicate work.
 /// </remarks>
 public sealed record RecurringScheduleSynchronization
 {
-    private const JobRecurringScheduleSuspensionReason SUPPORTED_SUSPENSION_REASONS =
-        JobRecurringScheduleSuspensionReason.OperatorPolicy
-        | JobRecurringScheduleSuspensionReason.DebugMode;
-
     /// <summary>
-    /// Gets the recurring job's current effective execution template for future occurrences.
+    /// Gets the recurring job whose cursor is reconciled.
     /// </summary>
-    public required JobExecutionTemplate Template { get; init; }
-
-    /// <summary>
-    /// Gets the effective Cron expression and optional execution boundaries. Its timezone remains declaration-owned.
-    /// </summary>
-    public required RecurringScheduleDefinition Schedule { get; init; }
-
-    /// <summary>
-    /// Gets the catalog change epoch observed alongside the host-owned suspension reasons.
-    /// </summary>
-    public long ChangeEpoch { get; init; }
+    public required RecurringScheduleCursorKey CursorKey { get; init; }
 
     /// <summary>
     /// Gets the host-owned reasons that prevent automatic materialization. The store always removes any caller-supplied
-    /// <see cref="JobRecurringScheduleSuspensionReason.OperatorPolicy"/> value and derives that reason from the active
-    /// catalog policy.
+    /// <see cref="JobRecurringScheduleSuspensionReason.OperatorPolicy"/> value and derives that reason from the
+    /// persisted definition policy.
     /// </summary>
-    public JobRecurringScheduleSuspensionReason SuspensionReasons { get; init; }
-
-    /// <summary>
-    /// Resolves the effective suspension reasons while preserving store ownership of the operator-policy reason.
-    /// </summary>
-    /// <param name="isSuspendedByOperatorPolicy">
-    /// Whether the active definition's effective declaration and operator policy currently prevents automatic
-    /// materialization.
-    /// </param>
-    /// <returns>The effective independent suspension reasons.</returns>
-    internal JobRecurringScheduleSuspensionReason ResolveSuspensionReasons(bool isSuspendedByOperatorPolicy)
-    {
-        var reasons = SuspensionReasons & ~JobRecurringScheduleSuspensionReason.OperatorPolicy;
-        return isSuspendedByOperatorPolicy
-            ? reasons | JobRecurringScheduleSuspensionReason.OperatorPolicy
-            : reasons;
-    }
+    public JobRecurringScheduleSuspensionReason HostSuspensionReasons { get; init; }
 
     internal void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Template);
-        Template.Validate();
-        ArgumentNullException.ThrowIfNull(Schedule);
-        Schedule.Validate();
-        if (ChangeEpoch < 1)
+        ArgumentNullException.ThrowIfNull(CursorKey);
+        CursorKey.Validate();
+        if ((HostSuspensionReasons
+                & ~(JobRecurringScheduleSuspensionReason.DebugMode)) != JobRecurringScheduleSuspensionReason.None)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(ChangeEpoch),
-                ChangeEpoch,
-                "A catalog change epoch must be greater than zero.");
-        }
-
-        if ((SuspensionReasons & ~SUPPORTED_SUSPENSION_REASONS) != JobRecurringScheduleSuspensionReason.None)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(SuspensionReasons),
-                SuspensionReasons,
-                "The recurring schedule suspension reasons contain an unsupported value.");
-        }
-
-        if (Template.JobType != JobType.Recurring)
-        {
-            throw new ArgumentException("Only recurring jobs can own recurring schedule cursors.", nameof(Template));
+                nameof(HostSuspensionReasons),
+                HostSuspensionReasons,
+                "Only DebugMode is a host-owned suspension reason.");
         }
     }
 }
 
 /// <summary>
-/// Describes how a catalog-version synchronization affected a recurring cursor.
+/// Describes how a host synchronization affected a recurring cursor.
 /// </summary>
 public enum RecurringScheduleSynchronizationStatus
 {
     /// <summary>
-    /// A cursor was created for the active activation.
+    /// A cursor was created for the recurring definition.
     /// </summary>
     Created,
 
     /// <summary>
-    /// A newer catalog change epoch or changed host-owned suspension reason updated the cursor.
+    /// The effective template, schedule, or suspension reasons changed and the cursor was updated.
     /// </summary>
     Updated,
 
     /// <summary>
-    /// The cursor had already observed the same catalog change epoch and effective suspension reasons.
+    /// The cursor already reflected the same effective state.
     /// </summary>
     Unchanged,
 
     /// <summary>
-    /// The request observed an older catalog change epoch and was ignored.
+    /// The addressed definition is absent or no longer recurring; any stale cursor was removed.
     /// </summary>
-    StaleChangeEpoch,
-
-    /// <summary>
-    /// The supplied execution template no longer belongs to the active activation.
-    /// </summary>
-    InactiveActivation
+    DefinitionNotRecurring
 }
 
 /// <summary>
@@ -277,7 +222,7 @@ public sealed record RecurringScheduleSynchronizationResult
     public RecurringScheduleSynchronizationStatus Status { get; init; }
 
     /// <summary>
-    /// Gets the current cursor, or <see langword="null"/> when the activation is no longer active and no cursor exists.
+    /// Gets the current cursor, or <see langword="null"/> when no cursor exists.
     /// </summary>
     public RecurringScheduleCursor? Cursor { get; init; }
 }
@@ -304,19 +249,9 @@ public sealed record RecurringScheduleCursor
     public required RecurringScheduleDefinition Schedule { get; init; }
 
     /// <summary>
-    /// Gets the policy revision applied to the cursor schedule and future execution template.
-    /// </summary>
-    public required string AppliedPolicyRevision { get; init; }
-
-    /// <summary>
     /// Gets the next occurrence in UTC, or <see langword="null"/> when no future occurrence exists.
     /// </summary>
     public DateTimeOffset? NextOccurrenceUtc { get; init; }
-
-    /// <summary>
-    /// Gets the latest catalog change epoch applied to this cursor.
-    /// </summary>
-    public long LastSynchronizedChangeEpoch { get; init; }
 
     /// <summary>
     /// Gets the independent reasons that prevent automatic recurring occurrence materialization.
@@ -329,7 +264,7 @@ public sealed record RecurringScheduleCursor
     public bool IsSuspended => SuspensionReasons != JobRecurringScheduleSuspensionReason.None;
 
     /// <summary>
-    /// Gets the compare-and-swap version used to fence stale control-plane replicas.
+    /// Gets the compare-and-swap version used to fence stale scheduling replicas.
     /// </summary>
     public long Version { get; init; }
 
@@ -350,7 +285,7 @@ public sealed record RecurringOccurrenceMaterialization
     public required RecurringScheduleCursorKey CursorKey { get; init; }
 
     /// <summary>
-    /// Gets the expected cursor version observed by a control-plane replica.
+    /// Gets the expected cursor version observed by a scheduling replica.
     /// </summary>
     public long ExpectedVersion { get; init; }
 
@@ -414,11 +349,6 @@ public enum RecurringMaterializationStatus
     StaleCursor,
 
     /// <summary>
-    /// The cursor's activation epoch is no longer active.
-    /// </summary>
-    InactiveActivation,
-
-    /// <summary>
     /// The cursor does not exist.
     /// </summary>
     CursorNotFound,
@@ -429,7 +359,7 @@ public enum RecurringMaterializationStatus
     NotDue,
 
     /// <summary>
-    /// The cursor is suspended or the current active policy disabled the job during materialization.
+    /// The cursor is suspended or the current effective policy disabled the job during materialization.
     /// </summary>
     Suspended
 }

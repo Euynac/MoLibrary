@@ -135,13 +135,13 @@ public sealed class JobDefinitionDetailPresentationTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "queued-before-health-window-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}"
         }, Xunit.TestContext.Current.CancellationToken);
         clock.SetUtcNow(OBSERVED_AT);
 
         var cut = context.Render<JobDefinitionDetailPage>(parameters => parameters
+            .Add(page => page.OwnerKey, JobSchedulerUiTestContext.OWNER)
             .Add(page => page.JobKey, context.TriggeredDefinition.Declaration.JobKey));
 
         cut.WaitForAssertion(() =>
@@ -162,13 +162,13 @@ public sealed class JobDefinitionDetailPresentationTests
             SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
             InstanceId = "job-detail-dialog-0001",
             JobKey = context.TriggeredDefinition.Declaration.JobKey,
-            ExpectedOwnerId = context.TriggeredDefinition.OwnerId,
-            ExpectedJobRevisionId = context.TriggeredDefinition.JobRevisionId,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobArgs = "{}"
         }, Xunit.TestContext.Current.CancellationToken);
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         var originalUri = navigation.Uri;
         var cut = context.Render<JobDefinitionDetailPage>(parameters => parameters
+            .Add(page => page.OwnerKey, JobSchedulerUiTestContext.OWNER)
             .Add(page => page.JobKey, context.TriggeredDefinition.Declaration.JobKey));
 
         cut.WaitForAssertion(() => cut.Find(".job-latest-panel__instance button").Should().NotBeNull());

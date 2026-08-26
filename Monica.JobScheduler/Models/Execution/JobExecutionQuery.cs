@@ -37,6 +37,11 @@ public sealed record JobExecutionQuery
     public required string SchedulerScopeKey { get; init; }
 
     /// <summary>
+    /// Gets an optional exact owner filter.
+    /// </summary>
+    public string? OwnerKey { get; init; }
+
+    /// <summary>
     /// Gets an optional exact logical job key.
     /// </summary>
     public string? JobKey { get; init; }
@@ -84,6 +89,11 @@ public sealed record JobExecutionQuery
     internal void Validate()
     {
         JobSchedulerIdentity.ValidateStandard(SchedulerScopeKey, nameof(SchedulerScopeKey));
+        if (OwnerKey is not null)
+        {
+            JobSchedulerIdentity.ValidateStandard(OwnerKey, nameof(OwnerKey));
+        }
+
         if (JobKey is not null)
         {
             JobSchedulerIdentity.ValidateJobKey(JobKey, nameof(JobKey));

@@ -1,0 +1,693 @@
+using AwesomeAssertions;
+using Monica.JobScheduler.Exceptions;
+using Monica.JobScheduler.Models;
+using Monica.JobScheduler.Models.Operations;
+using Monica.JobScheduler.Models.Definitions;
+using Monica.JobScheduler.Models.Execution;
+using Test.Monica.JobScheduler.Stores.Shared;
+using Xunit;
+
+namespace Test.Monica.JobScheduler.Stores;
+
+/// <summary>
+/// Behavioral contracts every scheduler-store provider must satisfy. Each theory runs against the
+/// in-memory provider and the SQLite-backed EF Core provider with an identical store clock.
+/// </summary>
+public sealed class JobSchedulerStoreContractTests
+{
+    private static readonly DateTimeOffset NOW = new(2026, 8, 20, 12, 0, 0, TimeSpan.Zero);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SyncOwnerSnapshot_ShouldUpsertDeclarationsPreservePolicyAndMarkMissingAbsent(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        var first = await fixture.SyncAsync(StoreFixture.OWNER_A,
+            StoreFixture.RecurringDeclaration("jobs.alpha"),
+            StoreFixture.TriggeredDeclaration("jobs.beta"));
+        first.PresentCount.Should().Be(2);
+        first.MarkedAbsentCount.Should().Be(0);
+
+        var alpha = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.alpha", TestContext.Current.CancellationToken);
+        alpha.Should().NotBeNull();
+        alpha!.IsPresent.Should().BeTrue();
+        alpha.Policy.Overrides.HasAnyOverride.Should().BeFalse();
+
+        var updated = await fixture.UpdatePolicyAsync(
+            StoreFixture.OWNER_A,
+            "jobs.alpha",
+            alpha.Policy,
+            new JobPolicyOverrides { MaxConcurrencyOverride = 3 });
+
+        // Republish without jobs.beta: the declaration disappears, but the policy of jobs.alpha survives.
+        fixture.Time.Advance(TimeSpan.FromSeconds(5));
+        var second = await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration("jobs.alpha"));
+        second.PresentCount.Should().Be(1);
+        second.MarkedAbsentCount.Should().Be(1);
+
+        var alphaAfter = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.alpha", TestContext.Current.CancellationToken);
+        alphaAfter!.Policy.ConcurrencyStamp.Should().Be(updated.ConcurrencyStamp);
+        alphaAfter.Policy.Overrides.MaxConcurrencyOverride.Should().Be(3);
+        alphaAfter.LastObservedAtUtc.Should().BeAfter(alpha.LastObservedAtUtc);
+
+        var beta = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.beta", TestContext.Current.CancellationToken);
+        beta!.IsPresent.Should().BeFalse();
+        // The absent definition keeps its sticky policy for audit and a possible return.
+        beta.Policy.Should().NotBeNull();
+
+        // A returning job resumes with its sticky policy intact.
+        fixture.Time.Advance(TimeSpan.FromSeconds(5));
+        await fixture.SyncAsync(
+            StoreFixture.OWNER_A,
+            StoreFixture.RecurringDeclaration("jobs.alpha"),
+            StoreFixture.TriggeredDeclaration("jobs.beta"));
+        var betaBack = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.beta", TestContext.Current.CancellationToken);
+        betaBack!.IsPresent.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SyncOwnerSnapshot_RepeatedIdenticalSnapshotsFromReplicasShouldBeIdempotent(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        var declarations = new[]
+        {
+            StoreFixture.RecurringDeclaration("jobs.alpha"),
+            StoreFixture.TriggeredDeclaration("jobs.beta")
+        };
+        await fixture.SyncAsync(StoreFixture.OWNER_A, declarations);
+        var observed = (await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.alpha", TestContext.Current.CancellationToken))!
+            .LastObservedAtUtc;
+        fixture.Time.Advance(TimeSpan.FromSeconds(30));
+        var repeat = await fixture.SyncAsync(StoreFixture.OWNER_A, declarations);
+        repeat.MarkedAbsentCount.Should().Be(0);
+        var alpha = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.alpha", TestContext.Current.CancellationToken);
+        alpha!.IsPresent.Should().BeTrue();
+        alpha.LastObservedAtUtc.Should().BeAfter(observed);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Definitions_SameJobKeyAcrossOwnersShouldStayIndependent(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.shared"));
+        await fixture.SyncAsync(StoreFixture.OWNER_B, StoreFixture.TriggeredDeclaration("jobs.shared"));
+
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.shared", instanceId: "a-1");
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_B, "jobs.shared", instanceId: "b-1");
+
+        var ownerAKeys = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.shared"]);
+        ownerAKeys.Should().ContainSingle().Which.Execution.InstanceId.Should().Be("a-1");
+
+        var ownerBKeys = await fixture.ClaimAsync(StoreFixture.OWNER_B, "worker-b", ["jobs.shared"]);
+        ownerBKeys.Should().ContainSingle().Which.Execution.InstanceId.Should().Be("b-1");
+
+        // One owner cannot claim the other owner's queued work.
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.shared", instanceId: "a-2");
+        var wrongOwnerClaims = await fixture.ClaimAsync(StoreFixture.OWNER_B, "worker-b", ["jobs.shared"]);
+        wrongOwnerClaims.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Enqueue_ShouldRejectAbsentDisabledAndMismatchedAdmission(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(
+            StoreFixture.OWNER_A,
+            StoreFixture.TriggeredDeclaration("jobs.beta"),
+            StoreFixture.RecurringDeclaration("jobs.removed"));
+
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.beta"));
+        Func<Task> act = () => fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.removed");
+        await act.Should().ThrowAsync<JobDefinitionNotFoundException>();
+
+        Func<Task> unknown = () => fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.unknown");
+        await unknown.Should().ThrowAsync<JobDefinitionNotFoundException>();
+
+        Func<Task> recurring = () => fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", jobArgs: null);
+        await recurring.Should().ThrowAsync<ArgumentException>();
+
+        var definition = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.beta", TestContext.Current.CancellationToken);
+        await fixture.UpdatePolicyAsync(
+            StoreFixture.OWNER_A,
+            "jobs.beta",
+            definition!.Policy,
+            new JobPolicyOverrides { DisabledOverride = true });
+        Func<Task> disabled = () => fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta");
+        await disabled.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Enqueue_RepeatingIdenticalRequestShouldBeIdempotent(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.beta"));
+        var first = await fixture.EnqueueTriggeredAsync(
+            StoreFixture.OWNER_A,
+            "jobs.beta",
+            jobArgs: "{\"v\":1}",
+            instanceId: "stable-id",
+            availableAtUtc: NOW.AddMinutes(1));
+        var second = await fixture.EnqueueTriggeredAsync(
+            StoreFixture.OWNER_A,
+            "jobs.beta",
+            jobArgs: "{\"v\":1}",
+            instanceId: "stable-id",
+            availableAtUtc: NOW.AddMinutes(1));
+        second.Should().Be(first);
+
+        Func<Task> conflicting = () => fixture.EnqueueTriggeredAsync(
+            StoreFixture.OWNER_A,
+            "jobs.beta",
+            jobArgs: "{\"v\":2}",
+            instanceId: "stable-id");
+        await conflicting.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RunRecurringNow_ShouldQueueWithoutAdvancingCursor(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration("jobs.alpha"));
+        var cursor = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+        var nextBefore = cursor.NextOccurrenceUtc;
+
+        var paused = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.alpha", TestContext.Current.CancellationToken);
+        await fixture.UpdatePolicyAsync(
+            StoreFixture.OWNER_A,
+            "jobs.alpha",
+            paused!.Policy,
+            new JobPolicyOverrides { DisabledOverride = true });
+
+        // A paused schedule remains eligible for this explicit operator action.
+        var execution = await fixture.RunRecurringNowAsync(StoreFixture.OWNER_A, "jobs.alpha");
+        execution.State.Should().Be(JobExecutionState.Queued);
+        execution.Origin.Should().Be(JobExecutionOrigin.RecurringRunNow);
+        execution.RecurringOccurrenceUtc.Should().BeNull();
+
+        var operational = await fixture.Store.GetOperationalSummaryAsync(
+            fixture.Scope,
+            new JobId(StoreFixture.OWNER_A, "jobs.alpha"), TestContext.Current.CancellationToken);
+        operational!.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Suspended);
+        operational.LatestExecution!.InstanceId.Should().Be(execution.InstanceId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Claim_ShouldEnforceConcurrencyGateAndLocalJobKeys(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.beta", maxConcurrency: 2));
+        for (var i = 0; i < 4; i++)
+        {
+            await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: $"exec-{i}");
+        }
+
+        // The worker does not know jobs.beta: nothing is claimable.
+        var unknownKey = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.other"]);
+        unknownKey.Should().BeEmpty();
+
+        var firstBatch = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"], maxCount: 8);
+        firstBatch.Should().HaveCount(2);
+        firstBatch.Should().OnlyContain(lease => lease.Execution.State == JobExecutionState.Running);
+
+        // The gate holds the configured capacity of two across workers.
+        var secondBatch = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-b", ["jobs.beta"], maxCount: 8);
+        secondBatch.Should().BeEmpty();
+
+        await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+        {
+            LeaseKey = firstBatch[0].LeaseKey,
+            Outcome = JobAttemptOutcome.Succeeded
+        }, TestContext.Current.CancellationToken);
+        var thirdBatch = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-b", ["jobs.beta"], maxCount: 8);
+        thirdBatch.Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CompleteAttempt_ShouldApplyRetryPolicyAndTerminalStates(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.beta"));
+        var definition = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.beta", TestContext.Current.CancellationToken);
+        await fixture.UpdatePolicyAsync(
+            StoreFixture.OWNER_A,
+            "jobs.beta",
+            definition!.Policy,
+            new JobPolicyOverrides { RetryCountOverride = 1 });
+
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "retry-exec");
+        var lease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"])).Single();
+
+        var firstFailure = await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+        {
+            LeaseKey = lease.LeaseKey,
+            Outcome = JobAttemptOutcome.Failed,
+            RetryDelay = TimeSpan.FromSeconds(5)
+        }, TestContext.Current.CancellationToken);
+        firstFailure.Status.Should().Be(JobAttemptCompletionStatus.Applied);
+        firstFailure.Execution!.State.Should().Be(JobExecutionState.Queued);
+        firstFailure.Execution.RetryAttempt.Should().Be(1);
+        firstFailure.Execution.AvailableAtUtc.Should().Be(NOW.AddSeconds(5));
+
+        fixture.Time.Advance(TimeSpan.FromSeconds(6));
+        var retryLease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"])).Single();
+        retryLease.Execution.InstanceId.Should().Be("retry-exec");
+        var exhausted = await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+        {
+            LeaseKey = retryLease.LeaseKey,
+            Outcome = JobAttemptOutcome.Failed
+        }, TestContext.Current.CancellationToken);
+        exhausted.Execution!.State.Should().Be(JobExecutionState.Failed);
+        exhausted.Execution.CompletedAtUtc.Should().NotBeNull();
+
+        // A stale lease completion is fenced.
+        var stale = await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+        {
+            LeaseKey = lease.LeaseKey,
+            Outcome = JobAttemptOutcome.Succeeded
+        }, TestContext.Current.CancellationToken);
+        stale.Status.Should().Be(JobAttemptCompletionStatus.Lost);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancellation_ShouldCancelQueuedImmediatelyAndRunningCooperatively(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.beta"));
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "queued-exec");
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "running-exec");
+
+        var queued = await fixture.Store.RequestCancellationAsync(fixture.Scope, "queued-exec", cancellationToken: TestContext.Current.CancellationToken);
+        queued.Status.Should().Be(JobCancellationStatus.Cancelled);
+        (await fixture.Store.GetExecutionAsync(fixture.Scope, "queued-exec", TestContext.Current.CancellationToken))!.State
+            .Should().Be(JobExecutionState.Cancelled);
+
+        var lease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"])).Single();
+        var running = await fixture.Store.RequestCancellationAsync(fixture.Scope, "running-exec", cancellationToken: TestContext.Current.CancellationToken);
+        running.Status.Should().Be(JobCancellationStatus.CancellationRequested);
+        var renewal = await fixture.Store.RenewLeaseAsync(lease.LeaseKey, TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        renewal.Status.Should().Be(JobLeaseRenewalStatus.CancellationRequested);
+
+        // A completion after a persisted cancellation always resolves to Cancelled.
+        var completion = await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+        {
+            LeaseKey = lease.LeaseKey,
+            Outcome = JobAttemptOutcome.Succeeded
+        }, TestContext.Current.CancellationToken);
+        completion.Execution!.State.Should().Be(JobExecutionState.Cancelled);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExpiredLeaseRecovery_ShouldRequeueOrCancelAndFenceLostLeases(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.beta", maxConcurrency: 2));
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "recover-exec");
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "cancel-exec");
+
+        var claimedLeases = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"]);
+        var recoverLease = claimedLeases.Single(lease => lease.Execution.InstanceId == "recover-exec");
+        var cancelLease = claimedLeases.Single(lease => lease.Execution.InstanceId == "cancel-exec");
+        await fixture.Store.RequestCancellationAsync(fixture.Scope, "cancel-exec", cancellationToken: TestContext.Current.CancellationToken);
+
+        fixture.Time.Advance(TimeSpan.FromSeconds(31));
+        var recovered = await fixture.Store.RecoverExpiredLeasesAsync(new ExpiredLeaseRecoveryRequest
+        {
+            SchedulerScopeKey = fixture.Scope,
+            MaxCount = 10
+        }, TestContext.Current.CancellationToken);
+        recovered.Should().HaveCount(2);
+
+        var recoveredExecution = (await fixture.Store.GetExecutionAsync(fixture.Scope, "recover-exec", TestContext.Current.CancellationToken))!;
+        recoveredExecution.State.Should().Be(JobExecutionState.Queued);
+        recoveredExecution.LeaseLossCount.Should().Be(1);
+
+        var cancelledExecution = (await fixture.Store.GetExecutionAsync(fixture.Scope, "cancel-exec", TestContext.Current.CancellationToken))!;
+        cancelledExecution.State.Should().Be(JobExecutionState.Cancelled);
+
+        // The recovered capacity is claimable again, and the expired lease is fenced.
+        (await fixture.Store.RenewLeaseAsync(recoverLease.LeaseKey, TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)).Status
+            .Should().Be(JobLeaseRenewalStatus.Lost);
+        var reclaimed = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"]);
+        reclaimed.Should().ContainSingle().Which.Execution.InstanceId.Should().Be("recover-exec");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecurringSynchronization_ShouldCreateProspectivelyAndRemoveStaleCursors(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration("jobs.alpha", cron: "0 0 * * * *"));
+        var cursor = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+        cursor.Version.Should().Be(1);
+        cursor.NextOccurrenceUtc.Should().Be(NOW.AddHours(1));
+        cursor.IsSuspended.Should().BeFalse();
+
+        // Debug mode suspends without losing the schedule.
+        var suspended = await fixture.Store.SynchronizeRecurringScheduleAsync(
+            new RecurringScheduleSynchronization
+            {
+                CursorKey = cursor.Key,
+                HostSuspensionReasons = JobRecurringScheduleSuspensionReason.DebugMode
+            }, TestContext.Current.CancellationToken);
+        suspended.Status.Should().Be(RecurringScheduleSynchronizationStatus.Updated);
+        suspended.Cursor!.IsSuspended.Should().BeTrue();
+        suspended.Cursor.NextOccurrenceUtc.Should().BeNull();
+
+        // A resume is prospective: it never replays suppressed time.
+        fixture.Time.Advance(TimeSpan.FromHours(2));
+        var resumed = await fixture.Store.SynchronizeRecurringScheduleAsync(
+            new RecurringScheduleSynchronization { CursorKey = cursor.Key }, TestContext.Current.CancellationToken);
+        resumed.Cursor!.IsSuspended.Should().BeFalse();
+        resumed.Cursor.NextOccurrenceUtc.Should().Be(NOW.AddHours(3));
+
+        // Replacing the recurring declaration with a triggered one removes its cursor during owner snapshot sync.
+        fixture.Time.Advance(TimeSpan.FromHours(2));
+        var definition = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.alpha", TestContext.Current.CancellationToken);
+        var triggered = definition!.Declaration with { JobType = JobType.Triggered, CronExpression = null, JobArgsKey = "jobs.alphaArgs" };
+        await fixture.SyncAsync(StoreFixture.OWNER_A, triggered);
+        var dueAfterRemoval = await fixture.Store.GetDueRecurringSchedulesAsync(fixture.Scope, StoreFixture.OWNER_A, 10, TestContext.Current.CancellationToken);
+        dueAfterRemoval.Should().BeEmpty();
+
+        var removed = await fixture.Store.SynchronizeRecurringScheduleAsync(
+            new RecurringScheduleSynchronization { CursorKey = cursor.Key }, TestContext.Current.CancellationToken);
+        removed.Status.Should().Be(RecurringScheduleSynchronizationStatus.DefinitionNotRecurring);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SyncOwnerSnapshot_RemovingRecurringJobShouldRemoveItsCursor(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration("jobs.alpha"));
+        await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+
+        await fixture.SyncAsync(StoreFixture.OWNER_A);
+        fixture.Time.Advance(TimeSpan.FromHours(1));
+
+        var due = await fixture.Store.GetDueRecurringSchedulesAsync(
+            fixture.Scope,
+            StoreFixture.OWNER_A,
+            10,
+            TestContext.Current.CancellationToken);
+        due.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecurringMaterialization_ShouldMaterializeOnceAndAdvanceCursor(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration("jobs.alpha", cron: "0 0 * * * *"));
+        var cursor = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+
+        fixture.Time.Advance(TimeSpan.FromHours(1));
+        var due = await fixture.Store.GetDueRecurringSchedulesAsync(fixture.Scope, StoreFixture.OWNER_A, 10, TestContext.Current.CancellationToken);
+        due.Should().ContainSingle().Which.NextOccurrenceUtc.Should().Be(NOW.AddHours(1));
+
+        var occurrence = NOW.AddHours(1);
+        var materialization = new RecurringOccurrenceMaterialization
+        {
+            CursorKey = cursor.Key,
+            ExpectedVersion = cursor.Version,
+            ExpectedOccurrenceUtc = occurrence,
+            NextOccurrenceUtc = occurrence.AddHours(1),
+            InstanceId = "alpha-occurrence-1"
+        };
+        var result = await fixture.Store.TryMaterializeRecurringOccurrenceAsync(materialization, TestContext.Current.CancellationToken);
+        result.Status.Should().Be(RecurringMaterializationStatus.Materialized);
+        result.Execution!.State.Should().Be(JobExecutionState.Queued);
+        result.Execution.RecurringOccurrenceUtc.Should().Be(occurrence);
+        result.Execution.Template.JobType.Should().Be(JobType.Recurring);
+        result.Cursor!.NextOccurrenceUtc.Should().Be(occurrence.AddHours(1));
+
+        // A repeated attempt with the stale cursor is rejected.
+        var stale = await fixture.Store.TryMaterializeRecurringOccurrenceAsync(materialization, TestContext.Current.CancellationToken);
+        stale.Status.Should().Be(RecurringMaterializationStatus.StaleCursor);
+
+        // The materialized occurrence is claimable and idempotent by instance identity.
+        var lease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.alpha"])).Single();
+        lease.Execution.InstanceId.Should().Be("alpha-occurrence-1");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecurringMaterialization_OverdueCapacityShouldRecordSkippedOccurrence(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(
+            StoreFixture.OWNER_A,
+            StoreFixture.RecurringDeclaration("jobs.alpha", cron: "0 0 * * * *", maxConcurrency: 1));
+        var cursor = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+
+        fixture.Time.Advance(TimeSpan.FromHours(1));
+        var first = await MaterializeDueAsync(fixture, cursor.Key);
+        first.Status.Should().Be(RecurringMaterializationStatus.Materialized);
+        first.Execution!.State.Should().Be(JobExecutionState.Queued);
+
+        fixture.Time.Advance(TimeSpan.FromHours(1));
+        var second = await MaterializeDueAsync(fixture, cursor.Key);
+        second.Status.Should().Be(RecurringMaterializationStatus.Materialized);
+        second.Execution!.State.Should().Be(JobExecutionState.Skipped);
+        second.Execution.SkipReason.Should().Be(JobExecutionSkipReason.RecurringCapacityUnavailable);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdatePolicy_ShouldApplyConcurrencyAndScheduleToCursorWithOptimisticFencing(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration("jobs.alpha", cron: "0 0 * * * *"));
+        var cursor = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+        var definition = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.alpha", TestContext.Current.CancellationToken);
+
+        // Optimistic concurrency fencing.
+        Func<Task> stale = () => fixture.Store.UpdatePolicyAsync(
+            fixture.Scope,
+            StoreFixture.OWNER_A,
+            "jobs.alpha",
+            new JobPolicyChange
+            {
+                Overrides = new JobPolicyOverrides { RetryCountOverride = 2 },
+                ExpectedConcurrencyStamp = "00000000000000000000000000000000"
+            });
+        await stale.Should().ThrowAsync<JobPolicyConcurrencyException>();
+
+        Func<Task> unknown = () => fixture.Store.UpdatePolicyAsync(
+            fixture.Scope,
+            StoreFixture.OWNER_A,
+            "jobs.missing",
+            new JobPolicyChange
+            {
+                Overrides = new JobPolicyOverrides(),
+                ExpectedConcurrencyStamp = definition!.Policy.ConcurrencyStamp
+            });
+        await unknown.Should().ThrowAsync<JobDefinitionNotFoundException>();
+
+        // A schedule replacement is prospective from the store time.
+        fixture.Time.Advance(TimeSpan.FromHours(2));
+        await fixture.UpdatePolicyAsync(
+            StoreFixture.OWNER_A,
+            "jobs.alpha",
+            definition!.Policy,
+            new JobPolicyOverrides
+            {
+                ScheduleOverride = new JobScheduleOverride { CronExpression = "0 0 0 * * *" }
+            });
+        var replaced = await fixture.Store.GetOperationalSummaryAsync(
+            fixture.Scope,
+            new JobId(StoreFixture.OWNER_A, "jobs.alpha"), TestContext.Current.CancellationToken);
+        replaced!.NextOccurrenceUtc.Should().Be(new DateTimeOffset(2026, 8, 21, 0, 0, 0, TimeSpan.Zero));
+
+        // The concurrency gate follows the effective policy.
+        var withConcurrency = await fixture.Store.GetDefinitionAsync(fixture.Scope, StoreFixture.OWNER_A, "jobs.alpha", TestContext.Current.CancellationToken);
+        await fixture.UpdatePolicyAsync(
+            StoreFixture.OWNER_A,
+            "jobs.alpha",
+            withConcurrency!.Policy,
+            new JobPolicyOverrides
+            {
+                ScheduleOverride = new JobScheduleOverride { CronExpression = "0 0 0 * * *" },
+                MaxConcurrencyOverride = 5
+            });
+        for (var i = 0; i < 5; i++)
+        {
+            await fixture.RunRecurringNowAsync(StoreFixture.OWNER_A, "jobs.alpha", instanceId: $"gate-{i}");
+        }
+        var fullClaims = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.alpha"], maxCount: 10);
+        fullClaims.Should().HaveCount(5);
+        var overCapacity = await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-b", ["jobs.alpha"], maxCount: 10);
+        overCapacity.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DefinitionQueries_ShouldFilterSortAndPageServerSide(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(
+            StoreFixture.OWNER_A,
+            StoreFixture.RecurringDeclaration("jobs.zulu") with { Description = "description-search-needle" },
+            StoreFixture.TriggeredDeclaration("jobs.alpha"));
+        await fixture.SyncAsync(StoreFixture.OWNER_B, StoreFixture.RecurringDeclaration("jobs.alpha"));
+
+        var ownerBPage = await fixture.Store.QueryDefinitionsAsync(
+            fixture.Scope,
+            new JobDefinitionQuery { OwnerKey = StoreFixture.OWNER_B }, TestContext.Current.CancellationToken);
+        ownerBPage.TotalCount.Should().Be(1);
+        ownerBPage.Items.Single().OwnerKey.Should().Be(StoreFixture.OWNER_B);
+
+        var triggeredPage = await fixture.Store.QueryDefinitionsAsync(
+            fixture.Scope,
+            new JobDefinitionQuery { JobType = JobType.Triggered }, TestContext.Current.CancellationToken);
+        triggeredPage.TotalCount.Should().Be(1);
+        triggeredPage.Items.Single().Declaration.JobKey.Should().Be("jobs.alpha");
+
+        var searchPage = await fixture.Store.QueryDefinitionsAsync(
+            fixture.Scope,
+            new JobDefinitionQuery { SearchText = "zulu" }, TestContext.Current.CancellationToken);
+        searchPage.TotalCount.Should().Be(1);
+
+        var descriptionSearchPage = await fixture.Store.QueryDefinitionsAsync(
+            fixture.Scope,
+            new JobDefinitionQuery { SearchText = "description-search-needle" }, TestContext.Current.CancellationToken);
+        descriptionSearchPage.TotalCount.Should().Be(1);
+
+        var sortedByJobKey = await fixture.Store.QueryDefinitionsAsync(
+            fixture.Scope,
+            new JobDefinitionQuery { SortField = JobDefinitionSortField.JobKey }, TestContext.Current.CancellationToken);
+        sortedByJobKey.Items.Select(definition => definition.Declaration.JobKey)
+            .Should().Equal(["jobs.alpha", "jobs.alpha", "jobs.zulu"]);
+
+        var paged = await fixture.Store.QueryDefinitionsAsync(
+            fixture.Scope,
+            new JobDefinitionQuery { PageSize = 2, PageNumber = 2, SortField = JobDefinitionSortField.JobKey }, TestContext.Current.CancellationToken);
+        paged.Items.Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecutionQueriesAndStatistics_ShouldStayBoundedAndFiltered(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(
+            StoreFixture.OWNER_A,
+            StoreFixture.TriggeredDeclaration("jobs.beta"),
+            StoreFixture.TriggeredDeclaration("jobs.other"));
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: "q-1");
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.other", instanceId: "q-2");
+
+        var byOwner = await fixture.Store.QueryExecutionsAsync(new JobExecutionQuery
+        {
+            SchedulerScopeKey = fixture.Scope,
+            OwnerKey = StoreFixture.OWNER_B
+        }, TestContext.Current.CancellationToken);
+        byOwner.TotalCount.Should().Be(0);
+
+        var byJob = await fixture.Store.QueryExecutionsAsync(new JobExecutionQuery
+        {
+            SchedulerScopeKey = fixture.Scope,
+            JobKey = "jobs.beta"
+        }, TestContext.Current.CancellationToken);
+        byJob.TotalCount.Should().Be(1);
+
+        var statistics = await fixture.Store.GetExecutionStateStatisticsAsync(fixture.Scope, cancellationToken: TestContext.Current.CancellationToken);
+        statistics[JobExecutionState.Queued].Should().Be(2);
+
+        var latest = await fixture.Store.GetLatestExecutionsAsync(
+            fixture.Scope,
+            StoreFixture.OWNER_A,
+            [new JobId(StoreFixture.OWNER_A, "jobs.beta"), new JobId(StoreFixture.OWNER_A, "jobs.missing")], TestContext.Current.CancellationToken);
+        latest[new JobId(StoreFixture.OWNER_A, "jobs.beta")]!.InstanceId.Should().Be("q-1");
+        latest[new JobId(StoreFixture.OWNER_A, "jobs.missing")].Should().BeNull();
+
+        Func<Task> mismatchedOwner = () => fixture.Store.GetLatestExecutionsAsync(
+            fixture.Scope,
+            StoreFixture.OWNER_A,
+            [new JobId(StoreFixture.OWNER_B, "jobs.beta")],
+            TestContext.Current.CancellationToken);
+        await mismatchedOwner.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HistoryCleanup_ShouldApplyRetentionPoliciesAndBoundedDeletion(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.TriggeredDeclaration("jobs.beta"));
+        for (var i = 0; i < 5; i++)
+        {
+            await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: $"done-{i}");
+            var lease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.beta"])).Single();
+            await fixture.Store.CompleteAttemptAsync(new JobAttemptCompletion
+            {
+                LeaseKey = lease.LeaseKey,
+                Outcome = JobAttemptOutcome.Succeeded
+            }, TestContext.Current.CancellationToken);
+            fixture.Time.Advance(TimeSpan.FromMinutes(1));
+        }
+
+        var candidates = await fixture.Store.GetExecutionCleanupCandidatesAsync(
+            fixture.Scope,
+            new Dictionary<JobId, JobHistoryRetentionPolicy>
+            {
+                [new JobId(StoreFixture.OWNER_A, "jobs.beta")] = new() { MaxRecords = 2 }
+            },
+            maxRetainedOrphanedExecutions: 0,
+            maxDeletions: 10, TestContext.Current.CancellationToken);
+        candidates.Should().HaveCount(3);
+        var deleted = await fixture.Store.DeleteExecutionsAsync(fixture.Scope, candidates, TestContext.Current.CancellationToken);
+        deleted.Should().Be(3);
+
+        var remaining = await fixture.Store.QueryExecutionsAsync(new JobExecutionQuery
+        {
+            SchedulerScopeKey = fixture.Scope,
+            States = [JobExecutionState.Succeeded]
+        }, TestContext.Current.CancellationToken);
+        remaining.TotalCount.Should().Be(2);
+    }
+
+    private static async Task<RecurringMaterializationResult> MaterializeDueAsync(
+        StoreFixture fixture,
+        RecurringScheduleCursorKey key)
+    {
+        var due = (await fixture.Store.GetDueRecurringSchedulesAsync(fixture.Scope, key.OwnerKey, 10, TestContext.Current.CancellationToken))
+            .SingleOrDefault(cursor => cursor.Key.JobKey == key.JobKey)
+            ?? throw new InvalidOperationException($"Cursor '{key.JobKey}' is not due.");
+        var occurrence = due.NextOccurrenceUtc!.Value;
+        return await fixture.Store.TryMaterializeRecurringOccurrenceAsync(new RecurringOccurrenceMaterialization
+        {
+            CursorKey = due.Key,
+            ExpectedVersion = due.Version,
+            ExpectedOccurrenceUtc = occurrence,
+            NextOccurrenceUtc = due.Schedule.GetNextOccurrence(occurrence.AddTicks(1)),
+            InstanceId = $"occurrence-{key.JobKey}-{occurrence.UtcTicks}"
+        }, TestContext.Current.CancellationToken);
+    }
+}

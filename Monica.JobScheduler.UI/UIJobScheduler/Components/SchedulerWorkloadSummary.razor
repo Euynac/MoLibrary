@@ -4,9 +4,11 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 @{
-    var definitions = Overview.ActiveCatalog?.Definitions ?? [];
-    var recurringCount = definitions.Count(static definition => definition.Declaration.JobType == JobType.Recurring);
-    var triggeredCount = definitions.Count(static definition => definition.Declaration.JobType == JobType.Triggered);
+    var definitions = Overview.Definitions;
+    var presentDefinitions = definitions.Where(static definition => definition.IsPresent).ToArray();
+    var recurringCount = presentDefinitions.Count(static definition => definition.Declaration.JobType == JobType.Recurring);
+    var triggeredCount = presentDefinitions.Count(static definition => definition.Declaration.JobType == JobType.Triggered);
+    var ownerCount = presentDefinitions.Select(static definition => definition.OwnerKey).Distinct(StringComparer.Ordinal).Count();
     var succeededCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Succeeded);
     var failedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Failed);
     var completedCount = succeededCount + failedCount;
@@ -19,8 +21,8 @@
         </span>
         <div>
             <span>@L["Overview:Workload:TotalJobs"]</span>
-            <strong>@definitions.Count</strong>
-            <small>@L["Overview:Workload:AcrossOwners", Overview.Owners.Count]</small>
+            <strong>@presentDefinitions.Length</strong>
+            <small>@L["Overview:Workload:AcrossOwners", ownerCount]</small>
         </div>
     </article>
     <article class="workload-summary__metric" data-tone="info">

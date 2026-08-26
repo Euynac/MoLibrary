@@ -1,63 +1,49 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Services.Support;
-using Monica.Modules;
 using Xunit;
 
 namespace Test.Monica.JobScheduler.Services;
 
 public sealed class JobSchedulerHealthCheckTests
 {
-    [Theory]
-    [InlineData(JobSchedulerRole.ControlPlane)]
-    [InlineData(JobSchedulerRole.Worker)]
-    [InlineData(JobSchedulerRole.Standalone)]
-    public async Task CheckHealthAsync_WhenRequiredPlaneHasNotInitialized_ShouldBeUnhealthy(JobSchedulerRole role)
+    [Fact]
+    public async Task CheckHealthAsync_WhenAPlaneHasNotInitialized_ShouldBeUnhealthy()
     {
-        var healthCheck = CreateHealthCheck(role, out _);
+        var runtimeState = new JobSchedulerRuntimeState();
+        var healthCheck = new JobSchedulerHealthCheck(runtimeState);
 
-        var result = await healthCheck.CheckHealthAsync(
-            new HealthCheckContext(),
-            TestContext.Current.CancellationToken);
+        var result = await healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Unhealthy);
+        result.Description.Should().Contain("Scheduling has not initialized");
+        result.Description.Should().Contain("Worker has not initialized");
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WhenZeroJobWorkerRegisteredCapability_ShouldBeHealthy()
+    public async Task CheckHealthAsync_WhenBothPlanesAreReady_ShouldBeHealthy()
     {
-        var healthCheck = CreateHealthCheck(JobSchedulerRole.Worker, out var runtimeState);
-        runtimeState.SetWorker(true, "Worker capability is active for 0 local job(s).");
+        var runtimeState = new JobSchedulerRuntimeState();
+        _ = runtimeState.SetScheduling(true, "ready");
+        _ = runtimeState.SetWorker(true, "ready");
+        var healthCheck = new JobSchedulerHealthCheck(runtimeState);
 
-        var result = await healthCheck.CheckHealthAsync(
-            new HealthCheckContext(),
-            TestContext.Current.CancellationToken);
+        var result = await healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         result.Status.Should().Be(HealthStatus.Healthy);
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WhenStandalonePlanesAreReady_ShouldBeHealthy()
+    public async Task CheckHealthAsync_WhenSchedulingFails_ShouldReportItsMessage()
     {
-        var healthCheck = CreateHealthCheck(JobSchedulerRole.Standalone, out var runtimeState);
-        runtimeState.SetControlPlane(true, "Control plane initialized.");
-        runtimeState.SetWorker(true, "Worker capability initialized.");
+        var runtimeState = new JobSchedulerRuntimeState();
+        _ = runtimeState.SetWorker(true, "ready");
+        _ = runtimeState.SetScheduling(false, "store unreachable");
+        var healthCheck = new JobSchedulerHealthCheck(runtimeState);
 
-        var result = await healthCheck.CheckHealthAsync(
-            new HealthCheckContext(),
-            TestContext.Current.CancellationToken);
+        var result = await healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
-        result.Status.Should().Be(HealthStatus.Healthy);
-    }
-
-    private static JobSchedulerHealthCheck CreateHealthCheck(
-        JobSchedulerRole role,
-        out JobSchedulerRuntimeState runtimeState)
-    {
-        runtimeState = new JobSchedulerRuntimeState();
-        return new JobSchedulerHealthCheck(
-            runtimeState,
-            Options.Create(new ModuleJobSchedulerOption { Role = role }));
+        result.Status.Should().Be(HealthStatus.Unhealthy);
+        result.Description.Should().Contain("store unreachable");
     }
 }

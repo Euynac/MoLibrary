@@ -1,10 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Monica.JobScheduler.EfCore.Entities;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 
 namespace Monica.JobScheduler.EfCore;
 
+/// <summary>
+/// Implements the recurring-cursor half of the relational scheduler store.
+/// </summary>
 public sealed partial class EfCoreJobSchedulerStore
 {
     /// <inheritdoc />
@@ -16,142 +20,101 @@ public sealed partial class EfCoreJobSchedulerStore
         synchronization.Validate();
         return WriteAsync(async (dbContext, token) =>
         {
-            var revision = synchronization.Template.Revision;
-            var cursor = await LoadRecurringCursorAsync(dbContext, new RecurringScheduleCursorKey
-            {
-                SchedulerScopeKey = revision.SchedulerScopeKey,
-                ActivationEpoch = revision.ActivationEpoch,
-                JobRevisionId = revision.JobRevisionId
-            }, true, token);
-            var scope = await dbContext.CatalogScopes.SingleOrDefaultAsync(
-                item => item.SchedulerScopeKey == revision.SchedulerScopeKey,
+            var now = await GetUtcNowAsync(dbContext, token);
+            var cursorEntity = await LoadCursorAsync(dbContext, synchronization.CursorKey, true, token);
+            var definition = await dbContext.Definitions.SingleOrDefaultAsync(
+                item => item.SchedulerScopeKey == synchronization.CursorKey.SchedulerScopeKey
+                        && item.OwnerKey == synchronization.CursorKey.OwnerKey
+                        && item.JobKey == synchronization.CursorKey.JobKey,
                 token);
-            if (scope?.ActiveReleaseId is null
-                || scope.ActiveIntentEpoch != scope.DesiredIntentEpoch
-                || scope.ActivationEpoch != revision.ActivationEpoch)
+            if (definition is null
+                || !definition.IsPresent
+                || definition.JobType != JobType.Recurring)
             {
+                if (cursorEntity is not null)
+                {
+                    dbContext.RecurringCursors.Remove(cursorEntity);
+                }
+
                 return new RecurringScheduleSynchronizationResult
                 {
-                    Status = RecurringScheduleSynchronizationStatus.InactiveActivation,
-                    Cursor = cursor is null ? null : ToRecurringCursor(cursor)
+                    Status = RecurringScheduleSynchronizationStatus.DefinitionNotRecurring
                 };
             }
 
-            if (synchronization.ChangeEpoch < scope.ChangeEpoch
-                || cursor is not null && synchronization.ChangeEpoch < cursor.LastSynchronizedChangeEpoch)
+            var jobDefinition = ToDefinition(definition);
+            var template = jobDefinition.CreateExecutionTemplate();
+            var schedule = jobDefinition.EffectiveConfiguration.Schedule
+                           ?? throw new InvalidOperationException(
+                               $"Recurring job '{jobDefinition.OwnerKey}/{jobDefinition.Declaration.JobKey}' has no effective schedule.");
+            var suspensionReasons = synchronization.HostSuspensionReasons
+                                    & ~JobRecurringScheduleSuspensionReason.OperatorPolicy;
+            if (jobDefinition.IsDisabled)
             {
-                return new RecurringScheduleSynchronizationResult
-                {
-                    Status = RecurringScheduleSynchronizationStatus.StaleChangeEpoch,
-                    Cursor = cursor is null ? null : ToRecurringCursor(cursor)
-                };
-            }
-            if (synchronization.ChangeEpoch > scope.ChangeEpoch)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(synchronization),
-                    synchronization.ChangeEpoch,
-                    $"Catalog change epoch {synchronization.ChangeEpoch} has not been committed.");
+                suspensionReasons |= JobRecurringScheduleSuspensionReason.OperatorPolicy;
             }
 
-            var activeDefinition = await ResolveActiveRecurringDefinitionAsync(dbContext, revision, token);
-            var activeSchedule = activeDefinition.EffectiveConfiguration.Schedule
-                ?? throw new InvalidOperationException(
-                    $"Recurring job '{revision.JobRevisionId}' did not resolve an effective schedule.");
-            if (synchronization.Template != activeDefinition.CreateExecutionTemplate()
-                || synchronization.Schedule != activeSchedule)
+            if (cursorEntity is not null)
             {
-                return new RecurringScheduleSynchronizationResult
-                {
-                    Status = RecurringScheduleSynchronizationStatus.StaleChangeEpoch,
-                    Cursor = cursor is null ? null : ToRecurringCursor(cursor)
-                };
-            }
-            var suspensionReasons = synchronization.ResolveSuspensionReasons(activeDefinition.IsDisabled);
-            if (cursor is not null)
-            {
-                var templateChanged = Deserialize<JobExecutionTemplate>(cursor.TemplateJson) != synchronization.Template;
-                var scheduleChanged = Deserialize<RecurringScheduleDefinition>(cursor.ScheduleJson)
-                                      != synchronization.Schedule;
-                var policyRevisionChanged = !string.Equals(
-                    cursor.AppliedPolicyRevision,
-                    synchronization.Template.AppliedPolicyRevision,
-                    StringComparison.Ordinal);
-                if (cursor.LastSynchronizedChangeEpoch == synchronization.ChangeEpoch
-                    && cursor.SuspensionReasons == suspensionReasons
-                    && !templateChanged
-                    && !scheduleChanged
-                    && !policyRevisionChanged)
+                var currentTemplate = Deserialize<JobExecutionTemplate>(cursorEntity.TemplateJson);
+                var currentSchedule = Deserialize<RecurringScheduleDefinition>(cursorEntity.ScheduleJson);
+                if (currentTemplate == template
+                    && currentSchedule == schedule
+                    && cursorEntity.SuspensionReasons == suspensionReasons)
                 {
                     return new RecurringScheduleSynchronizationResult
                     {
                         Status = RecurringScheduleSynchronizationStatus.Unchanged,
-                        Cursor = ToRecurringCursor(cursor)
+                        Cursor = ToCursor(cursorEntity, currentTemplate, currentSchedule)
                     };
                 }
 
-                var now = await GetUtcNowAsync(dbContext, token);
-                var resumed = cursor.SuspensionReasons != JobRecurringScheduleSuspensionReason.None
+                var scheduleChanged = currentSchedule != schedule;
+                var resumed = cursorEntity.SuspensionReasons != JobRecurringScheduleSuspensionReason.None
                               && suspensionReasons == JobRecurringScheduleSuspensionReason.None;
-                cursor.TemplateJson = Serialize(synchronization.Template);
-                cursor.ScheduleJson = Serialize(synchronization.Schedule);
-                cursor.AppliedPolicyRevision = synchronization.Template.AppliedPolicyRevision;
+                cursorEntity.TemplateJson = Serialize(template);
+                cursorEntity.ScheduleJson = Serialize(schedule);
                 if (suspensionReasons != JobRecurringScheduleSuspensionReason.None)
                 {
-                    cursor.NextOccurrenceUtcTicks = null;
+                    cursorEntity.NextOccurrenceUtcTicks = null;
                 }
                 else if (scheduleChanged || resumed)
                 {
-                    cursor.NextOccurrenceUtcTicks = ToTicks(synchronization.Schedule.GetNextOccurrence(now));
+                    // A schedule replacement and a resume are both prospective: never replay suppressed time.
+                    cursorEntity.NextOccurrenceUtcTicks = ToTicks(schedule.GetNextOccurrence(now));
                 }
-                cursor.SuspensionReasons = suspensionReasons;
-                cursor.LastSynchronizedChangeEpoch = synchronization.ChangeEpoch;
-                cursor.CursorVersion++;
-                cursor.UpdatedAtUtcTicks = ToTicks(now);
-                cursor.ConcurrencyToken = NewVersion();
+
+                cursorEntity.SuspensionReasons = suspensionReasons;
+                cursorEntity.CursorVersion++;
+                cursorEntity.UpdatedAtUtcTicks = ToTicks(now);
+                cursorEntity.ConcurrencyToken = NewVersion();
                 return new RecurringScheduleSynchronizationResult
                 {
                     Status = RecurringScheduleSynchronizationStatus.Updated,
-                    Cursor = ToRecurringCursor(cursor)
+                    Cursor = ToCursor(cursorEntity, template, schedule)
                 };
             }
 
-            var createdAtUtc = await GetUtcNowAsync(dbContext, token);
-            // Activation is the default durable admission boundary. A schedule replacement or resume persisted before
-            // the first cursor advances that boundary, so a late first synchronization cannot replay old occurrences.
-            var activationBoundaryUtc = FromTicks(await dbContext.CatalogActivations
-                .AsNoTracking()
-                .Where(item => item.SchedulerScopeKey == revision.SchedulerScopeKey
-                               && item.ActivationEpoch == revision.ActivationEpoch)
-                .Select(static item => item.ActivatedAtUtcTicks)
-                .SingleAsync(token));
-            var firstOccurrenceBoundaryUtc =
-                activeDefinition.Policy.RecurringScheduleEffectiveFromUtc is { } effectiveFromUtc
-                && effectiveFromUtc > activationBoundaryUtc
-                ? effectiveFromUtc
-                : activationBoundaryUtc;
-            cursor = new JobRecurringCursorEntity
+            var created = new JobRecurringCursorEntity
             {
-                SchedulerScopeKey = revision.SchedulerScopeKey,
-                ActivationEpoch = revision.ActivationEpoch,
-                JobRevisionId = revision.JobRevisionId,
-                TemplateJson = Serialize(synchronization.Template),
-                ScheduleJson = Serialize(synchronization.Schedule),
-                AppliedPolicyRevision = synchronization.Template.AppliedPolicyRevision,
+                SchedulerScopeKey = synchronization.CursorKey.SchedulerScopeKey,
+                OwnerKey = synchronization.CursorKey.OwnerKey,
+                JobKey = synchronization.CursorKey.JobKey,
+                TemplateJson = Serialize(template),
+                ScheduleJson = Serialize(schedule),
                 NextOccurrenceUtcTicks = suspensionReasons != JobRecurringScheduleSuspensionReason.None
                     ? null
-                    : ToTicks(synchronization.Schedule.GetNextOccurrence(firstOccurrenceBoundaryUtc)),
-                LastSynchronizedChangeEpoch = synchronization.ChangeEpoch,
-                SuspensionReasons = suspensionReasons,
+                    : ToTicks(schedule.GetNextOccurrence(now)),
                 CursorVersion = 1,
-                UpdatedAtUtcTicks = ToTicks(createdAtUtc),
+                UpdatedAtUtcTicks = ToTicks(now),
+                SuspensionReasons = suspensionReasons,
                 ConcurrencyToken = NewVersion()
             };
-            dbContext.RecurringCursors.Add(cursor);
+            dbContext.RecurringCursors.Add(created);
             return new RecurringScheduleSynchronizationResult
             {
                 Status = RecurringScheduleSynchronizationStatus.Created,
-                Cursor = ToRecurringCursor(cursor)
+                Cursor = ToCursor(created, template, schedule)
             };
         }, cancellationToken);
     }
@@ -159,36 +122,30 @@ public sealed partial class EfCoreJobSchedulerStore
     /// <inheritdoc />
     public Task<IReadOnlyList<RecurringScheduleCursor>> GetDueRecurringSchedulesAsync(
         string schedulerScopeKey,
+        string ownerKey,
         int maxCount,
         CancellationToken cancellationToken = default)
     {
         ValidateIdentity(schedulerScopeKey, nameof(schedulerScopeKey));
+        ValidateIdentity(ownerKey, nameof(ownerKey));
         if (maxCount < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(maxCount), maxCount, "Result count must be greater than zero.");
         }
-
         return ReadAsync(async (dbContext, token) =>
         {
-            var scope = await dbContext.CatalogScopes.AsNoTracking().SingleOrDefaultAsync(
-                item => item.SchedulerScopeKey == schedulerScopeKey,
-                token);
-            if (scope?.ActiveReleaseId is null || scope.ActiveIntentEpoch != scope.DesiredIntentEpoch)
-            {
-                return (IReadOnlyList<RecurringScheduleCursor>)[];
-            }
-
             var nowTicks = ToTicks(await GetUtcNowAsync(dbContext, token));
             var entities = await dbContext.RecurringCursors.AsNoTracking()
                 .Where(item => item.SchedulerScopeKey == schedulerScopeKey
-                               && item.ActivationEpoch == scope.ActivationEpoch
+                               && item.OwnerKey == ownerKey
                                && item.SuspensionReasons == JobRecurringScheduleSuspensionReason.None
+                               && item.NextOccurrenceUtcTicks != null
                                && item.NextOccurrenceUtcTicks <= nowTicks)
                 .OrderBy(item => item.NextOccurrenceUtcTicks)
-                .ThenBy(item => item.JobRevisionId)
+                .ThenBy(item => item.JobKey)
                 .Take(maxCount)
-                .ToArrayAsync(token);
-            return (IReadOnlyList<RecurringScheduleCursor>)entities.Select(ToRecurringCursor).ToArray();
+                .ToListAsync(token);
+            return (IReadOnlyList<RecurringScheduleCursor>)entities.Select(ToCursor).ToList();
         }, cancellationToken);
     }
 
@@ -201,109 +158,74 @@ public sealed partial class EfCoreJobSchedulerStore
         materialization.Validate();
         return WriteAsync(async (dbContext, token) =>
         {
-            var expectedTicks = ToTicks(materialization.ExpectedOccurrenceUtc);
-            var cursor = await LoadRecurringCursorAsync(dbContext, materialization.CursorKey, true, token);
+            var now = await GetUtcNowAsync(dbContext, token);
+            var cursor = await LoadCursorAsync(dbContext, materialization.CursorKey, true, token);
             if (cursor is null)
-            {
-                return new RecurringMaterializationResult { Status = RecurringMaterializationStatus.CursorNotFound };
-            }
-            var scope = await dbContext.CatalogScopes.SingleOrDefaultAsync(
-                item => item.SchedulerScopeKey == materialization.CursorKey.SchedulerScopeKey,
-                token);
-            if (scope?.ActiveReleaseId is null
-                || scope.ActiveIntentEpoch != scope.DesiredIntentEpoch
-                || scope.ActivationEpoch != materialization.CursorKey.ActivationEpoch)
             {
                 return new RecurringMaterializationResult
                 {
-                    Status = RecurringMaterializationStatus.InactiveActivation,
-                    Cursor = ToRecurringCursor(cursor)
+                    Status = RecurringMaterializationStatus.CursorNotFound
                 };
             }
-            var template = Deserialize<JobExecutionTemplate>(cursor.TemplateJson);
-            var activeDefinition = await ResolveActiveRecurringDefinitionAsync(dbContext, template.Revision, token);
-            var isSuspendedByOperatorPolicy = activeDefinition.IsDisabled;
-            if (cursor.SuspensionReasons != JobRecurringScheduleSuspensionReason.None
-                || isSuspendedByOperatorPolicy)
-            {
-                var suspensionReasons = cursor.SuspensionReasons;
-                if (isSuspendedByOperatorPolicy)
-                {
-                    suspensionReasons |= JobRecurringScheduleSuspensionReason.OperatorPolicy;
-                }
 
-                if (cursor.SuspensionReasons != suspensionReasons
-                    || cursor.NextOccurrenceUtcTicks is not null
-                    || cursor.LastSynchronizedChangeEpoch < scope.ChangeEpoch)
+            var template = Deserialize<JobExecutionTemplate>(cursor.TemplateJson);
+            var definitionEntity = await dbContext.Definitions.AsNoTracking().SingleOrDefaultAsync(
+                item => item.SchedulerScopeKey == materialization.CursorKey.SchedulerScopeKey
+                        && item.OwnerKey == materialization.CursorKey.OwnerKey
+                        && item.JobKey == materialization.CursorKey.JobKey,
+                token);
+            if (definitionEntity is null
+                || !definitionEntity.IsPresent
+                || definitionEntity.JobType != JobType.Recurring)
+            {
+                dbContext.RecurringCursors.Remove(cursor);
+                return new RecurringMaterializationResult
                 {
-                    cursor.SuspensionReasons = suspensionReasons;
-                    cursor.NextOccurrenceUtcTicks = null;
-                    cursor.LastSynchronizedChangeEpoch = Math.Max(
-                        cursor.LastSynchronizedChangeEpoch,
-                        scope.ChangeEpoch);
-                    cursor.CursorVersion++;
-                    cursor.UpdatedAtUtcTicks = ToTicks(await GetUtcNowAsync(dbContext, token));
-                    cursor.ConcurrencyToken = NewVersion();
-                }
+                    Status = RecurringMaterializationStatus.CursorNotFound
+                };
+            }
+
+            if (cursor.SuspensionReasons != JobRecurringScheduleSuspensionReason.None
+                || definitionEntity.IsDisabled)
+            {
                 return new RecurringMaterializationResult
                 {
                     Status = RecurringMaterializationStatus.Suspended,
-                    Cursor = ToRecurringCursor(cursor)
+                    Cursor = ToCursor(cursor, template)
                 };
             }
-            if (!string.Equals(
-                    cursor.AppliedPolicyRevision,
-                    activeDefinition.Policy.ConcurrencyStamp,
-                    StringComparison.Ordinal)
-                || !string.Equals(
-                    template.AppliedPolicyRevision,
-                    activeDefinition.Policy.ConcurrencyStamp,
-                    StringComparison.Ordinal))
-            {
-                return new RecurringMaterializationResult
-                {
-                    Status = RecurringMaterializationStatus.StaleCursor,
-                    Cursor = ToRecurringCursor(cursor)
-                };
-            }
+            var expectedOccurrenceTicks = ToTicks(materialization.ExpectedOccurrenceUtc);
             if (cursor.CursorVersion != materialization.ExpectedVersion
-                || cursor.NextOccurrenceUtcTicks != expectedTicks)
+                || cursor.NextOccurrenceUtcTicks != expectedOccurrenceTicks)
             {
                 return new RecurringMaterializationResult
                 {
                     Status = RecurringMaterializationStatus.StaleCursor,
-                    Cursor = ToRecurringCursor(cursor)
+                    Cursor = ToCursor(cursor, template)
                 };
             }
 
-            var now = await GetUtcNowAsync(dbContext, token);
-            if (expectedTicks > ToTicks(now))
+            if (expectedOccurrenceTicks > ToTicks(now))
             {
                 return new RecurringMaterializationResult
                 {
                     Status = RecurringMaterializationStatus.NotDue,
-                    Cursor = ToRecurringCursor(cursor)
+                    Cursor = ToCursor(cursor, template)
                 };
             }
 
             var request = new JobEnqueueRequest
             {
                 InstanceId = materialization.InstanceId,
-                SchedulerScopeKey = template.Revision.SchedulerScopeKey,
-                JobKey = template.Revision.JobKey,
-                AvailableAtUtc = FromTicks(expectedTicks),
-                EnqueueReason = $"Recurring occurrence {FromTicks(expectedTicks):O} materialized"
+                SchedulerScopeKey = cursor.SchedulerScopeKey,
+                OwnerKey = cursor.OwnerKey,
+                JobKey = cursor.JobKey,
+                AvailableAtUtc = materialization.ExpectedOccurrenceUtc,
+                EnqueueReason = $"Recurring occurrence {materialization.ExpectedOccurrenceUtc:O} materialized"
             };
-            var outstandingCount = await dbContext.Executions.CountAsync(
-                item => item.SchedulerScopeKey == template.Revision.SchedulerScopeKey
-                        && item.JobKey == template.Revision.JobKey
-                        && (item.State == JobExecutionState.Queued || item.State == JobExecutionState.Running),
-                token);
-            var gate = await dbContext.ExecutionGates.SingleAsync(
-                item => item.SchedulerScopeKey == template.Revision.SchedulerScopeKey
-                        && item.JobKey == template.Revision.JobKey,
-                token);
-            JobExecutionSkipReason? skipReason = outstandingCount >= gate.MaxConcurrency
+            var outstandingCount = await CountOutstandingExecutionsAsync(dbContext, template, token);
+            var currentMaxConcurrency = await ResolveCurrentMaxConcurrencyAsync(dbContext, template, token);
+            JobExecutionSkipReason? skipReason = outstandingCount >= currentMaxConcurrency
                 ? JobExecutionSkipReason.RecurringCapacityUnavailable
                 : null;
             var execution = await EnqueueCapturedExecutionAsync(
@@ -313,47 +235,30 @@ public sealed partial class EfCoreJobSchedulerStore
                 now,
                 token,
                 JobExecutionOrigin.RecurringSchedule,
-                FromTicks(expectedTicks),
+                materialization.ExpectedOccurrenceUtc,
                 skipReason,
                 skipReason is null
                     ? request.EnqueueReason
-                    : $"Recurring occurrence {FromTicks(expectedTicks):O} skipped because {outstandingCount} outstanding "
-                      + $"execution(s) reached the configured capacity of {gate.MaxConcurrency}");
-            cursor.NextOccurrenceUtcTicks = ToTicks(materialization.NextOccurrenceUtc);
+                    : $"Recurring occurrence {materialization.ExpectedOccurrenceUtc:O} skipped because " +
+                      $"{outstandingCount} outstanding execution(s) reached the configured capacity of " +
+                      $"{currentMaxConcurrency}");
+            cursor.NextOccurrenceUtcTicks = materialization.NextOccurrenceUtc is { } next
+                ? ToTicks(next)
+                : null;
             cursor.CursorVersion++;
             cursor.UpdatedAtUtcTicks = ToTicks(now);
             cursor.ConcurrencyToken = NewVersion();
+
             return new RecurringMaterializationResult
             {
                 Status = RecurringMaterializationStatus.Materialized,
                 Execution = execution,
-                Cursor = ToRecurringCursor(cursor)
+                Cursor = ToCursor(cursor, template)
             };
         }, cancellationToken);
     }
 
-    private async Task<ActiveJobDefinition> ResolveActiveRecurringDefinitionAsync(
-        JobSchedulerDbContext dbContext,
-        JobRevisionIdentity revision,
-        CancellationToken cancellationToken)
-    {
-        var definition = await ResolveActiveDefinitionAsync(
-            dbContext,
-            revision.SchedulerScopeKey,
-            revision.JobKey,
-            revision.OwnerKey,
-            revision.JobRevisionId,
-            cancellationToken);
-        if (definition.ActivationEpoch != revision.ActivationEpoch)
-        {
-            throw new InvalidOperationException(
-                $"Job revision '{revision.JobRevisionId}' no longer belongs to the active catalog.");
-        }
-
-        return definition;
-    }
-
-    private static Task<JobRecurringCursorEntity?> LoadRecurringCursorAsync(
+    private static Task<JobRecurringCursorEntity?> LoadCursorAsync(
         JobSchedulerDbContext dbContext,
         RecurringScheduleCursorKey key,
         bool tracked,
@@ -366,24 +271,85 @@ public sealed partial class EfCoreJobSchedulerStore
         }
         return query.SingleOrDefaultAsync(item =>
             item.SchedulerScopeKey == key.SchedulerScopeKey
-            && item.ActivationEpoch == key.ActivationEpoch
-            && item.JobRevisionId == key.JobRevisionId,
-            cancellationToken);
+            && item.OwnerKey == key.OwnerKey
+            && item.JobKey == key.JobKey, cancellationToken);
     }
 
-    private static RecurringScheduleCursor ToRecurringCursor(JobRecurringCursorEntity entity) => new()
+    private async Task ApplyPolicyToRecurringCursorAsync(
+        JobSchedulerDbContext dbContext,
+        JobDefinition definition,
+        DateTimeOffset updatedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (definition.Declaration.JobType != JobType.Recurring)
+        {
+            return;
+        }
+
+        var key = new RecurringScheduleCursorKey
+        {
+            SchedulerScopeKey = definition.SchedulerScopeKey,
+            OwnerKey = definition.OwnerKey,
+            JobKey = definition.Declaration.JobKey
+        };
+        var cursor = await LoadCursorAsync(dbContext, key, true, cancellationToken);
+        if (cursor is null)
+        {
+            return;
+        }
+
+        var effective = definition.EffectiveConfiguration;
+        var schedule = effective.Schedule
+                       ?? throw new InvalidOperationException(
+                           $"Recurring job '{definition.OwnerKey}/{definition.Declaration.JobKey}' has no effective schedule.");
+        var template = definition.CreateExecutionTemplate();
+        var currentSchedule = Deserialize<RecurringScheduleDefinition>(cursor.ScheduleJson);
+        var scheduleChanged = currentSchedule != schedule;
+        var wasSuspended = cursor.SuspensionReasons != JobRecurringScheduleSuspensionReason.None;
+        var hostSuspensionReasons = cursor.SuspensionReasons
+                                    & ~JobRecurringScheduleSuspensionReason.OperatorPolicy;
+        var suspensionReasons = effective.IsDisabled
+            ? hostSuspensionReasons | JobRecurringScheduleSuspensionReason.OperatorPolicy
+            : hostSuspensionReasons;
+
+        cursor.TemplateJson = Serialize(template);
+        cursor.ScheduleJson = Serialize(schedule);
+        if (suspensionReasons != JobRecurringScheduleSuspensionReason.None)
+        {
+            cursor.NextOccurrenceUtcTicks = null;
+        }
+        else if (scheduleChanged || wasSuspended)
+        {
+            // A policy schedule replacement and a resume are both prospective: never replay suppressed time.
+            cursor.NextOccurrenceUtcTicks = ToTicks(schedule.GetNextOccurrence(updatedAtUtc));
+        }
+
+        cursor.SuspensionReasons = suspensionReasons;
+        cursor.CursorVersion++;
+        cursor.UpdatedAtUtcTicks = ToTicks(updatedAtUtc);
+        cursor.ConcurrencyToken = NewVersion();
+    }
+
+    private static RecurringScheduleCursor ToCursor(JobRecurringCursorEntity entity) =>
+        ToCursor(
+            entity,
+            Deserialize<JobExecutionTemplate>(entity.TemplateJson),
+            Deserialize<RecurringScheduleDefinition>(entity.ScheduleJson));
+
+    private static RecurringScheduleCursor ToCursor(
+        JobRecurringCursorEntity entity,
+        JobExecutionTemplate template,
+        RecurringScheduleDefinition? schedule = null) => new()
     {
         Key = new RecurringScheduleCursorKey
         {
             SchedulerScopeKey = entity.SchedulerScopeKey,
-            ActivationEpoch = entity.ActivationEpoch,
-            JobRevisionId = entity.JobRevisionId
+            OwnerKey = entity.OwnerKey,
+            JobKey = entity.JobKey
         },
-        Template = Deserialize<JobExecutionTemplate>(entity.TemplateJson),
-        Schedule = Deserialize<RecurringScheduleDefinition>(entity.ScheduleJson),
-        AppliedPolicyRevision = entity.AppliedPolicyRevision,
+        Template = template,
+        Schedule = schedule ?? Deserialize<RecurringScheduleDefinition>(entity.ScheduleJson),
         NextOccurrenceUtc = FromTicks(entity.NextOccurrenceUtcTicks),
-        LastSynchronizedChangeEpoch = entity.LastSynchronizedChangeEpoch,
         SuspensionReasons = entity.SuspensionReasons,
         Version = entity.CursorVersion,
         UpdatedAtUtc = FromTicks(entity.UpdatedAtUtcTicks)

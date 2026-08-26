@@ -2,19 +2,18 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.Modules;
 
 namespace Monica.JobScheduler.Services;
 
 /// <summary>
-/// Admits local typed triggered jobs directly into the durable queue with an executable-revision fence.
+/// Admits local typed triggered jobs directly into the durable queue under this host's owner identity.
 /// </summary>
 internal sealed class TriggeredJobManager(
     IReadOnlyList<LocalJobDefinition> localDefinitions,
     IJobSchedulerStore store,
-    JobSchedulerHostIdentity identity,
     IOptions<ModuleJobSchedulerOption> options,
     TimeProvider timeProvider) : ITriggeredJobManager
 {
@@ -40,23 +39,15 @@ internal sealed class TriggeredJobManager(
                 $"No local triggered job accepts arguments of type '{typeof(TArgs).FullName}'.");
         }
 
-        var declaration = localDefinition.Declaration;
-        var ownerId = identity.LocalOwnerId
-                      ?? throw new InvalidOperationException("The current host has no worker owner identity.");
-        var revision = identity.LocalWorkerRevisionId
-                       ?? throw new InvalidOperationException("The current host has no worker revision identity.");
+        var schedulerOptions = options.Value;
         var instanceId = Guid.NewGuid().ToString("N");
         await store.EnqueueAsync(new JobEnqueueRequest
         {
             InstanceId = instanceId,
-            SchedulerScopeKey = identity.ReleaseStage.Manifest.SchedulerScopeKey,
-            JobKey = declaration.JobKey,
-            ExpectedOwnerId = ownerId,
-            ExpectedJobRevisionId = JobCatalogHash.ComputeJobRevision(
-                ownerId,
-                revision,
-                declaration),
-            JobArgs = JsonSerializer.Serialize(args, options.Value.JobArgsSerializerOptions),
+            SchedulerScopeKey = schedulerOptions.SchedulerScopeKey,
+            OwnerKey = schedulerOptions.GetProjectName(),
+            JobKey = localDefinition.Declaration.JobKey,
+            JobArgs = JsonSerializer.Serialize(args, schedulerOptions.JobArgsSerializerOptions),
             AvailableAtUtc = timeProvider.GetUtcNow().Add(delay ?? TimeSpan.Zero),
             EnqueueReason = delay is null
                 ? "Triggered execution enqueued"
@@ -71,7 +62,7 @@ internal sealed class TriggeredJobManager(
         CancellationToken cancellationToken = default)
     {
         return store.RequestCancellationAsync(
-            identity.ReleaseStage.Manifest.SchedulerScopeKey,
+            options.Value.SchedulerScopeKey,
             instanceId,
             "Cancellation requested by application",
             cancellationToken);

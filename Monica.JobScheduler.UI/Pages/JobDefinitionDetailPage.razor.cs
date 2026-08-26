@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Monica.Core.Results;
+using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Components;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.UIJobScheduler.Components;
@@ -18,9 +19,15 @@ namespace Monica.JobScheduler.UI.Pages;
 public partial class JobDefinitionDetailPage : IAsyncDisposable
 {
     /// <summary>
-    /// Gets the route pattern for one active logical job.
+    /// Gets the route pattern for one owner-scoped job definition.
     /// </summary>
-    public const string PAGE_URL = "/job-scheduler/catalog/{JobKey}";
+    public const string PAGE_URL = "/job-scheduler/catalog/{OwnerKey}/{JobKey}";
+
+    /// <summary>
+    /// Gets the route-provided owner key.
+    /// </summary>
+    [Parameter]
+    public string OwnerKey { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets the route-provided logical job key.
@@ -56,17 +63,16 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
 
     protected override async Task OnParametersSetAsync()
     {
-        var jobKey = JobKey;
-        if (PageState is not null
-            && string.Equals(PageState.JobKey, jobKey, StringComparison.Ordinal))
+        var jobId = new JobId(OwnerKey, JobKey);
+        if (PageState is not null && PageState.JobId == jobId)
         {
             return;
         }
 
-        await ReplaceStateAsync(jobKey);
+        await ReplaceStateAsync(jobId);
     }
 
-    private async Task ReplaceStateAsync(string jobKey)
+    private async Task ReplaceStateAsync(JobId jobId)
     {
         var version = Interlocked.Increment(ref _stateVersion);
         var previousState = PageState;
@@ -88,7 +94,7 @@ public partial class JobDefinitionDetailPage : IAsyncDisposable
             return;
         }
 
-        var state = PageStateFactory.Create(jobKey);
+        var state = PageStateFactory.Create(jobId);
         Func<Task> stateChangedHandler = () => HandleStateChangedAsync(state, version);
         state.Changed += stateChangedHandler;
         if (!IsCurrentStateVersion(version))

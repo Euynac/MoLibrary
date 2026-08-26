@@ -13,9 +13,8 @@ internal static class JobExecutionAdmission
     {
         InstanceId = command.InstanceId,
         SchedulerScopeKey = command.SchedulerScopeKey,
+        OwnerKey = command.OwnerKey,
         JobKey = command.JobKey,
-        ExpectedOwnerId = command.ExpectedOwnerId,
-        ExpectedJobRevisionId = command.ExpectedJobRevisionId,
         EnqueueReason = RECURRING_RUN_NOW_REASON
     };
 

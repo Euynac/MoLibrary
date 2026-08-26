@@ -1,17 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Monica.JobScheduler.Exceptions;
-using Monica.JobScheduler.Exceptions.Catalog;
 using Monica.JobScheduler.EfCore.Entities;
+using Monica.JobScheduler.Exceptions;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 
 namespace Monica.JobScheduler.EfCore;
 
 public sealed partial class EfCoreJobSchedulerStore
 {
-    private const int CLEANUP_JOB_KEY_PAGE_SIZE = 256;
+    private const int CLEANUP_DEFINITION_PAGE_SIZE = 256;
 
     /// <inheritdoc />
     public Task<JobExecutionInstance> EnqueueAsync(
@@ -34,7 +33,7 @@ public sealed partial class EfCoreJobSchedulerStore
                 return ResolveIdempotentEnqueue(request, existing, JobExecutionOrigin.Triggered);
             }
 
-            var template = await ResolveActiveExecutionTemplateAsync(dbContext, request, token);
+            var template = await ResolveTriggeredExecutionTemplateAsync(dbContext, request, token);
             return await EnqueueCapturedExecutionAsync(
                 dbContext,
                 request,
@@ -67,7 +66,7 @@ public sealed partial class EfCoreJobSchedulerStore
                 return ResolveIdempotentEnqueue(request, existing, JobExecutionOrigin.RecurringRunNow);
             }
 
-            var template = await ResolveActiveRecurringExecutionTemplateAsync(dbContext, command, token);
+            var template = await ResolveRecurringExecutionTemplateAsync(dbContext, command, token);
             return await EnqueueCapturedExecutionAsync(
                 dbContext,
                 request,
@@ -76,36 +75,6 @@ public sealed partial class EfCoreJobSchedulerStore
                 token,
                 JobExecutionOrigin.RecurringRunNow);
         }, cancellationToken);
-    }
-
-    private static JobExecutionInstance ResolveIdempotentEnqueue(
-        JobEnqueueRequest request,
-        JobExecutionEntity existing,
-        JobExecutionOrigin expectedOrigin)
-    {
-        var revision = Deserialize<JobExecutionTemplate>(existing.TemplateJson).Revision;
-        var expectedTemplateMatches = string.Equals(request.JobKey, revision.JobKey, StringComparison.Ordinal)
-                                      && (request.ExpectedOwnerId is null
-                                          || string.Equals(
-                                              request.ExpectedOwnerId,
-                                              revision.OwnerKey,
-                                              StringComparison.Ordinal))
-                                      && (request.ExpectedJobRevisionId is null
-                                          || string.Equals(
-                                              request.ExpectedJobRevisionId,
-                                              revision.JobRevisionId,
-                                              StringComparison.Ordinal));
-        if (!expectedTemplateMatches
-            || existing.Origin != expectedOrigin
-            || !string.Equals(existing.JobArgs, request.JobArgs, StringComparison.Ordinal)
-            || (request.AvailableAtUtc is { } requestedAvailability
-                && existing.AvailableAtUtcTicks != ToTicks(requestedAvailability)))
-        {
-            throw new InvalidOperationException(
-                $"Execution identifier '{request.InstanceId}' was reused for a different enqueue request.");
-        }
-
-        return ToExecution(existing);
     }
 
     /// <inheritdoc />
@@ -140,6 +109,10 @@ public sealed partial class EfCoreJobSchedulerStore
         {
             var filtered = dbContext.Executions.AsNoTracking()
                 .Where(item => item.SchedulerScopeKey == query.SchedulerScopeKey);
+            if (!string.IsNullOrWhiteSpace(query.OwnerKey))
+            {
+                filtered = filtered.Where(item => item.OwnerKey == query.OwnerKey);
+            }
             if (!string.IsNullOrWhiteSpace(query.JobKey))
             {
                 filtered = filtered.Where(item => item.JobKey == query.JobKey);
@@ -222,39 +195,49 @@ public sealed partial class EfCoreJobSchedulerStore
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyDictionary<string, JobExecutionInstance?>> GetLatestExecutionsAsync(
+    public Task<IReadOnlyDictionary<JobId, JobExecutionInstance?>> GetLatestExecutionsAsync(
         string schedulerScopeKey,
-        IEnumerable<string> jobKeys,
+        string ownerKey,
+        IEnumerable<JobId> jobIds,
         CancellationToken cancellationToken = default)
     {
         ValidateIdentity(schedulerScopeKey, nameof(schedulerScopeKey));
-        ArgumentNullException.ThrowIfNull(jobKeys);
-        var keys = jobKeys.Distinct(StringComparer.Ordinal).ToArray();
-        foreach (var jobKey in keys)
+        ValidateIdentity(ownerKey, nameof(ownerKey));
+        ArgumentNullException.ThrowIfNull(jobIds);
+        var ids = jobIds.Distinct().ToArray();
+        foreach (var jobId in ids)
         {
-            JobSchedulerIdentity.ValidateJobKey(jobKey, nameof(jobKeys));
+            jobId.Validate();
+            if (!string.Equals(jobId.OwnerKey, ownerKey, StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"Requested job '{jobId}' belongs to owner '{jobId.OwnerKey}', not '{ownerKey}'.",
+                    nameof(jobIds));
+            }
         }
         return ReadAsync(async (dbContext, token) =>
         {
-            var latest = new Dictionary<string, JobExecutionInstance?>(keys.Length, StringComparer.Ordinal);
-            foreach (var jobKey in keys)
+            var latest = new Dictionary<JobId, JobExecutionInstance?>(ids.Length);
+            foreach (var jobId in ids)
             {
                 var entity = await dbContext.Executions.AsNoTracking()
-                    .Where(item => item.SchedulerScopeKey == schedulerScopeKey && item.JobKey == jobKey)
+                    .Where(item => item.SchedulerScopeKey == schedulerScopeKey
+                                   && item.OwnerKey == ownerKey
+                                   && item.JobKey == jobId.JobKey)
                     .OrderByDescending(item => item.CreatedAtUtcTicks)
                     .ThenByDescending(item => item.InstanceId)
                     .FirstOrDefaultAsync(token);
-                latest.Add(jobKey, entity is null ? null : ToExecution(entity));
+                latest.Add(jobId, entity is null ? null : ToExecution(entity));
             }
 
-            return (IReadOnlyDictionary<string, JobExecutionInstance?>)latest;
+            return (IReadOnlyDictionary<JobId, JobExecutionInstance?>)latest;
         }, cancellationToken);
     }
 
     /// <inheritdoc />
     public Task<IReadOnlyList<string>> GetExecutionCleanupCandidatesAsync(
         string schedulerScopeKey,
-        IReadOnlyDictionary<string, JobHistoryRetentionPolicy> retentionPolicies,
+        IReadOnlyDictionary<JobId, JobHistoryRetentionPolicy> retentionPolicies,
         int maxRetainedOrphanedExecutions,
         int maxDeletions,
         CancellationToken cancellationToken = default)
@@ -280,23 +263,25 @@ public sealed partial class EfCoreJobSchedulerStore
         {
             var now = await GetUtcNowAsync(dbContext, token);
             var candidates = new Dictionary<string, long>(StringComparer.Ordinal);
-            var jobKeyOffset = 0;
+            var definitionOffset = 0;
             while (true)
             {
-                // Job keys are paged independently from execution rows. Each per-job query below is also capped by the
-                // global result bound, so no cleanup pass materializes an unbounded terminal history.
-                var jobKeys = await TerminalExecutions(dbContext, schedulerScopeKey)
-                    .Select(static item => item.JobKey)
+                // Definitions are paged independently from execution rows. Each per-definition query below is also
+                // capped by the global result bound, so no cleanup pass materializes an unbounded terminal history.
+                var definitions = await TerminalExecutions(dbContext, schedulerScopeKey)
+                    .Select(item => new { item.OwnerKey, item.JobKey })
                     .Distinct()
-                    .OrderBy(static jobKey => jobKey)
-                    .Skip(jobKeyOffset)
-                    .Take(CLEANUP_JOB_KEY_PAGE_SIZE)
+                    .OrderBy(item => item.OwnerKey)
+                    .ThenBy(item => item.JobKey)
+                    .Skip(definitionOffset)
+                    .Take(CLEANUP_DEFINITION_PAGE_SIZE)
                     .ToArrayAsync(token);
-                foreach (var jobKey in jobKeys)
+                foreach (var definition in definitions)
                 {
                     var terminal = TerminalExecutions(dbContext, schedulerScopeKey)
-                        .Where(item => item.JobKey == jobKey);
-                    var hasPolicy = retentionPolicies.TryGetValue(jobKey, out var policy);
+                        .Where(item => item.OwnerKey == definition.OwnerKey && item.JobKey == definition.JobKey);
+                    var jobId = new JobId(definition.OwnerKey, definition.JobKey);
+                    var hasPolicy = retentionPolicies.TryGetValue(jobId, out var policy);
                     var maxRecords = hasPolicy ? policy!.MaxRecords : maxRetainedOrphanedExecutions;
                     if (maxRecords > 0)
                     {
@@ -322,12 +307,12 @@ public sealed partial class EfCoreJobSchedulerStore
                     }
                 }
 
-                if (jobKeys.Length < CLEANUP_JOB_KEY_PAGE_SIZE)
+                if (definitions.Length < CLEANUP_DEFINITION_PAGE_SIZE)
                 {
                     break;
                 }
 
-                jobKeyOffset += jobKeys.Length;
+                definitionOffset += definitions.Length;
             }
 
             return (IReadOnlyList<string>)candidates
@@ -410,125 +395,6 @@ public sealed partial class EfCoreJobSchedulerStore
     }
 
     /// <inheritdoc />
-    public Task<WorkerCapabilityLease> RegisterWorkerCapabilityAsync(
-        WorkerCapabilityRegistration registration,
-        TimeSpan leaseDuration,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(registration);
-        registration.Validate();
-        ValidatePositiveDuration(leaseDuration, nameof(leaseDuration));
-        return WriteAsync(async (dbContext, token) =>
-        {
-            var now = await GetUtcNowAsync(dbContext, token);
-            var nowTicks = ToTicks(now);
-            // Worker registration is the churn boundary that creates capability rows, so it also removes expired rows
-            // for the same scope without introducing a separate cleanup service.
-            await dbContext.WorkerCapabilities
-                .Where(item => item.SchedulerScopeKey == registration.SchedulerScopeKey
-                               && item.LeaseExpiresAtUtcTicks <= nowTicks)
-                .ExecuteDeleteAsync(token);
-            var entity = await dbContext.WorkerCapabilities.SingleOrDefaultAsync(
-                item => item.SchedulerScopeKey == registration.SchedulerScopeKey
-                        && item.WorkerInstanceId == registration.WorkerInstanceId,
-                token);
-            if (entity is null)
-            {
-                entity = new JobWorkerCapabilityEntity
-                {
-                    SchedulerScopeKey = registration.SchedulerScopeKey,
-                    WorkerInstanceId = registration.WorkerInstanceId,
-                    ConcurrencyToken = NewVersion()
-                };
-                dbContext.WorkerCapabilities.Add(entity);
-            }
-            else
-            {
-                entity.ConcurrencyToken = NewVersion();
-            }
-
-            entity.OwnerKey = registration.OwnerKey;
-            entity.WorkerRevisionId = registration.WorkerRevisionId;
-            entity.JobRevisionIdsJson = Serialize(registration.JobRevisionIds.Order(StringComparer.Ordinal).ToArray());
-            entity.LeaseToken = NewToken();
-            entity.LeaseExpiresAtUtcTicks = ToTicks(now.Add(leaseDuration));
-            return ToCapability(entity);
-        }, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public Task<WorkerCapabilityLease?> RenewWorkerCapabilityAsync(
-        WorkerCapabilityLeaseKey leaseKey,
-        TimeSpan leaseDuration,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(leaseKey);
-        leaseKey.Validate();
-        ValidatePositiveDuration(leaseDuration, nameof(leaseDuration));
-        return WriteAsync(async (dbContext, token) =>
-        {
-            var now = await GetUtcNowAsync(dbContext, token);
-            var entity = await LoadCurrentCapabilityAsync(dbContext, leaseKey, now, token);
-            if (entity is null)
-            {
-                return null;
-            }
-
-            entity.LeaseExpiresAtUtcTicks = ToTicks(now.Add(leaseDuration));
-            entity.ConcurrencyToken = NewVersion();
-            return ToCapability(entity);
-        }, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public Task<bool> ReleaseWorkerCapabilityAsync(
-        WorkerCapabilityLeaseKey leaseKey,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(leaseKey);
-        leaseKey.Validate();
-        return WriteAsync(async (dbContext, token) =>
-        {
-            var entity = await dbContext.WorkerCapabilities.SingleOrDefaultAsync(
-                item => item.SchedulerScopeKey == leaseKey.SchedulerScopeKey
-                        && item.WorkerInstanceId == leaseKey.WorkerInstanceId
-                        && item.LeaseToken == leaseKey.LeaseToken,
-                token);
-            if (entity is null)
-            {
-                return false;
-            }
-
-            dbContext.WorkerCapabilities.Remove(entity);
-            return true;
-        }, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public Task<IReadOnlyList<WorkerCapabilityLease>> GetActiveWorkerCapabilitiesAsync(
-        string schedulerScopeKey,
-        string? ownerKey = null,
-        CancellationToken cancellationToken = default)
-    {
-        ValidateIdentity(schedulerScopeKey, nameof(schedulerScopeKey));
-        return ReadAsync(async (dbContext, token) =>
-        {
-            var nowTicks = ToTicks(await GetUtcNowAsync(dbContext, token));
-            var query = dbContext.WorkerCapabilities.AsNoTracking()
-                .Where(item => item.SchedulerScopeKey == schedulerScopeKey && item.LeaseExpiresAtUtcTicks > nowTicks);
-            if (ownerKey is not null)
-            {
-                query = query.Where(item => item.OwnerKey == ownerKey);
-            }
-
-            var entities = await query.OrderBy(item => item.OwnerKey)
-                .ThenBy(item => item.WorkerInstanceId)
-                .ToArrayAsync(token);
-            return (IReadOnlyList<WorkerCapabilityLease>)entities.Select(ToCapability).ToArray();
-        }, cancellationToken);
-    }
-
-    /// <inheritdoc />
     public Task<IReadOnlyList<JobExecutionLease>> ClaimAsync(
         JobClaimRequest request,
         CancellationToken cancellationToken = default)
@@ -538,27 +404,18 @@ public sealed partial class EfCoreJobSchedulerStore
         return WriteAsync(async (dbContext, token) =>
         {
             var now = await GetUtcNowAsync(dbContext, token);
-            var capability = await LoadCurrentCapabilityAsync(dbContext, request.CapabilityLeaseKey, now, token)
-                ?? throw new InvalidOperationException(
-                    $"Worker capability lease for '{request.CapabilityLeaseKey.WorkerInstanceId}' is expired or fenced.");
-            var revisionIds = Deserialize<string[]>(capability.JobRevisionIdsJson);
             var nowTicks = ToTicks(now);
-            var currentActivationEpoch = await dbContext.CatalogScopes.AsNoTracking()
-                .Where(item => item.SchedulerScopeKey == capability.SchedulerScopeKey)
-                .Select(item => item.ActiveIntentEpoch == item.DesiredIntentEpoch ? item.ActivationEpoch : 0)
-                .SingleOrDefaultAsync(token);
+            var jobKeys = request.JobKeys.ToArray();
             var eligibleExecutions = dbContext.Executions
-                .Where(item => item.SchedulerScopeKey == capability.SchedulerScopeKey
+                .Where(item => item.SchedulerScopeKey == request.SchedulerScopeKey
                                && item.State == JobExecutionState.Queued
-                               && item.ActivationEpoch == currentActivationEpoch
                                && item.AvailableAtUtcTicks <= nowTicks
-                               && item.OwnerKey == capability.OwnerKey
-                               && item.WorkerRevisionId == capability.WorkerRevisionId
-                               && revisionIds.Contains(item.JobRevisionId));
+                               && item.OwnerKey == request.OwnerKey
+                               && jobKeys.Contains(item.JobKey));
             var candidateBudget = request.GetCandidateBudget();
 
             // The fair pass takes only the oldest eligible row for each logical job. Consequently a deep queue for
-            // one saturated gate consumes one candidate, leaving other JobKeys visible within the fixed budget.
+            // one saturated gate consumes one candidate, leaving other job keys visible within the fixed budget.
             var fairCandidates = await eligibleExecutions
                 .Where(candidate => candidate.InstanceId == eligibleExecutions
                     .Where(item => item.JobKey == candidate.JobKey)
@@ -587,15 +444,13 @@ public sealed partial class EfCoreJobSchedulerStore
                     .ToArrayAsync(token)
                 : [];
             var candidates = fairCandidates.Concat(fillCandidates).ToArray();
-            var candidateJobKeys = candidates
-                .Select(item => item.JobKey)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-            var gatesByJobKey = (await dbContext.ExecutionGates
-                    .Where(item => item.SchedulerScopeKey == capability.SchedulerScopeKey
-                                   && candidateJobKeys.Contains(item.JobKey))
-                    .ToArrayAsync(token))
-                .ToDictionary(item => item.JobKey, StringComparer.Ordinal);
+
+
+            var gates = await dbContext.ExecutionGates
+                .Where(item => item.SchedulerScopeKey == request.SchedulerScopeKey
+                               && item.OwnerKey == request.OwnerKey)
+                .ToArrayAsync(token);
+            var gatesByJobKey = gates.ToDictionary(static item => item.JobKey, StringComparer.Ordinal);
             var leases = new List<JobExecutionLease>(request.MaxCount);
             foreach (var execution in candidates)
             {
@@ -607,7 +462,7 @@ public sealed partial class EfCoreJobSchedulerStore
                 if (!gatesByJobKey.TryGetValue(execution.JobKey, out var gate))
                 {
                     throw new InvalidOperationException(
-                        $"Execution gate '{execution.JobKey}' was not initialized by catalog activation.");
+                        $"Execution gate '{execution.OwnerKey}/{execution.JobKey}' has no concurrency-gate projection.");
                 }
                 if (gate.ActiveCount >= gate.MaxConcurrency)
                 {
@@ -620,14 +475,13 @@ public sealed partial class EfCoreJobSchedulerStore
                 execution.StartedAtUtcTicks = nowTicks;
                 execution.CompletedAtUtcTicks = null;
                 execution.ExecutionAttempt++;
-                execution.RunningWorkerInstanceId = capability.WorkerInstanceId;
+                execution.RunningWorkerInstanceId = request.WorkerInstanceId;
                 execution.ExecutionLeaseToken = NewToken();
-                execution.CapabilityLeaseToken = capability.LeaseToken;
                 execution.LeaseExpiresAtUtcTicks = ToTicks(now.Add(request.LeaseDuration));
                 execution.CancellationRequestedAtUtcTicks = null;
                 execution.ConcurrencyToken = NewVersion();
                 AddHistory(execution, now, JobExecutionHistoryKind.StateTransition,
-                    $"Claimed by worker '{capability.WorkerInstanceId}'", capability.WorkerInstanceId,
+                    $"Claimed by worker '{request.WorkerInstanceId}'", request.WorkerInstanceId,
                     JobExecutionState.Queued, JobExecutionState.Running);
                 leases.Add(new JobExecutionLease
                 {
@@ -636,7 +490,7 @@ public sealed partial class EfCoreJobSchedulerStore
                     {
                         SchedulerScopeKey = execution.SchedulerScopeKey,
                         InstanceId = execution.InstanceId,
-                        WorkerInstanceId = capability.WorkerInstanceId,
+                        WorkerInstanceId = request.WorkerInstanceId,
                         LeaseToken = execution.ExecutionLeaseToken
                     }
                 });
@@ -828,23 +682,16 @@ public sealed partial class EfCoreJobSchedulerStore
                 .ThenBy(item => item.InstanceId)
                 .Take(request.MaxCount)
                 .ToArrayAsync(token);
-            var scope = await dbContext.CatalogScopes.AsNoTracking().SingleOrDefaultAsync(
-                item => item.SchedulerScopeKey == request.SchedulerScopeKey,
-                token);
             foreach (var execution in expired)
             {
                 var worker = execution.RunningWorkerInstanceId;
                 await ReleaseExecutionGateAsync(dbContext, execution, token);
-                var superseded = scope is null || execution.ActivationEpoch != scope.ActivationEpoch;
-                if (superseded || execution.CancellationRequestedAtUtcTicks.HasValue)
+                if (execution.CancellationRequestedAtUtcTicks.HasValue)
                 {
                     execution.State = JobExecutionState.Cancelled;
                     execution.CompletedAtUtcTicks = nowTicks;
                     AddHistory(execution, now, JobExecutionHistoryKind.StateTransition,
-                        superseded
-                            ? "Expired lease from a superseded catalog was cancelled"
-                            : "Expired lease recovered after cancellation was requested",
-                        worker,
+                        "Expired lease recovered after cancellation was requested", worker,
                         JobExecutionState.Running, JobExecutionState.Cancelled);
                 }
                 else
@@ -864,7 +711,82 @@ public sealed partial class EfCoreJobSchedulerStore
         }, cancellationToken);
     }
 
-    private async Task<JobExecutionInstance> EnqueueCapturedExecutionAsync(
+    internal async Task<JobDefinition> ResolvePresentDefinitionAsync(
+        JobSchedulerDbContext dbContext,
+        string schedulerScopeKey,
+        string ownerKey,
+        string jobKey,
+        CancellationToken cancellationToken)
+    {
+        var entity = await dbContext.Definitions.SingleOrDefaultAsync(
+            item => item.SchedulerScopeKey == schedulerScopeKey
+                    && item.OwnerKey == ownerKey
+                    && item.JobKey == jobKey,
+            cancellationToken)
+            ?? throw new JobDefinitionNotFoundException(
+                $"Job '{ownerKey}/{jobKey}' was not found in scope '{schedulerScopeKey}'.");
+        if (!entity.IsPresent)
+        {
+            throw new JobDefinitionNotFoundException(
+                $"Job '{ownerKey}/{jobKey}' is absent from the latest owner snapshot in scope '{schedulerScopeKey}'.");
+        }
+
+        return ToDefinition(entity);
+    }
+
+    private async Task<JobExecutionTemplate> ResolveTriggeredExecutionTemplateAsync(
+        JobSchedulerDbContext dbContext,
+        JobEnqueueRequest request,
+        CancellationToken cancellationToken)
+    {
+        var definition = await ResolvePresentDefinitionAsync(
+            dbContext,
+            request.SchedulerScopeKey,
+            request.OwnerKey,
+            request.JobKey,
+            cancellationToken);
+        if (definition.IsDisabled)
+        {
+            throw new InvalidOperationException($"Job '{request.OwnerKey}/{request.JobKey}' is disabled.");
+        }
+
+        var template = definition.CreateExecutionTemplate();
+        if (template.JobType != JobType.Triggered)
+        {
+            throw new InvalidOperationException(
+                $"Job '{request.OwnerKey}/{request.JobKey}' is recurring and cannot be admitted through the triggered queue API.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.JobArgs))
+        {
+            throw new ArgumentException("Triggered job arguments cannot be empty.", nameof(request));
+        }
+
+        return template;
+    }
+
+    private async Task<JobExecutionTemplate> ResolveRecurringExecutionTemplateAsync(
+        JobSchedulerDbContext dbContext,
+        JobRecurringRunNowCommand command,
+        CancellationToken cancellationToken)
+    {
+        var definition = await ResolvePresentDefinitionAsync(
+            dbContext,
+            command.SchedulerScopeKey,
+            command.OwnerKey,
+            command.JobKey,
+            cancellationToken);
+        var template = definition.CreateExecutionTemplate();
+        if (template.JobType != JobType.Recurring)
+        {
+            throw new InvalidOperationException(
+                $"Job '{command.OwnerKey}/{command.JobKey}' is triggered and cannot be admitted through the recurring run-now API.");
+        }
+
+        return template;
+    }
+
+    internal async Task<JobExecutionInstance> EnqueueCapturedExecutionAsync(
         JobSchedulerDbContext dbContext,
         JobEnqueueRequest request,
         JobExecutionTemplate template,
@@ -880,10 +802,9 @@ public sealed partial class EfCoreJobSchedulerStore
         long? recurringOccurrenceTicks = recurringOccurrenceUtc is { } occurrence
             ? ToTicks(occurrence)
             : null;
-        var scope = template.Revision.SchedulerScopeKey;
         var existing = await LoadExecutionAsync(
             dbContext,
-            scope,
+            template.SchedulerScopeKey,
             request.InstanceId,
             true,
             false,
@@ -905,18 +826,13 @@ public sealed partial class EfCoreJobSchedulerStore
             return ToExecution(existing);
         }
 
-        var revision = template.Revision;
         var entity = new JobExecutionEntity
         {
-            SchedulerScopeKey = revision.SchedulerScopeKey,
+            SchedulerScopeKey = template.SchedulerScopeKey,
             InstanceId = request.InstanceId,
             TemplateJson = Serialize(template),
-            CatalogReleaseId = revision.CatalogReleaseId,
-            ActivationEpoch = revision.ActivationEpoch,
-            OwnerKey = revision.OwnerKey,
-            WorkerRevisionId = revision.WorkerRevisionId,
-            JobRevisionId = revision.JobRevisionId,
-            JobKey = revision.JobKey,
+            OwnerKey = template.OwnerKey,
+            JobKey = template.JobKey,
             JobArgs = request.JobArgs,
             Origin = origin,
             RecurringOccurrenceUtcTicks = recurringOccurrenceTicks,
@@ -938,130 +854,51 @@ public sealed partial class EfCoreJobSchedulerStore
         return ToExecution(entity);
     }
 
-    private async Task<JobExecutionTemplate> ResolveActiveExecutionTemplateAsync(
+    internal async Task<int> CountOutstandingExecutionsAsync(
         JobSchedulerDbContext dbContext,
+        JobExecutionTemplate template,
+        CancellationToken cancellationToken) =>
+        await dbContext.Executions.AsNoTracking()
+            .CountAsync(item => item.SchedulerScopeKey == template.SchedulerScopeKey
+                                && item.OwnerKey == template.OwnerKey
+                                && item.JobKey == template.JobKey
+                                && (item.State == JobExecutionState.Queued
+                                    || item.State == JobExecutionState.Running), cancellationToken);
+
+    internal async Task<int> ResolveCurrentMaxConcurrencyAsync(
+        JobSchedulerDbContext dbContext,
+        JobExecutionTemplate template,
+        CancellationToken cancellationToken)
+    {
+        return await dbContext.ExecutionGates.AsNoTracking()
+            .Where(item => item.SchedulerScopeKey == template.SchedulerScopeKey
+                           && item.OwnerKey == template.OwnerKey
+                           && item.JobKey == template.JobKey)
+            .Select(item => (int?)item.MaxConcurrency)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Job '{template.OwnerKey}/{template.JobKey}' has no concurrency-gate projection.");
+    }
+
+    private static JobExecutionInstance ResolveIdempotentEnqueue(
         JobEnqueueRequest request,
-        CancellationToken cancellationToken)
+        JobExecutionEntity existing,
+        JobExecutionOrigin expectedOrigin)
     {
-        var definition = await ResolveActiveDefinitionAsync(
-            dbContext,
-            request.SchedulerScopeKey,
-            request.JobKey,
-            request.ExpectedOwnerId,
-            request.ExpectedJobRevisionId,
-            cancellationToken);
-        if (definition.IsDisabled)
-        {
-            throw new InvalidOperationException($"Active job '{request.JobKey}' is disabled.");
-        }
-
-        var template = definition.CreateExecutionTemplate();
-        if (template.JobType != JobType.Triggered)
+        var template = Deserialize<JobExecutionTemplate>(existing.TemplateJson);
+        var expectedTemplateMatches = string.Equals(request.JobKey, template.JobKey, StringComparison.Ordinal)
+                                      && string.Equals(request.OwnerKey, template.OwnerKey, StringComparison.Ordinal);
+        if (!expectedTemplateMatches
+            || existing.Origin != expectedOrigin
+            || !string.Equals(existing.JobArgs, request.JobArgs, StringComparison.Ordinal)
+            || (request.AvailableAtUtc is { } requestedAvailability
+                && existing.AvailableAtUtcTicks != ToTicks(requestedAvailability)))
         {
             throw new InvalidOperationException(
-                $"Active job '{request.JobKey}' is recurring and cannot be admitted through the triggered queue API.");
+                $"Execution identifier '{request.InstanceId}' was reused for a different enqueue request.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.JobArgs))
-        {
-            throw new ArgumentException("Triggered job arguments cannot be empty.", nameof(request));
-        }
-
-        return template;
-    }
-
-    private async Task<JobExecutionTemplate> ResolveActiveRecurringExecutionTemplateAsync(
-        JobSchedulerDbContext dbContext,
-        JobRecurringRunNowCommand command,
-        CancellationToken cancellationToken)
-    {
-        var definition = await ResolveActiveDefinitionAsync(
-            dbContext,
-            command.SchedulerScopeKey,
-            command.JobKey,
-            command.ExpectedOwnerId,
-            command.ExpectedJobRevisionId,
-            cancellationToken);
-        var template = definition.CreateExecutionTemplate();
-        if (template.JobType != JobType.Recurring)
-        {
-            throw new InvalidOperationException(
-                $"Active job '{command.JobKey}' is triggered and cannot be admitted through the recurring run-now API.");
-        }
-
-        return template;
-    }
-
-    private async Task<ActiveJobDefinition> ResolveActiveDefinitionAsync(
-        JobSchedulerDbContext dbContext,
-        string schedulerScopeKey,
-        string jobKey,
-        string? expectedOwnerId,
-        string? expectedJobRevisionId,
-        CancellationToken cancellationToken)
-    {
-        var scope = await dbContext.CatalogScopes.SingleOrDefaultAsync(
-            item => item.SchedulerScopeKey == schedulerScopeKey,
-            cancellationToken);
-        if (scope?.ActiveReleaseId is null)
-        {
-            throw new JobCatalogNotFoundException(
-                $"Scheduler scope '{schedulerScopeKey}' has no active catalog.");
-        }
-        if (scope.ActiveIntentEpoch != scope.DesiredIntentEpoch)
-        {
-            throw new JobCatalogTransitionException(schedulerScopeKey);
-        }
-
-        var release = await GetReleaseAsync(
-            dbContext,
-            schedulerScopeKey,
-            scope.ActiveReleaseId,
-            cancellationToken);
-        var payload = Deserialize<CatalogReleasePayload>(release.PayloadJson);
-        JobOwnerCatalogSnapshot? owner = null;
-        JobDeclaration? declaration = null;
-        foreach (var snapshot in payload.OwnerSnapshots.Values.OfType<JobOwnerCatalogSnapshot>())
-        {
-            var candidate = snapshot.Declarations.SingleOrDefault(item =>
-                string.Equals(item.JobKey, jobKey, StringComparison.Ordinal));
-            if (candidate is not null)
-            {
-                owner = snapshot;
-                declaration = candidate;
-                break;
-            }
-        }
-        if (owner is null || declaration is null)
-        {
-            throw new JobCatalogNotFoundException(
-                $"Active job '{jobKey}' was not found in scope '{schedulerScopeKey}'.");
-        }
-
-        var policy = await dbContext.JobPolicies.SingleAsync(item =>
-            item.SchedulerScopeKey == schedulerScopeKey
-            && item.JobKey == jobKey,
-            cancellationToken);
-
-        var definition = new ActiveJobDefinition
-        {
-            SchedulerScopeKey = schedulerScopeKey,
-            ReleaseId = release.ReleaseId,
-            ActivationEpoch = scope.ActivationEpoch,
-            OwnerId = owner.OwnerId,
-            WorkerRevisionId = owner.WorkerRevisionId,
-            Declaration = declaration,
-            Policy = ToPolicy(policy)
-        };
-        if ((expectedOwnerId is not null
-             && !string.Equals(expectedOwnerId, definition.OwnerId, StringComparison.Ordinal))
-            || (expectedJobRevisionId is not null
-                && !string.Equals(expectedJobRevisionId, definition.JobRevisionId, StringComparison.Ordinal)))
-        {
-            throw new JobRevisionMismatchException(jobKey);
-        }
-
-        return definition;
+        return ToExecution(existing);
     }
 
     private async Task<JobAttemptCompletionResult> CompleteAttemptAsync(
@@ -1136,42 +973,18 @@ public sealed partial class EfCoreJobSchedulerStore
         };
     }
 
-    private static Task<JobWorkerCapabilityEntity?> LoadCurrentCapabilityAsync(
-        JobSchedulerDbContext dbContext,
-        WorkerCapabilityLeaseKey key,
-        DateTimeOffset now,
-        CancellationToken cancellationToken) =>
-        dbContext.WorkerCapabilities.SingleOrDefaultAsync(item =>
-            item.SchedulerScopeKey == key.SchedulerScopeKey
-            && item.WorkerInstanceId == key.WorkerInstanceId
-            && item.LeaseToken == key.LeaseToken
-            && item.LeaseExpiresAtUtcTicks > ToTicks(now), cancellationToken);
-
-    private static async Task<JobExecutionEntity?> LoadCurrentExecutionLeaseAsync(
+    private static Task<JobExecutionEntity?> LoadCurrentExecutionLeaseAsync(
         JobSchedulerDbContext dbContext,
         JobLeaseKey key,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        var execution = await dbContext.Executions.SingleOrDefaultAsync(item =>
+        CancellationToken cancellationToken) =>
+        dbContext.Executions.SingleOrDefaultAsync(item =>
             item.SchedulerScopeKey == key.SchedulerScopeKey
             && item.InstanceId == key.InstanceId
             && item.State == JobExecutionState.Running
             && item.RunningWorkerInstanceId == key.WorkerInstanceId
             && item.ExecutionLeaseToken == key.LeaseToken
             && item.LeaseExpiresAtUtcTicks > ToTicks(now), cancellationToken);
-        if (execution is null)
-        {
-            return null;
-        }
-
-        var capability = await dbContext.WorkerCapabilities.AsNoTracking().SingleOrDefaultAsync(item =>
-            item.SchedulerScopeKey == key.SchedulerScopeKey
-            && item.WorkerInstanceId == key.WorkerInstanceId
-            && item.LeaseToken == execution.CapabilityLeaseToken
-            && item.LeaseExpiresAtUtcTicks > ToTicks(now), cancellationToken);
-        return capability is null ? null : execution;
-    }
 
     private static Task<JobExecutionEntity?> LoadExecutionAsync(
         JobSchedulerDbContext dbContext,
@@ -1200,12 +1013,15 @@ public sealed partial class EfCoreJobSchedulerStore
         CancellationToken cancellationToken)
     {
         var gate = await dbContext.ExecutionGates.SingleOrDefaultAsync(item =>
-            item.SchedulerScopeKey == execution.SchedulerScopeKey
-            && item.JobKey == execution.JobKey, cancellationToken)
-            ?? throw new InvalidOperationException($"Execution gate '{execution.JobKey}' does not exist.");
+                item.SchedulerScopeKey == execution.SchedulerScopeKey
+                && item.OwnerKey == execution.OwnerKey
+                && item.JobKey == execution.JobKey, cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Execution gate '{execution.OwnerKey}/{execution.JobKey}' does not exist.");
         if (gate.ActiveCount < 1)
         {
-            throw new InvalidOperationException($"Execution gate '{execution.JobKey}' has no active lease to release.");
+            throw new InvalidOperationException(
+                $"Execution gate '{execution.OwnerKey}/{execution.JobKey}' has no active lease to release.");
         }
         gate.ActiveCount--;
         gate.ConcurrencyToken = NewVersion();
@@ -1215,7 +1031,6 @@ public sealed partial class EfCoreJobSchedulerStore
     {
         entity.RunningWorkerInstanceId = null;
         entity.ExecutionLeaseToken = null;
-        entity.CapabilityLeaseToken = null;
         entity.LeaseExpiresAtUtcTicks = null;
         if (entity.State == JobExecutionState.Queued)
         {
@@ -1283,25 +1098,6 @@ public sealed partial class EfCoreJobSchedulerStore
                 WorkerInstanceId = item.WorkerInstanceId
             }).ToArray()
         };
-
-    private static WorkerCapabilityLease ToCapability(JobWorkerCapabilityEntity entity) => new()
-    {
-        Capability = new WorkerCapabilityRegistration
-        {
-            SchedulerScopeKey = entity.SchedulerScopeKey,
-            OwnerKey = entity.OwnerKey,
-            WorkerRevisionId = entity.WorkerRevisionId,
-            WorkerInstanceId = entity.WorkerInstanceId,
-            JobRevisionIds = Deserialize<string[]>(entity.JobRevisionIdsJson)
-        },
-        LeaseKey = new WorkerCapabilityLeaseKey
-        {
-            SchedulerScopeKey = entity.SchedulerScopeKey,
-            WorkerInstanceId = entity.WorkerInstanceId,
-            LeaseToken = entity.LeaseToken
-        },
-        LeaseExpiresAtUtc = FromTicks(entity.LeaseExpiresAtUtcTicks)
-    };
 
     private sealed class ExecutionCleanupCandidate
     {

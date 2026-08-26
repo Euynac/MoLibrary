@@ -126,17 +126,11 @@ public sealed class SchedulerTimePresentationTests
     {
         var template = new JobExecutionTemplate
         {
-            Revision = new JobRevisionIdentity
-            {
-                SchedulerScopeKey = "scope",
-                CatalogReleaseId = "release",
-                ActivationEpoch = 1,
-                OwnerKey = "owner",
-                WorkerRevisionId = "worker",
-                JobRevisionId = "sha256:job",
-                JobKey = "Sample.Jobs.GenerateReport"
-            },
-            AppliedPolicyRevision = "0123456789abcdef0123456789abcdef",
+            SchedulerScopeKey = "scope-1",
+
+            OwnerKey = "owner-1",
+
+            JobKey = "Sample.Jobs.GenerateReport",
             JobName = "Generate report"
         };
 

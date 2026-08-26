@@ -110,7 +110,7 @@
             <dl class="execution-evidence__facts">
                 <div>
                     <dt>@L["ExecutionDetail:Scope"]</dt>
-                    <dd><code>@Execution.Template.Revision.SchedulerScopeKey</code></dd>
+                    <dd><code>@Execution.Template.SchedulerScopeKey</code></dd>
                 </div>
                 <div>
                     <dt>@L["ExecutionDetail:JobType"]</dt>
@@ -122,23 +122,11 @@
                 </div>
                 <div>
                     <dt>@L["ExecutionDetail:Owner"]</dt>
-                    <dd><code>@Execution.Template.Revision.OwnerKey</code></dd>
+                    <dd><code>@Execution.Template.OwnerKey</code></dd>
                 </div>
                 <div>
-                    <dt>@L["ExecutionDetail:Release"]</dt>
-                    <dd><code>@Execution.Template.Revision.CatalogReleaseId</code></dd>
-                </div>
-                <div>
-                    <dt>@L["ExecutionDetail:Activation"]</dt>
-                    <dd>@Execution.Template.Revision.ActivationEpoch</dd>
-                </div>
-                <div>
-                    <dt>@L["ExecutionDetail:WorkerRevision"]</dt>
-                    <dd><code>@Execution.Template.Revision.WorkerRevisionId</code></dd>
-                </div>
-                <div>
-                    <dt>@L["ExecutionDetail:JobRevision"]</dt>
-                    <dd><code>@Execution.Template.Revision.JobRevisionId</code></dd>
+                    <dt>@L["ExecutionDetail:Job"]</dt>
+                    <dd><code>@Execution.Template.JobKey</code></dd>
                 </div>
             </dl>
         </section>

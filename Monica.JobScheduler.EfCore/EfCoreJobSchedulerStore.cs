@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.EfCore.Entities;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Models.Catalog;
+using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.Modules;
 
@@ -203,10 +203,4 @@ public sealed partial class EfCoreJobSchedulerStore(
 
     private static void ValidateIdentity(string value, string parameterName) =>
         JobSchedulerIdentity.ValidateStandard(value, parameterName);
-
-    private sealed class CatalogReleasePayload
-    {
-        public required JobCatalogReleaseManifest Manifest { get; init; }
-        public required Dictionary<string, JobOwnerCatalogSnapshot?> OwnerSnapshots { get; init; }
-    }
 }
