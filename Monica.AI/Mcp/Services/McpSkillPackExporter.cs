@@ -299,11 +299,17 @@ internal sealed class McpSkillPackExporter
 
         request='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"'"$tool"'","arguments":'"$arguments"'}}'
 
+        # Pass the payload through a temp file: on Windows the native curl re-encodes
+        # command-line arguments in the local codepage, which corrupts non-ASCII JSON.
+        payload_file="$(mktemp)"
+        cleanup_payload_file() { rm -f "$payload_file"; }
+        trap cleanup_payload_file EXIT
+        printf '%s' "$request" > "$payload_file"
         raw="$(curl -sS -X POST "$endpoint" \
           -H 'Content-Type: application/json' \
           -H 'Accept: application/json, text/event-stream' \
           -H 'User-Agent: monica-mcp-skill/1.0' \
-          --data "$request" \
+          --data-binary "@$payload_file" \
           -w '\n%{http_code}')"
 
         http_code="${raw##*$'\n'}"
@@ -355,7 +361,11 @@ internal sealed class McpSkillPackExporter
         } | ConvertTo-Json -Depth 64 -Compress
 
         try {
-            $response = Invoke-WebRequest -Uri $endpoint -Method Post -Body $request -ContentType 'application/json' `
+            # A string body without an explicit charset is sent as ISO-8859-1 and
+            # corrupts non-ASCII JSON; send explicit UTF-8 bytes instead.
+            $response = Invoke-WebRequest -Uri $endpoint -Method Post `
+                -Body ([System.Text.Encoding]::UTF8.GetBytes($request)) `
+                -ContentType 'application/json; charset=utf-8' `
                 -Headers @{ Accept = 'application/json, text/event-stream' } `
                 -UserAgent 'monica-mcp-skill/1.0' `
                 -UseBasicParsing -TimeoutSec 300
