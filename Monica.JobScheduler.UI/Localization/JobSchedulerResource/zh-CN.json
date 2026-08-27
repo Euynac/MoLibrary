@@ -105,14 +105,14 @@
     "PageTitle": "任务调度 · 总览",
     "Workload": {
       "AriaLabel": "调度工作负载摘要",
-      "TotalJobs": "作业总数",
-      "AcrossOwners": "来自 {0} 个项目",
-      "RecurringJobs": "周期作业",
-      "RecurringDescription": "由调度计划驱动",
-      "TriggeredJobs": "触发作业",
-      "TriggeredDescription": "由运维或 API 准入",
+      "TotalJobs": "任务总数",
+      "TypeBreakdown": "{0} 周期 / {1} 触发",
+      "RunningJobs": "正在运行",
+      "DisabledCount": "{0} 个已禁用",
       "SuccessRate": "成功率",
-      "CompletedSample": "基于 {0} 次成功或失败执行"
+      "CompletedSample": "基于 {0} 次成功或失败执行",
+      "Throughput": "吞吐量",
+      "ThroughputDescription": "近 24 小时 · 每小时执行"
     },
     "Queue": {
       "Title": "执行状态",
@@ -185,7 +185,10 @@
       "RunDuringDebug": "立即执行仍然可用，因为显式准入不会推进周期游标。",
       "PauseSelected": "暂停所选",
       "ResumeSelected": "继续所选",
-      "Reset": "重置筛选"
+      "Reset": "重置筛选",
+      "CopyKey": "复制完整作业键",
+      "CopiedKey": "已复制作业键",
+      "CopyKeyFailed": "复制作业键失败"
     },
     "ScheduleStatus": {
       "Awaiting": "等待同步",
@@ -215,8 +218,7 @@
     },
     "Cron": {
       "Unavailable": "无法解析调度含义",
-      "Parsing": "正在解析调度…",
-      "ConfiguredTimeZone": "部署配置的时区（只读）"
+      "Parsing": "正在解析调度…"
     },
     "Triggered": {
       "Ready": "可由运维人员触发",

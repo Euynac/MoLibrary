@@ -20,7 +20,7 @@
     <div class="execution-flow__body">
         <div class="execution-flow__chart" role="img" aria-label="@L["Overview:Queue:AriaLabel"]">
             <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-                <circle class="execution-flow__track" cx="50" cy="50" r="41" pathLength="100" />
+                <circle class="execution-flow__track" cx="50" cy="50" r="38" pathLength="100" />
                 @if (total > 0)
                 {
                     @foreach (var state in States)
@@ -31,7 +31,7 @@
                             <circle class="execution-flow__segment execution-flow__segment--@state.ToString().ToLowerInvariant()"
                                     cx="50"
                                     cy="50"
-                                    r="41"
+                                    r="38"
                                     pathLength="100"
                                     stroke-dasharray="@FormatSegment(length)"
                                     stroke-dashoffset="@FormatOffset(offset)" />
@@ -49,12 +49,14 @@
         <div class="execution-flow__legend">
             @foreach (var state in States)
             {
+                var count = Counts.GetValueOrDefault(state);
                 <a class="execution-flow__state"
                    data-state="@state.ToString().ToLowerInvariant()"
                    href="@GetExecutionHref(state)">
                     <span class="execution-flow__state-dot" aria-hidden="true"></span>
                     <span>@L[$"ExecutionStates:{state}"]</span>
-                    <strong>@Counts.GetValueOrDefault(state)</strong>
+                    <strong>@count</strong>
+                    <em>@FormatShare(count, total)</em>
                 </a>
             }
         </div>
@@ -62,6 +64,11 @@
 </section>
 
 @code {
+    /// <summary>
+    /// ViewBox-units of blank ring kept between adjacent segments so butt-capped arcs never touch.
+    /// </summary>
+    private const double SEGMENT_GAP = 1.2;
+
     private static readonly JobExecutionState[] States = Enum.GetValues<JobExecutionState>();
 
     /// <summary>
@@ -74,12 +81,20 @@
     private static string GetExecutionHref(JobExecutionState state) =>
         $"/job-scheduler/executions?states={Uri.EscapeDataString(state.ToString())}";
 
+    private static string FormatShare(int count, int total) => total == 0
+        ? "—"
+        : (count / (double)total).ToString("P0", CultureInfo.CurrentCulture);
+
+    // Butt caps keep each arc inside its dash, so a fixed gap per boundary guarantees no overlap
+    // regardless of how many states carry counts.
     private static string FormatSegment(double length)
     {
-        var visibleLength = Math.Max(0, length - Math.Min(1.2, length * 0.14));
+        var visibleLength = length <= SEGMENT_GAP
+            ? Math.Min(length, 0.4)
+            : length - SEGMENT_GAP;
         return $"{visibleLength.ToString("0.###", CultureInfo.InvariantCulture)} {(100 - visibleLength).ToString("0.###", CultureInfo.InvariantCulture)}";
     }
 
     private static string FormatOffset(double offset) =>
-        (-offset).ToString("0.###", CultureInfo.InvariantCulture);
+        (-(offset + SEGMENT_GAP / 2)).ToString("0.###", CultureInfo.InvariantCulture);
 }

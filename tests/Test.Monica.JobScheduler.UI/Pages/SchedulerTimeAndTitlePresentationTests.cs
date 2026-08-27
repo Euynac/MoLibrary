@@ -45,7 +45,7 @@ public sealed class SchedulerTimeAndTitlePresentationTests
     }
 
     [Fact]
-    public async Task ExecutionLedger_ShouldKeepDetailsExplicitAndRenderDurableJobName()
+    public async Task ExecutionLedger_ShouldOpenDetailsFromTitleAndRenderDurableJobName()
     {
         var clock = new ManualTimeProvider(NOW);
         await using var context = new JobSchedulerUiTestContext(
@@ -58,8 +58,10 @@ public sealed class SchedulerTimeAndTitlePresentationTests
         cut.WaitForAssertion(() => cut.Markup.Should().Contain(execution.InstanceId));
         var identity = cut.Find(".execution-table__identity");
         identity.LocalName.Should().Be("div");
-        identity.QuerySelector("button").Should().BeNull();
-        identity.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobName);
+        // The job title is the detail entry point; evidence rows below stay non-interactive.
+        var title = identity.QuerySelector("button.execution-table__name");
+        title.Should().NotBeNull();
+        title!.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobName);
         identity.TextContent.Should().Contain(context.TriggeredDefinition.Declaration.JobKey);
         cut.Markup.Should().Contain("2026-08-14 09:02:03.456");
         cut.Find(".execution-table__actions button[aria-label='Executions:Actions:Details']")

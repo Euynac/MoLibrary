@@ -31,6 +31,7 @@ public sealed class JobSchedulerFacade(
     private const int MAX_PAGE_SIZE = 200;
     private const int RECENT_EXECUTION_COUNT = 12;
     private const int OVERVIEW_DEFINITION_LIMIT = 500;
+    private const int THROUGHPUT_WINDOW_HOURS = 24;
 
     /// <summary>
     /// Multiplier applied to <see cref="ModuleJobSchedulerOption.SnapshotSyncInterval"/> to derive the owner
@@ -130,13 +131,26 @@ public sealed class JobSchedulerFacade(
                     SortDescending = true
                 },
                 cancellationToken);
+            // Page size one is sufficient: only TotalCount feeds the per-hour rate.
+            var throughputTask = store.QueryExecutionsAsync(
+                new JobExecutionQuery
+                {
+                    SchedulerScopeKey = _schedulerScopeKey,
+                    CreatedAfterUtc = timeProvider.GetUtcNow().AddHours(-THROUGHPUT_WINDOW_HOURS),
+                    PageNumber = 1,
+                    PageSize = 1,
+                    SortField = JobExecutionSortField.CreatedAtUtc,
+                    SortDescending = true
+                },
+                cancellationToken);
 
-            await Task.WhenAll(definitionsTask, statisticsTask, recentTask);
+            await Task.WhenAll(definitionsTask, statisticsTask, recentTask, throughputTask);
             return new JobSchedulerOverview
             {
                 Definitions = (await definitionsTask).Items,
                 ExecutionStateCounts = await statisticsTask,
                 RecentExecutions = (await recentTask).Items,
+                ExecutionsPerHourLast24h = (await throughputTask).TotalCount / (double)THROUGHPUT_WINDOW_HOURS,
                 CapturedAtUtc = timeProvider.GetUtcNow()
             };
         }, "load the scheduler overview", cancellationToken);

@@ -95,7 +95,7 @@
     text-align: left;
 }
 
-.catalog-table__identity strong,
+.catalog-table__identity-name,
 .catalog-table__identity span,
 .catalog-table__identity code,
 .catalog-table__owner span {
@@ -104,10 +104,24 @@
     white-space: nowrap;
 }
 
-.catalog-table__identity strong {
+.catalog-table__identity-name {
+    display: block;
     color: var(--mud-palette-text-primary);
     font-family: var(--mo-font-family-display);
     font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.catalog-table__identity-name:hover {
+    color: var(--mud-palette-primary);
+    text-decoration: underline;
+}
+
+.catalog-table__identity-name:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 1px;
+    border-radius: 3px;
 }
 
 .catalog-table__identity span {
@@ -115,10 +129,45 @@
     font-size: 0.72rem;
 }
 
-.catalog-table__identity code {
+.catalog-table__identity-key {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
+.catalog-table__identity-key code {
     color: var(--mud-palette-text-secondary);
     font-family: var(--mo-font-family-mono);
     font-size: 0.7rem;
+}
+
+.catalog-table__identity-key ::deep .mud-icon-root {
+    flex: 0 0 auto;
+    color: var(--mud-palette-text-disabled);
+    transition: color 140ms ease;
+}
+
+.catalog-table__identity-key:hover code {
+    color: var(--mud-palette-primary);
+}
+
+.catalog-table__identity-key:hover ::deep .mud-icon-root,
+.catalog-table__identity-key:focus-visible ::deep .mud-icon-root {
+    color: var(--mud-palette-primary);
+}
+
+.catalog-table__identity-key:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 1px;
+    border-radius: 3px;
 }
 
 .catalog-table__owner {
@@ -181,29 +230,6 @@
     font-size: 0.72rem;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.catalog-table__timezone {
-    display: inline-flex;
-    width: fit-content;
-    max-width: 100%;
-    align-items: center;
-    gap: 4px;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.68rem;
-}
-
-.catalog-table__timezone code {
-    overflow: hidden;
-    color: inherit;
-    font-family: var(--mo-font-family-mono);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.catalog-table__timezone ::deep .mud-icon-root {
-    flex: 0 0 auto;
-    font-size: 0.9rem;
 }
 
 .catalog-table__cron ::deep .mud-icon-button {

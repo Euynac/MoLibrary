@@ -180,9 +180,12 @@
                             <RowTemplate>
                                 <MudTd DataLabel="@L["Executions:Columns:Definition"]">
                                     <div class="execution-table__identity">
-                                        <strong title="@JobSchedulerUiPresentation.GetJobDisplayName(context.Template)">
+                                        <button type="button"
+                                                class="execution-table__name"
+                                                title="@JobSchedulerUiPresentation.GetJobDisplayName(context.Template)"
+                                                @onclick="@(() => OpenDetailsAsync(context.InstanceId))">
                                             @JobSchedulerUiPresentation.GetJobDisplayName(context.Template)
-                                        </strong>
+                                        </button>
                                         <code title="@context.Template.JobKey">@context.Template.JobKey</code>
                                         <span title="@context.Template.OwnerKey">@context.Template.OwnerKey</span>
                                         <code title="@context.InstanceId">@context.InstanceId</code>

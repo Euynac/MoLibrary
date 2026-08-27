@@ -224,6 +224,11 @@ public sealed record JobSchedulerOverview
     public required IReadOnlyList<JobExecutionInstance> RecentExecutions { get; init; }
 
     /// <summary>
+    /// Gets the average number of executions admitted per hour over the trailing 24 hours.
+    /// </summary>
+    public double ExecutionsPerHourLast24h { get; init; }
+
+    /// <summary>
     /// Gets when the operational snapshot finished loading.
     /// </summary>
     public DateTimeOffset CapturedAtUtc { get; init; }

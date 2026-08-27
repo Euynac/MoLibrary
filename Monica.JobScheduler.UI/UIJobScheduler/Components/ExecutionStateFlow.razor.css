@@ -24,18 +24,18 @@
 
 .execution-flow__body {
     display: grid;
-    grid-template-columns: minmax(10.5rem, 13rem) minmax(11rem, 18rem);
+    grid-template-columns: minmax(13rem, 17rem) minmax(11rem, 20rem);
     align-items: center;
     place-content: center;
-    gap: 16px;
+    gap: 20px;
     min-width: 0;
-    padding: clamp(16px, 2vw, 24px);
+    padding: clamp(18px, 2.4vw, 28px);
 }
 
 .execution-flow__chart {
     position: relative;
     display: grid;
-    width: min(100%, 13rem);
+    width: min(100%, 17rem);
     aspect-ratio: 1;
     place-items: center;
     justify-self: center;
@@ -52,7 +52,7 @@
 .execution-flow__track,
 .execution-flow__segment {
     fill: none;
-    stroke-width: 10;
+    stroke-width: 22;
 }
 
 .execution-flow__track {
@@ -61,7 +61,7 @@
 
 .execution-flow__segment {
     stroke: var(--mud-palette-info);
-    stroke-linecap: round;
+    stroke-linecap: butt;
 }
 
 .execution-flow__segment--running {
@@ -94,7 +94,7 @@
 .execution-flow__total strong {
     color: var(--mud-palette-text-primary);
     font-family: var(--mo-font-family-display);
-    font-size: clamp(1.65rem, 4vw, 2.35rem);
+    font-size: clamp(1.9rem, 4.5vw, 2.75rem);
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
@@ -116,7 +116,7 @@
 .execution-flow__state {
     --state-tone: var(--mud-palette-info);
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 7px;
     min-width: 0;
@@ -180,6 +180,13 @@
     font-variant-numeric: tabular-nums;
 }
 
+.execution-flow__state em {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.68rem;
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 600px) {
     .execution-flow__body {
         grid-template-columns: minmax(0, 1fr);
@@ -187,7 +194,7 @@
     }
 
     .execution-flow__chart {
-        width: min(68vw, 12rem);
+        width: min(68vw, 14rem);
     }
 }
 

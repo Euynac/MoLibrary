@@ -139,6 +139,8 @@ public sealed class JobSchedulerFacadeTests
         overview.Data!.Definitions.Should().HaveCount(2);
         overview.Data.ExecutionStateCounts[JobExecutionState.Queued].Should().Be(1);
         overview.Data.RecentExecutions.Should().ContainSingle();
+        // One execution admitted inside the trailing 24h window averages 1/24 executions per hour.
+        overview.Data.ExecutionsPerHourLast24h.Should().BeApproximately(1 / 24d, 0.0001);
     }
 
     [Fact]

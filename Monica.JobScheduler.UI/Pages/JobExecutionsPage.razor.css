@@ -115,7 +115,7 @@
     text-align: left;
 }
 
-.execution-table__identity strong,
+.execution-table__name,
 .execution-table__identity span,
 .execution-table__identity code,
 .execution-table__worker {
@@ -124,9 +124,30 @@
     white-space: nowrap;
 }
 
-.execution-table__identity strong {
+.execution-table__name {
+    display: block;
+    justify-self: start;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
     color: var(--mud-palette-text-primary);
+    cursor: pointer;
+    font: inherit;
     font-size: 0.86rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.execution-table__name:hover {
+    color: var(--mud-palette-primary);
+    text-decoration: underline;
+}
+
+.execution-table__name:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 1px;
+    border-radius: 3px;
 }
 
 .execution-table__identity span {

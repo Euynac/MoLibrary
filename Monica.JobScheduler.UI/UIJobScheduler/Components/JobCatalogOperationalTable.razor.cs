@@ -29,6 +29,9 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
     [Inject]
     private IJSRuntime JsRuntime { get; set; } = null!;
 
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = null!;
+
     /// <summary>
     /// Gets the server query used by the native table.
     /// </summary>
@@ -280,6 +283,30 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         _cronDescriptions.TryGetValue(GetCronDescriptionKey(summary), out var description)
             ? description ?? L["Catalog:Cron:Unavailable"]
             : L["Catalog:Cron:Parsing"];
+
+    private async Task CopyJobKeyAsync(string jobKey)
+    {
+        bool copied;
+        try
+        {
+            copied = await JsRuntime.InvokeAsync<bool>(
+                "MoClipboard.copyText",
+                _lifetimeCancellation.Token,
+                jobKey);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (JSException)
+        {
+            copied = false;
+        }
+
+        Snackbar.Add(
+            copied ? L["Catalog:Actions:CopiedKey"] : L["Catalog:Actions:CopyKeyFailed"],
+            copied ? Severity.Success : Severity.Warning);
+    }
 
     private static string GetCronDescriptionKey(JobOperationalSummary summary) =>
         $"{summary.Definition.OwnerKey}\u001e{summary.Definition.Declaration.JobKey}\u001e{summary.Definition.Policy.ConcurrencyStamp}";

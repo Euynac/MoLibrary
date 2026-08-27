@@ -106,13 +106,13 @@
     "Workload": {
       "AriaLabel": "Scheduler workload summary",
       "TotalJobs": "Total jobs",
-      "AcrossOwners": "Across {0} source project(s)",
-      "RecurringJobs": "Recurring jobs",
-      "RecurringDescription": "Schedule-driven workload",
-      "TriggeredJobs": "Triggered jobs",
-      "TriggeredDescription": "Operator or API admission",
+      "TypeBreakdown": "{0} recurring / {1} triggered",
+      "RunningJobs": "Running now",
+      "DisabledCount": "{0} disabled",
       "SuccessRate": "Success rate",
-      "CompletedSample": "Across {0} successful or failed run(s)"
+      "CompletedSample": "Across {0} successful or failed run(s)",
+      "Throughput": "Throughput",
+      "ThroughputDescription": "Executions per hour · last 24h"
     },
     "Queue": {
       "Title": "Execution state",
@@ -185,7 +185,10 @@
       "RunDuringDebug": "Run job now remains available because explicit admission does not advance the recurring cursor.",
       "PauseSelected": "Pause selected",
       "ResumeSelected": "Resume selected",
-      "Reset": "Reset filters"
+      "Reset": "Reset filters",
+      "CopyKey": "Copy full job key",
+      "CopiedKey": "Job key copied",
+      "CopyKeyFailed": "Failed to copy job key"
     },
     "ScheduleStatus": {
       "Awaiting": "Awaiting synchronization",
@@ -215,8 +218,7 @@
     },
     "Cron": {
       "Unavailable": "Description unavailable",
-      "Parsing": "Reading schedule…",
-      "ConfiguredTimeZone": "Deployment-configured timezone (read only)"
+      "Parsing": "Reading schedule…"
     },
     "Triggered": {
       "Ready": "Ready for operator admission",

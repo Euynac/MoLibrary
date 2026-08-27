@@ -86,13 +86,22 @@
                     </div>
                 </MudTd>
                 <MudTd Class="catalog-table__definition-cell" DataLabel="@L["Catalog:Columns:Definition"]">
-                    <div class="catalog-table__identity" title="@declaration.JobKey">
-                        <strong>@effective.JobName</strong>
+                    <div class="catalog-table__identity">
+                        <a class="catalog-table__identity-name" href="@GetDetailHref(context)" title="@effective.JobName">
+                            @effective.JobName
+                        </a>
                         @if (!string.IsNullOrWhiteSpace(effective.Description))
                         {
                             <span>@effective.Description</span>
                         }
-                        <code>@declaration.JobKey</code>
+                        <button type="button"
+                                class="catalog-table__identity-key"
+                                title="@declaration.JobKey"
+                                aria-label="@L["Catalog:Actions:CopyKey"]"
+                                @onclick="@(() => CopyJobKeyAsync(declaration.JobKey))">
+                            <code>@declaration.JobKey</code>
+                            <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
+                        </button>
                     </div>
                 </MudTd>
                 <MudTd DataLabel="@L["Catalog:Filters:Owner"]">
@@ -120,12 +129,6 @@
                             <span class="catalog-table__cron">
                                 <CronDescriptionBadge Expression="@effective.Schedule!.CronExpression"
                                                       Description="@GetCronDescription(context)" />
-                            </span>
-                            <span class="catalog-table__timezone"
-                                  title="@L["Catalog:Cron:ConfiguredTimeZone"]"
-                                  aria-label="@L["Catalog:Cron:ConfiguredTimeZone"]">
-                                <MudIcon Icon="@Icons.Material.Filled.LockClock" Size="Size.Small" />
-                                <code>@effective.Schedule.TimeZoneId</code>
                             </span>
                         </div>
                     }

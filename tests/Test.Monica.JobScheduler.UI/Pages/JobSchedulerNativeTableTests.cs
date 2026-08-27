@@ -45,11 +45,8 @@ public sealed class JobSchedulerNativeTableTests
         var schedule = table.QuerySelector(".catalog-table__schedule");
         schedule.Should().NotBeNull();
         schedule!.TextContent.Should().Contain("0 */5 * * * *");
-        schedule.TextContent.Should().Contain("UTC");
-        var timezone = schedule.QuerySelector(".catalog-table__timezone");
-        timezone.Should().NotBeNull();
-        timezone!.GetAttribute("aria-label").Should().Be("Catalog:Cron:ConfiguredTimeZone");
-        timezone.QuerySelector("input, button, [role='combobox']").Should().BeNull();
+        // The deployment timezone is deliberately not repeated in the catalog row.
+        schedule.QuerySelector(".catalog-table__timezone").Should().BeNull();
         schedule.TextContent.Should().NotContain("Catalog:Cron:Parsing");
         table.QuerySelector("time.catalog-table__next-run")
             .Should().NotBeNull();
@@ -57,9 +54,17 @@ public sealed class JobSchedulerNativeTableTests
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         var originalUri = navigation.Uri;
         table.QuerySelector(".catalog-table__owner")!.Click();
-        table.QuerySelector(".catalog-table__identity")!.Click();
         navigation.Uri.Should().Be(originalUri);
-        table.QuerySelector("button.catalog-table__identity").Should().BeNull();
+
+        // The definition title links straight into the operational dossier.
+        var titleLink = table.QuerySelector("a.catalog-table__identity-name");
+        titleLink.Should().NotBeNull();
+        titleLink!.GetAttribute("href").Should().Be("/job-scheduler/catalog/worker-a/Sample.Jobs.RecurringCleanup");
+
+        // The job key copies its full value instead of navigating.
+        var keyButton = table.QuerySelector("button.catalog-table__identity-key");
+        keyButton.Should().NotBeNull();
+        keyButton!.GetAttribute("aria-label").Should().Be("Catalog:Actions:CopyKey");
 
         var filter = cut.Find(".catalog-filter");
         filter.TextContent.Should().Contain("Catalog:Filters:Policy");
@@ -125,6 +130,8 @@ public sealed class JobSchedulerNativeTableTests
         table.TextContent.Should().Contain("Executions:Columns:State");
         table.TextContent.Should().Contain("Executions:Columns:Created");
         table.TextContent.Should().Contain("Executions:Columns:Duration");
+        // The job title opens the execution detail evidence.
+        table.QuerySelector("button.execution-table__name").Should().NotBeNull();
         cut.FindAll(".execution-activity__item").Should().BeEmpty();
 
         var stateChips = cut.Find(".executions-page__state-chips");

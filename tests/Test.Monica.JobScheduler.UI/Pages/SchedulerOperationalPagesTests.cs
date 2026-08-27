@@ -41,8 +41,10 @@ public sealed class SchedulerOperationalPagesTests
 
         cut.WaitForAssertion(() =>
         {
-            cut.Markup.Should().Contain("Overview:Workload:AcrossOwners");
             cut.Markup.Should().Contain("Overview:Workload:TotalJobs");
+            cut.Markup.Should().Contain("Overview:Workload:TypeBreakdown");
+            cut.Markup.Should().Contain("Overview:Workload:RunningJobs");
+            cut.Markup.Should().Contain("Overview:Workload:Throughput");
             cut.Markup.Should().Contain("Overview:Attention:Title");
             cut.Markup.Should().Contain("execution-flow__chart");
         });

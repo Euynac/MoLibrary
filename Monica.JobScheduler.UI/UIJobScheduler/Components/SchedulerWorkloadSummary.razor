@@ -4,11 +4,11 @@
 @inject IStringLocalizer<JobSchedulerResource> L
 
 @{
-    var definitions = Overview.Definitions;
-    var presentDefinitions = definitions.Where(static definition => definition.IsPresent).ToArray();
+    var presentDefinitions = Overview.Definitions.Where(static definition => definition.IsPresent).ToArray();
     var recurringCount = presentDefinitions.Count(static definition => definition.Declaration.JobType == JobType.Recurring);
-    var triggeredCount = presentDefinitions.Count(static definition => definition.Declaration.JobType == JobType.Triggered);
-    var ownerCount = presentDefinitions.Select(static definition => definition.OwnerKey).Distinct(StringComparer.Ordinal).Count();
+    var triggeredCount = presentDefinitions.Length - recurringCount;
+    var runningCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Running);
+    var disabledCount = presentDefinitions.Count(static definition => definition.IsDisabled);
     var succeededCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Succeeded);
     var failedCount = Overview.ExecutionStateCounts.GetValueOrDefault(JobExecutionState.Failed);
     var completedCount = succeededCount + failedCount;
@@ -22,37 +22,37 @@
         <div>
             <span>@L["Overview:Workload:TotalJobs"]</span>
             <strong>@presentDefinitions.Length</strong>
-            <small>@L["Overview:Workload:AcrossOwners", ownerCount]</small>
+            <small>@L["Overview:Workload:TypeBreakdown", recurringCount, triggeredCount]</small>
         </div>
     </article>
     <article class="workload-summary__metric" data-tone="info">
         <span class="workload-summary__icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.Update" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Size="Size.Small" />
         </span>
         <div>
-            <span>@L["Overview:Workload:RecurringJobs"]</span>
-            <strong>@recurringCount</strong>
-            <small>@L["Overview:Workload:RecurringDescription"]</small>
-        </div>
-    </article>
-    <article class="workload-summary__metric" data-tone="warning">
-        <span class="workload-summary__icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
-        </span>
-        <div>
-            <span>@L["Overview:Workload:TriggeredJobs"]</span>
-            <strong>@triggeredCount</strong>
-            <small>@L["Overview:Workload:TriggeredDescription"]</small>
+            <span>@L["Overview:Workload:RunningJobs"]</span>
+            <strong>@runningCount</strong>
+            <small>@L["Overview:Workload:DisabledCount", disabledCount]</small>
         </div>
     </article>
     <article class="workload-summary__metric" data-tone="success">
         <span class="workload-summary__icon" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
         </span>
         <div>
             <span>@L["Overview:Workload:SuccessRate"]</span>
             <strong>@FormatSuccessRate(succeededCount, completedCount)</strong>
             <small>@L["Overview:Workload:CompletedSample", completedCount]</small>
+        </div>
+    </article>
+    <article class="workload-summary__metric" data-tone="warning">
+        <span class="workload-summary__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" />
+        </span>
+        <div>
+            <span>@L["Overview:Workload:Throughput"]</span>
+            <strong>@FormatThroughput(Overview.ExecutionsPerHourLast24h)</strong>
+            <small>@L["Overview:Workload:ThroughputDescription"]</small>
         </div>
     </article>
 </section>
@@ -66,5 +66,8 @@
 
     private static string FormatSuccessRate(int succeededCount, int completedCount) => completedCount == 0
         ? "—"
-        : (succeededCount / (double)completedCount).ToString("P0", CultureInfo.CurrentCulture);
+        : (succeededCount / (double)completedCount).ToString("P1", CultureInfo.CurrentCulture);
+
+    private static string FormatThroughput(double executionsPerHour) =>
+        executionsPerHour.ToString("0.#", CultureInfo.CurrentCulture);
 }
