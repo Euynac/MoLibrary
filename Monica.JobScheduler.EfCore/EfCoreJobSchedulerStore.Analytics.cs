@@ -215,9 +215,7 @@ public sealed partial class EfCoreJobSchedulerStore
         var ordered = durationTicks.Order();
         var minimum = await ordered.FirstAsync(cancellationToken);
         var maximum = await ordered.OrderDescending().FirstAsync(cancellationToken);
-        // Cast before aggregating: some providers (GaussDB) shape AVG over bigint as a double-precision column
-        // their Int64 reader cannot materialize, while AVG over an already-double projection is read as double.
-        var average = await durationTicks.AverageAsync(static ticks => (double)ticks, cancellationToken);
+        var average = await durationTicks.AverageAsync(cancellationToken);
         var p50 = await GetPercentileAsync(ordered, count, 0.50, cancellationToken);
         var p90 = await GetPercentileAsync(ordered, count, 0.90, cancellationToken);
         var p95 = await GetPercentileAsync(ordered, count, 0.95, cancellationToken);
@@ -255,7 +253,11 @@ public sealed partial class EfCoreJobSchedulerStore
         var rows = await completions
             .Select(item => new
             {
-                BucketIndex = (item.CompletedAtUtcTicks!.Value - startTicks) / bucketTicks,
+                // Divide in double and cast back: GaussDB evaluates bigint division in double precision, which
+                // the Int64-shaped bucket-key reader cannot materialize; the explicit cast keeps the grouped
+                // key an integer on every provider. Inputs are non-negative and far below double precision's
+                // exact-integer range, so truncation matches integer division exactly.
+                BucketIndex = (long)((item.CompletedAtUtcTicks!.Value - startTicks) / (double)bucketTicks),
                 item.State,
                 WasExecuted = item.StartedAtUtcTicks != null
             })
