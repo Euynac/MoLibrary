@@ -245,4 +245,47 @@ public sealed partial class EfCoreJobSchedulerStore(
             body ?? Expression.Constant(false),
             parameter);
     }
+
+    /// <summary>
+    /// Builds an exact OR predicate over (OwnerKey, JobKey, boundary) match rows so the second phase of a
+    /// two-phase latest-per-group lookup fetches only the aggregated winners. Correlated "latest per group"
+    /// subqueries are not translated reliably by every EF provider — GaussDB returned ungrouped rows, crashing
+    /// keyed lookups — so winners are first reduced with plain GROUP BY aggregates and then matched by exact
+    /// equality.
+    /// </summary>
+    private static Expression<Func<JobExecutionEntity, bool>> CreateBoundaryPredicate(
+        IEnumerable<(JobId Identity, long Boundary)> boundaries,
+        Expression<Func<JobExecutionEntity, long>> boundarySelector)
+    {
+        var parameter = Expression.Parameter(typeof(JobExecutionEntity), "item");
+        var boundary = new ParameterRebinder(boundarySelector.Parameters[0], parameter)
+            .Visit(boundarySelector.Body)!;
+        Expression? body = null;
+        foreach (var (identity, value) in boundaries)
+        {
+            var ownerMatch = Expression.Equal(
+                Expression.Property(parameter, nameof(JobExecutionEntity.OwnerKey)),
+                Expression.Constant(identity.OwnerKey));
+            var jobMatch = Expression.Equal(
+                Expression.Property(parameter, nameof(JobExecutionEntity.JobKey)),
+                Expression.Constant(identity.JobKey));
+            var boundaryMatch = Expression.Equal(boundary, Expression.Constant(value));
+            var match = Expression.AndAlso(Expression.AndAlso(ownerMatch, jobMatch), boundaryMatch);
+            body = body is null ? match : Expression.OrElse(body, match);
+        }
+
+        return Expression.Lambda<Func<JobExecutionEntity, bool>>(
+            body ?? Expression.Constant(false),
+            parameter);
+    }
+
+    /// <summary>
+    /// Rebinds one lambda parameter onto another so a selector body composes into a larger predicate.
+    /// </summary>
+    private sealed class ParameterRebinder(ParameterExpression source, ParameterExpression target)
+        : ExpressionVisitor
+    {
+        protected override Expression VisitParameter(ParameterExpression node) =>
+            node == source ? target : node;
+    }
 }

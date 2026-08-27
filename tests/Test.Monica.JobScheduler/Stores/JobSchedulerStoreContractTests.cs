@@ -209,6 +209,34 @@ public sealed class JobSchedulerStoreContractTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task QueryOperationalSummaries_MultipleExecutionsPerJobShouldReportLatest(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(
+            StoreFixture.OWNER_A,
+            StoreFixture.RecurringDeclaration("jobs.alpha"),
+            StoreFixture.TriggeredDeclaration("jobs.beta"));
+
+        // An execution history behind one job must reduce to a single latest row per summary, exactly as the
+        // GaussDB incident showed: several executions per job crashed the page's keyed lookup.
+        for (var i = 0; i < 3; i++)
+        {
+            await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_A, "jobs.beta", instanceId: $"exec-{i}");
+            fixture.Time.Advance(TimeSpan.FromMinutes(1));
+        }
+
+        var page = await fixture.Store.QueryOperationalSummariesAsync(
+            fixture.Scope,
+            new JobDefinitionQuery { PageNumber = 1, PageSize = 10 },
+            TestContext.Current.CancellationToken);
+        var beta = page.Items.Should().ContainSingle(
+            summary => summary.Definition.Id == new JobId(StoreFixture.OWNER_A, "jobs.beta")).Subject;
+        beta.LatestExecution!.InstanceId.Should().Be("exec-2");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Claim_ShouldEnforceConcurrencyGateAndLocalJobKeys(bool useEfCore)
     {
         await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);

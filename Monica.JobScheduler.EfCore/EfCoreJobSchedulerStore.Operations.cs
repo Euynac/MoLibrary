@@ -64,18 +64,32 @@ public sealed partial class EfCoreJobSchedulerStore
             var executionQuery = dbContext.Executions.AsNoTracking()
                 .Where(execution => execution.SchedulerScopeKey == schedulerScopeKey)
                 .Where(CreateIdentityPredicate<JobExecutionEntity>(identities));
-            var latestExecutionEntities = await executionQuery
-                .Where(candidate => candidate.InstanceId == executionQuery
-                    .Where(execution => execution.OwnerKey == candidate.OwnerKey
-                                        && execution.JobKey == candidate.JobKey)
-                    .OrderByDescending(execution => execution.CreatedAtUtcTicks)
-                    .ThenByDescending(execution => execution.InstanceId)
-                    .Select(execution => execution.InstanceId)
-                    .First())
+            // Latest execution per page job in two phases: a plain GROUP BY + MAX reduces each job to its newest
+            // creation tick, then an exact-equality fetch loads the winning rows. Correlated "latest per group"
+            // subqueries are not translated reliably by every EF provider and would crash the keyed lookup below.
+            var latestBoundaries = await executionQuery
+                .GroupBy(static execution => new { execution.OwnerKey, execution.JobKey })
+                .Select(static group => new
+                {
+                    group.Key.OwnerKey,
+                    group.Key.JobKey,
+                    CreatedAtUtcTicks = group.Max(static execution => execution.CreatedAtUtcTicks)
+                })
                 .ToArrayAsync(token);
-            var latestExecutions = latestExecutionEntities.ToDictionary(
-                static execution => new JobId(execution.OwnerKey, execution.JobKey),
-                ToExecution);
+            var latestExecutionEntities = await executionQuery
+                .Where(CreateBoundaryPredicate(
+                    latestBoundaries.Select(static row =>
+                        (new JobId(row.OwnerKey, row.JobKey), row.CreatedAtUtcTicks)),
+                    static execution => execution.CreatedAtUtcTicks))
+                .ToArrayAsync(token);
+            var latestExecutions = latestExecutionEntities
+                .GroupBy(static execution => new JobId(execution.OwnerKey, execution.JobKey))
+                .ToDictionary(
+                    static group => group.Key,
+                    static group => ToExecution(group
+                        .OrderByDescending(static execution => execution.CreatedAtUtcTicks)
+                        .ThenByDescending(static execution => execution.InstanceId)
+                        .First()));
             var activeCountRows = await executionQuery
                 .Where(execution =>
                     execution.State == JobExecutionState.Queued

@@ -132,28 +132,25 @@ public sealed partial class EfCoreJobSchedulerStore
             .Where(static execution =>
                 execution.StartedAtUtcTicks != null
                 && execution.CompletedAtUtcTicks >= execution.StartedAtUtcTicks);
-        var slowestExecutionKeys = measurableCompletions
-            .Select(static execution => new { execution.OwnerKey, execution.JobKey })
-            .Distinct()
-            .Select(identity => new
+        // Slowest execution per job in two phases: a plain GROUP BY + MAX reduces each job to its peak duration,
+        // then an exact-equality fetch loads the winning rows, which are ranked and limited client-side over the
+        // per-job winners. Correlated argmax subqueries are not translated reliably by every EF provider.
+        var slowestBoundaries = await measurableCompletions
+            .GroupBy(static execution => new { execution.OwnerKey, execution.JobKey })
+            .Select(static group => new
             {
-                identity.OwnerKey,
-                identity.JobKey,
-                InstanceId = measurableCompletions
-                    .Where(execution => execution.OwnerKey == identity.OwnerKey
-                                        && execution.JobKey == identity.JobKey)
-                    .OrderByDescending(static execution =>
-                        execution.CompletedAtUtcTicks!.Value - execution.StartedAtUtcTicks!.Value)
-                    .ThenBy(static execution => execution.InstanceId)
-                    .Select(static execution => execution.InstanceId)
-                    .First()
-            });
-        var slowestRows = await measurableCompletions
-            .Join(
-                slowestExecutionKeys,
-                static execution => new { execution.OwnerKey, execution.JobKey, execution.InstanceId },
-                static selected => new { selected.OwnerKey, selected.JobKey, selected.InstanceId },
-                static (execution, _) => new
+                group.Key.OwnerKey,
+                group.Key.JobKey,
+                DurationTicks = group.Max(static execution =>
+                    execution.CompletedAtUtcTicks!.Value - execution.StartedAtUtcTicks!.Value)
+            })
+            .ToArrayAsync(cancellationToken);
+        var slowestRows = (await measurableCompletions
+                .Where(CreateBoundaryPredicate(
+                    slowestBoundaries.Select(static row =>
+                        (new JobId(row.OwnerKey, row.JobKey), row.DurationTicks)),
+                    static execution => execution.CompletedAtUtcTicks!.Value - execution.StartedAtUtcTicks!.Value))
+                .Select(static execution => new
                 {
                     execution.InstanceId,
                     execution.TemplateJson,
@@ -164,12 +161,13 @@ public sealed partial class EfCoreJobSchedulerStore
                     CompletedAtUtcTicks = execution.CompletedAtUtcTicks!.Value,
                     DurationTicks = execution.CompletedAtUtcTicks.Value - execution.StartedAtUtcTicks.Value
                 })
+                .ToArrayAsync(cancellationToken))
             .OrderByDescending(static execution => execution.DurationTicks)
             .ThenBy(static execution => execution.OwnerKey)
             .ThenBy(static execution => execution.JobKey)
             .ThenBy(static execution => execution.InstanceId)
             .Take(query.SlowestExecutionLimit)
-            .ToArrayAsync(cancellationToken);
+            .ToArray();
 
         return new JobExecutionAnalyticsSnapshot
         {
@@ -217,7 +215,9 @@ public sealed partial class EfCoreJobSchedulerStore
         var ordered = durationTicks.Order();
         var minimum = await ordered.FirstAsync(cancellationToken);
         var maximum = await ordered.OrderDescending().FirstAsync(cancellationToken);
-        var average = await durationTicks.AverageAsync(cancellationToken);
+        // Cast before aggregating: some providers (GaussDB) shape AVG over bigint as a double-precision column
+        // their Int64 reader cannot materialize, while AVG over an already-double projection is read as double.
+        var average = await durationTicks.AverageAsync(static ticks => (double)ticks, cancellationToken);
         var p50 = await GetPercentileAsync(ordered, count, 0.50, cancellationToken);
         var p90 = await GetPercentileAsync(ordered, count, 0.90, cancellationToken);
         var p95 = await GetPercentileAsync(ordered, count, 0.95, cancellationToken);
@@ -343,21 +343,40 @@ public sealed partial class EfCoreJobSchedulerStore
                 group.LongCount(item => item.State == JobExecutionState.Skipped),
                 group.LongCount(item => item.State == JobExecutionState.Cancelled)))
             .ToArrayAsync(cancellationToken);
-        var latestTemplates = await completions
+        var templateBoundaries = await completions
             .Where(identityPredicate)
             .GroupBy(static item => new { item.OwnerKey, item.JobKey })
-            .Select(static group => new AnalyticsJobTitleRow(
+            .Select(static group => new
+            {
                 group.Key.OwnerKey,
                 group.Key.JobKey,
-                group.OrderByDescending(static item => item.CompletedAtUtcTicks)
-                    .ThenBy(static item => item.InstanceId)
-                    .Select(static item => item.TemplateJson)
-                    .First()))
+                CompletedAtUtcTicks = group.Max(static item => item.CompletedAtUtcTicks!.Value)
+            })
             .ToArrayAsync(cancellationToken);
-        var templateByIdentity = latestTemplates.ToDictionary(
-            static item => new JobId(item.OwnerKey, item.JobKey),
-            static item => item.TemplateJson,
-            EqualityComparer<JobId>.Default);
+        var latestTemplateRows = await completions
+            .Where(identityPredicate)
+            .Where(CreateBoundaryPredicate(
+                templateBoundaries.Select(static row =>
+                    (new JobId(row.OwnerKey, row.JobKey), row.CompletedAtUtcTicks)),
+                static item => item.CompletedAtUtcTicks!.Value))
+            .Select(static item => new
+            {
+                item.OwnerKey,
+                item.JobKey,
+                CompletedAtUtcTicks = item.CompletedAtUtcTicks!.Value,
+                item.InstanceId,
+                item.TemplateJson
+            })
+            .ToArrayAsync(cancellationToken);
+        var templateByIdentity = latestTemplateRows
+            .GroupBy(static item => new JobId(item.OwnerKey, item.JobKey))
+            .ToDictionary(
+                static group => group.Key,
+                static group => group
+                    .OrderByDescending(static item => item.CompletedAtUtcTicks)
+                    .ThenBy(static item => item.InstanceId)
+                    .First()
+                    .TemplateJson);
         var rowsByIdentity = rows.ToDictionary(
             static item => new JobId(item.OwnerKey, item.JobKey),
             EqualityComparer<JobId>.Default);
@@ -398,8 +417,6 @@ public sealed partial class EfCoreJobSchedulerStore
         long FailedCount,
         long SkippedCount,
         long CancelledCount);
-
-    private sealed record AnalyticsJobTitleRow(string OwnerKey, string JobKey, string TemplateJson);
 
     private enum AnalyticsJobRanking
     {
