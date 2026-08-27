@@ -145,6 +145,7 @@
     "Disabled": "已禁用",
     "OnDemand": "按需触发",
     "Empty": "没有符合当前筛选条件的活动定义。",
+    "AbsentViewNotice": "正在显示所有者已不再发布的作业定义，执行历史仍可用于审计。",
     "Filters": {
       "AriaLabel": "作业目录搜索与筛选",
       "Search": "定义",
@@ -162,13 +163,12 @@
       "Lifecycle": "调度状态",
       "Schedule": "调度",
       "NextRun": "下次执行",
-      "Readiness": "运行就绪",
       "LastRun": "上次执行",
       "Actions": "操作"
     },
     "Actions": {
       "Run": "立即执行作业",
-      "Trigger": "通过活动目录执行",
+      "Trigger": "通过活动作业定义执行",
       "Policy": "编辑运维策略",
       "Details": "打开作业详情",
       "Pause": "暂停周期实例物化",
@@ -217,9 +217,6 @@
     "History": {
       "NeverRun": "从未执行"
     },
-    "Activity": {
-      "QueuedRunning": "排队 {0} · 执行中 {1}"
-    },
     "Selection": {
       "SelectAll": "选择本页全部周期作业",
       "SelectPage": "选择本页",
@@ -248,15 +245,11 @@
       "PauseUnavailableDebug": "所选作业中至少有一个仅由调试模式抑制且没有运维暂停，因此不能快速暂停。",
       "Result": "{0} 项策略更新成功，{1} 项失败。",
       "ResultDebugRemains": "{0} 项运维暂停更新成功，{1} 项失败；已配置调试模式的作业仍会抑制自动物化。"
-    },
-    "Readiness": {
-      "Present": "所有者在线",
-      "Absent": "所有者缺席"
     }
   },
   "Policy": {
     "Title": "运维策略工作台",
-    "ImmutableNotice": "作业键、作业类型、参数契约、所有者、发布、工作器修订、作业修订和已配置时区始终由部署管理。策略变更影响后续准入；已排队和运行中的执行保留其已捕获配置。",
+    "ImmutableNotice": "作业键、作业类型、参数契约、所有者和已配置时区始终由代码声明管理。策略变更影响后续准入；已排队和运行中的执行保留其已捕获配置。",
     "DisabledOverride": "执行状态覆盖",
     "InheritDefault": "继承代码默认值",
     "ForceEnabled": "强制启用",
@@ -272,7 +265,7 @@
       "Declared": "声明默认值",
       "Override": "运维覆盖值",
       "Effective": "生效值",
-      "Help": "每一行都分别展示不可变发布默认值、运维意图以及调度器将采用的实际行为。"
+      "Help": "每一行都分别展示不可变声明默认值、运维意图以及调度器将采用的实际行为。"
     },
     "Sections": {
       "General": "常规",
@@ -332,7 +325,7 @@
       "Timeout": "请输入大于 0 且在支持范围内的执行超时。"
     },
     "Conflict": {
-      "DraftsPreserved": "另一位运维人员或新发布更改了策略基线（{0} → {1}）。未保存的编辑会保留，未触及字段会采用最新策略；请检查后再重试。",
+      "DraftsPreserved": "另一位运维人员更改了策略基线（{0} → {1}）。未保存的编辑会保留，未触及字段会采用最新策略；请检查后再重试。",
       "ReloadFailed": "策略已发生变化，但无法加载最新运维基线。请关闭并重新打开工作台后重试。",
       "SameField": "最新策略至少修改了您也编辑过的字段；这些字段将保留您的草稿。重试前请检查声明值、覆盖值和生效值三列。",
       "ScheduleTypeChanged": "此 Cron 草稿打开期间，作业已从周期型变为触发型。隐藏草稿尚未提交；请仅丢弃该调度意图，再保存其余编辑。",
@@ -448,7 +441,7 @@
   "JobDetail": {
     "PageTitle": "任务调度 · 作业详情",
     "BreadcrumbAriaLabel": "作业目录导航",
-    "NotFound": "活动目录中不存在作业 {0} 的声明。",
+    "NotFound": "活动 owner 声明中不存在作业 {0}。",
     "RefreshFailed": "最近一次刷新失败：{0}",
     "ObservedAt": "运行证据观测时间：{0}",
     "Actions": {
@@ -488,11 +481,11 @@
       "StartBoundary": "开始边界",
       "EndBoundary": "结束边界",
       "TriggeredTitle": "按需准入",
-      "TriggeredDescription": "该作业没有周期游标，运维人员需通过活动目录显式准入执行。",
+      "TriggeredDescription": "该作业没有周期游标，运维人员需通过活动作业定义显式准入执行。",
       "DebugManualOnly": "调试模式正在抑制自动周期实例；立即执行仍然可用，并且不会推进周期游标。",
       "StatusDescriptions": {
         "NotRecurring": "按需作业不使用周期游标。",
-        "AwaitingSynchronization": "活动声明正在等待控制平面创建持久化游标。",
+        "AwaitingSynchronization": "活动 owner 声明正在等待调度器创建持久化游标。",
         "Scheduled": "持久化游标已确定下一个待物化的未来时点。",
         "Suspended": "运维策略已暂停新的周期实例物化。",
         "Exhausted": "声明的调度边界内已没有后续执行时点。"
@@ -508,7 +501,7 @@
       "Description": "代码声明字段保持不可变；运维策略独立存储，并通过乐观并发更新。",
       "Immutable": "不可变声明",
       "DeclarationTitle": "执行声明",
-      "Owner": "目录所有者",
+      "Owner": "作业所有者",
       "ArgumentsKey": "参数契约",
       "MaxConcurrency": "最大并发数",
       "MaxConcurrencyHelp": "限制并发工作节点租约；周期实例物化也将其作为排队与运行实例的重叠上限。",
@@ -522,7 +515,7 @@
       "PolicyUpdated": "策略更新时间",
       "PolicyStamp": "并发标识",
       "PolicyStampHelp": "乐观并发令牌；策略更新必须匹配当前值，并在成功后获得新值。",
-      "RevisionTitle": "发布与版本身份",
+      "IdentityTitle": "调度身份",
       "SchedulerScope": "调度范围",
       "OverrideEffective": "覆盖值：{0} · 生效值：{1}",
       "Absent": "已移除",
@@ -533,7 +526,7 @@
     },
     "LatestExecution": {
       "Title": "最近执行",
-      "Description": "该逻辑作业跨目录版本的最新持久化执行证据。",
+      "Description": "该 owner 作用域逻辑作业的最新持久化执行证据。",
       "Empty": "该作业尚未生成持久化执行。"
     },
     "Health": {
@@ -723,7 +716,6 @@
     "Origin": "准入方式",
     "Available": "可执行时间",
     "Worker": "执行节点",
-    "Revision": "精确执行身份",
     "Arguments": "序列化参数",
     "History": "追加式执行历史",
     "Identity": "执行身份",

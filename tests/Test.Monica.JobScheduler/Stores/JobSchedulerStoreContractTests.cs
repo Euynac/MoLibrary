@@ -56,6 +56,10 @@ public sealed class JobSchedulerStoreContractTests
         // The absent definition keeps its sticky policy for audit and a possible return.
         beta.Policy.Should().NotBeNull();
 
+        fixture.Time.Advance(TimeSpan.FromSeconds(5));
+        var repeatedAbsent = await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration("jobs.alpha"));
+        repeatedAbsent.MarkedAbsentCount.Should().Be(0);
+
         // A returning job resumes with its sticky policy intact.
         fixture.Time.Advance(TimeSpan.FromSeconds(5));
         await fixture.SyncAsync(
@@ -432,7 +436,6 @@ public sealed class JobSchedulerStoreContractTests
             CursorKey = cursor.Key,
             ExpectedVersion = cursor.Version,
             ExpectedOccurrenceUtc = occurrence,
-            NextOccurrenceUtc = occurrence.AddHours(1),
             InstanceId = "alpha-occurrence-1"
         };
         var result = await fixture.Store.TryMaterializeRecurringOccurrenceAsync(materialization, TestContext.Current.CancellationToken);
@@ -449,6 +452,77 @@ public sealed class JobSchedulerStoreContractTests
         // The materialized occurrence is claimable and idempotent by instance identity.
         var lease = (await fixture.ClaimAsync(StoreFixture.OWNER_A, "worker-a", ["jobs.alpha"])).Single();
         lease.Execution.InstanceId.Should().Be("alpha-occurrence-1");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecurringMaterialization_ShouldAdvanceFromTheStoreClockAfterAnOutage(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration(
+            "jobs.alpha",
+            cron: "0 0 * * * *"));
+        var cursor = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+
+        // The first hourly occurrence is overdue, while two later occurrences have already elapsed. The store must
+        // coalesce that backlog using its authoritative clock and leave the cursor at the first future occurrence.
+        fixture.Time.Advance(TimeSpan.FromHours(2).Add(TimeSpan.FromMinutes(30)));
+        var result = await fixture.Store.TryMaterializeRecurringOccurrenceAsync(new RecurringOccurrenceMaterialization
+        {
+            CursorKey = cursor.Key,
+            ExpectedVersion = cursor.Version,
+            ExpectedOccurrenceUtc = NOW.AddHours(1),
+            InstanceId = "alpha-outage-occurrence"
+        }, TestContext.Current.CancellationToken);
+
+        result.Status.Should().Be(RecurringMaterializationStatus.Materialized);
+        result.Cursor!.NextOccurrenceUtc.Should().Be(NOW.AddHours(3));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecurringMaterialization_ShouldRejectAStaleCursorAfterDeclarationPublication(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration(
+            "jobs.alpha",
+            cron: "0 0 * * * *"));
+        var cursor = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+
+        fixture.Time.Advance(TimeSpan.FromHours(1));
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration(
+            "jobs.alpha",
+            cron: "0 30 * * * *",
+            retryCount: 3));
+
+        // Definition publication and cursor synchronization are intentionally separate. The old cursor must not admit
+        // an occurrence with the old schedule or execution template during that synchronization window.
+        var stale = await fixture.Store.TryMaterializeRecurringOccurrenceAsync(new RecurringOccurrenceMaterialization
+        {
+            CursorKey = cursor.Key,
+            ExpectedVersion = cursor.Version,
+            ExpectedOccurrenceUtc = NOW.AddHours(1),
+            InstanceId = "stale-declaration-occurrence"
+        }, TestContext.Current.CancellationToken);
+
+        stale.Status.Should().Be(RecurringMaterializationStatus.StaleCursor);
+        stale.Execution.Should().BeNull();
+        stale.Cursor!.Schedule.CronExpression.Should().Be("0 0 * * * *");
+
+        var executions = await fixture.Store.QueryExecutionsAsync(new JobExecutionQuery
+        {
+            SchedulerScopeKey = fixture.Scope,
+            OwnerKey = StoreFixture.OWNER_A,
+            JobKey = "jobs.alpha"
+        }, TestContext.Current.CancellationToken);
+        executions.TotalCount.Should().Be(0);
+
+        var repaired = await fixture.SyncCursorAsync(StoreFixture.OWNER_A, "jobs.alpha");
+        repaired.Template.RetryCount.Should().Be(3);
+        repaired.Schedule.CronExpression.Should().Be("0 30 * * * *");
+        repaired.NextOccurrenceUtc.Should().Be(NOW.AddHours(1).AddMinutes(30));
     }
 
     [Theory]
@@ -580,13 +654,23 @@ public sealed class JobSchedulerStoreContractTests
         var sortedByJobKey = await fixture.Store.QueryDefinitionsAsync(
             fixture.Scope,
             new JobDefinitionQuery { SortField = JobDefinitionSortField.JobKey }, TestContext.Current.CancellationToken);
-        sortedByJobKey.Items.Select(definition => definition.Declaration.JobKey)
-            .Should().Equal(["jobs.alpha", "jobs.alpha", "jobs.zulu"]);
+        sortedByJobKey.Items.Select(definition => definition.Id)
+            .Should().Equal(
+                [
+                    new JobId(StoreFixture.OWNER_A, "jobs.alpha"),
+                    new JobId(StoreFixture.OWNER_B, "jobs.alpha"),
+                    new JobId(StoreFixture.OWNER_A, "jobs.zulu")
+                ]);
 
-        var paged = await fixture.Store.QueryDefinitionsAsync(
+        var firstPage = await fixture.Store.QueryDefinitionsAsync(
+            fixture.Scope,
+            new JobDefinitionQuery { PageSize = 2, PageNumber = 1, SortField = JobDefinitionSortField.JobKey }, TestContext.Current.CancellationToken);
+        var secondPage = await fixture.Store.QueryDefinitionsAsync(
             fixture.Scope,
             new JobDefinitionQuery { PageSize = 2, PageNumber = 2, SortField = JobDefinitionSortField.JobKey }, TestContext.Current.CancellationToken);
-        paged.Items.Should().ContainSingle();
+        firstPage.Items.Select(definition => definition.Id)
+            .Concat(secondPage.Items.Select(definition => definition.Id))
+            .Should().Equal(sortedByJobKey.Items.Select(definition => definition.Id));
     }
 
     [Theory]
@@ -686,7 +770,6 @@ public sealed class JobSchedulerStoreContractTests
             CursorKey = due.Key,
             ExpectedVersion = due.Version,
             ExpectedOccurrenceUtc = occurrence,
-            NextOccurrenceUtc = due.Schedule.GetNextOccurrence(occurrence.AddTicks(1)),
             InstanceId = $"occurrence-{key.JobKey}-{occurrence.UtcTicks}"
         }, TestContext.Current.CancellationToken);
     }

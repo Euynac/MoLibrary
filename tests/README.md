@@ -32,14 +32,8 @@ public sealed class JobSchedulerTestApplicationFactory
     protected override void ConfigureMonica(IMonicaBuilder monica)
     {
         monica.AddJobScheduler(options => options.ProjectName = "Test.Monica.JobScheduler")
-            .AsStandalone()
-            .UseInMemoryStore()
             .UseSchedulerScope("job-tests")
-            .UseCatalogRelease(
-                "job-tests:scenario-1",
-                deploymentGeneration: 1,
-                [new("Test.Monica.JobScheduler", "job-tests:scenario-1")])
-            .UseLocalWorkerIdentity("Test.Monica.JobScheduler", "job-tests:scenario-1");
+            .UseInMemoryStore();
     }
 
     protected override void ConfigureServices(IServiceCollection services)

@@ -70,14 +70,8 @@ builder.AddMonica(monica =>
         {
             options.ProjectName = "Orders";
         })
-        .AsStandalone()
-        .UseInMemoryStore()
         .UseSchedulerScope("orders")
-        .UseCatalogRelease(
-            "orders:development",
-            deploymentGeneration: 1,
-            [new("Orders", "orders:development")])
-        .UseLocalWorkerIdentity("Orders", "orders:development");
+        .UseInMemoryStore();
 
     monica.AddJobSchedulerUI();
 });
@@ -88,7 +82,7 @@ app.MapMonica();
 app.Run();
 ```
 
-With a durable production store, leases provide at-least-once execution after a worker crash, and fencing rejects stale scheduler mutations. A logical job's concurrency gate is keyed by scheduler scope and `JobKey`; it therefore remains closed while a superseded owner or revision is still cooperatively stopping after catalog cutover. Fencing cannot make arbitrary job side effects exactly-once; jobs should use idempotency keys or transactional business boundaries for those effects.
+With a durable production store, execution leases provide at-least-once recovery after a worker crash, while fencing rejects mutations from an expired lease. Each host synchronizes, schedules, and executes the jobs it discovers under its own owner identity; replicas coordinate through durable compare-and-swap operations. Concurrency gates are keyed by scheduler scope, owner, and `JobKey`. Fencing cannot make arbitrary job side effects exactly-once, so jobs should use idempotency keys or transactional business boundaries for those effects.
 
 The callback is the complete composition boundary. Captured `ModuleRegistration<,>` handles cannot mutate the graph after it closes, and startup fails early when the graph is incomplete or cyclic.
 

@@ -41,6 +41,11 @@ public sealed partial class EfCoreJobSchedulerStore
                 .ToHashSet(StringComparer.Ordinal);
             foreach (var entity in existingEntities.Where(item => !presentKeys.Contains(item.JobKey)))
             {
+                if (entity.IsPresent)
+                {
+                    markedAbsent++;
+                }
+
                 entity.IsPresent = false;
                 entity.LastObservedAtUtcTicks = ToTicks(now);
                 entity.ConcurrencyToken = NewVersion();
@@ -48,7 +53,6 @@ public sealed partial class EfCoreJobSchedulerStore
                 {
                     dbContext.RecurringCursors.Remove(cursor);
                 }
-                markedAbsent++;
             }
 
             foreach (var declaration in normalized.Declarations)
@@ -233,20 +237,21 @@ public sealed partial class EfCoreJobSchedulerStore
 
     private static IOrderedQueryable<JobDefinitionEntity> OrderDefinitions(
         IQueryable<JobDefinitionEntity> filtered,
-        JobDefinitionQuery query) =>
-        query.SortField switch
+        JobDefinitionQuery query)
+    {
+        var ordered = query.SortField switch
         {
-            JobDefinitionSortField.JobName => Order(filtered, query, item => item.JobName)
-                .ThenBy(item => item.JobKey),
+            JobDefinitionSortField.JobName => Order(filtered, query, item => item.JobName),
             JobDefinitionSortField.JobKey => Order(filtered, query, item => item.JobKey),
-            JobDefinitionSortField.OwnerKey => Order(filtered, query, item => item.OwnerKey)
-                .ThenBy(item => item.JobKey),
-            JobDefinitionSortField.JobType => Order(filtered, query, item => item.JobType)
-                .ThenBy(item => item.JobKey),
-            JobDefinitionSortField.IsDisabled => Order(filtered, query, item => item.IsDisabled)
-                .ThenBy(item => item.JobKey),
+            JobDefinitionSortField.OwnerKey => Order(filtered, query, item => item.OwnerKey),
+            JobDefinitionSortField.JobType => Order(filtered, query, item => item.JobType),
+            JobDefinitionSortField.IsDisabled => Order(filtered, query, item => item.IsDisabled),
             _ => throw new ArgumentOutOfRangeException(nameof(query), query.SortField, "Unsupported sort field.")
         };
+        return ordered
+            .ThenBy(item => item.OwnerKey)
+            .ThenBy(item => item.JobKey);
+    }
 
     private static IOrderedQueryable<JobDefinitionEntity> Order<TKey>(
         IQueryable<JobDefinitionEntity> filtered,

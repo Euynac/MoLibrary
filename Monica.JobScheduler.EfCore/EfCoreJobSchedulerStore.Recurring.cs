@@ -169,6 +169,7 @@ public sealed partial class EfCoreJobSchedulerStore
             }
 
             var template = Deserialize<JobExecutionTemplate>(cursor.TemplateJson);
+            var cursorSchedule = Deserialize<RecurringScheduleDefinition>(cursor.ScheduleJson);
             var definitionEntity = await dbContext.Definitions.AsNoTracking().SingleOrDefaultAsync(
                 item => item.SchedulerScopeKey == materialization.CursorKey.SchedulerScopeKey
                         && item.OwnerKey == materialization.CursorKey.OwnerKey
@@ -185,8 +186,25 @@ public sealed partial class EfCoreJobSchedulerStore
                 };
             }
 
+            var definition = ToDefinition(definitionEntity);
+            var currentTemplate = definition.CreateExecutionTemplate();
+            var currentSchedule = definition.EffectiveConfiguration.Schedule
+                                  ?? throw new InvalidOperationException(
+                                      $"Recurring job '{definition.OwnerKey}/{definition.Declaration.JobKey}' has no effective schedule.");
+            // Snapshot publication and cursor synchronization are separate transactions. A materializer can therefore
+            // briefly see a new definition beside the previous cursor; reject that mixed snapshot and let the next
+            // scheduling cycle repair the cursor before admission.
+            if (template != currentTemplate || cursorSchedule != currentSchedule)
+            {
+                return new RecurringMaterializationResult
+                {
+                    Status = RecurringMaterializationStatus.StaleCursor,
+                    Cursor = ToCursor(cursor, template, cursorSchedule)
+                };
+            }
+
             if (cursor.SuspensionReasons != JobRecurringScheduleSuspensionReason.None
-                || definitionEntity.IsDisabled)
+                || definition.IsDisabled)
             {
                 return new RecurringMaterializationResult
                 {
@@ -223,6 +241,9 @@ public sealed partial class EfCoreJobSchedulerStore
                 AvailableAtUtc = materialization.ExpectedOccurrenceUtc,
                 EnqueueReason = $"Recurring occurrence {materialization.ExpectedOccurrenceUtc:O} materialized"
             };
+            // Use the database-authoritative clock so a host with a skewed process clock cannot advance the cursor to
+            // an incorrect occurrence or replay an already elapsed backlog one item at a time.
+            var nextOccurrence = cursorSchedule.GetNextOccurrence(now);
             var outstandingCount = await CountOutstandingExecutionsAsync(dbContext, template, token);
             var currentMaxConcurrency = await ResolveCurrentMaxConcurrencyAsync(dbContext, template, token);
             JobExecutionSkipReason? skipReason = outstandingCount >= currentMaxConcurrency
@@ -242,9 +263,7 @@ public sealed partial class EfCoreJobSchedulerStore
                     : $"Recurring occurrence {materialization.ExpectedOccurrenceUtc:O} skipped because " +
                       $"{outstandingCount} outstanding execution(s) reached the configured capacity of " +
                       $"{currentMaxConcurrency}");
-            cursor.NextOccurrenceUtcTicks = materialization.NextOccurrenceUtc is { } next
-                ? ToTicks(next)
-                : null;
+            cursor.NextOccurrenceUtcTicks = ToTicks(nextOccurrence);
             cursor.CursorVersion++;
             cursor.UpdatedAtUtcTicks = ToTicks(now);
             cursor.ConcurrencyToken = NewVersion();

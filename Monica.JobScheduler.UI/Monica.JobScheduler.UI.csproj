@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageDescription>Durable JobScheduler operations UI for catalog convergence, operator policy, and execution evidence.</PackageDescription>
+    <PackageDescription>Durable JobScheduler operations UI for owner definitions, operator policy, and execution evidence.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>

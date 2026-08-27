@@ -236,6 +236,29 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
+    public async Task JobDetailState_WhenTriggeredPolicyChanges_ShouldRemainNotRecurring()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await using var state = context.Services
+            .GetRequiredService<JobDefinitionDetailPageStateFactory>()
+            .Create(new JobId(JobSchedulerUiTestContext.OWNER, context.TriggeredDefinition.Declaration.JobKey));
+
+        await state.InitializeAsync();
+        (await state.SetDisabledAsync(true)).Status.Should().Be(ResStatus.Ok);
+
+        state.Summary.Should().NotBeNull();
+        state.Summary!.Definition.IsDisabled.Should().BeTrue();
+        state.Summary.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.NotRecurring);
+        state.Summary.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.None);
+        state.Summary.NextOccurrenceUtc.Should().BeNull();
+
+        (await state.SetDisabledAsync(false)).Status.Should().Be(ResStatus.Ok);
+        state.Summary.Definition.IsDisabled.Should().BeFalse();
+        state.Summary.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.NotRecurring);
+        state.Summary.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.None);
+    }
+
+    [Fact]
     public async Task OverviewRecentActivity_ShouldRenderClickableTimelineInsteadOfTableActions()
     {
         await using var context = new JobSchedulerUiTestContext();
@@ -334,7 +357,7 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
-    public async Task StatisticsRankings_ShouldLeadWithDurableTitleAndRetainJobKeyNavigation()
+    public async Task StatisticsRankings_ShouldLeadWithDurableTitleAndRetainOwnerScopedJobNavigation()
     {
         await using var context = new JobSchedulerUiTestContext();
         var jobKey = context.TriggeredDefinition.Declaration.JobKey;
@@ -342,6 +365,7 @@ public sealed class SchedulerOperationalPagesTests
         var rank = new JobExecutionAnalyticsJobRank
         {
             JobName = jobName,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
             JobKey = jobKey,
             SucceededCount = 7,
             FailedCount = 2
@@ -352,6 +376,8 @@ public sealed class SchedulerOperationalPagesTests
             StartTimeUtc = start,
             EndTimeUtc = start.AddHours(1),
             BucketSize = JobExecutionAnalyticsBucketSize.Hour,
+            OwnerKey = context.TriggeredDefinition.OwnerKey,
+            JobKey = jobKey,
             StateTotals = Enum.GetValues<JobExecutionState>()
                 .ToDictionary(static state => state, static _ => 0L),
             CompletedTerminalCount = 9,
@@ -379,7 +405,10 @@ public sealed class SchedulerOperationalPagesTests
         rankingLinks.Should().OnlyContain(link =>
             link.QuerySelector("strong")!.TextContent == jobName
             && link.QuerySelector("code")!.TextContent == jobKey
-            && link.GetAttribute("href")!.Contains(Uri.EscapeDataString(jobKey), StringComparison.Ordinal));
+            && link.QuerySelector(".analytics-dashboard__rank-copy small")!.TextContent ==
+            context.TriggeredDefinition.OwnerKey
+            && link.GetAttribute("href") ==
+            $"/job-scheduler/catalog/{Uri.EscapeDataString(context.TriggeredDefinition.OwnerKey)}/{Uri.EscapeDataString(jobKey)}");
         rankingLinks.Should().OnlyContain(link =>
             link.GetAttribute("aria-label")!.Contains(jobName, StringComparison.Ordinal)
             && link.QuerySelector("progress")!.GetAttribute("aria-hidden") == "true");
@@ -417,6 +446,7 @@ public sealed class SchedulerOperationalPagesTests
                 new JobExecutionAnalyticsJobRank
                 {
                     JobName = context.TriggeredDefinition.Declaration.JobName,
+                    OwnerKey = context.TriggeredDefinition.OwnerKey,
                     JobKey = context.TriggeredDefinition.Declaration.JobKey,
                     SucceededCount = 1
                 }
@@ -462,6 +492,7 @@ public sealed class SchedulerOperationalPagesTests
                 {
                     InstanceId = execution.InstanceId,
                     JobName = execution.Template.JobName,
+                    OwnerKey = execution.Template.OwnerKey,
                     JobKey = execution.Template.JobKey,
                     State = JobExecutionState.Succeeded,
                     StartedAtUtc = completedAtUtc.AddSeconds(-4),
@@ -493,7 +524,7 @@ public sealed class SchedulerOperationalPagesTests
     }
 
     [Fact]
-    public async Task JobDetail_ShouldRenderSchedulePolicyRevisionAndLatestExecutionEvidence()
+    public async Task JobDetail_ShouldRenderSchedulePolicyIdentityAndLatestExecutionEvidence()
     {
         await using var context = new JobSchedulerUiTestContext();
 
@@ -506,6 +537,7 @@ public sealed class SchedulerOperationalPagesTests
             cut.Markup.Should().Contain(context.RecurringDefinition.Declaration.JobKey);
             cut.Markup.Should().Contain("JobDetail:Schedule:NextOccurrence");
             cut.Markup.Should().Contain("JobDetail:Contract:PolicyTitle");
+            cut.Markup.Should().Contain("JobDetail:Contract:IdentityTitle");
             cut.Markup.Should().Contain("JobDetail:Contract:JobKey");
             cut.Markup.Should().Contain("RecurringScheduleStatuses:Scheduled");
             cut.Markup.Should().Contain("JobDetail:Health:Title");
@@ -696,6 +728,7 @@ public sealed class SchedulerOperationalPagesTests
             AvailableAtUtc = DateTimeOffset.UtcNow
         }, Xunit.TestContext.Current.CancellationToken);
         var dialogService = context.Services.GetRequiredService<IDialogService>();
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
         await dialogService.ShowAsync<ExecutionDetailDialog>(
             "Execution",
             new DialogParameters<ExecutionDetailDialog>
@@ -717,6 +750,12 @@ public sealed class SchedulerOperationalPagesTests
             provider.Markup.Should().Contain("ExecutionDetail:Actions:CopyDiagnostics");
             provider.Markup.Should().Contain("ExecutionDetail:Actions:ViewCatalog");
         });
+
+        await provider.FindAll("button")
+            .Single(button => button.TextContent.Contains("ExecutionDetail:Actions:ViewCatalog", StringComparison.Ordinal))
+            .ClickAsync();
+        navigation.Uri.Should().EndWith(
+            $"/job-scheduler/catalog/{Uri.EscapeDataString(execution.Template.OwnerKey)}/{Uri.EscapeDataString(execution.Template.JobKey)}");
     }
 
     [Fact]

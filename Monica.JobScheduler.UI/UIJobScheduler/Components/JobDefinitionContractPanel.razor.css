@@ -40,7 +40,7 @@
 }
 
 .job-contract-panel__sections > section,
-.job-contract-panel__revision {
+.job-contract-panel__identity {
     display: grid;
     align-content: start;
     gap: 10px;
@@ -59,7 +59,7 @@
     background-color: var(--mud-palette-lines-default);
 }
 
-.job-contract-panel__revision dl {
+.job-contract-panel__identity dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -74,13 +74,13 @@
     background-color: var(--mud-palette-surface);
 }
 
-.job-contract-panel__revision dl > div {
+.job-contract-panel__identity dl > div {
     grid-template-columns: minmax(0, 1fr);
     align-content: start;
     gap: 4px;
 }
 
-.job-contract-panel__revision dl > .job-contract-panel__revision-wide {
+.job-contract-panel__identity dl > .job-contract-panel__identity-wide {
     grid-column: 1 / -1;
 }
 
@@ -128,7 +128,7 @@
     text-align: right;
 }
 
-.job-contract-panel__revision dd {
+.job-contract-panel__identity dd {
     text-align: left;
 }
 
@@ -148,7 +148,7 @@
         display: grid;
     }
 
-    .job-contract-panel__revision dl {
+    .job-contract-panel__identity dl {
         grid-template-columns: minmax(0, 1fr);
     }
 

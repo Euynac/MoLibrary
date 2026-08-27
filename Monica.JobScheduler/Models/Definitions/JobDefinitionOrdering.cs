@@ -43,9 +43,9 @@ internal static class JobDefinitionOrdering
                 "Definition sort field is not supported.")
         };
 
-        return query.SortField == JobDefinitionSortField.JobKey
-            ? ordered
-            : ordered.ThenBy(static definition => definition.Declaration.JobKey, StringComparer.Ordinal);
+        return ordered
+            .ThenBy(static definition => definition.OwnerKey, StringComparer.Ordinal)
+            .ThenBy(static definition => definition.Declaration.JobKey, StringComparer.Ordinal);
     }
 
     private static IOrderedEnumerable<JobDefinition> Order<TKey>(

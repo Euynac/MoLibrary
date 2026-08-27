@@ -167,8 +167,98 @@ public sealed class JobSchedulerNativeTableStateTests
 
         await state.LoadTableAsync(tableState, Xunit.TestContext.Current.CancellationToken);
 
-        state.SelectedJobKeys.Should().ContainSingle().Which.Should()
-            .Be(summary.Definition.Declaration.JobKey);
+        state.SelectedJobIds.Should().ContainSingle().Which.Should()
+            .Be(summary.Definition.Id);
+    }
+
+    [Fact]
+    public async Task CatalogLoadTableAsync_WhenAbsentDeepLinkApplied_ShouldQueryOnlyAbsentDefinitions()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        var retiredDeclaration = context.RecurringDefinition.Declaration with
+        {
+            JobKey = "Sample.Jobs.RetiredCleanup",
+            JobName = "Retired cleanup"
+        };
+        var survivingDeclaration = context.RecurringDefinition.Declaration with
+        {
+            JobKey = "Sample.Jobs.SurvivingCleanup",
+            JobName = "Surviving cleanup"
+        };
+        await context.Store.SyncOwnerSnapshotAsync(new JobOwnerSnapshot(
+            JobSchedulerUiTestContext.SCOPE,
+            "worker-b",
+            [retiredDeclaration, survivingDeclaration]), Xunit.TestContext.Current.CancellationToken);
+        // Republish without the retired declaration so it stays in the catalog as an absent definition.
+        await context.Store.SyncOwnerSnapshotAsync(new JobOwnerSnapshot(
+            JobSchedulerUiTestContext.SCOPE,
+            "worker-b",
+            [survivingDeclaration]), Xunit.TestContext.Current.CancellationToken);
+
+        await using var state = context.Services
+            .GetRequiredService<JobCatalogPageStateFactory>()
+            .Create(20);
+        state.ApplyInitialQuery(present: false);
+        await state.InitializeAsync();
+
+        var result = await state.LoadTableAsync(new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobDefinitionSortField.JobName),
+            SortDirection = SortDirection.Ascending
+        }, Xunit.TestContext.Current.CancellationToken);
+
+        state.PresentFilter.Should().BeFalse();
+        result.TotalItems.Should().Be(1);
+        result.Items.Should().ContainSingle()
+            .Which.Definition.Declaration.JobKey.Should().Be(retiredDeclaration.JobKey);
+        result.Items.Single().Definition.IsPresent.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CatalogSelection_ShouldUseOwnerAndJobKeyIdentity()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        await context.Store.SyncOwnerSnapshotAsync(new JobOwnerSnapshot(
+            JobSchedulerUiTestContext.SCOPE,
+            "worker-b",
+            [context.RecurringDefinition.Declaration]), Xunit.TestContext.Current.CancellationToken);
+        await using var state = context.Services
+            .GetRequiredService<JobCatalogPageStateFactory>()
+            .Create(20);
+
+        await state.InitializeAsync();
+        var tableState = new TableState
+        {
+            PageSize = 20,
+            SortLabel = nameof(JobDefinitionSortField.JobName),
+            SortDirection = SortDirection.Ascending
+        };
+        var summaries = (await state.LoadTableAsync(tableState, Xunit.TestContext.Current.CancellationToken))
+            .Items!
+            .Where(summary => summary.Definition.Declaration.JobKey == context.RecurringDefinition.Declaration.JobKey)
+            .ToArray();
+        summaries.Should().HaveCount(2);
+
+        var ownerA = summaries.Single(summary => summary.Definition.OwnerKey == JobSchedulerUiTestContext.OWNER);
+        var ownerB = summaries.Single(summary => summary.Definition.OwnerKey == "worker-b");
+        state.ToggleSelection(ownerA);
+        state.SelectedRecurringSummaries.Should().ContainSingle()
+            .Which.Definition.OwnerKey.Should().Be(JobSchedulerUiTestContext.OWNER);
+
+        state.ToggleSelection(ownerB);
+        state.SelectedJobIds.Should().BeEquivalentTo([ownerA.Definition.Id, ownerB.Definition.Id]);
+
+        var result = await state.SetDisabledAsync(ownerB, true);
+        result.IsFailed(out var error).Should().BeFalse(error?.Message);
+        state.Summaries
+            .Where(summary => summary.Definition.Declaration.JobKey == context.RecurringDefinition.Declaration.JobKey)
+            .Single(summary => summary.Definition.OwnerKey == "worker-b")
+            .Definition.IsDisabled.Should().BeTrue();
+        state.Summaries
+            .Where(summary => summary.Definition.Declaration.JobKey == context.RecurringDefinition.Declaration.JobKey)
+            .Single(summary => summary.Definition.OwnerKey == JobSchedulerUiTestContext.OWNER)
+            .Definition.IsDisabled.Should().BeFalse();
     }
 
     [Fact]
@@ -223,13 +313,13 @@ public sealed class JobSchedulerNativeTableStateTests
         batch.Should().NotBeNull();
         batch!.SucceededCount.Should().Be(1);
         batch.FailedCount.Should().Be(1);
-        state.SelectedJobKeys.Should().ContainSingle().Which.Should()
-            .Be(staleDefinition.Declaration.JobKey);
+        state.SelectedJobIds.Should().ContainSingle().Which.Should()
+            .Be(staleDefinition.Id);
 
         await state.LoadTableAsync(tableState, Xunit.TestContext.Current.CancellationToken);
 
-        state.SelectedJobKeys.Should().ContainSingle().Which.Should()
-            .Be(staleDefinition.Declaration.JobKey);
+        state.SelectedJobIds.Should().ContainSingle().Which.Should()
+            .Be(staleDefinition.Id);
     }
 
     [Fact]
@@ -254,7 +344,7 @@ public sealed class JobSchedulerNativeTableStateTests
 
         failed.Items.Should().BeEmpty();
         failed.TotalItems.Should().Be(0);
-        state.SelectedJobKeys.Should().BeEmpty();
+        state.SelectedJobIds.Should().BeEmpty();
         state.Error.Should().Be("Authorization unavailable");
     }
 }

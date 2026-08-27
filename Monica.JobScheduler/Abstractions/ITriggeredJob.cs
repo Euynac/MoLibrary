@@ -18,7 +18,7 @@ public interface ITriggeredJob<in TArgs> : IJobDefinition where TArgs : class
     /// Cancellation token that will be signaled when the job should stop.
     /// The token is cancelled when:
     /// - Execution timeout is reached (configured via MaxExecutionTimeoutSeconds in JobConfigAttribute)
-    /// - Manual cancellation is requested via the Control Plane API
+    /// - Manual cancellation is requested through the JobScheduler facade or API
     /// - Application is shutting down gracefully
     /// Implementations should check this token periodically and exit gracefully when cancellation is requested.
     /// </param>
@@ -40,8 +40,8 @@ public interface ITriggeredJob<in TArgs> : IJobDefinition where TArgs : class
     /// </para>
     /// <para>
     /// <b>Concurrency:</b> Multiple instances of this logical job may execute concurrently based on the
-    /// MaxConcurrency setting. The scope-wide JobKey gate includes superseded owners and revisions that are still
-    /// stopping after catalog cutover. Ensure your implementation is thread-safe or set MaxConcurrency to 1.
+    /// MaxConcurrency setting. The owner-scoped JobKey gate includes attempts that are still stopping after a lease
+    /// transition. Ensure your implementation is thread-safe or set MaxConcurrency to 1.
     /// </para>
     /// <para>
     /// <b>Parameter Validation:</b> Validate application-level values at the beginning of execution.

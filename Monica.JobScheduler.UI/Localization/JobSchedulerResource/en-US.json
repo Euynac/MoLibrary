@@ -145,6 +145,7 @@
     "Disabled": "Disabled",
     "OnDemand": "On demand",
     "Empty": "No active definitions match the current filters.",
+    "AbsentViewNotice": "Showing definitions their owners no longer publish. Execution history stays available for audit.",
     "Filters": {
       "AriaLabel": "Catalog search and filters",
       "Search": "Definition",
@@ -162,13 +163,12 @@
       "Lifecycle": "Scheduling mode",
       "Schedule": "Schedule",
       "NextRun": "Next run",
-      "Readiness": "Readiness",
       "LastRun": "Last run",
       "Actions": "Actions"
     },
     "Actions": {
       "Run": "Run job now",
-      "Trigger": "Run through active catalog",
+      "Trigger": "Run through the active job definition",
       "Policy": "Edit operator policy",
       "Details": "Open job details",
       "Pause": "Pause recurring materialization",
@@ -217,9 +217,6 @@
     "History": {
       "NeverRun": "Never run"
     },
-    "Activity": {
-      "QueuedRunning": "{0} queued · {1} running"
-    },
     "Selection": {
       "SelectAll": "Select all recurring jobs on this page",
       "SelectPage": "Select page",
@@ -248,15 +245,11 @@
       "PauseUnavailableDebug": "Quick Pause is unavailable because one or more selected jobs are already suppressed by debug mode without an operator pause.",
       "Result": "{0} policy update(s) succeeded; {1} failed.",
       "ResultDebugRemains": "{0} operator pause update(s) succeeded; {1} failed. Debug mode still suppresses automatic materialization where configured."
-    },
-    "Readiness": {
-      "Present": "Owner present",
-      "Absent": "Owner absent"
     }
   },
   "Policy": {
     "Title": "Operational policy workbench",
-    "ImmutableNotice": "Job key, job type, argument contract, owner, release, worker revision, job revision, and configured timezone remain deployment-owned. Policy changes affect future admission; queued and running executions preserve their captured configuration.",
+    "ImmutableNotice": "Job key, job type, argument contract, owner, and configured timezone remain code-owned. Policy changes affect future admission; queued and running executions preserve their captured configuration.",
     "DisabledOverride": "Execution state override",
     "InheritDefault": "Inherit code default",
     "ForceEnabled": "Force enabled",
@@ -272,7 +265,7 @@
       "Declared": "Declared default",
       "Override": "Operator override",
       "Effective": "Effective value",
-      "Help": "Each row separates the immutable release default from operator intent and the behavior the scheduler will apply."
+      "Help": "Each row separates the immutable declaration default from operator intent and the behavior the scheduler will apply."
     },
     "Sections": {
       "General": "General",
@@ -332,7 +325,7 @@
       "Timeout": "Enter a positive timeout within the supported duration range."
     },
     "Conflict": {
-      "DraftsPreserved": "Another operator or release changed the policy baseline ({0} → {1}). Your unsaved edits are preserved while untouched fields adopt the latest policy; review before retrying.",
+      "DraftsPreserved": "Another operator changed the policy baseline ({0} → {1}). Your unsaved edits are preserved while untouched fields adopt the latest policy; review before retrying.",
       "ReloadFailed": "The policy changed, but the latest operational baseline could not be loaded. Close and reopen the workbench before retrying.",
       "SameField": "The latest policy changed at least one field that you also edited. Your draft wins on those fields; review the declared, override, and effective columns before retrying.",
       "ScheduleTypeChanged": "The job changed from recurring to triggered while this Cron draft was open. The hidden draft has not been submitted. Discard only that schedule intent before saving the remaining edits.",
@@ -448,7 +441,7 @@
   "JobDetail": {
     "PageTitle": "Job Scheduler · Job details",
     "BreadcrumbAriaLabel": "Job catalog breadcrumb",
-    "NotFound": "No active catalog declaration exists for {0}.",
+    "NotFound": "No active owner declaration exists for {0}.",
     "RefreshFailed": "The latest refresh failed: {0}",
     "ObservedAt": "Operational evidence observed {0}",
     "Actions": {
@@ -488,11 +481,11 @@
       "StartBoundary": "Start boundary",
       "EndBoundary": "End boundary",
       "TriggeredTitle": "On-demand admission",
-      "TriggeredDescription": "This job has no recurring cursor. Operators admit an execution explicitly through the active catalog.",
+      "TriggeredDescription": "This job has no recurring cursor. Operators admit an execution explicitly through the active job definition.",
       "DebugManualOnly": "Debug mode is suppressing automatic occurrences. Run job now remains available and does not advance the recurring cursor.",
       "StatusDescriptions": {
         "NotRecurring": "No recurring cursor applies to an on-demand job.",
-        "AwaitingSynchronization": "The active declaration is waiting for the control plane to create its durable cursor.",
+        "AwaitingSynchronization": "The active owner declaration is waiting for the scheduler to create its durable cursor.",
         "Scheduled": "The durable cursor has a next occurrence ready for future materialization.",
         "Suspended": "Operator policy has suspended new recurring occurrence materialization.",
         "Exhausted": "No occurrence remains within the declared schedule boundaries."
@@ -508,7 +501,7 @@
       "Description": "Code-owned declaration fields remain immutable; operator policy is stored independently and updated with optimistic concurrency.",
       "Immutable": "Immutable declaration",
       "DeclarationTitle": "Execution declaration",
-      "Owner": "Catalog owner",
+      "Owner": "Job owner",
       "ArgumentsKey": "Arguments contract",
       "MaxConcurrency": "Maximum concurrency",
       "MaxConcurrencyHelp": "Caps concurrent worker leases; recurring materialization also uses it as the queued-and-running overlap limit.",
@@ -522,7 +515,7 @@
       "PolicyUpdated": "Policy updated",
       "PolicyStamp": "Concurrency stamp",
       "PolicyStampHelp": "Optimistic-concurrency token; policy updates must match it and receive a new stamp.",
-      "RevisionTitle": "Release and revision identity",
+      "IdentityTitle": "Scheduler identity",
       "SchedulerScope": "Scheduler scope",
       "OverrideEffective": "Override: {0} · Effective: {1}",
       "Absent": "Absent",
@@ -533,7 +526,7 @@
     },
     "LatestExecution": {
       "Title": "Latest execution",
-      "Description": "Newest durable execution evidence for this logical job across catalog revisions.",
+      "Description": "Newest durable execution evidence for this owner-scoped logical job.",
       "Empty": "This job has not produced any durable execution yet."
     },
     "Health": {
@@ -723,7 +716,6 @@
     "Origin": "Admission",
     "Available": "Available at",
     "Worker": "Running worker",
-    "Revision": "Exact executable identity",
     "Arguments": "Serialized arguments",
     "History": "Append-only execution history",
     "Identity": "Execution identity",

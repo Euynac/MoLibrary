@@ -175,8 +175,9 @@ public interface IJobExecutionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Atomically materializes one recurring occurrence and compare-and-swap advances its cursor. Repeated attempts
-    /// after a successful cursor advance return a stale-cursor result.
+    /// Atomically materializes one recurring occurrence and compare-and-swap advances its cursor. The store's
+    /// authoritative clock determines the first future occurrence after the materialized one, coalescing any missed
+    /// backlog. Repeated attempts after a successful cursor advance return a stale-cursor result.
     /// </summary>
     Task<RecurringMaterializationResult> TryMaterializeRecurringOccurrenceAsync(
         RecurringOccurrenceMaterialization materialization,

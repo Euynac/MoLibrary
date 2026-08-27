@@ -41,7 +41,10 @@ public sealed partial class InMemoryJobSchedulerStore
             {
                 _definitions[DefinitionKeyOf(existing)] = existing with { IsPresent = false, LastObservedAtUtc = now };
                 _recurringCursors.Remove(DefinitionKeyOf(existing));
-                markedAbsent++;
+                if (existing.IsPresent)
+                {
+                    markedAbsent++;
+                }
             }
 
             foreach (var declaration in normalized.Declarations)

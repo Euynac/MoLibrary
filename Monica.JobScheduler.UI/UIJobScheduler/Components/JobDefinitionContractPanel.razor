@@ -173,9 +173,9 @@
         </section>
     </div>
 
-    <section class="job-contract-panel__revision" aria-labelledby="job-revision-heading">
-        <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-revision-heading">
-            @L["JobDetail:Contract:RevisionTitle"]
+    <section class="job-contract-panel__identity" aria-labelledby="job-identity-heading">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h3" id="job-identity-heading">
+            @L["JobDetail:Contract:IdentityTitle"]
         </MudText>
         <dl>
             <div>
@@ -186,7 +186,7 @@
                 <dt>@L["JobDetail:Contract:Owner"]</dt>
                 <dd><code>@Definition.OwnerKey</code></dd>
             </div>
-            <div class="job-contract-panel__revision-wide">
+            <div class="job-contract-panel__identity-wide">
                 <dt>@L["JobDetail:Contract:JobKey"]</dt>
                 <dd><code>@Definition.Declaration.JobKey</code></dd>
             </div>
@@ -213,7 +213,7 @@
 
 @code {
     /// <summary>
-    /// Gets the active definition whose code declaration, operator policy, and revision evidence are rendered.
+    /// Gets the active definition whose code declaration, operator policy, and scheduler identity are rendered.
     /// </summary>
     [Parameter, EditorRequired]
     public JobDefinition Definition { get; set; } = null!;

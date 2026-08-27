@@ -1,8 +1,10 @@
 @using Microsoft.JSInterop
+@using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Localization
 @using Monica.JobScheduler.UI.Pages
 @using Monica.JobScheduler.UI.UIJobScheduler.Executions.State
 @using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared
 
 @inject JobExecutionsStateFactory PageStateFactory
 @inject IStringLocalizer<JobSchedulerResource> L
@@ -193,10 +195,10 @@
     private void OpenJobDetails()
     {
         MudDialog.Close();
-        var jobKey = DetailState.Execution?.Template.JobKey;
-        Navigation.NavigateTo(string.IsNullOrWhiteSpace(jobKey)
+        var template = DetailState.Execution?.Template;
+        Navigation.NavigateTo(template is null
             ? JobCatalogPage.PAGE_URL
-            : $"/job-scheduler/catalog/{Uri.EscapeDataString(jobKey)}");
+            : JobSchedulerUiUrls.JobDefinition(new JobId(template.OwnerKey, template.JobKey)));
     }
 
     private void Close() => MudDialog.Close();

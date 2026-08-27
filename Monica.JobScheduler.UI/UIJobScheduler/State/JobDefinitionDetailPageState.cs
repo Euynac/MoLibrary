@@ -312,17 +312,22 @@ public sealed class JobDefinitionDetailPageState : IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (!result.IsFailed(out _, out var policy))
             {
-                var suspensionReasons = JobSchedulerUiPresentation.SetOperatorPolicySuspension(
-                    summary.SuspensionReasons,
-                    disabled);
+                var isRecurring = definition.Declaration.JobType == JobType.Recurring;
+                var suspensionReasons = isRecurring
+                    ? JobSchedulerUiPresentation.SetOperatorPolicySuspension(
+                        summary.SuspensionReasons,
+                        disabled)
+                    : JobRecurringScheduleSuspensionReason.None;
                 Summary = summary with
                 {
                     Definition = definition with { Policy = policy },
-                    RecurringScheduleStatus = suspensionReasons != JobRecurringScheduleSuspensionReason.None
-                        ? JobRecurringScheduleStatus.Suspended
-                        : JobRecurringScheduleStatus.AwaitingSynchronization,
+                    RecurringScheduleStatus = isRecurring
+                        ? suspensionReasons != JobRecurringScheduleSuspensionReason.None
+                            ? JobRecurringScheduleStatus.Suspended
+                            : JobRecurringScheduleStatus.AwaitingSynchronization
+                        : JobRecurringScheduleStatus.NotRecurring,
                     SuspensionReasons = suspensionReasons,
-                    NextOccurrenceUtc = null
+                    NextOccurrenceUtc = isRecurring ? null : summary.NextOccurrenceUtc
                 };
                 ObservedAtUtc = _timeProvider.GetUtcNow();
             }

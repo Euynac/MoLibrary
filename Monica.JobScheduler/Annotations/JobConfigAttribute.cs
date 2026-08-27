@@ -51,8 +51,8 @@ public class JobConfigAttribute : Attribute
     /// Triggered and operator run-now executions wait durably when all leased slots are occupied. A scheduled recurring
     /// occurrence is instead recorded as skipped when queued and running occurrences already reach this limit, which
     /// prevents overdue schedules from building an unbounded replay backlog.
-    /// The limit applies to the scope-wide logical <c>JobKey</c> across catalog owners and revisions, including
-    /// superseded attempts that are still cooperatively stopping after a cutover.
+    /// The limit applies to this owner's logical <c>JobKey</c>, including attempts that are still cooperatively
+    /// stopping after a lease transition.
     /// Set to higher values for jobs that can safely run concurrently.
     /// Example: [JobConfig(MaxConcurrency = 5)]
     /// </summary>

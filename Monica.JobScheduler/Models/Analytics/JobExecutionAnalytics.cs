@@ -161,6 +161,11 @@ public sealed record JobExecutionAnalyticsSnapshot
     public JobExecutionAnalyticsBucketSize BucketSize { get; init; }
 
     /// <summary>
+    /// Gets the optional exact owner selected by the query.
+    /// </summary>
+    public string? OwnerKey { get; init; }
+
+    /// <summary>
     /// Gets the optional exact job key selected by the query.
     /// </summary>
     public string? JobKey { get; init; }
@@ -331,13 +336,18 @@ public sealed record JobExecutionAnalyticsJobRank
     /// Gets the immutable user-facing job name captured by the most recently completed execution in this range.
     /// </summary>
     /// <remarks>
-    /// Ranking identity remains <see cref="JobKey"/> so a display-name change does not split one logical job into
-    /// multiple rows.
+    /// Ranking identity is the owner and job-key pair, so a display-name change does not split one owner-scoped job
+    /// into multiple rows.
     /// </remarks>
     public required string JobName { get; init; }
 
     /// <summary>
-    /// Gets the logical job key.
+    /// Gets the stable owner identity of the ranked job.
+    /// </summary>
+    public required string OwnerKey { get; init; }
+
+    /// <summary>
+    /// Gets the owner-scoped logical job key.
     /// </summary>
     public required string JobKey { get; init; }
 
@@ -374,7 +384,7 @@ public sealed record JobExecutionAnalyticsJobRank
 }
 
 /// <summary>
-/// Describes one logical job's longest terminal attempt completed in an analytics range.
+/// Describes one owner-scoped job's longest terminal attempt completed in an analytics range.
 /// </summary>
 public sealed record JobExecutionAnalyticsSlowExecution
 {
@@ -389,7 +399,12 @@ public sealed record JobExecutionAnalyticsSlowExecution
     public required string JobName { get; init; }
 
     /// <summary>
-    /// Gets the logical job key.
+    /// Gets the stable owner identity of the job.
+    /// </summary>
+    public required string OwnerKey { get; init; }
+
+    /// <summary>
+    /// Gets the owner-scoped logical job key.
     /// </summary>
     public required string JobKey { get; init; }
 

@@ -132,8 +132,7 @@
 }
 
 .catalog-table__schedule,
-.catalog-table__latest,
-.catalog-table__readiness {
+.catalog-table__latest {
     display: grid;
     min-width: 0;
     gap: 3px;
@@ -281,26 +280,6 @@
 
 .catalog-table__latest-state[data-state="skipped"] {
     --state-tone: var(--mud-palette-warning);
-}
-
-.catalog-table__readiness {
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.7rem;
-}
-
-.catalog-table__readiness > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-}
-
-.catalog-table__readiness > span[data-ready="true"] {
-    color: var(--mud-palette-success);
-}
-
-.catalog-table__readiness > span[data-ready="false"] {
-    color: var(--mud-palette-warning);
 }
 
 .catalog-table__actions {

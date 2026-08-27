@@ -30,12 +30,12 @@ public sealed class JobOrchestrator(
     {
         ArgumentNullException.ThrowIfNull(lease);
         var execution = lease.Execution;
-        var jobType = jobRegistry.GetJobClrType(execution.Template.JobKey)
-                      ?? throw new InvalidOperationException(
-                          $"Local worker does not contain job '{execution.Template.JobKey}'.");
 
         try
         {
+            var jobType = jobRegistry.GetJobClrType(execution.Template.JobKey)
+                           ?? throw new InvalidOperationException(
+                               $"Local worker does not contain job '{execution.Template.JobKey}'.");
             await using var scope = serviceScopeFactory.CreateAsyncScope();
             var arguments = DeserializeArguments(execution);
             var context = new JobExecutionContext

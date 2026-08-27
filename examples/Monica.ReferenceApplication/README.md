@@ -123,14 +123,8 @@ builder.AddMonica(monica =>
         {
             options.MaxWorkerExecutionThreads = 1;
         })
-        .AsStandalone()
-        .UseInMemoryStore()
         .UseSchedulerScope("monica-reference-ordering")
-        .UseCatalogRelease(
-            "monica-reference-ordering:development",
-            deploymentGeneration: 1,
-            [new("Monica.Reference.Api", "monica-reference-ordering:development")])
-        .UseLocalWorkerIdentity("Monica.Reference.Api", "monica-reference-ordering:development");
+        .UseInMemoryStore();
     monica.AddOpenTelemetry()
         .UsePrometheusEndpoint();
 });
@@ -138,7 +132,7 @@ builder.AddMonica(monica =>
 
 The no-op distributed provider makes the external integration boundary explicit without introducing a broker. `EventOrderApproved` is dispatched through the real in-process local bus. The approval handler registers publication with `IUnitOfWork.OnCompleted`, so the local reaction observes only a successfully completed request boundary.
 
-JobScheduler UI is deliberately not composed: adding its Blazor shell to an API-only host would blur the host boundary. The standalone development role publishes and activates the local immutable catalog, while the recurring job remains observable through scheduler execution history and logs.
+JobScheduler UI is deliberately not composed: adding its Blazor shell to an API-only host would blur the host boundary. The host synchronizes its local owner snapshot and schedules and executes the recurring job; its activity remains observable through scheduler execution history and logs.
 
 Production stores recover abandoned leases with at-least-once execution and fence stale scheduler mutations. A job must still make its own external side effects idempotent or transactional because lease fencing cannot provide exactly-once business effects.
 

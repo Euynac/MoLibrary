@@ -1,4 +1,5 @@
 using System.Data;
+using System.Linq.Expressions;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -203,4 +204,31 @@ public sealed partial class EfCoreJobSchedulerStore(
 
     private static void ValidateIdentity(string value, string parameterName) =>
         JobSchedulerIdentity.ValidateStandard(value, parameterName);
+
+    /// <summary>
+    /// Builds an exact OR predicate over (OwnerKey, JobKey) identity pairs so a page mixing several owners and job
+    /// keys never matches the Cartesian cross product of the two independent key sets. Both persisted entity families
+    /// expose the same identity property names.
+    /// </summary>
+    private static Expression<Func<TEntity, bool>> CreateIdentityPredicate<TEntity>(
+        IReadOnlyCollection<JobId> identities)
+    {
+        var parameter = Expression.Parameter(typeof(TEntity), "item");
+        Expression? body = null;
+        foreach (var identity in identities)
+        {
+            var ownerMatch = Expression.Equal(
+                Expression.Property(parameter, nameof(JobExecutionEntity.OwnerKey)),
+                Expression.Constant(identity.OwnerKey));
+            var jobMatch = Expression.Equal(
+                Expression.Property(parameter, nameof(JobExecutionEntity.JobKey)),
+                Expression.Constant(identity.JobKey));
+            var identityMatch = Expression.AndAlso(ownerMatch, jobMatch);
+            body = body is null ? identityMatch : Expression.OrElse(body, identityMatch);
+        }
+
+        return Expression.Lambda<Func<TEntity, bool>>(
+            body ?? Expression.Constant(false),
+            parameter);
+    }
 }

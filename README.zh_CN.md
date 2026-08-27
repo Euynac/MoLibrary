@@ -42,7 +42,7 @@ Monica 是面向可观测 .NET 后端的 agent-governed application architecture
 
 这段一分钟演示覆盖 Monica 面向运维的几个核心界面：
 
-- JobScheduler 运行概览、catalog 收敛状态、执行记录和手动触发。
+- JobScheduler 运行概览、owner 定义状态、执行记录和手动触发。
 - 作业启停与历史保留策略管理，无需为后台作业手写运维页。
 - ModuleSystem 对运行中宿主的性能视图和依赖视图。
 - 运行时配置查看和主题切换。
@@ -70,14 +70,8 @@ builder.AddMonica(monica =>
     });
 
     monica.AddJobScheduler(options => options.ProjectName = "Orders")
-        .AsStandalone()
-        .UseInMemoryStore()
         .UseSchedulerScope("local-dev")
-        .UseCatalogRelease(
-            "orders:development",
-            deploymentGeneration: 1,
-            [new("Orders", "orders:development")])
-        .UseLocalWorkerIdentity("Orders", "orders:development");
+        .UseInMemoryStore();
 
     monica.AddJobSchedulerUI();
 });
@@ -101,10 +95,10 @@ public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob(lo
 }
 ```
 
-使用持久化生产 store 时，worker 崩溃后租约会以至少一次语义恢复执行，fencing 会拒绝旧租约继续修改调度状态。逻辑作业的并发门以 scheduler scope 与 `JobKey` 为身份，因此 catalog 切换后旧 owner 或 revision 尚在协作停止时，新 owner 仍不能绕过并发上限。但 fencing 无法让任意业务副作用自动获得严格一次语义；作业仍应使用幂等键或事务型业务边界保护这些副作用。
+使用持久化生产 store 时，worker 崩溃后执行租约会以至少一次语义恢复，fencing 会拒绝已过期租约继续修改状态。每个宿主按自己的 owner 身份同步、调度并执行本地发现的作业；同一 scope 内的副本通过持久化 CAS 协调。并发门以 scheduler scope、owner 和 `JobKey` 为身份。但 fencing 无法让任意业务副作用自动获得严格一次语义；作业仍应使用幂等键或事务型业务边界保护这些副作用。
 
 - 定时作业和触发式作业共享同一套持久化执行模型。
-- 独立宿主同时运行控制平面与 worker；不可变 catalog release、精确 worker revision 和带租约的执行队列共同保证部署切换边界清晰。
+- 每个宿主同时运行本地定义同步、调度器和 worker；持久化游标、并发门与执行租约共同保证副本之间的分布式正确性。
 - 需要浏览器运维界面时，在同一个 `AddMonica(...)` 回调中加入 `monica.AddJobSchedulerUI()`。UI 需要 ASP.NET Core Web 宿主来提供 Blazor 路由和静态资源。
 - 最小可运行参考见 [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal)，它演示了如何用最少 ASP.NET Core 宿主在 `/job-scheduler` 跑起 JobScheduler + JobScheduler UI。
 

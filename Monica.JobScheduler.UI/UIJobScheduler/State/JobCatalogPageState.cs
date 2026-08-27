@@ -30,7 +30,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _loadGate = new(1, 1);
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
-    private readonly HashSet<string> _selectedJobKeys = new(StringComparer.Ordinal);
+    private readonly HashSet<JobId> _selectedJobIds = [];
     private int _disposed;
 
     internal JobCatalogPageState(
@@ -52,16 +52,23 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     internal IReadOnlyList<KeyValuePair<string, int>> OwnerFacets { get; private set; } = [];
     internal IReadOnlyDictionary<JobType, int> JobTypeCounts { get; private set; } =
         new Dictionary<JobType, int>();
-    internal IReadOnlySet<string> SelectedJobKeys => _selectedJobKeys;
+    internal IReadOnlySet<JobId> SelectedJobIds => _selectedJobIds;
     internal IReadOnlyList<JobOperationalSummary> SelectedRecurringSummaries => Summaries
         .Where(summary => summary.Definition.Declaration.JobType == JobType.Recurring
-                          && _selectedJobKeys.Contains(summary.Definition.Declaration.JobKey))
+                          && _selectedJobIds.Contains(summary.Definition.Id))
         .ToArray();
 
     internal string? SearchText { get; set; }
     internal string? OwnerId { get; set; }
     internal JobType? SelectedJobType { get; set; } = JobType.Recurring;
     internal bool? SelectedDisabledState { get; set; }
+
+    /// <summary>
+    /// Gets the presence scope applied to every catalog query. Defaults to definitions their owners currently
+    /// publish; the overview attention panel deep-links an absent-only audit view through the page query parameter.
+    /// </summary>
+    internal bool? PresentFilter { get; private set; } = true;
+
     internal bool AccessChecked { get; private set; }
     internal bool IsAuthorized { get; private set; }
     internal bool IsLoading { get; private set; }
@@ -73,10 +80,21 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     internal int TotalCount { get; private set; }
     internal JobDefinitionSortField SortField { get; private set; } = JobDefinitionSortField.JobName;
     internal bool SortDescending { get; private set; }
-    internal bool HasSelection => _selectedJobKeys.Count > 0;
+    internal bool HasSelection => _selectedJobIds.Count > 0;
     internal bool HasDebugOnlySuppressedSelection =>
         SelectedRecurringSummaries.Any(JobSchedulerUiPresentation.IsDebugOnlySuppressed);
     internal bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    /// <summary>
+    /// Applies the page's presence deep-link before the first load. Omitted values keep the present-only default.
+    /// </summary>
+    internal void ApplyInitialQuery(bool? present)
+    {
+        if (present is { } value)
+        {
+            PresentFilter = value;
+        }
+    }
 
     internal async Task InitializeAsync()
     {
@@ -120,7 +138,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
 
     internal void Search()
     {
-        _selectedJobKeys.Clear();
+        _selectedJobIds.Clear();
     }
 
     internal void Reset()
@@ -129,7 +147,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         OwnerId = null;
         SelectedJobType = JobType.Recurring;
         SelectedDisabledState = null;
-        _selectedJobKeys.Clear();
+        _selectedJobIds.Clear();
     }
 
     internal void SelectJobType(JobType jobType)
@@ -140,7 +158,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         }
 
         SelectedJobType = jobType;
-        _selectedJobKeys.Clear();
+        _selectedJobIds.Clear();
     }
 
     internal void SelectDisabledState(bool? disabled)
@@ -151,7 +169,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         }
 
         SelectedDisabledState = disabled;
-        _selectedJobKeys.Clear();
+        _selectedJobIds.Clear();
     }
 
     internal async Task<TableData<JobOperationalSummary>> LoadTableAsync(
@@ -185,31 +203,31 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             return;
         }
 
-        var jobKey = summary.Definition.Declaration.JobKey;
-        if (!_selectedJobKeys.Add(jobKey))
+        var jobId = summary.Definition.Id;
+        if (!_selectedJobIds.Add(jobId))
         {
-            _selectedJobKeys.Remove(jobKey);
+            _selectedJobIds.Remove(jobId);
         }
     }
 
     internal void SelectAllRecurring(bool selected)
     {
-        _selectedJobKeys.Clear();
+        _selectedJobIds.Clear();
         if (selected)
         {
             foreach (var summary in Summaries.Where(static summary =>
                          summary.Definition.Declaration.JobType == JobType.Recurring))
             {
-                _selectedJobKeys.Add(summary.Definition.Declaration.JobKey);
+                _selectedJobIds.Add(summary.Definition.Id);
             }
         }
     }
 
-    internal void ApplyPolicy(string jobKey, JobPolicy policy)
+    internal void ApplyPolicy(JobId jobId, JobPolicy policy)
     {
         var items = Summaries.ToArray();
         var index = Array.FindIndex(items, summary =>
-            string.Equals(summary.Definition.Declaration.JobKey, jobKey, StringComparison.Ordinal));
+            summary.Definition.Id == jobId);
         if (index < 0)
         {
             return;
@@ -268,7 +286,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (!result.IsFailed(out _, out var policy))
             {
-                ApplyPolicy(definition.Declaration.JobKey, policy);
+                ApplyPolicy(definition.Id, policy);
             }
 
             return result;
@@ -362,8 +380,9 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             {
                 foreach (var item in batch.Items.Where(static item => item.IsSucceeded))
                 {
-                    ApplyPolicy(item.JobKey, item.Policy!);
-                    _selectedJobKeys.Remove(item.JobKey);
+                    var jobId = new JobId(item.OwnerKey, item.JobKey);
+                    ApplyPolicy(jobId, item.Policy!);
+                    _selectedJobIds.Remove(jobId);
                 }
             }
 
@@ -424,9 +443,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             {
                 SearchText = SearchText,
                 OwnerKey = OwnerId,
-                // The operator catalog defaults to definitions their owners currently publish; absent definitions
-                // stay visible in the overview attention panel and through explicit queries.
-                IsPresent = true,
+                IsPresent = PresentFilter,
                 JobType = SelectedJobType,
                 IsDisabled = SelectedDisabledState,
                 SortField = SortField,
@@ -439,7 +456,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             {
                 Summaries = [];
                 TotalCount = 0;
-                _selectedJobKeys.Clear();
+                _selectedJobIds.Clear();
                 Error = error.Message;
                 return;
             }
@@ -456,7 +473,7 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         {
             Summaries = [];
             TotalCount = 0;
-            _selectedJobKeys.Clear();
+            _selectedJobIds.Clear();
             Error = exception.Message;
         }
         finally
@@ -480,13 +497,17 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
             return;
         }
 
-        var presentDefinitions = overview.Definitions.Where(static definition => definition.IsPresent).ToArray();
-        OwnerFacets = presentDefinitions
+        // Scope the facets to the same presence view the table queries so an absent-only audit view does not show
+        // owner and job-type counts taken from the present catalog.
+        var scopedDefinitions = overview.Definitions
+            .Where(definition => definition.IsPresent == PresentFilter)
+            .ToArray();
+        OwnerFacets = scopedDefinitions
             .GroupBy(static definition => definition.OwnerKey, StringComparer.Ordinal)
             .OrderBy(static group => group.Key, StringComparer.Ordinal)
             .Select(static group => KeyValuePair.Create(group.Key, group.Count()))
             .ToArray();
-        JobTypeCounts = presentDefinitions
+        JobTypeCounts = scopedDefinitions
             .GroupBy(static definition => definition.Declaration.JobType)
             .ToDictionary(static group => group.Key, static group => group.Count());
     }
@@ -497,16 +518,16 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
         TotalCount = 0;
         PageNumber = 1;
         Error = null;
-        _selectedJobKeys.Clear();
+        _selectedJobIds.Clear();
     }
 
     private void RetainVisibleSelection()
     {
-        var visibleRecurringJobKeys = Summaries
+        var visibleRecurringJobIds = Summaries
             .Where(static summary => summary.Definition.Declaration.JobType == JobType.Recurring)
-            .Select(static summary => summary.Definition.Declaration.JobKey)
-            .ToHashSet(StringComparer.Ordinal);
-        _selectedJobKeys.IntersectWith(visibleRecurringJobKeys);
+            .Select(static summary => summary.Definition.Id)
+            .ToHashSet();
+        _selectedJobIds.IntersectWith(visibleRecurringJobIds);
     }
 
     private static JobDefinitionSortField ResolveSortField(string? sortLabel) =>

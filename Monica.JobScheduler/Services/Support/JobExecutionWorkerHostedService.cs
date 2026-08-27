@@ -93,9 +93,20 @@ internal sealed class JobExecutionWorkerHostedService(
         var tasks = _executions.Values.ToArray();
         if (tasks.Length != 0)
         {
+            var shutdownDeadlineAlreadyReached = cancellationToken.IsCancellationRequested;
+            if (shutdownDeadlineAlreadyReached)
+            {
+                RecordState(
+                    "Worker shutdown reached the host deadline before execution cleanup completed",
+                    HostedServiceState.Degraded,
+                    logLevel: LogLevel.Warning);
+            }
+
             try
             {
-                await Task.WhenAll(tasks).WaitAsync(_options.WorkerShutdownGracePeriod, cancellationToken);
+                // Keep the worker-owned grace period independent from the host token. A pre-cancelled host token
+                // must not skip the bounded wait or the final task observation below.
+                await Task.WhenAll(tasks).WaitAsync(_options.WorkerShutdownGracePeriod);
             }
             catch (TimeoutException)
             {
@@ -107,7 +118,15 @@ internal sealed class JobExecutionWorkerHostedService(
                 // cancelled; a cooperative attempt releases its lease and requeues, while an uncooperative attempt
                 // remains fenced until its lease expires and the scheduling plane recovers it.
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (OperationCanceledException exception)
+            {
+                RecordState(
+                    "One or more scheduler executions were cancelled during worker shutdown",
+                    HostedServiceState.Degraded,
+                    exception,
+                    LogLevel.Warning);
+            }
+            catch (Exception exception)
             {
                 RecordState(
                     "One or more scheduler executions faulted during worker shutdown",
@@ -117,6 +136,14 @@ internal sealed class JobExecutionWorkerHostedService(
             }
             finally
             {
+                if (!shutdownDeadlineAlreadyReached && cancellationToken.IsCancellationRequested)
+                {
+                    RecordState(
+                        "Worker shutdown reached the host deadline before execution cleanup completed",
+                        HostedServiceState.Degraded,
+                        logLevel: LogLevel.Warning);
+                }
+
                 ObserveCompletedExecutions();
             }
         }
@@ -157,6 +184,7 @@ internal sealed class JobExecutionWorkerHostedService(
         var timedOut = false;
         var executionTask = orchestrator.ExecuteAsync(lease, executionCancellation.Token);
         using var renewalStop = new CancellationTokenSource();
+        var workerStopSignal = Task.Delay(Timeout.InfiniteTimeSpan, workerToken);
         var timeoutSignal = Task.Delay(
             lease.Execution.Template.MaxExecutionTimeout,
             timeProvider,
@@ -170,8 +198,10 @@ internal sealed class JobExecutionWorkerHostedService(
                     _options.ExecutionLeaseRenewInterval,
                     timeProvider,
                     renewalStop.Token);
-                var completed = await Task.WhenAny(executionTask, renewalDelay, timeoutSignal);
-                if (completed == executionTask)
+                var completed = await Task.WhenAny(executionTask, renewalDelay, timeoutSignal, workerStopSignal);
+                // A completion can race with a timeout, renewal, or shutdown signal. Prefer the finished job so a
+                // successful attempt is not misclassified merely because another signal won Task.WhenAny's race.
+                if (completed == executionTask || executionTask.IsCompleted)
                 {
                     await renewalStop.CancelAsync();
                     try
@@ -181,6 +211,20 @@ internal sealed class JobExecutionWorkerHostedService(
                     catch (OperationCanceledException) when (renewalStop.IsCancellationRequested)
                     {
                     }
+                    break;
+                }
+
+                if (completed == workerStopSignal)
+                {
+                    if (!await CancelAndAwaitExecutionAsync(
+                            executionCancellation,
+                            executionTask,
+                            lease.Execution.InstanceId,
+                            "worker shutdown"))
+                    {
+                        return;
+                    }
+
                     break;
                 }
 
@@ -222,23 +266,6 @@ internal sealed class JobExecutionWorkerHostedService(
                     return;
                 }
 
-                if (timedOut)
-                {
-                    if (!await CancelAndAwaitExecutionAsync(
-                            executionCancellation,
-                            executionTask,
-                            lease.Execution.InstanceId,
-                            "the configured execution timeout"))
-                    {
-                        RequestWorkerRestart(
-                            lease.Execution.InstanceId,
-                            "Job code ignored cancellation after its execution timeout.");
-                        return;
-                    }
-
-                    break;
-                }
-
                 if (renewal.Status == JobLeaseRenewalStatus.CancellationRequested)
                 {
                     cancellationRequested = true;
@@ -278,8 +305,22 @@ internal sealed class JobExecutionWorkerHostedService(
             await renewalStop.CancelAsync();
         }
 
-        var result = await executionTask;
-        if (workerToken.IsCancellationRequested)
+        // The orchestrator normally converts user-code and pipeline exceptions into a failed result. Keep a second
+        // boundary here because an exception can still escape before the orchestrator enters its guarded scope; a
+        // faulted execution task must not strand the durable lease.
+        var result = await ObserveExecutionTaskAsync(
+            executionTask,
+            lease.Execution.InstanceId,
+            timedOut,
+            cancellationRequested,
+            workerToken);
+        // Linked cancellation can finish a cooperative job before the shutdown signal wins Task.WhenAny. Requeue
+        // only that cancellation-shaped completion; a successful task that finished before shutdown must be committed.
+        var shutdownCancelledExecution = workerToken.IsCancellationRequested
+                                         && !timedOut
+                                         && !cancellationRequested
+                                         && result.Outcome == JobAttemptOutcome.Cancelled;
+        if (shutdownCancelledExecution)
         {
             await store.ReleaseLeaseAsync(lease.LeaseKey, CancellationToken.None);
             return;
@@ -300,6 +341,36 @@ internal sealed class JobExecutionWorkerHostedService(
             Message = message,
             RetryDelay = _options.ExecutionRetryDelay
         }, CancellationToken.None);
+    }
+
+    private async Task<JobAttemptResult> ObserveExecutionTaskAsync(
+        Task<JobAttemptResult> executionTask,
+        string instanceId,
+        bool timedOut,
+        bool cancellationRequested,
+        CancellationToken workerToken)
+    {
+        try
+        {
+            return await executionTask;
+        }
+        catch (OperationCanceledException exception) when (
+            !timedOut
+            && (cancellationRequested || workerToken.IsCancellationRequested))
+        {
+            return new JobAttemptResult(
+                JobAttemptOutcome.Cancelled,
+                exception.Message is { Length: > 0 } ? exception.Message : "Execution task was cancelled.");
+        }
+        catch (Exception exception)
+        {
+            RecordState(
+                $"Worker execution '{instanceId}' pipeline faulted while reporting its outcome",
+                HostedServiceState.Degraded,
+                exception,
+                LogLevel.Error);
+            return new JobAttemptResult(JobAttemptOutcome.Failed, exception.ToString());
+        }
     }
 
     private async Task<bool> CancelAndAwaitExecutionAsync(

@@ -295,11 +295,6 @@ public sealed record RecurringOccurrenceMaterialization
     public DateTimeOffset ExpectedOccurrenceUtc { get; init; }
 
     /// <summary>
-    /// Gets the following occurrence, or <see langword="null"/> when the schedule is exhausted.
-    /// </summary>
-    public DateTimeOffset? NextOccurrenceUtc { get; init; }
-
-    /// <summary>
     /// Gets the deterministic execution identifier assigned to this occurrence.
     /// </summary>
     public required string InstanceId { get; init; }
@@ -323,13 +318,6 @@ public sealed record RecurringOccurrenceMaterialization
             throw new ArgumentException("The expected occurrence is required.", nameof(ExpectedOccurrenceUtc));
         }
 
-        if (NextOccurrenceUtc is { } next && next <= ExpectedOccurrenceUtc)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(NextOccurrenceUtc),
-                next,
-                "The next occurrence must be later than the occurrence being materialized.");
-        }
     }
 }
 

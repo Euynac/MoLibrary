@@ -180,6 +180,22 @@ public sealed partial class InMemoryJobSchedulerStore
                 });
             }
 
+            var currentTemplate = definition.CreateExecutionTemplate();
+            var currentSchedule = definition.EffectiveConfiguration.Schedule
+                                  ?? throw new InvalidOperationException(
+                                      $"Recurring job '{definition.OwnerKey}/{definition.Declaration.JobKey}' has no effective schedule.");
+            // Snapshot publication and cursor synchronization are separate operations so a replica can briefly observe
+            // a new definition with the previous cursor. Never materialize with that mixed state; the next scheduling
+            // pass will reconcile the cursor before trying again.
+            if (cursor.Template != currentTemplate || cursor.Schedule != currentSchedule)
+            {
+                return Task.FromResult(new RecurringMaterializationResult
+                {
+                    Status = RecurringMaterializationStatus.StaleCursor,
+                    Cursor = ToSnapshot(key, cursor)
+                });
+            }
+
             var template = cursor.Template;
             if (cursor.IsSuspended || definition.IsDisabled)
             {
@@ -219,6 +235,9 @@ public sealed partial class InMemoryJobSchedulerStore
                 AvailableAtUtc = expectedOccurrence,
                 EnqueueReason = $"Recurring occurrence {expectedOccurrence:O} materialized"
             };
+            // Use the store clock so a host with a skewed process clock cannot advance the cursor to an incorrect
+            // occurrence or replay an already elapsed backlog one item at a time.
+            var nextOccurrence = cursor.Schedule.GetNextOccurrence(now);
             var outstandingCount = CountOutstandingExecutionsUnsafe(template);
             var currentMaxConcurrency = ResolveCurrentMaxConcurrencyUnsafe(template);
             JobExecutionSkipReason? skipReason = outstandingCount >= currentMaxConcurrency
@@ -235,7 +254,7 @@ public sealed partial class InMemoryJobSchedulerStore
                     ? request.EnqueueReason
                     : $"Recurring occurrence {expectedOccurrence:O} skipped because {outstandingCount} outstanding "
                       + $"execution(s) reached the configured capacity of {currentMaxConcurrency}");
-            cursor.NextOccurrenceUtc = materialization.NextOccurrenceUtc is { } next ? NormalizeUtc(next) : null;
+            cursor.NextOccurrenceUtc = nextOccurrence;
             cursor.Version++;
             cursor.UpdatedAtUtc = now;
 

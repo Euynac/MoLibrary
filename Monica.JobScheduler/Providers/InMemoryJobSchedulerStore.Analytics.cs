@@ -67,6 +67,7 @@ public sealed partial class InMemoryJobSchedulerStore
                 StartTimeUtc = range.StartTimeUtc,
                 EndTimeUtc = range.EndTimeUtc,
                 BucketSize = query.BucketSize,
+                OwnerKey = query.OwnerKey,
                 JobKey = query.JobKey,
                 StateTotals = stateTotals,
                 CompletedTerminalCount = completions.LongLength,
@@ -91,8 +92,9 @@ public sealed partial class InMemoryJobSchedulerStore
                     requirePositiveMetric: true),
                 SlowestExecutions = measurableExecutions
                     .GroupBy(
-                        static execution => execution.Template.JobKey,
-                        StringComparer.Ordinal)
+                        static execution => new JobId(
+                            execution.Template.OwnerKey,
+                            execution.Template.JobKey))
                     .Select(static group => group
                         .OrderByDescending(static execution =>
                             execution.CompletedAtUtc!.Value - execution.StartedAtUtc!.Value)
@@ -100,12 +102,15 @@ public sealed partial class InMemoryJobSchedulerStore
                         .First())
                     .OrderByDescending(static execution =>
                         execution.CompletedAtUtc!.Value - execution.StartedAtUtc!.Value)
+                    .ThenBy(static execution => execution.Template.OwnerKey, StringComparer.Ordinal)
+                    .ThenBy(static execution => execution.Template.JobKey, StringComparer.Ordinal)
                     .ThenBy(static execution => execution.InstanceId, StringComparer.Ordinal)
                     .Take(query.SlowestExecutionLimit)
                     .Select(static execution => new JobExecutionAnalyticsSlowExecution
                     {
                         InstanceId = execution.InstanceId,
                         JobName = execution.Template.JobName,
+                        OwnerKey = execution.Template.OwnerKey,
                         JobKey = execution.Template.JobKey,
                         State = execution.State,
                         StartedAtUtc = execution.StartedAtUtc!.Value,
@@ -181,7 +186,9 @@ public sealed partial class InMemoryJobSchedulerStore
         bool requirePositiveMetric)
     {
         var rows = completions
-            .GroupBy(static execution => execution.Template.JobKey, StringComparer.Ordinal)
+            .GroupBy(static execution => new JobId(
+                execution.Template.OwnerKey,
+                execution.Template.JobKey))
             .Select(group => new JobExecutionAnalyticsJobRank
             {
                 JobName = group
@@ -189,7 +196,8 @@ public sealed partial class InMemoryJobSchedulerStore
                     .ThenBy(static execution => execution.InstanceId, StringComparer.Ordinal)
                     .First()
                     .Template.JobName,
-                JobKey = group.Key,
+                OwnerKey = group.Key.OwnerKey,
+                JobKey = group.Key.JobKey,
                 SucceededCount = CountState(group, JobExecutionState.Succeeded),
                 FailedCount = CountState(group, JobExecutionState.Failed),
                 SkippedCount = CountState(group, JobExecutionState.Skipped),
@@ -202,6 +210,7 @@ public sealed partial class InMemoryJobSchedulerStore
 
         return rows
             .OrderByDescending(metric)
+            .ThenBy(static item => item.OwnerKey, StringComparer.Ordinal)
             .ThenBy(static item => item.JobKey, StringComparer.Ordinal)
             .Take(limit)
             .ToArray();

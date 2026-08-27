@@ -70,6 +70,22 @@ public sealed class ModuleJobScheduler : MonicaModule<ModuleJobSchedulerOption>
                 $"{nameof(options.ExecutionLeaseDuration)}.");
         }
 
+        // Grace-period waits stop lease renewal, so a grace period at or beyond the lease duration could let another
+        // host recover and requeue an execution while the original attempt is still draining it.
+        if (options.ExecutionCancellationGracePeriod >= options.ExecutionLeaseDuration)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(options.ExecutionCancellationGracePeriod)} must be shorter than " +
+                $"{nameof(options.ExecutionLeaseDuration)}.");
+        }
+
+        if (options.WorkerShutdownGracePeriod >= options.ExecutionLeaseDuration)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(options.WorkerShutdownGracePeriod)} must be shorter than " +
+                $"{nameof(options.ExecutionLeaseDuration)}.");
+        }
+
         if (options.MaxWorkerExecutionThreads < 1)
         {
             throw new InvalidOperationException(
@@ -403,7 +419,9 @@ public sealed class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
 
     /// <summary>
     /// Gets or sets the duration of each fenced execution lease. It must exceed
-    /// <see cref="ExecutionLeaseRenewInterval"/>. The default is 30 seconds.
+    /// <see cref="ExecutionLeaseRenewInterval"/>, <see cref="ExecutionCancellationGracePeriod"/>, and
+    /// <see cref="WorkerShutdownGracePeriod"/> so a grace-period wait never outlives the lease that fences the
+    /// attempt. The default is 30 seconds.
     /// </summary>
     public TimeSpan ExecutionLeaseDuration { get; set; } = TimeSpan.FromSeconds(30);
 
@@ -423,7 +441,7 @@ public sealed class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
     /// Gets or sets how long a worker keeps its lease while waiting for job code to observe a timeout, durable
     /// cancellation, lease loss, or execution-loop failure. If the job still has not exited, the worker requests host
     /// shutdown so an external supervisor can terminate the unsafe process before the lease is recovered elsewhere.
-    /// The default is 15 seconds.
+    /// Must be shorter than <see cref="ExecutionLeaseDuration"/>. The default is 15 seconds.
     /// </summary>
     public TimeSpan ExecutionCancellationGracePeriod { get; set; } = TimeSpan.FromSeconds(15);
 
@@ -444,8 +462,10 @@ public sealed class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
         JobExecutionHistoryLimits.DEFAULT_MAX_MESSAGE_LENGTH;
 
     /// <summary>
-    /// Gets or sets how long graceful shutdown keeps execution leases alive while cooperative jobs exit. After this
-    /// boundary, surviving leases expire and are recovered by any host in the scope. The default is 15 seconds.
+    /// Gets or sets how long the worker waits for cooperative job cancellation during graceful shutdown. The worker
+    /// stops renewing execution leases when shutdown begins; attempts that do not exit before this boundary remain
+    /// fenced until their lease expires and are then recovered by a host in the scope. Must be shorter than
+    /// <see cref="ExecutionLeaseDuration"/>. The default is 15 seconds.
     /// </summary>
     public TimeSpan WorkerShutdownGracePeriod { get; set; } = TimeSpan.FromSeconds(15);
 

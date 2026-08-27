@@ -38,6 +38,13 @@
                     <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_state.Error</MudAlert>
                 }
 
+                @if (_state.PresentFilter == false)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                        @L["Catalog:AbsentViewNotice"]
+                    </MudAlert>
+                }
+
                 @if (_state.HasSelection)
                 {
                     <MudPaper Outlined="true" Class="catalog-page__selection pa-3" role="region"
@@ -85,7 +92,7 @@
 
                 <JobCatalogOperationalTable @ref="_catalogTable"
                                             ServerData="@_state.LoadTableAsync"
-                                            SelectedJobKeys="@_state.SelectedJobKeys"
+                                            SelectedJobIds="@_state.SelectedJobIds"
                                             TotalCount="@_state.TotalCount"
                                             PageSize="@_state.PageSize"
                                             PageSizeOptions="@_state.PageSizeOptions"
@@ -102,6 +109,14 @@
 @code {
     public const string PAGE_URL = "/job-scheduler/catalog";
 
+    /// <summary>
+    /// Gets or sets the optional presence deep-link filter. The catalog defaults to definitions their owners
+    /// currently publish; <c>?present=false</c> lists definitions whose owners no longer publish them, as linked
+    /// from the overview attention panel.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "present")]
+    public bool? Present { get; set; }
+
     private JobCatalogPageState? _state;
     private JobCatalogOperationalTable? _catalogTable;
     private bool _disposed;
@@ -110,6 +125,7 @@
     {
         _state = PageStateFactory.Create(UiOptions.Value.DefaultPageSize);
         _state.Changed += OnStateChangedAsync;
+        _state.ApplyInitialQuery(Present);
         await _state.InitializeAsync();
     }
 

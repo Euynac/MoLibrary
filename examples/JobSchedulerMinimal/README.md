@@ -15,7 +15,7 @@ The launch profile uses the `Development` environment so Blazor static web asset
 ## What It Registers
 
 - one `builder.AddMonica(monica => ...)` host boundary
-- one standalone JobScheduler using `UseInMemoryStore()`, an explicit scheduler scope, immutable release manifest, and local worker identity
+- one standalone JobScheduler using `UseInMemoryStore()` and an explicit scheduler scope; the host discovers, schedules, and executes its local jobs
 - `monica.AddJobSchedulerUI()`
 - web lifecycle: `app.UseMonica()` and `app.MapMonica()`
 

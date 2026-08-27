@@ -38,7 +38,6 @@ public sealed class JobSchedulerNativeTableTests
         table.TextContent.Should().Contain("Catalog:Columns:Schedule");
         table.TextContent.Should().Contain("Catalog:Columns:NextRun");
         table.TextContent.Should().Contain("Catalog:Columns:LastRun");
-        table.TextContent.Should().Contain("Catalog:Columns:Readiness");
         table.TextContent.Should().Contain("Catalog:Columns:Actions");
         cut.FindAll(".catalog-item").Should().BeEmpty();
         table.QuerySelector("th.catalog-table__definition-heading").Should().NotBeNull();

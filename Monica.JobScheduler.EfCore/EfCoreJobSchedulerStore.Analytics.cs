@@ -1,4 +1,5 @@
 using System.Data;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Monica.JobScheduler.EfCore.Entities;
 using Monica.JobScheduler.Models;
@@ -132,13 +133,15 @@ public sealed partial class EfCoreJobSchedulerStore
                 execution.StartedAtUtcTicks != null
                 && execution.CompletedAtUtcTicks >= execution.StartedAtUtcTicks);
         var slowestExecutionKeys = measurableCompletions
-            .Select(static execution => execution.JobKey)
+            .Select(static execution => new { execution.OwnerKey, execution.JobKey })
             .Distinct()
-            .Select(jobKey => new
+            .Select(identity => new
             {
-                JobKey = jobKey,
+                identity.OwnerKey,
+                identity.JobKey,
                 InstanceId = measurableCompletions
-                    .Where(execution => execution.JobKey == jobKey)
+                    .Where(execution => execution.OwnerKey == identity.OwnerKey
+                                        && execution.JobKey == identity.JobKey)
                     .OrderByDescending(static execution =>
                         execution.CompletedAtUtcTicks!.Value - execution.StartedAtUtcTicks!.Value)
                     .ThenBy(static execution => execution.InstanceId)
@@ -148,12 +151,13 @@ public sealed partial class EfCoreJobSchedulerStore
         var slowestRows = await measurableCompletions
             .Join(
                 slowestExecutionKeys,
-                static execution => new { execution.JobKey, execution.InstanceId },
-                static selected => new { selected.JobKey, selected.InstanceId },
+                static execution => new { execution.OwnerKey, execution.JobKey, execution.InstanceId },
+                static selected => new { selected.OwnerKey, selected.JobKey, selected.InstanceId },
                 static (execution, _) => new
                 {
                     execution.InstanceId,
                     execution.TemplateJson,
+                    execution.OwnerKey,
                     execution.JobKey,
                     execution.State,
                     StartedAtUtcTicks = execution.StartedAtUtcTicks!.Value,
@@ -161,6 +165,8 @@ public sealed partial class EfCoreJobSchedulerStore
                     DurationTicks = execution.CompletedAtUtcTicks.Value - execution.StartedAtUtcTicks.Value
                 })
             .OrderByDescending(static execution => execution.DurationTicks)
+            .ThenBy(static execution => execution.OwnerKey)
+            .ThenBy(static execution => execution.JobKey)
             .ThenBy(static execution => execution.InstanceId)
             .Take(query.SlowestExecutionLimit)
             .ToArrayAsync(cancellationToken);
@@ -170,6 +176,7 @@ public sealed partial class EfCoreJobSchedulerStore
             StartTimeUtc = range.StartTimeUtc,
             EndTimeUtc = range.EndTimeUtc,
             BucketSize = query.BucketSize,
+            OwnerKey = query.OwnerKey,
             JobKey = query.JobKey,
             StateTotals = stateTotals,
             CompletedTerminalCount = completedTerminalCount,
@@ -188,6 +195,7 @@ public sealed partial class EfCoreJobSchedulerStore
             {
                 InstanceId = item.InstanceId,
                 JobName = Deserialize<JobExecutionTemplate>(item.TemplateJson).JobName,
+                OwnerKey = item.OwnerKey,
                 JobKey = item.JobKey,
                 State = item.State,
                 StartedAtUtc = FromTicks(item.StartedAtUtcTicks),
@@ -284,68 +292,85 @@ public sealed partial class EfCoreJobSchedulerStore
         AnalyticsJobRanking ranking,
         CancellationToken cancellationToken)
     {
-        var jobKeys = ranking switch
+        var rankedIdentities = ranking switch
         {
             AnalyticsJobRanking.Volume => await completions
-                .GroupBy(static item => item.JobKey)
-                .Select(static group => new { JobKey = group.Key, Metric = group.LongCount() })
+                .GroupBy(static item => new { item.OwnerKey, item.JobKey })
+                .Select(static group => new
+                {
+                    group.Key.OwnerKey,
+                    group.Key.JobKey,
+                    Metric = group.LongCount()
+                })
                 .OrderByDescending(static item => item.Metric)
+                .ThenBy(static item => item.OwnerKey)
                 .ThenBy(static item => item.JobKey)
-                .Select(static item => item.JobKey)
                 .Take(limit)
                 .ToArrayAsync(cancellationToken),
             AnalyticsJobRanking.Failures => await completions
                 .Where(static item => item.State == JobExecutionState.Failed)
-                .GroupBy(static item => item.JobKey)
-                .Select(static group => new { JobKey = group.Key, Metric = group.LongCount() })
+                .GroupBy(static item => new { item.OwnerKey, item.JobKey })
+                .Select(static group => new
+                {
+                    group.Key.OwnerKey,
+                    group.Key.JobKey,
+                    Metric = group.LongCount()
+                })
                 .OrderByDescending(static item => item.Metric)
+                .ThenBy(static item => item.OwnerKey)
                 .ThenBy(static item => item.JobKey)
-                .Select(static item => item.JobKey)
                 .Take(limit)
                 .ToArrayAsync(cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(ranking), ranking, "Analytics ranking is not supported.")
         };
-        if (jobKeys.Length == 0)
+        if (rankedIdentities.Length == 0)
         {
             return [];
         }
 
+        var identities = rankedIdentities
+            .Select(static item => new JobId(item.OwnerKey, item.JobKey))
+            .ToArray();
+        var identityPredicate = CreateIdentityPredicate<JobExecutionEntity>(identities);
         var rows = await completions
-            .Where(item => jobKeys.Contains(item.JobKey))
-            .GroupBy(static item => item.JobKey)
+            .Where(identityPredicate)
+            .GroupBy(static item => new { item.OwnerKey, item.JobKey })
             .Select(static group => new AnalyticsJobRankRow(
-                group.Key,
+                group.Key.OwnerKey,
+                group.Key.JobKey,
                 group.LongCount(item => item.State == JobExecutionState.Succeeded),
                 group.LongCount(item => item.State == JobExecutionState.Failed),
                 group.LongCount(item => item.State == JobExecutionState.Skipped),
                 group.LongCount(item => item.State == JobExecutionState.Cancelled)))
             .ToArrayAsync(cancellationToken);
         var latestTemplates = await completions
-            .Where(item => jobKeys.Contains(item.JobKey))
-            .Select(static item => item.JobKey)
-            .Distinct()
-            .Select(jobKey => new AnalyticsJobTitleRow(
-                jobKey,
-                completions
-                    .Where(item => item.JobKey == jobKey)
-                    .OrderByDescending(static item => item.CompletedAtUtcTicks)
+            .Where(identityPredicate)
+            .GroupBy(static item => new { item.OwnerKey, item.JobKey })
+            .Select(static group => new AnalyticsJobTitleRow(
+                group.Key.OwnerKey,
+                group.Key.JobKey,
+                group.OrderByDescending(static item => item.CompletedAtUtcTicks)
                     .ThenBy(static item => item.InstanceId)
                     .Select(static item => item.TemplateJson)
                     .First()))
             .ToArrayAsync(cancellationToken);
-        var templateByJobKey = latestTemplates.ToDictionary(
-            static item => item.JobKey,
+        var templateByIdentity = latestTemplates.ToDictionary(
+            static item => new JobId(item.OwnerKey, item.JobKey),
             static item => item.TemplateJson,
-            StringComparer.Ordinal);
-        var rowsByJobKey = rows.ToDictionary(static item => item.JobKey, StringComparer.Ordinal);
-        return jobKeys.Select(jobKey => rowsByJobKey[jobKey]).Select(item => new JobExecutionAnalyticsJobRank
+            EqualityComparer<JobId>.Default);
+        var rowsByIdentity = rows.ToDictionary(
+            static item => new JobId(item.OwnerKey, item.JobKey),
+            EqualityComparer<JobId>.Default);
+        return rankedIdentities.Select(identity => new JobExecutionAnalyticsJobRank
         {
-            JobName = Deserialize<JobExecutionTemplate>(templateByJobKey[item.JobKey]).JobName,
-            JobKey = item.JobKey,
-            SucceededCount = item.SucceededCount,
-            FailedCount = item.FailedCount,
-            SkippedCount = item.SkippedCount,
-            CancelledCount = item.CancelledCount
+            JobName = Deserialize<JobExecutionTemplate>(
+                templateByIdentity[new JobId(identity.OwnerKey, identity.JobKey)]).JobName,
+            OwnerKey = identity.OwnerKey,
+            JobKey = identity.JobKey,
+            SucceededCount = rowsByIdentity[new JobId(identity.OwnerKey, identity.JobKey)].SucceededCount,
+            FailedCount = rowsByIdentity[new JobId(identity.OwnerKey, identity.JobKey)].FailedCount,
+            SkippedCount = rowsByIdentity[new JobId(identity.OwnerKey, identity.JobKey)].SkippedCount,
+            CancelledCount = rowsByIdentity[new JobId(identity.OwnerKey, identity.JobKey)].CancelledCount
         }).ToArray();
     }
 
@@ -367,13 +392,14 @@ public sealed partial class EfCoreJobSchedulerStore
         long ExecutedTerminalCount);
 
     private sealed record AnalyticsJobRankRow(
+        string OwnerKey,
         string JobKey,
         long SucceededCount,
         long FailedCount,
         long SkippedCount,
         long CancelledCount);
 
-    private sealed record AnalyticsJobTitleRow(string JobKey, string TemplateJson);
+    private sealed record AnalyticsJobTitleRow(string OwnerKey, string JobKey, string TemplateJson);
 
     private enum AnalyticsJobRanking
     {

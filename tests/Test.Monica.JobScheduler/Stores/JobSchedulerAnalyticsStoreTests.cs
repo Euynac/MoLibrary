@@ -95,6 +95,30 @@ public sealed class JobSchedulerAnalyticsStoreTests
         await RunAndCompleteAsync(fixture, StoreFixture.OWNER_B, "jobs.alpha", "b-1",
             JobAttemptOutcome.Succeeded, TimeSpan.FromMinutes(5));
 
+        var aggregate = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope, new JobExecutionAnalyticsQuery
+        {
+            StartTimeUtc = RANGE_START,
+            EndTimeUtc = RANGE_START.AddHours(1)
+        }, TestContext.Current.CancellationToken);
+        aggregate.TopJobsByVolume
+            .Where(item => item.JobKey == "jobs.alpha")
+            .Select(item => item.OwnerKey)
+            .Should().BeEquivalentTo([StoreFixture.OWNER_A, StoreFixture.OWNER_B]);
+        aggregate.TopJobsByVolume
+            .Where(item => item.JobKey == "jobs.alpha")
+            .Should().OnlyContain(item => item.CompletedTerminalCount == 1);
+        aggregate.TopJobsByFailures
+            .Should().ContainSingle()
+            .Which.OwnerKey.Should().Be(StoreFixture.OWNER_A);
+        aggregate.SlowestExecutions
+            .Select(item => new JobId(item.OwnerKey, item.JobKey))
+            .Should().BeEquivalentTo(
+                [
+                    new JobId(StoreFixture.OWNER_A, "jobs.alpha"),
+                    new JobId(StoreFixture.OWNER_A, "jobs.beta"),
+                    new JobId(StoreFixture.OWNER_B, "jobs.alpha")
+                ]);
+
         var ownerScoped = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope, new JobExecutionAnalyticsQuery
         {
             StartTimeUtc = RANGE_START,
@@ -110,8 +134,21 @@ public sealed class JobSchedulerAnalyticsStoreTests
                 EndTimeUtc = RANGE_START.AddHours(1),
                 OwnerKey = StoreFixture.OWNER_B,
                 JobKey = "jobs.alpha"
-            }, TestContext.Current.CancellationToken);
+        }, TestContext.Current.CancellationToken);
         ownerJobScoped.CompletedTerminalCount.Should().Be(1);
+
+        var jobAcrossOwners = await fixture.Store.GetExecutionAnalyticsAsync(fixture.Scope,
+            new JobExecutionAnalyticsQuery
+            {
+                StartTimeUtc = RANGE_START,
+                EndTimeUtc = RANGE_START.AddHours(1),
+                JobKey = "jobs.alpha"
+            }, TestContext.Current.CancellationToken);
+        jobAcrossOwners.TopJobsByVolume.Should().HaveCount(2);
+        jobAcrossOwners.TopJobsByVolume.Select(item => item.OwnerKey)
+            .Should().BeEquivalentTo([StoreFixture.OWNER_A, StoreFixture.OWNER_B]);
+        jobAcrossOwners.SlowestExecutions.Select(item => item.OwnerKey)
+            .Should().BeEquivalentTo([StoreFixture.OWNER_A, StoreFixture.OWNER_B]);
     }
 
     [Fact]

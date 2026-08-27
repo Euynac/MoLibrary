@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Monica.JobScheduler.EfCore.Entities;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
@@ -57,12 +58,12 @@ public sealed partial class EfCoreJobSchedulerStore
                 return new QueryResult<JobOperationalSummary>([], totalCount);
             }
 
-            var ownerKeys = definitions.Select(static definition => definition.OwnerKey).Distinct().ToArray();
-            var jobKeys = definitions.Select(static definition => definition.Declaration.JobKey).ToArray();
-            var executionQuery = dbContext.Executions.AsNoTracking().Where(execution =>
-                execution.SchedulerScopeKey == schedulerScopeKey
-                && ownerKeys.Contains(execution.OwnerKey)
-                && jobKeys.Contains(execution.JobKey));
+            // Match the exact (OwnerKey, JobKey) pairs on the page; independent owner/job key filters would also scan
+            // every crossed combination of the two sets.
+            var identities = definitions.Select(static definition => definition.Id).ToArray();
+            var executionQuery = dbContext.Executions.AsNoTracking()
+                .Where(execution => execution.SchedulerScopeKey == schedulerScopeKey)
+                .Where(CreateIdentityPredicate<JobExecutionEntity>(identities));
             var latestExecutionEntities = await executionQuery
                 .Where(candidate => candidate.InstanceId == executionQuery
                     .Where(execution => execution.OwnerKey == candidate.OwnerKey
@@ -93,9 +94,8 @@ public sealed partial class EfCoreJobSchedulerStore
                 static row => row.Count);
 
             var cursorEntities = await dbContext.RecurringCursors.AsNoTracking()
-                .Where(cursor => cursor.SchedulerScopeKey == schedulerScopeKey
-                                 && ownerKeys.Contains(cursor.OwnerKey)
-                                 && jobKeys.Contains(cursor.JobKey))
+                .Where(cursor => cursor.SchedulerScopeKey == schedulerScopeKey)
+                .Where(CreateIdentityPredicate<JobRecurringCursorEntity>(identities))
                 .ToArrayAsync(token);
             var cursors = cursorEntities.ToDictionary(
                 static cursor => new JobId(cursor.OwnerKey, cursor.JobKey),

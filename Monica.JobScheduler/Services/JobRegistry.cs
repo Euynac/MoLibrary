@@ -10,8 +10,8 @@ namespace Monica.JobScheduler.Services;
 /// Owns the immutable local job-type catalog used by this host's execution plane.
 /// </summary>
 /// <remarks>
-/// The local catalog is built once when this worker singleton is created. Durable catalog publication and activation
-/// never mutate the process-local CLR-type catalog.
+/// The local catalog is built once when this worker singleton is created. Durable owner snapshots never mutate the
+/// process-local CLR-type catalog.
 /// </remarks>
 public class JobRegistry(
     IReadOnlyList<LocalJobDefinition> localJobDefinitions,

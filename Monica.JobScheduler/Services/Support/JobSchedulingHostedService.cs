@@ -80,29 +80,30 @@ internal sealed class JobSchedulingHostedService(
         var scopeKey = _options.SchedulerScopeKey;
         var ownerKey = _options.GetProjectName();
         await SyncOwnerStateAsync(scopeKey, ownerKey, cancellationToken);
-        await MaterializeDueOccurrencesAsync(scopeKey, ownerKey, cancellationToken);
         await store.RecoverExpiredLeasesAsync(new ExpiredLeaseRecoveryRequest
         {
             SchedulerScopeKey = scopeKey,
             MaxCount = _options.MaxExpiredLeaseRecoveriesPerCycle
         }, cancellationToken);
+        await MaterializeDueOccurrencesAsync(scopeKey, ownerKey, cancellationToken);
         await CleanupHistoryAsync(scopeKey, cancellationToken);
     }
 
     private async Task SyncOwnerStateAsync(string scopeKey, string ownerKey, CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
-        if (now >= _nextSnapshotSyncUtc)
+        if (now < _nextSnapshotSyncUtc)
         {
-            await store.SyncOwnerSnapshotAsync(new JobOwnerSnapshot(
-                scopeKey,
-                ownerKey,
-                localDefinitions.Select(static definition => definition.Declaration).ToArray()), cancellationToken);
-            _nextSnapshotSyncUtc = now.Add(_options.SnapshotSyncInterval);
+            return;
         }
 
-        // Reconcile host-owned suspension reasons (debug mode) after each snapshot sync and at startup so a restart
-        // with a changed mode never leaves a stale cursor state behind.
+        await store.SyncOwnerSnapshotAsync(new JobOwnerSnapshot(
+            scopeKey,
+            ownerKey,
+            localDefinitions.Select(static definition => definition.Declaration).ToArray()), cancellationToken);
+
+        // Reconcile host-owned suspension reasons with the same cadence as the owner snapshot. Policy edits update
+        // their cursor synchronously; this pass is only needed at startup and after a definition snapshot changes.
         if (_hasLocalRecurringJobs)
         {
             var hostReasons = _options.RecurringJobDebugMode
@@ -123,6 +124,10 @@ internal sealed class JobSchedulingHostedService(
                 }, cancellationToken);
             }
         }
+
+        // Advance the cadence only after both the snapshot and every cursor synchronization succeeds. A partial
+        // failure must retry the complete owner synchronization on the next scheduling cycle.
+        _nextSnapshotSyncUtc = timeProvider.GetUtcNow().Add(_options.SnapshotSyncInterval);
     }
 
     private async Task MaterializeDueOccurrencesAsync(string scopeKey, string ownerKey, CancellationToken cancellationToken)
@@ -153,17 +158,15 @@ internal sealed class JobSchedulingHostedService(
                     continue;
                 }
 
-                var now = timeProvider.GetUtcNow().ToUniversalTime();
-                // Coalesce missed occurrences: at most one overdue execution is materialized, and the cursor advances
-                // directly to the first occurrence after the current time.
-                var nextSearchAfter = occurrence > now ? occurrence : now;
+                // The store owns the authoritative clock and advances the cursor past all missed occurrences in the
+                // same atomic operation as enqueueing this one. The host must not calculate the next cursor value from
+                // a potentially skewed process clock.
                 var result = await store.TryMaterializeRecurringOccurrenceAsync(
                     new RecurringOccurrenceMaterialization
                     {
                         CursorKey = cursor.Key,
                         ExpectedVersion = cursor.Version,
                         ExpectedOccurrenceUtc = occurrence,
-                        NextOccurrenceUtc = cursor.Schedule.GetNextOccurrence(nextSearchAfter),
                         InstanceId = CreateRecurringInstanceId(cursor.Key, occurrence)
                     },
                     cancellationToken);
@@ -237,13 +240,25 @@ internal sealed class JobSchedulingHostedService(
             : now.Add(_options.HistoryCleanupInterval);
     }
 
-    private static string CreateRecurringInstanceId(
+    internal static string CreateRecurringInstanceId(
         RecurringScheduleCursorKey key,
         DateTimeOffset occurrence)
     {
-        var payload = string.Create(
-            CultureInfo.InvariantCulture,
-            $"{key.SchedulerScopeKey}|{key.OwnerKey}|{key.JobKey}|{occurrence.UtcTicks}");
+        var payload = new StringBuilder()
+            .AppendLengthPrefixed(key.SchedulerScopeKey)
+            .AppendLengthPrefixed(key.OwnerKey)
+            .AppendLengthPrefixed(key.JobKey)
+            .Append('|')
+            .Append(occurrence.UtcTicks.ToString(CultureInfo.InvariantCulture))
+            .ToString();
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+    }
+}
+
+file static class StringBuilderExtensions
+{
+    public static StringBuilder AppendLengthPrefixed(this StringBuilder builder, string value)
+    {
+        return builder.Append(value.Length).Append(':').Append(value);
     }
 }

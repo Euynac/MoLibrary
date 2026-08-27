@@ -11,19 +11,19 @@ using Monica.JobScheduler.EfCore;
 namespace Monica.Modules;
 
 /// <summary>
-/// Adds the relational job catalog and execution store to a JobScheduler registration.
+/// Adds the relational definition and execution store to a JobScheduler registration.
 /// </summary>
 public static class ModuleJobSchedulerEfCoreBuilderExtensions
 {
     /// <summary>
-    /// Uses one EF Core database as the scheduler catalog, policy, queue, lease, and history correctness boundary.
+    /// Uses one EF Core database as the scheduler definition, policy, queue, lease, and history correctness boundary.
     /// </summary>
     /// <param name="module">The host-bound JobScheduler registration.</param>
     /// <param name="optionsAction">Configures the relational provider and connection.</param>
     /// <param name="moduleAction">Optionally configures the EF Core persistence module.</param>
     /// <returns>The original JobScheduler registration for continued composition.</returns>
     /// <remarks>
-    /// The selected database must be shared by every scheduler control-plane and worker replica for the same scope.
+    /// The selected database must be shared by every scheduler and worker replica for the same scope.
     /// Production deployments should use PostgreSQL-compatible serializable transactions.
     /// </remarks>
     public static ModuleRegistration<ModuleJobScheduler, ModuleJobSchedulerOption> UseEfCoreStore(

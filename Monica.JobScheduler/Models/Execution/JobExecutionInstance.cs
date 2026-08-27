@@ -49,7 +49,7 @@ public enum JobExecutionOrigin
     Triggered,
 
     /// <summary>
-    /// The recurring control plane materialized a scheduled occurrence.
+    /// A scheduler service materialized a scheduled occurrence from a recurring cursor.
     /// </summary>
     RecurringSchedule,
 

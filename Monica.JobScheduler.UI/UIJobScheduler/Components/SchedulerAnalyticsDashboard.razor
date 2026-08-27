@@ -1,6 +1,8 @@
 @using System.Globalization
+@using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Localization
 @using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared
 
 @inject IStringLocalizer<JobSchedulerResource> L
 @inject SchedulerTimePresentation TimePresentation
@@ -218,10 +220,11 @@
                                 FormatDuration(execution.Duration)]"
                             @onclick="@(() => OpenExecutionAsync(execution.InstanceId))">
                         <span class="analytics-dashboard__slow-rank">@(index + 1)</span>
-                        <span class="analytics-dashboard__slow-copy">
-                            <strong title="@execution.JobName">@execution.JobName</strong>
-                            <code title="@execution.JobKey">@execution.JobKey</code>
-                            <small title="@execution.InstanceId">@execution.InstanceId</small>
+                            <span class="analytics-dashboard__slow-copy">
+                                <strong title="@execution.JobName">@execution.JobName</strong>
+                                <small title="@execution.OwnerKey">@execution.OwnerKey</small>
+                                <code title="@execution.JobKey">@execution.JobKey</code>
+                                <small title="@execution.InstanceId">@execution.InstanceId</small>
                         </span>
                         <span class="analytics-dashboard__slow-state" data-state="@GetStateName(execution.State)">
                             @L[$"ExecutionStates:{execution.State}"]
@@ -265,7 +268,7 @@
                             var item = group.Items[index];
                             var value = group.GetValue(item);
                             <li>
-                                <a href="@GetJobHref(item.JobKey)"
+                                <a href="@GetJobHref(item)"
                                    aria-label="@L[
                                        "Analytics:Rankings:OpenJobWithMetric",
                                        index + 1,
@@ -276,6 +279,7 @@
                                     <span class="analytics-dashboard__rank-number" data-rank="@(index + 1)">@(index + 1)</span>
                                     <span class="analytics-dashboard__rank-copy">
                                         <strong title="@item.JobName">@item.JobName</strong>
+                                        <small title="@item.OwnerKey">@item.OwnerKey</small>
                                         <code title="@item.JobKey">@item.JobKey</code>
                                         <progress aria-hidden="true"
                                                   max="@Math.Max(1, group.MaximumValue)"
@@ -466,8 +470,8 @@
 
     private static string FormatSvgNumber(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
-    private static string GetJobHref(string jobKey) =>
-        $"/job-scheduler/catalog/{Uri.EscapeDataString(jobKey)}";
+    private static string GetJobHref(JobExecutionAnalyticsJobRank item) =>
+        JobSchedulerUiUrls.JobDefinition(new JobId(item.OwnerKey, item.JobKey));
 
     private static string GetStateName(JobExecutionState state) => state.ToString().ToLowerInvariant();
 

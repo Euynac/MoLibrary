@@ -21,6 +21,29 @@ public sealed class JobSchedulingHostedServiceTests
     private static readonly DateTimeOffset NOW = new(2026, 8, 20, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void CreateRecurringInstanceId_ShouldPreserveFieldBoundaries()
+    {
+        var first = JobSchedulingHostedService.CreateRecurringInstanceId(
+            new RecurringScheduleCursorKey
+            {
+                SchedulerScopeKey = "scope|owner",
+                OwnerKey = "job",
+                JobKey = "key"
+            },
+            NOW);
+        var second = JobSchedulingHostedService.CreateRecurringInstanceId(
+            new RecurringScheduleCursorKey
+            {
+                SchedulerScopeKey = "scope",
+                OwnerKey = "owner|job",
+                JobKey = "key"
+            },
+            NOW);
+
+        first.Should().NotBe(second);
+    }
+
+    [Fact]
     public async Task ScheduleAsync_ShouldSyncSnapshotMaterializeDueOccurrencesAndCoalesceOutages()
     {
         var time = new StoreFixture.ManualTimeProvider(NOW);
@@ -59,6 +82,46 @@ public sealed class JobSchedulingHostedServiceTests
             StoreFixture.SCOPE,
             new JobId(StoreFixture.OWNER_A, "jobs.alpha"), TestContext.Current.CancellationToken);
         afterOutage!.NextOccurrenceUtc.Should().Be(NOW.AddHours(6));
+    }
+
+    [Fact]
+    public async Task ScheduleAsync_ShouldNotResynchronizeRecurringCursorsBeforeSnapshotInterval()
+    {
+        var time = new StoreFixture.ManualTimeProvider(NOW);
+        var store = new InMemoryJobSchedulerStore(time);
+        var definition = new LocalJobDefinition
+        {
+            Declaration = StoreFixture.RecurringDeclaration("jobs.alpha", cron: "0 0 * * * *"),
+            JobClrType = typeof(object)
+        };
+        var options = new ModuleJobSchedulerOption
+        {
+            SchedulerScopeKey = StoreFixture.SCOPE,
+            ProjectName = StoreFixture.OWNER_A,
+            EnableHistoryCleanup = false
+        };
+        using var service = CreateService(store, [definition], time, configuredOptions: options);
+
+        await service.ScheduleAsync(TestContext.Current.CancellationToken);
+        options.RecurringJobDebugMode = true;
+        await service.ScheduleAsync(TestContext.Current.CancellationToken);
+
+        var beforeInterval = await store.GetOperationalSummaryAsync(
+            StoreFixture.SCOPE,
+            new JobId(StoreFixture.OWNER_A, definition.Declaration.JobKey),
+            TestContext.Current.CancellationToken);
+        beforeInterval!.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Scheduled);
+        beforeInterval.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.None);
+
+        time.Advance(options.SnapshotSyncInterval);
+        await service.ScheduleAsync(TestContext.Current.CancellationToken);
+
+        var afterInterval = await store.GetOperationalSummaryAsync(
+            StoreFixture.SCOPE,
+            new JobId(StoreFixture.OWNER_A, definition.Declaration.JobKey),
+            TestContext.Current.CancellationToken);
+        afterInterval!.RecurringScheduleStatus.Should().Be(JobRecurringScheduleStatus.Suspended);
+        afterInterval.SuspensionReasons.Should().Be(JobRecurringScheduleSuspensionReason.DebugMode);
     }
 
     [Fact]
@@ -129,26 +192,77 @@ public sealed class JobSchedulingHostedServiceTests
             .Should().Be(JobLeaseRenewalStatus.Lost);
     }
 
+    [Fact]
+    public async Task ScheduleAsync_ShouldRecoverExpiredCancelledLeasesBeforeMaterializingDueOccurrences()
+    {
+        var time = new StoreFixture.ManualTimeProvider(NOW);
+        var store = new InMemoryJobSchedulerStore(time);
+        var definition = new LocalJobDefinition
+        {
+            Declaration = StoreFixture.RecurringDeclaration(
+                "jobs.alpha",
+                cron: "0 0 * * * *",
+                maxConcurrency: 1),
+            JobClrType = typeof(object)
+        };
+        using var service = CreateService(store, [definition], time);
+
+        await service.ScheduleAsync(TestContext.Current.CancellationToken);
+        time.Advance(TimeSpan.FromHours(1));
+        await service.ScheduleAsync(TestContext.Current.CancellationToken);
+
+        var lease = (await store.ClaimAsync(new JobClaimRequest
+        {
+            SchedulerScopeKey = StoreFixture.SCOPE,
+            OwnerKey = StoreFixture.OWNER_A,
+            WorkerInstanceId = "worker-a",
+            JobKeys = [definition.Declaration.JobKey],
+            LeaseDuration = TimeSpan.FromMinutes(30)
+        }, TestContext.Current.CancellationToken)).Single();
+        (await store.RequestCancellationAsync(
+            StoreFixture.SCOPE,
+            lease.Execution.InstanceId,
+            cancellationToken: TestContext.Current.CancellationToken)).Status
+            .Should().Be(JobCancellationStatus.CancellationRequested);
+
+        // The lease is expired and the next hourly occurrence is due at the same time. Recovery must release the
+        // cancelled attempt before recurring admission evaluates the capacity gate.
+        time.Advance(TimeSpan.FromHours(1).Add(TimeSpan.FromMinutes(1)));
+        await service.ScheduleAsync(TestContext.Current.CancellationToken);
+
+        var executions = await store.QueryExecutionsAsync(new JobExecutionQuery
+        {
+            SchedulerScopeKey = StoreFixture.SCOPE,
+            JobKey = definition.Declaration.JobKey
+        }, TestContext.Current.CancellationToken);
+        executions.Items.Should().HaveCount(2);
+        executions.Items.Should().ContainSingle(item => item.State == JobExecutionState.Cancelled);
+        executions.Items.Should().ContainSingle(item =>
+            item.State == JobExecutionState.Queued
+            && item.RecurringOccurrenceUtc == NOW.AddHours(2));
+    }
+
     private static JobSchedulingHostedService CreateService(
         InMemoryJobSchedulerStore store,
         IReadOnlyList<LocalJobDefinition> definitions,
         StoreFixture.ManualTimeProvider time,
-        bool debugMode = false)
+        bool debugMode = false,
+        ModuleJobSchedulerOption? configuredOptions = null)
     {
-        var options = Options.Create(new ModuleJobSchedulerOption
+        var options = configuredOptions ?? new ModuleJobSchedulerOption
         {
             SchedulerScopeKey = StoreFixture.SCOPE,
             ProjectName = StoreFixture.OWNER_A,
             RecurringJobDebugMode = debugMode,
             EnableHistoryCleanup = false
-        });
+        };
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
         return new JobSchedulingHostedService(
             store,
             definitions,
             new JobSchedulerRuntimeState(),
             time,
-            options,
+            Options.Create(options),
             new ObservableInstanceRegistry(Options.Create(new ModuleObservableInstanceOption())),
             Options.Create(new ModuleHostedServiceOption()),
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),

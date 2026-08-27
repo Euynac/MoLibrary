@@ -36,10 +36,10 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
     public Func<TableState, CancellationToken, Task<TableData<JobOperationalSummary>>> ServerData { get; set; } = null!;
 
     /// <summary>
-    /// Gets the recurring job keys selected on the visible page.
+    /// Gets the owner-scoped recurring job identities selected on the visible page.
     /// </summary>
     [Parameter, EditorRequired]
-    public IReadOnlySet<string> SelectedJobKeys { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+    public IReadOnlySet<JobId> SelectedJobIds { get; set; } = new HashSet<JobId>();
 
     /// <summary>
     /// Gets the total definitions matching the current filter.
@@ -109,7 +109,7 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         {
             var recurring = _visibleSummaries.Where(IsRecurring).ToArray();
             return recurring.Length > 0
-                   && recurring.All(summary => SelectedJobKeys.Contains(summary.Definition.Declaration.JobKey));
+                   && recurring.All(summary => SelectedJobIds.Contains(summary.Definition.Id));
         }
     }
 
@@ -425,7 +425,7 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
     };
 
     private static string GetDetailHref(JobOperationalSummary summary) =>
-        $"/job-scheduler/catalog/{Uri.EscapeDataString(summary.Definition.OwnerKey)}/{Uri.EscapeDataString(summary.Definition.Declaration.JobKey)}";
+        JobSchedulerUiUrls.JobDefinition(summary.Definition.Id);
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()

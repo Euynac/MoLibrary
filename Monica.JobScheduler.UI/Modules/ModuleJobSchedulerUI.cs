@@ -32,7 +32,7 @@ public static class ModuleJobSchedulerUIBuilderExtensions
 }
 
 /// <summary>
-/// Registers the JobScheduler catalog, convergence, and durable-execution user interface.
+/// Registers the JobScheduler definition, policy, and durable-execution user interface.
 /// </summary>
 public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOption>, IUIModule
 {

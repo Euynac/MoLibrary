@@ -134,6 +134,39 @@ public sealed class JobExecutionWorkerHostedServiceTests
     }
 
     [Fact]
+    public async Task ExecuteLease_WhenLocalJobIsMissing_ShouldCompleteAttemptAsFailed()
+    {
+        using var host = Host.CreateApplicationBuilder().Build();
+        var store = Substitute.For<IJobSchedulerStore>();
+        store.CompleteAttemptAsync(
+                Arg.Any<JobAttemptCompletion>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new JobAttemptCompletionResult
+            {
+                Status = JobAttemptCompletionStatus.Applied
+            }));
+        var (worker, options) = CreateWorker(
+            store,
+            [],
+            host.Services.GetRequiredService<IServiceScopeFactory>(),
+            configure: null);
+
+        var attempt = worker.ExecuteLeaseAsync(
+            CreateLease("jobs.missing", options.Value.ExecutionLeaseDuration),
+            TestContext.Current.CancellationToken);
+        await attempt.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        await store.Received(1).CompleteAttemptAsync(
+            Arg.Is<JobAttemptCompletion>(completion =>
+                completion.Outcome == JobAttemptOutcome.Failed
+                && completion.Message!.Contains("Local worker does not contain job 'jobs.missing'", StringComparison.Ordinal)),
+            Arg.Any<CancellationToken>());
+        await store.DidNotReceive().ReleaseLeaseAsync(
+            Arg.Any<JobLeaseKey>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ExecuteLease_WhenTimedOutJobIgnoresCancellation_ShouldFenceLeaseAndRequestHostRestart()
     {
         var probe = new CancellationProbe();
@@ -184,6 +217,110 @@ public sealed class JobExecutionWorkerHostedServiceTests
 
         probe.Release.TrySetResult();
         await probe.Exited.Task.WaitAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task ExecuteLease_WhenWorkerStopsAndJobIgnoresCancellation_ShouldStopRenewingTheLease()
+    {
+        var probe = new CancellationProbe();
+        var hostBuilder = Host.CreateApplicationBuilder();
+        hostBuilder.Services.AddSingleton(probe);
+        hostBuilder.Services.AddScoped<CancellationIgnoringRecurringJob>();
+        hostBuilder.AddMonica(monica => monica.AddExecutionPipeline());
+        using var host = hostBuilder.Build();
+
+        var definition = new LocalJobDefinition
+        {
+            JobClrType = typeof(CancellationIgnoringRecurringJob),
+            Declaration = StoreFixture.RecurringDeclaration(
+                typeof(CancellationIgnoringRecurringJob).FullName!)
+        };
+        var store = Substitute.For<IJobSchedulerStore>();
+        var (worker, options) = CreateWorker(
+            store,
+            [definition],
+            host.Services.GetRequiredService<IServiceScopeFactory>(),
+            configure: schedulerOptions =>
+            {
+                schedulerOptions.ExecutionCancellationGracePeriod = TimeSpan.FromMilliseconds(30);
+                schedulerOptions.ExecutionLeaseRenewInterval = TimeSpan.FromMilliseconds(5);
+            });
+
+        using var workerStop = new CancellationTokenSource();
+        var attempt = worker.ExecuteLeaseAsync(
+            CreateLease(definition.Declaration.JobKey, options.Value.ExecutionLeaseDuration),
+            workerStop.Token);
+        await probe.Started.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await workerStop.CancelAsync();
+        await attempt.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        await store.DidNotReceive().CompleteAttemptAsync(
+            Arg.Any<JobAttemptCompletion>(),
+            Arg.Any<CancellationToken>());
+        await store.DidNotReceive().ReleaseLeaseAsync(
+            Arg.Any<JobLeaseKey>(),
+            Arg.Any<CancellationToken>());
+
+        probe.Release.TrySetResult();
+        await probe.Exited.Task.WaitAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task ExecuteLease_WhenShutdownBeginsAfterExecutionCompletes_ShouldCompleteTheAttempt()
+    {
+        var probe = new CompletionProbe();
+        var hostBuilder = Host.CreateApplicationBuilder();
+        hostBuilder.Services.AddSingleton(probe);
+        hostBuilder.Services.AddScoped<CompletingRecurringJob>();
+        hostBuilder.AddMonica(monica => monica.AddExecutionPipeline());
+        using var host = hostBuilder.Build();
+
+        var definition = new LocalJobDefinition
+        {
+            JobClrType = typeof(CompletingRecurringJob),
+            Declaration = StoreFixture.RecurringDeclaration(
+                typeof(CompletingRecurringJob).FullName!)
+        };
+        var store = Substitute.For<IJobSchedulerStore>();
+        using var workerStop = new CancellationTokenSource();
+        store.RenewLeaseAsync(
+                Arg.Any<JobLeaseKey>(),
+                Arg.Any<TimeSpan>(),
+                Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                // Complete the user task inline before requesting shutdown. The worker is still awaiting this store
+                // operation, which deterministically exercises the completion/shutdown ordering boundary.
+                probe.Completion.TrySetResult();
+                workerStop.Cancel();
+                return Task.FromResult(new JobLeaseRenewalResult { Status = JobLeaseRenewalStatus.Active });
+            });
+        store.CompleteAttemptAsync(
+                Arg.Any<JobAttemptCompletion>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new JobAttemptCompletionResult
+            {
+                Status = JobAttemptCompletionStatus.Applied
+            }));
+        var (worker, options) = CreateWorker(
+            store,
+            [definition],
+            host.Services.GetRequiredService<IServiceScopeFactory>(),
+            configure: schedulerOptions => schedulerOptions.ExecutionLeaseRenewInterval = TimeSpan.FromMilliseconds(5));
+
+        var attempt = worker.ExecuteLeaseAsync(
+            CreateLease(definition.Declaration.JobKey, options.Value.ExecutionLeaseDuration),
+            workerStop.Token);
+        await probe.Started.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await attempt.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        await store.Received(1).CompleteAttemptAsync(
+            Arg.Is<JobAttemptCompletion>(completion => completion.Outcome == JobAttemptOutcome.Succeeded),
+            Arg.Any<CancellationToken>());
+        await store.DidNotReceive().ReleaseLeaseAsync(
+            Arg.Any<JobLeaseKey>(),
+            Arg.Any<CancellationToken>());
     }
 
     private static (JobExecutionWorkerHostedService Worker, OptionsWrapper<ModuleJobSchedulerOption> Options)
@@ -265,6 +402,22 @@ public sealed class JobExecutionWorkerHostedServiceTests
         public TaskCompletionSource Exited { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private sealed class CompletionProbe
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Completion { get; } = new();
+    }
+
+    private sealed class CompletingRecurringJob(CompletionProbe probe) : IRecurringJob
+    {
+        public Task ExecuteAsync(CancellationToken cancellationToken)
+        {
+            probe.Started.TrySetResult();
+            return probe.Completion.Task;
+        }
     }
 
     private sealed class CancellationObservingRecurringJob(CancellationProbe probe) : IRecurringJob

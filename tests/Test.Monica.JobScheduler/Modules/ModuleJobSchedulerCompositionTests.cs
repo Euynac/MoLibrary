@@ -53,4 +53,51 @@ public sealed class ModuleJobSchedulerCompositionTests
         host.Services.GetRequiredService<JobSchedulingHostedService>().Should().NotBeNull();
         host.Services.GetRequiredService<JobExecutionWorkerHostedService>().Should().NotBeNull();
     }
+
+    [Fact]
+    public void ValidateOptions_WithDefaultDurations_ShouldSucceed()
+    {
+        var act = () => new ModuleJobScheduler().ValidateOptions(CreateValidOptions(), null);
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void ValidateOptions_WhenGracePeriodReachesOrExceedsLeaseDuration_ShouldFail(
+        bool shutdownGrace,
+        bool exceedsLease)
+    {
+        var options = CreateValidOptions();
+        var grace = exceedsLease
+            ? options.ExecutionLeaseDuration.Add(TimeSpan.FromSeconds(1))
+            : options.ExecutionLeaseDuration;
+        if (shutdownGrace)
+        {
+            options.WorkerShutdownGracePeriod = grace;
+        }
+        else
+        {
+            options.ExecutionCancellationGracePeriod = grace;
+        }
+
+        var expectedPropertyName = shutdownGrace
+            ? nameof(ModuleJobSchedulerOption.WorkerShutdownGracePeriod)
+            : nameof(ModuleJobSchedulerOption.ExecutionCancellationGracePeriod);
+        var act = () => new ModuleJobScheduler().ValidateOptions(options, null);
+
+        act.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain(expectedPropertyName)
+            .And.Contain(nameof(ModuleJobSchedulerOption.ExecutionLeaseDuration));
+    }
+
+    private static ModuleJobSchedulerOption CreateValidOptions() => new()
+    {
+        SchedulerScopeKey = "composition-tests",
+        ProjectName = "owner-a",
+        WorkerInstanceId = "worker-1"
+    };
 }

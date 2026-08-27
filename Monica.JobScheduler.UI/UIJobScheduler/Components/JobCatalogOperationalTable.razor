@@ -58,7 +58,6 @@
                 <MudTh>@L["Catalog:Columns:Schedule"]</MudTh>
                 <MudTh>@L["Catalog:Columns:NextRun"]</MudTh>
                 <MudTh>@L["Catalog:Columns:LastRun"]</MudTh>
-                <MudTh>@L["Catalog:Columns:Readiness"]</MudTh>
                 <MudTh Class="catalog-table__actions-heading">@L["Catalog:Columns:Actions"]</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -72,7 +71,7 @@
                         @if (IsRecurring(context))
                         {
                             <MudCheckBox T="bool"
-                                         Value="@SelectedJobKeys.Contains(declaration.JobKey)"
+                                         Value="@SelectedJobIds.Contains(definition.Id)"
                                          ValueChanged="@(_ => SelectionToggled.InvokeAsync(context))"
                                          Dense="true"
                                          Color="Color.Primary"
@@ -174,18 +173,6 @@
                     {
                         <span class="catalog-table__never-run">@L["Catalog:History:NeverRun"]</span>
                     }
-                </MudTd>
-                <MudTd DataLabel="@L["Catalog:Columns:Readiness"]">
-                    <div class="catalog-table__readiness">
-                        <span>@L["Catalog:Activity:QueuedRunning", context.QueuedExecutionCount, context.RunningExecutionCount]</span>
-                        <span data-ready="@definition.IsPresent.ToString().ToLowerInvariant()">
-                            <MudIcon Icon="@(definition.IsPresent ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.CloudOff)"
-                                     Size="Size.Small" />
-                            @(definition.IsPresent
-                                ? L["Catalog:Readiness:Present"]
-                                : L["Catalog:Readiness:Absent"])
-                        </span>
-                    </div>
                 </MudTd>
                 <MudTd DataLabel="@L["Catalog:Columns:Actions"]">
                     <div class="catalog-table__actions" @onclick:stopPropagation="true">
