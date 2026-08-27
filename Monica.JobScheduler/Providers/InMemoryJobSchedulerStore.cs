@@ -15,7 +15,7 @@ namespace Monica.JobScheduler.Providers;
 /// </remarks>
 public sealed partial class InMemoryJobSchedulerStore(
     TimeProvider timeProvider,
-    IOptions<ModuleJobSchedulerOption>? options = null) : IJobSchedulerStore
+    IOptions<ModuleJobSchedulerOption>? options = null) : IJobSchedulerStore, IJobSchedulerStoreDescriptor
 {
     private readonly object _gate = new();
     private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -24,6 +24,12 @@ public sealed partial class InMemoryJobSchedulerStore(
         ?? JobExecutionHistoryLimits.DEFAULT_MAX_ENTRIES,
         options?.Value.MaxExecutionHistoryMessageLength
         ?? JobExecutionHistoryLimits.DEFAULT_MAX_MESSAGE_LENGTH);
+
+    /// <inheritdoc />
+    public string StoreKind => "InMemory";
+
+    /// <inheritdoc />
+    public string? Provider => null;
 
     private DateTimeOffset UtcNow => _timeProvider.GetUtcNow().ToUniversalTime();
 

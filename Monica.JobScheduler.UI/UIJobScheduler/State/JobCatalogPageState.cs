@@ -86,13 +86,19 @@ internal sealed class JobCatalogPageState : IAsyncDisposable
     internal bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
     /// <summary>
-    /// Applies the page's presence deep-link before the first load. Omitted values keep the present-only default.
+    /// Applies the page's deep-link filters before the first load. Omitted values keep the present-only default
+    /// and the unfiltered owner scope.
     /// </summary>
-    internal void ApplyInitialQuery(bool? present)
+    internal void ApplyInitialQuery(bool? present, string? owner)
     {
         if (present is { } value)
         {
             PresentFilter = value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(owner))
+        {
+            OwnerId = owner.Trim();
         }
     }
 

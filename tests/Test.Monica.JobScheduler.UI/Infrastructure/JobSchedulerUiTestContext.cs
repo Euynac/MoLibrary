@@ -8,7 +8,9 @@ using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Providers;
+using Monica.JobScheduler.Services.Support;
 using Monica.JobScheduler.UI.Localization;
+using Monica.JobScheduler.UI.UIJobScheduler.Abstractions;
 using Monica.JobScheduler.UI.UIJobScheduler.Executions.State;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
 using Monica.JobScheduler.UI.UIJobScheduler.State;
@@ -30,7 +32,8 @@ public sealed class JobSchedulerUiTestContext : BunitContext
     public JobSchedulerUiTestContext(
         bool isAuthorized = true,
         TimeZoneInfo? schedulerTimeZone = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IJobSchedulerWorkerInsightProvider? workerInsight = null)
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         var schedulerClock = timeProvider ?? TimeProvider.System;
@@ -48,6 +51,7 @@ public sealed class JobSchedulerUiTestContext : BunitContext
             Store,
             Options.Create(schedulerOptions),
             schedulerClock,
+            new JobSchedulerRuntimeState(),
             NullLogger<JobSchedulerFacade>.Instance);
 
         Services.AddMudServices();
@@ -69,6 +73,11 @@ public sealed class JobSchedulerUiTestContext : BunitContext
         Services.AddScoped<JobDefinitionDetailPageStateFactory>();
         Services.AddScoped<JobExecutionsStateFactory>();
         Services.AddScoped<SchedulerStatisticsPageStateFactory>();
+        Services.AddScoped<SchedulerRuntimePageStateFactory>();
+        if (workerInsight is not null)
+        {
+            Services.AddSingleton(workerInsight);
+        }
         _ = Render<MudPopoverProvider>();
         DialogProvider = Render<MudDialogProvider>();
     }

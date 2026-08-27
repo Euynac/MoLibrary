@@ -1,0 +1,55 @@
+.runtime-owners {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.runtime-owners__heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.runtime-owners__icon {
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    color: var(--mud-palette-primary);
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+    place-items: center;
+}
+
+.runtime-owners__table {
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+}
+
+.runtime-owners__jobs {
+    font-variant-numeric: tabular-nums;
+}
+
+.runtime-owners__actions {
+    text-align: right;
+}
+
+.runtime-owners__empty {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 24px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.runtime-owners .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

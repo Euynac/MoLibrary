@@ -1,0 +1,26 @@
+.runtime-page {
+    display: grid;
+    gap: 16px;
+}
+
+.runtime-page__loading {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    padding: 48px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.runtime-page__host-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+.runtime-page__freshness {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--mud-palette-text-secondary);
+}

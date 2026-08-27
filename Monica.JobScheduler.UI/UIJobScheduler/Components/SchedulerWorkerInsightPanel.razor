@@ -1,0 +1,145 @@
+@using Monica.JobScheduler.Models.Operations
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Abstractions
+@using Monica.JobScheduler.UI.UIJobScheduler.Support
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="runtime-workers" aria-labelledby="runtime-workers-heading">
+    <header class="runtime-workers__heading">
+        <span class="runtime-workers__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Devices" />
+        </span>
+        <div>
+            <MudText id="runtime-workers-heading" Typo="Typo.h6" HtmlTag="h2">
+                @L["Runtime:Workers:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Runtime:Workers:Description"]</MudText>
+        </div>
+    </header>
+
+    @if (!HasWorkerInsight)
+    {
+        <div class="runtime-workers__hint" role="note">
+            <MudIcon Icon="@Icons.Material.Outlined.Extension" Size="Size.Large" Color="Color.Secondary" />
+            <MudText Typo="Typo.body2">@L["Runtime:Workers:Hint"]</MudText>
+            <code class="runtime-workers__hint-code">AddJobSchedulerServiceDiscoveryInsight()</code>
+        </div>
+    }
+    else
+    {
+        @if (WorkerInsightError is { } workerError)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                @L["Runtime:Workers:LoadFailed", workerError]
+            </MudAlert>
+        }
+
+        <MudTable T="JobSchedulerWorkerInstanceView" Items="@Workers" Dense="true" Hover="true"
+                  Breakpoint="Breakpoint.Sm" Class="runtime-workers__table">
+            <HeaderContent>
+                <MudTh>@L["Runtime:Workers:Status"]</MudTh>
+                <MudTh>@L["Runtime:Workers:Instance"]</MudTh>
+                <MudTh>@L["Runtime:Workers:Owner"]</MudTh>
+                <MudTh>@L["Runtime:Workers:Leader"]</MudTh>
+                <MudTh>@L["Runtime:Workers:Heartbeat"]</MudTh>
+                <MudTh>@L["Runtime:Workers:Registered"]</MudTh>
+                <MudTh>@L["Runtime:Workers:Addresses"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["Runtime:Workers:Status"]">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                             Color="@StatusColor(context.Status)"
+                             Icon="@StatusIcon(context.Status)">
+                        @L[$"Runtime:Workers:Status:{context.Status}"]
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="@L["Runtime:Workers:Instance"]">
+                    <div class="runtime-workers__instance" title="@context.InstanceId">
+                        <strong>@context.AppName</strong>
+                        <code>@context.InstanceId</code>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["Runtime:Workers:Owner"]">
+                    <code>@context.ProjectName</code>
+                </MudTd>
+                <MudTd DataLabel="@L["Runtime:Workers:Leader"]">
+                    @if (context.IsLeader)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Color="Color.Warning"
+                                 aria-label="@L["Runtime:Workers:IsLeader"]" />
+                    }
+                    else
+                    {
+                        <span aria-hidden="true">—</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="@L["Runtime:Workers:Heartbeat"]">
+                    <time datetime="@context.LastHeartbeatUtc.ToString("O")"
+                          title="@TimePresentation.FormatTimestamp(context.LastHeartbeatUtc)">
+                        @SchedulerRuntimePresentation.FormatAge(CapturedAtUtc, context.LastHeartbeatUtc, L)
+                    </time>
+                </MudTd>
+                <MudTd DataLabel="@L["Runtime:Workers:Registered"]">
+                    <time datetime="@context.RegisteredAtUtc.ToString("O")">
+                        @TimePresentation.FormatTimestamp(context.RegisteredAtUtc)
+                    </time>
+                </MudTd>
+                <MudTd DataLabel="@L["Runtime:Workers:Addresses"]">
+                    <div class="runtime-workers__addresses">
+                        @foreach (var address in context.ListeningAddresses)
+                        {
+                            <code>@address</code>
+                        }
+                    </div>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="runtime-workers__empty">
+                    <MudIcon Icon="@Icons.Material.Outlined.Devices" Size="Size.Large" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Runtime:Workers:Empty"]</MudText>
+                </div>
+            </NoRecordsContent>
+        </MudTable>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the worker instances reported by the registered insight provider, when one exists.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<JobSchedulerWorkerInstanceView> Workers { get; set; } = [];
+
+    /// <summary>
+    /// Gets whether a worker-instance insight provider is registered for this host.
+    /// </summary>
+    [Parameter]
+    public bool HasWorkerInsight { get; set; }
+
+    /// <summary>
+    /// Gets the latest worker-insight load failure, when one occurred.
+    /// </summary>
+    [Parameter]
+    public string? WorkerInsightError { get; set; }
+
+    /// <summary>
+    /// Gets the capture instant heartbeat ages are measured against.
+    /// </summary>
+    [Parameter]
+    public DateTimeOffset CapturedAtUtc { get; set; }
+
+    private Color StatusColor(JobSchedulerWorkerInstanceStatus status) => status switch
+    {
+        JobSchedulerWorkerInstanceStatus.Online => Color.Success,
+        JobSchedulerWorkerInstanceStatus.Unhealthy => Color.Warning,
+        _ => Color.Error
+    };
+
+    private string StatusIcon(JobSchedulerWorkerInstanceStatus status) => status switch
+    {
+        JobSchedulerWorkerInstanceStatus.Online => Icons.Material.Filled.CheckCircle,
+        JobSchedulerWorkerInstanceStatus.Unhealthy => Icons.Material.Filled.WarningAmber,
+        _ => Icons.Material.Filled.CloudOff
+    };
+}

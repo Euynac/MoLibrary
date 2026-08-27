@@ -1,0 +1,134 @@
+@using Monica.JobScheduler.Models.Operations
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Support
+@inject IStringLocalizer<JobSchedulerResource> L
+
+<section class="runtime-config" aria-labelledby="runtime-config-heading">
+    <header class="runtime-config__heading">
+        <span class="runtime-config__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Tune" />
+        </span>
+        <div>
+            <MudText id="runtime-config-heading" Typo="Typo.h6" HtmlTag="h2">
+                @L["Runtime:Config:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Runtime:Config:Description"]</MudText>
+        </div>
+    </header>
+    <div class="runtime-config__grid">
+        <section class="runtime-config__group" aria-labelledby="runtime-config-cadence-heading">
+            <MudText id="runtime-config-cadence-heading" Typo="Typo.subtitle2" HtmlTag="h3">
+                @L["Runtime:Config:Group:Cadence"]
+            </MudText>
+            <dl>
+                <div>
+                    <dt>@L["Runtime:Config:SchedulingPollInterval"]</dt>
+                    <dd>@Format(c.SchedulingPollInterval)</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:WorkerPollInterval"]</dt>
+                    <dd>@Format(c.WorkerPollInterval)</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:SnapshotSyncInterval"]</dt>
+                    <dd>@Format(c.SnapshotSyncInterval)</dd>
+                </div>
+            </dl>
+        </section>
+        <section class="runtime-config__group" aria-labelledby="runtime-config-lease-heading">
+            <MudText id="runtime-config-lease-heading" Typo="Typo.subtitle2" HtmlTag="h3">
+                @L["Runtime:Config:Group:Lease"]
+            </MudText>
+            <dl>
+                <div>
+                    <dt>@L["Runtime:Config:ExecutionLeaseDuration"]</dt>
+                    <dd>@Format(c.ExecutionLeaseDuration)</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:ExecutionLeaseRenewInterval"]</dt>
+                    <dd>@Format(c.ExecutionLeaseRenewInterval)</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:ExecutionRetryDelay"]</dt>
+                    <dd>@Format(c.ExecutionRetryDelay)</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:ExecutionCancellationGracePeriod"]</dt>
+                    <dd>@Format(c.ExecutionCancellationGracePeriod)</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:WorkerShutdownGracePeriod"]</dt>
+                    <dd>@Format(c.WorkerShutdownGracePeriod)</dd>
+                </div>
+            </dl>
+        </section>
+        <section class="runtime-config__group" aria-labelledby="runtime-config-capacity-heading">
+            <MudText id="runtime-config-capacity-heading" Typo="Typo.subtitle2" HtmlTag="h3">
+                @L["Runtime:Config:Group:Capacity"]
+            </MudText>
+            <dl>
+                <div>
+                    <dt>@L["Runtime:Config:MaxWorkerExecutionThreads"]</dt>
+                    <dd>@c.MaxWorkerExecutionThreads</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:MaxClaimBatchSize"]</dt>
+                    <dd>@c.MaxClaimBatchSize</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:MaxRecurringMaterializationsPerCycle"]</dt>
+                    <dd>@c.MaxRecurringMaterializationsPerCycle</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:MaxExpiredLeaseRecoveriesPerCycle"]</dt>
+                    <dd>@c.MaxExpiredLeaseRecoveriesPerCycle</dd>
+                </div>
+            </dl>
+        </section>
+        <section class="runtime-config__group" aria-labelledby="runtime-config-history-heading">
+            <MudText id="runtime-config-history-heading" Typo="Typo.subtitle2" HtmlTag="h3">
+                @L["Runtime:Config:Group:History"]
+            </MudText>
+            <dl>
+                <div>
+                    <dt>@L["Runtime:Config:EnableHistoryCleanup"]</dt>
+                    <dd>@FormatFlag(c.EnableHistoryCleanup)</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:HistoryCleanupInterval"]</dt>
+                    <dd>@Format(c.HistoryCleanupInterval)</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:MaxHistoryDeletionsPerCycle"]</dt>
+                    <dd>@c.MaxHistoryDeletionsPerCycle</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:MaxExecutionHistoryEntriesPerExecution"]</dt>
+                    <dd>@c.MaxExecutionHistoryEntriesPerExecution</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:MaxExecutionHistoryMessageLength"]</dt>
+                    <dd>@c.MaxExecutionHistoryMessageLength</dd>
+                </div>
+                <div>
+                    <dt>@L["Runtime:Config:MaxRetainedOrphanedExecutions"]</dt>
+                    <dd>@c.MaxRetainedOrphanedExecutions</dd>
+                </div>
+            </dl>
+        </section>
+    </div>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the runtime snapshot whose scalar configuration values are rendered.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobSchedulerRuntimeOverview Overview { get; set; } = null!;
+
+    private JobSchedulerRuntimeConfiguration c => Overview.Configuration;
+
+    private string Format(TimeSpan value) => SchedulerRuntimePresentation.FormatInterval(value, L);
+
+    private string FormatFlag(bool value) => value ? L["Runtime:Config:Enabled"] : L["Runtime:Config:Disabled"];
+}

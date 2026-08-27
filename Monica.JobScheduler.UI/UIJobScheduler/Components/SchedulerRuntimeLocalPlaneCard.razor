@@ -1,0 +1,67 @@
+@using Monica.JobScheduler.Models.Operations
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Support
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="runtime-plane" aria-labelledby="runtime-plane-heading">
+    <header class="runtime-plane__heading">
+        <span class="runtime-plane__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" />
+        </span>
+        <div>
+            <MudText id="runtime-plane-heading" Typo="Typo.h6" HtmlTag="h2">
+                @L["Runtime:Plane:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Runtime:Plane:Description"]</MudText>
+        </div>
+    </header>
+    <div class="runtime-plane__grid">
+        <div class="runtime-plane__channel">
+            <header>
+                <MudText Typo="Typo.subtitle2">@L["Runtime:Plane:Scheduling"]</MudText>
+                <MudChip T="string" Size="Size.Small"
+                         Color="@(Overview.LocalPlane.SchedulingReady ? Color.Success : Color.Error)"
+                         Variant="Variant.Outlined"
+                         Icon="@(Overview.LocalPlane.SchedulingReady ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ErrorOutline)">
+                    @(Overview.LocalPlane.SchedulingReady
+                        ? L["Runtime:Plane:Ready"]
+                        : L["Runtime:Plane:NotReady"])
+                </MudChip>
+            </header>
+            <p>@(Overview.LocalPlane.SchedulingMessage ?? L["Runtime:Plane:NoMessage"])</p>
+        </div>
+        <div class="runtime-plane__channel">
+            <header>
+                <MudText Typo="Typo.subtitle2">@L["Runtime:Plane:Worker"]</MudText>
+                <MudChip T="string" Size="Size.Small"
+                         Color="@(Overview.LocalPlane.WorkerReady ? Color.Success : Color.Error)"
+                         Variant="Variant.Outlined"
+                         Icon="@(Overview.LocalPlane.WorkerReady ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ErrorOutline)">
+                    @(Overview.LocalPlane.WorkerReady
+                        ? L["Runtime:Plane:Ready"]
+                        : L["Runtime:Plane:NotReady"])
+                </MudChip>
+            </header>
+            <p>@(Overview.LocalPlane.WorkerMessage ?? L["Runtime:Plane:NoMessage"])</p>
+            <dl>
+                <div>
+                    <dt>@L["Runtime:Plane:InFlight"]</dt>
+                    <dd>@Overview.LocalPlane.InFlightExecutions / @Overview.Configuration.MaxWorkerExecutionThreads</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+    <footer class="runtime-plane__scope-note">
+        <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Runtime:Plane:LocalOnly"]</MudText>
+    </footer>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the runtime snapshot whose host-local plane readiness is rendered.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobSchedulerRuntimeOverview Overview { get; set; } = null!;
+}

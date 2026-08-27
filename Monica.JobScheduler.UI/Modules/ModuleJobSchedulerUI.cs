@@ -88,6 +88,14 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
             addToNav: false,
             navOrder: 103,
             accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
+        registry.RegisterLocalizedPage<SchedulerRuntimePage, JobSchedulerResource>(
+            SchedulerRuntimePage.PAGE_URL,
+            "Pages:Runtime:Title",
+            Icons.Material.Filled.MonitorHeart,
+            BuiltInNavigationCategoryIds.TaskScheduling,
+            addToNav: true,
+            navOrder: 104,
+            accessPolicyType: typeof(OperationalPageAccessPolicy<ModuleJobSchedulerUIOption>));
     }
 
     /// <inheritdoc />
@@ -101,6 +109,7 @@ public sealed class ModuleJobSchedulerUI : MonicaModule<ModuleJobSchedulerUIOpti
         context.Services.TryAddScoped<JobDefinitionDetailPageStateFactory>();
         context.Services.TryAddScoped<JobExecutionsStateFactory>();
         context.Services.TryAddScoped<SchedulerStatisticsPageStateFactory>();
+        context.Services.TryAddScoped<SchedulerRuntimePageStateFactory>();
     }
 }
 

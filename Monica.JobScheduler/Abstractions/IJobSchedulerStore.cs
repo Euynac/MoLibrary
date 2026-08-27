@@ -31,4 +31,12 @@ public interface IJobSchedulerStore : IJobDefinitionStore, IJobExecutionStore, I
         string schedulerScopeKey,
         JobDefinitionQuery query,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Aggregates every owner's definition counts by presence, active queue depth, and snapshot freshness in one
+    /// scope. The result is ordered by owner key.
+    /// </summary>
+    Task<IReadOnlyList<JobOwnerSummary>> QueryOwnerSummariesAsync(
+        string schedulerScopeKey,
+        CancellationToken cancellationToken = default);
 }

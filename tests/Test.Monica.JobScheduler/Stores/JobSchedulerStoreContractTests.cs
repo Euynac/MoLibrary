@@ -773,4 +773,44 @@ public sealed class JobSchedulerStoreContractTests
             InstanceId = $"occurrence-{key.JobKey}-{occurrence.UtcTicks}"
         }, TestContext.Current.CancellationToken);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task QueryOwnerSummaries_ShouldAggregatePresenceQueueDepthAndFreshness(bool useEfCore)
+    {
+        await using var fixture = await StoreFixture.CreateAsync(useEfCore, NOW);
+        await fixture.SyncAsync(StoreFixture.OWNER_A,
+            StoreFixture.RecurringDeclaration("jobs.alpha"),
+            StoreFixture.RecurringDeclaration("jobs.beta"));
+        await fixture.SyncAsync(StoreFixture.OWNER_B, StoreFixture.TriggeredDeclaration("jobs.gamma"));
+        // Retire one owner-A definition and advance the clock so the surviving observation time is distinct.
+        fixture.Time.Advance(TimeSpan.FromMinutes(1));
+        await fixture.SyncAsync(StoreFixture.OWNER_A, StoreFixture.RecurringDeclaration("jobs.beta"));
+        var lastObserved = NOW.AddMinutes(1);
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_B, "jobs.gamma", instanceId: "instance-queued");
+        await fixture.EnqueueTriggeredAsync(StoreFixture.OWNER_B, "jobs.gamma", instanceId: "instance-running");
+        var claimed = (await fixture.ClaimAsync(
+            StoreFixture.OWNER_B,
+            "worker-1",
+            ["jobs.gamma"],
+            maxCount: 1)).Should().ContainSingle().Subject;
+        claimed.Execution.State.Should().Be(JobExecutionState.Running);
+
+        var summaries = await fixture.Store.QueryOwnerSummariesAsync(fixture.Scope, TestContext.Current.CancellationToken);
+
+        summaries.Select(static summary => summary.OwnerKey).Should().Equal(StoreFixture.OWNER_A, StoreFixture.OWNER_B);
+        var ownerA = summaries[0];
+        ownerA.PresentCount.Should().Be(1);
+        ownerA.AbsentCount.Should().Be(1);
+        ownerA.QueuedCount.Should().Be(0);
+        ownerA.RunningCount.Should().Be(0);
+        ownerA.LastObservedAtUtc.Should().Be(lastObserved);
+        var ownerB = summaries[1];
+        ownerB.PresentCount.Should().Be(1);
+        ownerB.AbsentCount.Should().Be(0);
+        ownerB.QueuedCount.Should().Be(1);
+        ownerB.RunningCount.Should().Be(1);
+        ownerB.LastObservedAtUtc.Should().Be(NOW);
+    }
 }

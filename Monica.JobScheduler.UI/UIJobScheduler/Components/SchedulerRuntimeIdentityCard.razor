@@ -1,0 +1,69 @@
+@using Monica.JobScheduler.Models.Operations
+@using Monica.JobScheduler.UI.Localization
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="runtime-identity" aria-labelledby="runtime-identity-heading">
+    <header class="runtime-identity__heading">
+        <span class="runtime-identity__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Badge" />
+        </span>
+        <div class="runtime-identity__heading-copy">
+            <MudText id="runtime-identity-heading" Typo="Typo.h6" HtmlTag="h2">
+                @L["Runtime:Identity:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Runtime:Identity:Description"]</MudText>
+        </div>
+        @if (Overview.Configuration.RecurringJobDebugMode)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined"
+                     Icon="@Icons.Material.Filled.BugReport" Class="runtime-identity__debug-chip">
+                @L["Runtime:Identity:DebugMode"]
+            </MudChip>
+        }
+    </header>
+    <div class="runtime-identity__grid">
+        <dl class="runtime-identity__facts">
+            <div>
+                <dt>@L["Runtime:Identity:Scope"]</dt>
+                <dd><code>@Overview.Configuration.SchedulerScopeKey</code></dd>
+            </div>
+            <div>
+                <dt>@L["Runtime:Identity:Owner"]</dt>
+                <dd><code>@Overview.Configuration.OwnerKey</code></dd>
+            </div>
+            <div class="runtime-identity__fact-wide">
+                <dt>@L["Runtime:Identity:WorkerInstanceId"]</dt>
+                <dd><code>@Overview.Configuration.WorkerInstanceId</code></dd>
+            </div>
+            <div>
+                <dt>@L["Runtime:Identity:CronTimeZone"]</dt>
+                <dd>@TimePresentation.TimeZoneId</dd>
+            </div>
+        </dl>
+        <dl class="runtime-identity__facts">
+            <div>
+                <dt>@L["Runtime:Store:Title"]</dt>
+                <dd>@Overview.Store.Kind</dd>
+            </div>
+            <div class="runtime-identity__fact-wide">
+                <dt>@L["Runtime:Store:Provider"]</dt>
+                <dd><code>@(Overview.Store.Provider ?? L["Runtime:Store:NoProvider"])</code></dd>
+            </div>
+        </dl>
+    </div>
+    <footer class="runtime-identity__captured">
+        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            @L["Runtime:CapturedAt", TimePresentation.FormatTimestamp(Overview.CapturedAtUtc)]
+        </MudText>
+    </footer>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the runtime snapshot whose identity and storage facts are rendered.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobSchedulerRuntimeOverview Overview { get; set; } = null!;
+}

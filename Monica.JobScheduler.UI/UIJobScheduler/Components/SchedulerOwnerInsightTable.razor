@@ -1,0 +1,83 @@
+@using Monica.JobScheduler.Models.Operations
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Support
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+<section class="runtime-owners" aria-labelledby="runtime-owners-heading">
+    <header class="runtime-owners__heading">
+        <span class="runtime-owners__icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Hub" />
+        </span>
+        <div>
+            <MudText id="runtime-owners-heading" Typo="Typo.h6" HtmlTag="h2">
+                @L["Runtime:Owners:Title"]
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["Runtime:Owners:Description", FormatThreshold()]
+            </MudText>
+        </div>
+    </header>
+    <MudTable T="JobOwnerSummary" Items="@Overview.Owners" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
+              Class="runtime-owners__table">
+        <HeaderContent>
+            <MudTh>@L["Runtime:Owners:Owner"]</MudTh>
+            <MudTh>@L["Runtime:Owners:Liveness"]</MudTh>
+            <MudTh>@L["Runtime:Owners:Jobs"]</MudTh>
+            <MudTh>@L["Runtime:Owners:Active"]</MudTh>
+            <MudTh>@L["Runtime:Owners:LastObserved"]</MudTh>
+            <MudTh Class="runtime-owners__actions-heading"><span class="visually-hidden">@L["Runtime:Owners:Actions"]</span></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@L["Runtime:Owners:Owner"]">
+                <code>@context.OwnerKey</code>
+            </MudTd>
+            <MudTd DataLabel="@L["Runtime:Owners:Liveness"]">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="@(IsOnline(context) ? Color.Success : Color.Warning)"
+                         Icon="@(IsOnline(context) ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.CloudOff)">
+                    @(IsOnline(context) ? L["Runtime:Owners:Online"] : L["Runtime:Owners:Offline"])
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="@L["Runtime:Owners:Jobs"]">
+                <span class="runtime-owners__jobs" title="@L["Runtime:Owners:JobsHelp"]">
+                    @L["Runtime:Owners:JobsCounts", context.PresentCount, context.AbsentCount]
+                </span>
+            </MudTd>
+            <MudTd DataLabel="@L["Runtime:Owners:Active"]">
+                @L["Runtime:Owners:ActiveCounts", context.QueuedCount, context.RunningCount]
+            </MudTd>
+            <MudTd DataLabel="@L["Runtime:Owners:LastObserved"]">
+                <time datetime="@context.LastObservedAtUtc.ToString("O")">
+                    @TimePresentation.FormatTimestamp(context.LastObservedAtUtc)
+                </time>
+            </MudTd>
+            <MudTd Class="runtime-owners__actions">
+                <MudIconButton Icon="@Icons.Material.Outlined.Inventory2"
+                               Href="@($"/job-scheduler/catalog?owner={Uri.EscapeDataString(context.OwnerKey)}")"
+                               Size="Size.Small"
+                               aria-label="@L["Runtime:Owners:OpenCatalog", context.OwnerKey]" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="runtime-owners__empty">
+                <MudIcon Icon="@Icons.Material.Outlined.Hub" Size="Size.Large" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Runtime:Owners:Empty"]</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</section>
+
+@code {
+    /// <summary>
+    /// Gets the runtime snapshot whose durable owner footprint is rendered.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public JobSchedulerRuntimeOverview Overview { get; set; } = null!;
+
+    private bool IsOnline(JobOwnerSummary owner) =>
+        Overview.CapturedAtUtc - owner.LastObservedAtUtc <= Overview.OwnerOnlineThreshold;
+
+    private string FormatThreshold() =>
+        SchedulerRuntimePresentation.FormatInterval(Overview.OwnerOnlineThreshold, L);
+}

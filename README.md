@@ -84,6 +84,8 @@ app.Run();
 
 With a durable production store, execution leases provide at-least-once recovery after a worker crash, while fencing rejects mutations from an expired lease. Each host synchronizes, schedules, and executes the jobs it discovers under its own owner identity; replicas coordinate through durable compare-and-swap operations. Concurrency gates are keyed by scheduler scope, owner, and `JobKey`. Fencing cannot make arbitrary job side effects exactly-once, so jobs should use idempotency keys or transactional business boundaries for those effects.
 
+The JobScheduler UI workspace includes a runtime tab showing the host's effective configuration, storage identity, local scheduling-plane readiness, and every owner's durable footprint with a documented liveness threshold (three snapshot-sync intervals). Hosts that also register ServiceDiscovery can add `monica.AddJobSchedulerServiceDiscoveryInsight()` (package `Monica.JobScheduler.ServiceDiscovery`) to enrich that tab with live worker-instance heartbeats; without it, the tab hides the worker table behind a setup hint instead of failing.
+
 The callback is the complete composition boundary. Captured `ModuleRegistration<,>` handles cannot mutate the graph after it closes, and startup fails early when the graph is incomplete or cyclic.
 
 For a runnable DDD application rather than a toy snippet, see [`examples/Monica.ReferenceApplication`](examples/Monica.ReferenceApplication). For the smallest operational scheduler UI host, see [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal).

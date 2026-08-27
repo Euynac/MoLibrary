@@ -8,6 +8,7 @@ using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.Providers;
+using Monica.JobScheduler.Services.Support;
 using Monica.Modules;
 using Test.Monica.JobScheduler.Stores.Shared;
 using Xunit;
@@ -166,17 +167,65 @@ public sealed class JobSchedulerFacadeTests
         summary.Data!.LatestExecution!.InstanceId.Should().Be(triggered.Data.InstanceId);
     }
 
+    [Fact]
+    public async Task GetRuntimeOverviewAsync_ShouldCaptureConfigurationStoreLocalPlaneAndOwners()
+    {
+        var harness = await FacadeHarness.CreateAsync();
+        await harness.SyncDefinitions(StoreFixture.RecurringDeclaration("jobs.alpha"));
+        var enqueued = await harness.Store.RunRecurringNowAsync(new JobRecurringRunNowCommand
+        {
+            SchedulerScopeKey = StoreFixture.SCOPE,
+            OwnerKey = StoreFixture.OWNER_A,
+            JobKey = "jobs.alpha",
+            InstanceId = "runtime-overview-run-now"
+        }, TestContext.Current.CancellationToken);
+        enqueued.State.Should().Be(JobExecutionState.Queued);
+        harness.RuntimeState.SetScheduling(true, "Scheduling is active.");
+        harness.RuntimeState.SetWorker(true, "Worker is active.");
+        harness.RuntimeState.SetInFlightExecutions(2);
+
+        var result = await harness.Facade.GetRuntimeOverviewAsync(TestContext.Current.CancellationToken);
+
+        result.Status.Should().Be(ResStatus.Ok);
+        var overview = result.Data!;
+        overview.Store.Kind.Should().Be("InMemory");
+        overview.Store.Provider.Should().BeNull();
+        overview.Configuration.SchedulerScopeKey.Should().Be(StoreFixture.SCOPE);
+        overview.Configuration.OwnerKey.Should().Be(StoreFixture.OWNER_A);
+        overview.Configuration.SnapshotSyncInterval.Should().Be(new ModuleJobSchedulerOption().SnapshotSyncInterval);
+        overview.OwnerOnlineThreshold.Should().Be(
+            new ModuleJobSchedulerOption().SnapshotSyncInterval * 3,
+            "the owner liveness contract must travel with the snapshot");
+        overview.LocalPlane.SchedulingReady.Should().BeTrue();
+        overview.LocalPlane.SchedulingMessage.Should().Be("Scheduling is active.");
+        overview.LocalPlane.WorkerReady.Should().BeTrue();
+        overview.LocalPlane.InFlightExecutions.Should().Be(2);
+        var owner = overview.Owners.Should().ContainSingle().Subject;
+        owner.OwnerKey.Should().Be(StoreFixture.OWNER_A);
+        owner.PresentCount.Should().Be(1);
+        owner.AbsentCount.Should().Be(0);
+        owner.QueuedCount.Should().Be(1);
+        owner.RunningCount.Should().Be(0);
+        owner.LastObservedAtUtc.Should().Be(NOW);
+    }
+
     private sealed class FacadeHarness
     {
-        private FacadeHarness(JobSchedulerFacade facade, InMemoryJobSchedulerStore store)
+        private FacadeHarness(
+            JobSchedulerFacade facade,
+            InMemoryJobSchedulerStore store,
+            JobSchedulerRuntimeState runtimeState)
         {
             Facade = facade;
             Store = store;
+            RuntimeState = runtimeState;
         }
 
         internal JobSchedulerFacade Facade { get; }
 
         internal InMemoryJobSchedulerStore Store { get; }
+
+        internal JobSchedulerRuntimeState RuntimeState { get; }
 
         internal Task SyncDefinitions(params JobDeclaration[] declarations) =>
             Store.SyncOwnerSnapshotAsync(new JobOwnerSnapshot(
@@ -193,8 +242,14 @@ public sealed class JobSchedulerFacadeTests
                 SchedulerScopeKey = StoreFixture.SCOPE,
                 ProjectName = StoreFixture.OWNER_A
             });
-            var facade = new JobSchedulerFacade(store, options, time, NullLogger<JobSchedulerFacade>.Instance);
-            return Task.FromResult(new FacadeHarness(facade, store));
+            var runtimeState = new JobSchedulerRuntimeState();
+            var facade = new JobSchedulerFacade(
+                store,
+                options,
+                time,
+                runtimeState,
+                NullLogger<JobSchedulerFacade>.Instance);
+            return Task.FromResult(new FacadeHarness(facade, store, runtimeState));
         }
     }
 }

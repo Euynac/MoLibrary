@@ -117,6 +117,12 @@
     [SupplyParameterFromQuery(Name = "present")]
     public bool? Present { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional owner deep-link filter, as linked from the runtime owner table.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "owner")]
+    public string? Owner { get; set; }
+
     private JobCatalogPageState? _state;
     private JobCatalogOperationalTable? _catalogTable;
     private bool _disposed;
@@ -125,7 +131,7 @@
     {
         _state = PageStateFactory.Create(UiOptions.Value.DefaultPageSize);
         _state.Changed += OnStateChangedAsync;
-        _state.ApplyInitialQuery(Present);
+        _state.ApplyInitialQuery(Present, Owner);
         await _state.InitializeAsync();
     }
 

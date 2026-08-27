@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PackageDescription>Optional ServiceDiscovery-backed worker-instance observability for the Monica JobScheduler runtime workspace.</PackageDescription>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Monica.JobScheduler.UI\Monica.JobScheduler.UI.csproj" />
+        <ProjectReference Include="..\Monica.ServiceDiscovery\Monica.ServiceDiscovery.csproj" />
+    </ItemGroup>
+
+</Project>

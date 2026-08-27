@@ -99,6 +99,7 @@ public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob(lo
 
 - 定时作业和触发式作业共享同一套持久化执行模型。
 - 每个宿主同时运行本地定义同步、调度器和 worker；持久化游标、并发门与执行租约共同保证副本之间的分布式正确性。
+- JobScheduler UI 工作区提供运行时 Tab：展示当前宿主的生效配置、存储身份、本机调度面就绪状态，以及范围内每个所有者的持久化足迹（在线阈值 = 3 个快照同步间隔，契约随数据下发）。同时注册了 ServiceDiscovery 的宿主可再加 `monica.AddJobSchedulerServiceDiscoveryInsight()`（包 `Monica.JobScheduler.ServiceDiscovery`），为该 Tab 增加基于心跳的 Worker 实例视图；未接入时仅隐藏该表并显示接入提示，不影响其余内容。
 - 需要浏览器运维界面时，在同一个 `AddMonica(...)` 回调中加入 `monica.AddJobSchedulerUI()`。UI 需要 ASP.NET Core Web 宿主来提供 Blazor 路由和静态资源。
 - 最小可运行参考见 [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal)，它演示了如何用最少 ASP.NET Core 宿主在 `/job-scheduler` 跑起 JobScheduler + JobScheduler UI。
 

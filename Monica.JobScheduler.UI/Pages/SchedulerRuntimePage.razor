@@ -1,0 +1,109 @@
+@attribute [Route(PAGE_URL)]
+
+@using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Components
+@using Monica.JobScheduler.UI.UIJobScheduler.State
+
+@inject SchedulerRuntimePageStateFactory PageStateFactory
+@inject IOptions<ModuleJobSchedulerUIOption> UiOptions
+@inject IStringLocalizer<JobSchedulerResource> L
+@inject SchedulerTimePresentation TimePresentation
+
+@implements IAsyncDisposable
+
+<PageTitle>@L["Runtime:PageTitle"]</PageTitle>
+
+<SchedulerWorkspace Title="@L["Workspace:Pages:Runtime:Title"]"
+                    Description="@L["Workspace:Pages:Runtime:Description"]"
+                    ActivePanelIndex="4">
+    @if (_state is not null)
+    {
+        <SchedulerAccessBoundary AccessChecked="@_state.AccessChecked" IsAuthorized="@_state.IsAuthorized">
+            <div class="runtime-page">
+                @if (_state.IsLoading && _state.Overview is null)
+                {
+                    <div class="runtime-page__loading" role="status">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Loading"]</MudText>
+                    </div>
+                }
+                else if (_state.Error is not null && _state.Overview is null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @_state.Error
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="_state.RefreshAsync">
+                            @L["Common:Retry"]
+                        </MudButton>
+                    </MudAlert>
+                }
+                else if (_state.Overview is { } overview)
+                {
+                    <div class="runtime-page__host-grid">
+                        <SchedulerRuntimeIdentityCard Overview="@overview" />
+                        <SchedulerRuntimeLocalPlaneCard Overview="@overview" />
+                    </div>
+
+                    @if (_state.Error is not null)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                            @L["Runtime:RefreshFailed", _state.Error]
+                        </MudAlert>
+                    }
+
+                    <SchedulerRuntimeConfigurationPanel Overview="@overview" />
+
+                    <SchedulerOwnerInsightTable Overview="@overview" />
+
+                    <SchedulerWorkerInsightPanel Workers="@_state.Workers"
+                                                 HasWorkerInsight="@_state.HasWorkerInsight"
+                                                 WorkerInsightError="@_state.WorkerInsightError"
+                                                 CapturedAtUtc="@overview.CapturedAtUtc" />
+
+                    <footer class="runtime-page__freshness">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Runtime:LastRefreshed", TimePresentation.FormatTimestamp(_state.LastRefreshedUtc ?? overview.CapturedAtUtc)]
+                        </MudText>
+                        @if (_state.IsLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Secondary" />
+                        }
+                    </footer>
+                }
+            </div>
+        </SchedulerAccessBoundary>
+    }
+</SchedulerWorkspace>
+
+@code {
+    public const string PAGE_URL = "/job-scheduler/runtime";
+
+    private SchedulerRuntimePageState? _state;
+    private bool _disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _state = PageStateFactory.Create(UiOptions.Value.AutoRefreshInterval);
+        _state.Changed += OnStateChangedAsync;
+        await _state.InitializeAsync();
+    }
+
+    private Task OnStateChangedAsync() => _disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        var state = _state;
+        _state = null;
+        if (state is not null)
+        {
+            state.Changed -= OnStateChangedAsync;
+            await state.DisposeAsync();
+        }
+    }
+}

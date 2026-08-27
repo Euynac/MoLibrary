@@ -24,7 +24,7 @@ namespace Monica.JobScheduler.EfCore;
 public sealed partial class EfCoreJobSchedulerStore(
     IDbContextFactory<JobSchedulerDbContext> dbContextFactory,
     TimeProvider? timeProvider = null,
-    IOptions<ModuleJobSchedulerOption>? options = null) : IJobSchedulerStore
+    IOptions<ModuleJobSchedulerOption>? options = null) : IJobSchedulerStore, IJobSchedulerStoreDescriptor
 {
     private const int MAX_TRANSACTION_ATTEMPTS = 5;
     private static readonly JsonSerializerOptions JSON_OPTIONS = new(JsonSerializerDefaults.Web);
@@ -36,6 +36,20 @@ public sealed partial class EfCoreJobSchedulerStore(
         ?? JobExecutionHistoryLimits.DEFAULT_MAX_ENTRIES,
         options?.Value.MaxExecutionHistoryMessageLength
         ?? JobExecutionHistoryLimits.DEFAULT_MAX_MESSAGE_LENGTH);
+    private string? _providerName;
+
+    /// <inheritdoc />
+    public string StoreKind => "EF Core";
+
+    /// <inheritdoc />
+    /// <remarks>The Entity Framework provider never changes at runtime, so the name is resolved once and cached.</remarks>
+    public string? Provider => _providerName ??= ResolveProviderName();
+
+    private string? ResolveProviderName()
+    {
+        using var dbContext = _dbContextFactory.CreateDbContext();
+        return dbContext.Database.ProviderName;
+    }
 
     private DateTimeOffset UtcNow => NormalizeUtc(_timeProvider.GetUtcNow());
 

@@ -54,6 +54,7 @@ internal sealed class JobExecutionWorkerHostedService(
             {
                 ObserveCompletedExecutions();
                 await ClaimAvailableWorkAsync(workerToken);
+                runtimeState.SetInFlightExecutions(_executions.Count);
                 if (runtimeState.SetWorker(
                         true,
                         $"Worker is active for {_options.GetProjectName()} with {localDefinitions.Count} local job(s)."))

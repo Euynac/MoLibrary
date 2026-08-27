@@ -7,6 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Monica.Testing\Monica.Testing.csproj" />
     <ProjectReference Include="..\..\Monica.Testing.UI\Monica.Testing.UI.csproj" />
+    <ProjectReference Include="..\..\Monica.JobScheduler.ServiceDiscovery\Monica.JobScheduler.ServiceDiscovery.csproj" />
     <ProjectReference Include="..\..\Monica.JobScheduler.UI\Monica.JobScheduler.UI.csproj" />
     <ProjectReference Include="..\..\Monica.JobScheduler\Monica.JobScheduler.csproj" />
   </ItemGroup>

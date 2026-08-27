@@ -14,6 +14,9 @@
     },
     "Statistics": {
       "Title": "Scheduler analytics"
+    },
+    "Runtime": {
+      "Title": "Scheduler runtime"
     }
   },
   "Workspace": {
@@ -25,7 +28,8 @@
       "Overview": "Overview",
       "Catalog": "Catalog",
       "Executions": "Executions",
-      "Statistics": "Analytics"
+      "Statistics": "Analytics",
+      "Runtime": "Runtime"
     },
     "Pages": {
       "Overview": {
@@ -47,6 +51,10 @@
       "Statistics": {
         "Title": "Scheduler analytics",
         "Description": "Measure reliability, schedule fulfillment, throughput, duration percentiles, and workload concentration over bounded scheduler-time windows."
+      },
+      "Runtime": {
+        "Title": "Scheduler runtime",
+        "Description": "Inspect this host's effective configuration and storage, its local scheduling planes, and every owner's durable footprint in the shared scope."
       }
     }
   },
@@ -764,5 +772,106 @@
     "Error": "Error",
     "Critical": "Critical",
     "None": "None"
+  },
+  "Runtime": {
+    "PageTitle": "Scheduler runtime",
+    "CapturedAt": "Snapshot captured {0}",
+    "LastRefreshed": "Runtime refreshed {0}",
+    "RefreshFailed": "The latest runtime refresh failed: {0}",
+    "Format": {
+      "Days": "{0} d",
+      "Hours": "{0} h",
+      "Minutes": "{0} min",
+      "Seconds": "{0} s",
+      "Milliseconds": "{0} ms"
+    },
+    "Identity": {
+      "Title": "Scheduler identity and storage",
+      "Description": "The host serving this page and the durable storage behind the scheduler.",
+      "DebugMode": "Recurring debug mode",
+      "Scope": "Scheduler scope",
+      "Owner": "Host owner",
+      "WorkerInstanceId": "Worker instance",
+      "CronTimeZone": "Cron timezone"
+    },
+    "Store": {
+      "Title": "Storage",
+      "Provider": "Provider",
+      "NoProvider": "none"
+    },
+    "Config": {
+      "Title": "Effective configuration",
+      "Description": "Scalar options that shape this host's scheduling and execution behavior.",
+      "Group:Cadence": "Cadence",
+      "Group:Lease": "Leases and grace periods",
+      "Group:Capacity": "Capacity and budgets",
+      "Group:History": "Execution history",
+      "SchedulingPollInterval": "Scheduling poll",
+      "WorkerPollInterval": "Worker poll",
+      "SnapshotSyncInterval": "Snapshot sync",
+      "ExecutionLeaseDuration": "Execution lease",
+      "ExecutionLeaseRenewInterval": "Lease renewal",
+      "ExecutionRetryDelay": "Retry delay",
+      "ExecutionCancellationGracePeriod": "Cancellation grace",
+      "WorkerShutdownGracePeriod": "Shutdown grace",
+      "MaxWorkerExecutionThreads": "Worker threads",
+      "MaxClaimBatchSize": "Claim batch size",
+      "MaxRecurringMaterializationsPerCycle": "Materializations per cycle",
+      "MaxExpiredLeaseRecoveriesPerCycle": "Lease recoveries per cycle",
+      "EnableHistoryCleanup": "History cleanup",
+      "HistoryCleanupInterval": "Cleanup interval",
+      "MaxHistoryDeletionsPerCycle": "Deletions per cycle",
+      "MaxExecutionHistoryEntriesPerExecution": "Entries per execution",
+      "MaxExecutionHistoryMessageLength": "Message length",
+      "MaxRetainedOrphanedExecutions": "Retained orphans",
+      "Enabled": "Enabled",
+      "Disabled": "Disabled"
+    },
+    "Plane": {
+      "Title": "Local scheduling planes",
+      "Description": "Readiness of this host's scheduling and worker loops.",
+      "Scheduling": "Scheduling plane",
+      "Worker": "Execution worker",
+      "Ready": "Ready",
+      "NotReady": "Not ready",
+      "NoMessage": "No cycle has completed yet.",
+      "InFlight": "In-flight executions",
+      "LocalOnly": "Local view: only this host's planes are visible; other replicas report their own."
+    },
+    "Owners": {
+      "Title": "Owners in this scope",
+      "Description": "Durable footprint per owner; an owner is offline when its freshest snapshot observation is older than {0}.",
+      "Owner": "Owner",
+      "Liveness": "Liveness",
+      "Online": "Online",
+      "Offline": "Offline",
+      "Jobs": "Managed jobs",
+      "JobsHelp": "Definitions currently published versus retained but no longer published.",
+      "JobsCounts": "{0} present · {1} absent",
+      "Active": "Queue",
+      "ActiveCounts": "{0} queued · {1} running",
+      "LastObserved": "Last observed",
+      "Actions": "Actions",
+      "OpenCatalog": "Open {0} in the catalog",
+      "Empty": "No owner has published a snapshot in this scope yet."
+    },
+    "Workers": {
+      "Title": "Worker instances",
+      "Description": "Live instances reported by the integrated service registry with heartbeats.",
+      "Hint": "No worker-instance insight provider is registered. Hosts that fully adopt the Monica stack can enable ServiceDiscovery-backed worker observability by registering the JobScheduler ServiceDiscovery insight module.",
+      "LoadFailed": "Worker-instance insight failed to load: {0}",
+      "Status": "Status",
+      "Status:Online": "Online",
+      "Status:Unhealthy": "Unhealthy",
+      "Status:Offline": "Offline",
+      "Instance": "Instance",
+      "Owner": "Owner",
+      "Leader": "Leader",
+      "IsLeader": "Service leader",
+      "Heartbeat": "Heartbeat",
+      "Registered": "Registered",
+      "Addresses": "Listening addresses",
+      "Empty": "No worker instance has registered yet."
+    }
   }
 }

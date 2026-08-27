@@ -9,6 +9,7 @@ using Monica.JobScheduler.Models.Analytics;
 using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
+using Monica.JobScheduler.Services.Support;
 using Monica.Modules;
 
 namespace Monica.JobScheduler.Facades;
@@ -24,13 +25,80 @@ public sealed class JobSchedulerFacade(
     IJobSchedulerStore store,
     IOptions<ModuleJobSchedulerOption> options,
     TimeProvider timeProvider,
+    JobSchedulerRuntimeState runtimeState,
     ILogger<JobSchedulerFacade> logger)
 {
     private const int MAX_PAGE_SIZE = 200;
     private const int RECENT_EXECUTION_COUNT = 12;
     private const int OVERVIEW_DEFINITION_LIMIT = 500;
 
+    /// <summary>
+    /// Multiplier applied to <see cref="ModuleJobSchedulerOption.SnapshotSyncInterval"/> to derive the owner
+    /// liveness threshold; an owner whose freshest observation is older is reported as offline.
+    /// </summary>
+    private const int OWNER_ONLINE_THRESHOLD_SNAPSHOT_MULTIPLIER = 3;
+
     private readonly string _schedulerScopeKey = options.Value.SchedulerScopeKey;
+
+    /// <summary>
+    /// Captures the serving host's effective configuration, storage identity, local scheduling-plane readiness,
+    /// and every owner's durable footprint in the configured scope.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels snapshot loading.</param>
+    /// <returns>A result containing the host-scoped runtime snapshot.</returns>
+    public Task<Res<JobSchedulerRuntimeOverview>> GetRuntimeOverviewAsync(
+        CancellationToken cancellationToken = default) =>
+        ExecuteAsync(async () =>
+        {
+            var option = options.Value;
+            var owners = await store.QueryOwnerSummariesAsync(_schedulerScopeKey, cancellationToken);
+            return new JobSchedulerRuntimeOverview
+            {
+                Configuration = new JobSchedulerRuntimeConfiguration
+                {
+                    SchedulerScopeKey = option.SchedulerScopeKey,
+                    OwnerKey = option.GetProjectName(),
+                    WorkerInstanceId = option.WorkerInstanceId,
+                    RecurringJobDebugMode = option.RecurringJobDebugMode,
+                    CronTimeZoneId = option.CronTimeZone.Id,
+                    SchedulingPollInterval = option.SchedulingPollInterval,
+                    WorkerPollInterval = option.WorkerPollInterval,
+                    SnapshotSyncInterval = option.SnapshotSyncInterval,
+                    ExecutionLeaseDuration = option.ExecutionLeaseDuration,
+                    ExecutionLeaseRenewInterval = option.ExecutionLeaseRenewInterval,
+                    ExecutionRetryDelay = option.ExecutionRetryDelay,
+                    ExecutionCancellationGracePeriod = option.ExecutionCancellationGracePeriod,
+                    WorkerShutdownGracePeriod = option.WorkerShutdownGracePeriod,
+                    MaxWorkerExecutionThreads = option.MaxWorkerExecutionThreads,
+                    MaxClaimBatchSize = option.MaxClaimBatchSize,
+                    MaxRecurringMaterializationsPerCycle = option.MaxRecurringMaterializationsPerCycle,
+                    MaxExpiredLeaseRecoveriesPerCycle = option.MaxExpiredLeaseRecoveriesPerCycle,
+                    EnableHistoryCleanup = option.EnableHistoryCleanup,
+                    HistoryCleanupInterval = option.HistoryCleanupInterval,
+                    MaxHistoryDeletionsPerCycle = option.MaxHistoryDeletionsPerCycle,
+                    MaxExecutionHistoryEntriesPerExecution = option.MaxExecutionHistoryEntriesPerExecution,
+                    MaxExecutionHistoryMessageLength = option.MaxExecutionHistoryMessageLength,
+                    MaxRetainedOrphanedExecutions = option.MaxRetainedOrphanedExecutions
+                },
+                Store = DescribeStore(),
+                LocalPlane = new JobSchedulerLocalPlaneSnapshot
+                {
+                    SchedulingReady = runtimeState.SchedulingReady,
+                    SchedulingMessage = runtimeState.SchedulingMessage,
+                    WorkerReady = runtimeState.WorkerReady,
+                    WorkerMessage = runtimeState.WorkerMessage,
+                    InFlightExecutions = runtimeState.InFlightExecutions
+                },
+                Owners = owners,
+                OwnerOnlineThreshold = option.SnapshotSyncInterval * OWNER_ONLINE_THRESHOLD_SNAPSHOT_MULTIPLIER,
+                CapturedAtUtc = timeProvider.GetUtcNow()
+            };
+        }, "load the scheduler runtime overview", cancellationToken);
+
+    private JobSchedulerStoreInfo DescribeStore() =>
+        store is IJobSchedulerStoreDescriptor descriptor
+            ? new JobSchedulerStoreInfo { Kind = descriptor.StoreKind, Provider = descriptor.Provider }
+            : new JobSchedulerStoreInfo { Kind = store.GetType().Name };
 
     /// <summary>
     /// Captures persisted definitions, queue state, and recent execution activity for the configured scope.

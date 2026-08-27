@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models.Analytics;
 using Monica.JobScheduler.Providers;
+using Monica.JobScheduler.Services.Support;
 using Monica.Modules;
 using Monica.Testing.Results;
 using Xunit;
@@ -21,6 +22,7 @@ public sealed class JobSchedulerFacadeAnalyticsTests
             new InMemoryJobSchedulerStore(timeProvider),
             Options.Create(new ModuleJobSchedulerOption { SchedulerScopeKey = "facade-analytics" }),
             timeProvider,
+            new JobSchedulerRuntimeState(),
             NullLogger<JobSchedulerFacade>.Instance);
         var query = new JobExecutionAnalyticsQuery
         {

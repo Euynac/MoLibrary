@@ -1,0 +1,72 @@
+.runtime-config {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.runtime-config__heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.runtime-config__icon {
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    color: var(--mud-palette-primary);
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+    place-items: center;
+}
+
+.runtime-config__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 14px;
+}
+
+.runtime-config__group {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.runtime-config__group dl {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 6px;
+    background-color: var(--mud-palette-lines-default);
+}
+
+.runtime-config__group dl > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px 10px;
+    background-color: var(--mud-palette-surface);
+}
+
+.runtime-config__group dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+}
+
+.runtime-config__group dd {
+    min-width: 0;
+    margin: 0;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}

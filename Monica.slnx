@@ -72,6 +72,7 @@
   <Project Path="Monica.HealthCheck.UI/Monica.HealthCheck.UI.csproj" />
   <Project Path="Monica.HealthCheck/Monica.HealthCheck.csproj" />
   <Project Path="Monica.JobScheduler.EfCore/Monica.JobScheduler.EfCore.csproj" />
+  <Project Path="Monica.JobScheduler.ServiceDiscovery/Monica.JobScheduler.ServiceDiscovery.csproj" />
   <Project Path="Monica.JobScheduler.UI/Monica.JobScheduler.UI.csproj" />
   <Project Path="Monica.JobScheduler/Monica.JobScheduler.csproj" />
   <Project Path="Monica.Locker/Monica.Locker.csproj" />

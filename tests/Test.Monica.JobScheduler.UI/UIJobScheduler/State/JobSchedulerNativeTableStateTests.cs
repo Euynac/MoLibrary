@@ -198,7 +198,7 @@ public sealed class JobSchedulerNativeTableStateTests
         await using var state = context.Services
             .GetRequiredService<JobCatalogPageStateFactory>()
             .Create(20);
-        state.ApplyInitialQuery(present: false);
+        state.ApplyInitialQuery(present: false, owner: null);
         await state.InitializeAsync();
 
         var result = await state.LoadTableAsync(new TableState
