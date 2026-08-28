@@ -64,11 +64,6 @@
 </section>
 
 @code {
-    /// <summary>
-    /// ViewBox-units of blank ring kept between adjacent segments so butt-capped arcs never touch.
-    /// </summary>
-    private const double SEGMENT_GAP = 1.2;
-
     private static readonly JobExecutionState[] States = Enum.GetValues<JobExecutionState>();
 
     /// <summary>
@@ -85,16 +80,10 @@
         ? "—"
         : (count / (double)total).ToString("P0", CultureInfo.CurrentCulture);
 
-    // Butt caps keep each arc inside its dash, so a fixed gap per boundary guarantees no overlap
-    // regardless of how many states carry counts.
     private static string FormatSegment(double length)
-    {
-        var visibleLength = length <= SEGMENT_GAP
-            ? Math.Min(length, 0.4)
-            : length - SEGMENT_GAP;
-        return $"{visibleLength.ToString("0.###", CultureInfo.InvariantCulture)} {(100 - visibleLength).ToString("0.###", CultureInfo.InvariantCulture)}";
-    }
+        => $"{length.ToString("0.###", CultureInfo.InvariantCulture)} {(100 - length).ToString("0.###", CultureInfo.InvariantCulture)}";
 
-    private static string FormatOffset(double offset) =>
-        (-(offset + SEGMENT_GAP / 2)).ToString("0.###", CultureInfo.InvariantCulture);
+    private static string FormatOffset(double offset) => offset == 0
+        ? "0"
+        : (-offset).ToString("0.###", CultureInfo.InvariantCulture);
 }
