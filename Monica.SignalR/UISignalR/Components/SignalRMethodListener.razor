@@ -3,48 +3,111 @@
 
 <MudPaper Class="signalr-method-listener" Elevation="0">
     <div class="signalr-component-heading"><MudIcon Icon="@Icons.Material.Outlined.Hearing" Color="Color.Secondary" /><MudText Typo="Typo.h6">@L["UISignalR:MethodListener:Title"]</MudText></div>
-    <MudGrid Class="mb-3">
-        <MudItem xs="12">
-            <MudButton Variant="Variant.Outlined" 
-                     Color="Color.Primary" 
-                     OnClick="EnableAllListenersAsync"
-                     Disabled="!IsConnected">
-                @L["UISignalR:MethodListener:EnableAll"]
+    @if (HubMethods.Any())
+    {
+        <div class="signalr-listener-summary">
+            <MudText Typo="Typo.body2">@L["UISignalR:MethodListener:EnabledSummary", EnabledMethods.Count, HubMethods.Count]</MudText>
+            <MudText Typo="Typo.body2" Class="ms-3">@L["UISignalR:MethodListener:TotalReceived", HubMethods.Sum(method => method.ReceivedCount)]</MudText>
+        </div>
+        <div class="signalr-listener-actions mb-3">
+            <MudButton Variant="Variant.Outlined"
+                     Color="Color.Primary"
+                     StartIcon="@Icons.Material.Filled.ManageSearch"
+                     OnClick="OpenManageDialog">
+                @L["UISignalR:MethodListener:Manage"]
             </MudButton>
-            <MudButton Variant="Variant.Outlined" 
-                     Color="Color.Secondary" 
+            <MudButton Variant="Variant.Outlined"
+                     Color="Color.Secondary"
+                     StartIcon="@Icons.Material.Filled.VisibilityOff"
                      OnClick="DisableAllListenersAsync"
                      Disabled="!IsConnected"
                      Class="ms-2">
                 @L["UISignalR:MethodListener:DisableAll"]
             </MudButton>
-        </MudItem>
-    </MudGrid>
-    @if (HubMethods.Any())
-    {
-        <div class="signalr-listener-list">
-            @foreach (var method in HubMethods)
-            {
-                <div class="signalr-listener-row">
-                        <MudCheckBox Value="@method.IsListening" 
-                                   Label="@method.DisplayName"
-                                   Color="Color.Primary"
-                                   T="bool"
-                                   ValueChanged="@((bool isChecked) => ToggleMethodListenerAsync(method, isChecked))" />
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                            @L["UISignalR:MethodListener:Parameters", GetParameterSummary(method)]
-                        </MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                            @L["UISignalR:MethodListener:ReceivedCount", method.ReceivedCount]
-                        </MudText>
-                </div>
-            }
         </div>
+        @if (EnabledMethods.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["UISignalR:MethodListener:EmptyEnabled"]</MudAlert>
+        }
+        else
+        {
+            <div class="signalr-listener-list">
+                @foreach (var method in EnabledMethods)
+                {
+                    <div class="signalr-listener-row">
+                        <span class="signalr-listener-name" title="@method.DisplayName">@method.DisplayName</span>
+                        <span class="signalr-listener-count">@L["UISignalR:MethodListener:ReceivedCount", method.ReceivedCount]</span>
+                        <MudTooltip Text="@L["UISignalR:MethodListener:StopListening"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                         Size="Size.Small"
+                                         Color="Color.Secondary"
+                                         OnClick="@(() => ToggleMethodListenerAsync(method, false))" />
+                        </MudTooltip>
+                    </div>
+                }
+            </div>
+        }
     }
     else
     {
         <MudAlert Severity="Severity.Info">@L["UISignalR:MethodListener:Empty"]</MudAlert>
     }
+
+    <MudDialog @bind-Visible="_manageDialogVisible" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+        <TitleContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Outlined.Hearing" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6">@L["UISignalR:MethodListener:DialogTitle"]</MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ms-2">
+                    @L["UISignalR:MethodListener:EnabledSummary", EnabledMethods.Count, HubMethods.Count]
+                </MudChip>
+            </MudStack>
+        </TitleContent>
+        <DialogContent>
+            <MudTextField T="string"
+                        @bind-Value="_searchText"
+                        Immediate="true"
+                        Clearable="true"
+                        Variant="Variant.Outlined"
+                        Adornment="Adornment.Start"
+                        AdornmentIcon="@Icons.Material.Filled.Search"
+                        Placeholder="@L["UISignalR:MethodListener:SearchPlaceholder"]"
+                        Class="mb-3" />
+            <div class="signalr-listener-dialog-actions mb-3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="EnableAllListenersAsync" Disabled="!IsConnected">
+                    @L["UISignalR:MethodListener:EnableAll"]
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="DisableAllListenersAsync" Disabled="!IsConnected" Class="ms-2">
+                    @L["UISignalR:MethodListener:DisableAll"]
+                </MudButton>
+            </div>
+            <div class="signalr-listener-dialog-list">
+                @foreach (var method in FilteredHubMethods)
+                {
+                    <div class="signalr-listener-row signalr-listener-row--manage">
+                        <MudCheckBox Value="@method.IsListening"
+                                   Label="@method.DisplayName"
+                                   Color="Color.Primary"
+                                   T="bool"
+                                   ValueChanged="@((bool isChecked) => ToggleMethodListenerAsync(method, isChecked))" />
+                        <span class="signalr-listener-count">@L["UISignalR:MethodListener:ReceivedCount", method.ReceivedCount]</span>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @L["UISignalR:MethodListener:Parameters", GetParameterSummary(method)]
+                        </MudText>
+                    </div>
+                }
+                @if (FilteredHubMethods.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">@L["UISignalR:MethodListener:SearchEmpty"]</MudAlert>
+                }
+            </div>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="CloseManageDialog" Color="Color.Primary" Variant="Variant.Text">
+                @L["UISignalR:MethodListener:DialogClose"]
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
 </MudPaper>
 
 @code {
@@ -72,6 +135,27 @@
     /// Disable all listener callbacks
     /// </summary>
     [Parameter] public EventCallback OnDisableAllListeners { get; set; }
+
+    private bool _manageDialogVisible;
+    private string _searchText = string.Empty;
+
+    private IReadOnlyList<HubMethodInfo> EnabledMethods => HubMethods.Where(method => method.IsListening).ToList();
+
+    private List<HubMethodInfo> FilteredHubMethods => HubMethods
+        .Where(method => string.IsNullOrWhiteSpace(_searchText)
+            || method.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+            || method.DisplayName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private void OpenManageDialog()
+    {
+        _manageDialogVisible = true;
+    }
+
+    private void CloseManageDialog()
+    {
+        _manageDialogVisible = false;
+    }
 
     /// <summary>
     /// Switch method listener
@@ -105,4 +189,4 @@
             ? string.Join(", ", method.Args.Select(argument => $"{argument.TypeName} {argument.Name}"))
             : L["UISignalR:Common:NoArguments"].Value;
     }
-} 
+}

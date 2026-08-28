@@ -80,7 +80,9 @@ public sealed class SignalRSendMetrics
             target.TargetCount,
             BuildTargetIdentifierKey(target.Identifiers));
 
-        var metric = _metrics.GetOrAdd(key, _ => new SignalRSendMetric(key, target.Identifiers));
+        // Display names ride along for diagnostics only; the metric row keeps the identity derived from identifiers,
+        // so a target does not split into a second row when the resolved display names change between sends.
+        var metric = _metrics.GetOrAdd(key, _ => new SignalRSendMetric(key, target.Identifiers, target.IdentifierDisplayNames));
         var startedAt = metric.Start();
         RecordSendEvent(EVENT_STARTED, key, target);
 

@@ -14,12 +14,14 @@ namespace Monica.SignalR.UISignalR.State;
 public sealed class SignalRDebugPageState(
     IOptions<ModuleSignalRUIOption> options,
     SignalRFacade signalRFacade,
-    SignalRDebugJsClient jsClient)
+    SignalRDebugJsClient jsClient,
+    SignalRDebugTestTokenService testTokenService)
     : IAsyncDisposable
 {
     private bool _disposed;
     private bool _initialized;
     private bool _verboseLogging;
+    private bool _connectedUsersRefreshInProgress;
 
     /// <summary>
     /// Raised whenever the page should re-render.
@@ -104,6 +106,25 @@ public sealed class SignalRDebugPageState(
     /// Gets the current connection state.
     /// </summary>
     public SignalRConnectionState ConnectionState { get; private set; } = new();
+
+    /// <summary>
+    /// Gets a value indicating whether the host allows minting a random test-user token for local debugging.
+    /// </summary>
+    public bool CanGenerateTestToken => testTokenService.IsEnabled;
+
+    /// <summary>
+    /// Gets the username of the most recently generated test-user token, if any.
+    /// </summary>
+    public string? LastTestUserName { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the browser connection is established but the server treats it as anonymous.
+    /// </summary>
+    /// <remarks>
+    /// This happens when the access token is missing, invalid, expired, or not accepted for the WebSocket transport,
+    /// because anonymous connections are never registered in the server-side connected-user list.
+    /// </remarks>
+    public bool IsServerSideAnonymous { get; private set; }
 
     /// <summary>
     /// Initializes the page state and JavaScript client.
@@ -199,7 +220,33 @@ public sealed class SignalRDebugPageState(
         var success = await jsClient.ConnectAsync(hubUrl, AccessToken);
         SyncFromJsClient();
         NotifyStateChanged();
+        await RefreshConnectedUsersAfterConnectionChangeAsync();
         return success;
+    }
+
+    /// <summary>
+    /// Mints a random test-user token, fills the token field with it, and connects to the selected hub.
+    /// </summary>
+    /// <param name="baseUri">The app base URI used to build the hub URL.</param>
+    /// <returns><c>true</c> when the test user was minted and the connection succeeded.</returns>
+    public async Task<bool> TestUserConnectAsync(string baseUri)
+    {
+        SignalRDebugTestToken token;
+        try
+        {
+            token = testTokenService.GenerateTestUserToken();
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+
+        // Keep the minted token in the input so it stays visible and copyable while stepping through breakpoints.
+        AccessToken = token.AccessToken;
+        LastTestUserName = token.Username;
+        NotifyStateChanged();
+
+        return await ConnectAsync(baseUri);
     }
 
     /// <summary>
@@ -209,7 +256,9 @@ public sealed class SignalRDebugPageState(
     {
         var success = await jsClient.DisconnectAsync();
         SyncFromJsClient();
+        IsServerSideAnonymous = false;
         NotifyStateChanged();
+        await RefreshConnectedUsersAfterConnectionChangeAsync();
         return success;
     }
 
@@ -348,16 +397,64 @@ public sealed class SignalRDebugPageState(
         NotifyStateChanged();
     }
 
-    private void OnConnectionStateChanged(SignalRConnectionState _)
+    private void OnConnectionStateChanged(SignalRConnectionState state)
     {
         SyncFromJsClient();
         NotifyStateChanged();
+        _ = RefreshConnectedUsersAfterConnectionChangeAsync();
     }
 
     private void OnMethodListenerChanged(HubMethodInfo _)
     {
         SyncFromJsClient();
         NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Refreshes the connected-user snapshot after the browser connection reached or left a stable state.
+    /// </summary>
+    /// <remarks>
+    /// The server registers a connection in <c>OnConnectedAsync</c> before the browser reports the established
+    /// connection, so refreshing here observes the debug client itself. Failures are swallowed because this is a
+    /// best-effort auto refresh; the manual refresh button still surfaces errors.
+    /// </remarks>
+    private async Task RefreshConnectedUsersAfterConnectionChangeAsync()
+    {
+        if (_disposed
+            || ConnectionState.Status is not ("Connected" or "Disconnected")
+            || _connectedUsersRefreshInProgress)
+        {
+            return;
+        }
+
+        _connectedUsersRefreshInProgress = true;
+        try
+        {
+            await LoadConnectedUsersAsync();
+        }
+        catch (Exception)
+        {
+            // Best-effort auto refresh; the manual refresh button reports failures to the user.
+        }
+        finally
+        {
+            _connectedUsersRefreshInProgress = false;
+        }
+
+        UpdateAnonymousConnectionDiagnostic();
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Marks the connection as server-side anonymous when the browser reports it as established but the
+    /// server-side connected-user registry does not contain its connection identifier.
+    /// </summary>
+    private void UpdateAnonymousConnectionDiagnostic()
+    {
+        IsServerSideAnonymous = ConnectionState.IsConnected
+            && !string.IsNullOrEmpty(ConnectionState.ConnectionId)
+            && ConnectedUsers.All(user =>
+                !string.Equals(user.ConnectionId, ConnectionState.ConnectionId, StringComparison.Ordinal));
     }
 
     private void SyncFromJsClient()

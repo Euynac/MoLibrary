@@ -16,6 +16,7 @@ public sealed class SignalRDebugPageStateFactory(
     SignalRFacade signalRFacade,
     IJSRuntime jsRuntime,
     SignalRInvocationArgumentParser argumentParser,
+    SignalRDebugTestTokenService testTokenService,
     IStringLocalizer<SignalRResource> localizer)
 {
     /// <summary>
@@ -24,6 +25,6 @@ public sealed class SignalRDebugPageStateFactory(
     public SignalRDebugPageState Create()
     {
         var jsClient = new SignalRDebugJsClient(jsRuntime, argumentParser, localizer);
-        return new SignalRDebugPageState(options, signalRFacade, jsClient);
+        return new SignalRDebugPageState(options, signalRFacade, jsClient, testTokenService);
     }
 }

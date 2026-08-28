@@ -31,6 +31,8 @@
         "LoadSendDiagnosticsFailed": "加载 SignalR 发送诊断信息失败。",
         "ConnectSuccess": "SignalR 连接成功。",
         "ConnectFailed": "SignalR 连接失败。",
+        "TestTokenUnavailable": "测试用户令牌生成不可用：需要 Development 环境（或通过 ModuleSignalRUIOption.EnableTestUserConnection 显式开启）且已注册 Monica 认证模块。",
+        "TestUserConnectSuccess": "已生成测试用户 {0} 的访问令牌并连接成功。",
         "DisconnectSuccess": "SignalR 连接已断开。",
         "DisconnectFailed": "断开 SignalR 连接失败。",
         "SendMessageFailed": "发送消息失败。",
@@ -67,13 +69,16 @@
       "Connect": "连接",
       "Reconnect": "重新连接",
       "Disconnect": "断开连接",
-      "RefreshHubInfo": "刷新 Hub 信息"
+      "RefreshHubInfo": "刷新 Hub 信息",
+      "TestUserConnect": "测试用户连接",
+      "TestUserConnectHelper": "生成随机测试用户的访问令牌并立即连接，令牌会回填到输入框便于断点调试。"
     },
     "ConnectionStatus": {
       "Title": "连接状态",
       "ConnectionId": "连接 ID：{0}",
       "CurrentHub": "当前 Hub：{0}",
-      "TotalReceivedMessages": "接收到的消息总数：{0}"
+      "TotalReceivedMessages": "接收到的消息总数：{0}",
+      "AnonymousWarning": "连接已建立，但服务器将其视为匿名连接，因此不会出现在已连接用户列表中。访问令牌可能为空、无效或已过期，或未被 WebSocket 传输接受。"
     },
     "ConnectedUsers": {
       "Title": "已连接用户（{0}）",
@@ -137,9 +142,9 @@
         "GroupsCount": "分组目标数：{0}",
         "GroupExceptIdentifiers": "分组排除：{0}",
         "GroupExceptCount": "分组排除目标数：{0}",
-        "UserIdentifiers": "用户目标：{0}",
+        "UserTargetLabel": "用户目标：",
         "UserCount": "用户目标数：{0}",
-        "UsersIdentifiers": "用户目标：{0}",
+        "UsersTargetLabel": "用户目标：",
         "UsersCount": "用户目标数：{0}",
         "UnknownIdentifiers": "目标：{0}",
         "UnknownCount": "目标标识数：{0}"
@@ -147,11 +152,20 @@
     },
     "MethodListener": {
       "Title": "Hub 方法监听",
+      "Manage": "管理监听…",
       "EnableAll": "全部启用",
       "DisableAll": "全部禁用",
+      "EnabledSummary": "已启用 {0}/{1}",
+      "TotalReceived": "累计接收 {0} 次",
+      "StopListening": "取消监听",
+      "Empty": "请先连接到 Hub 以加载可用的方法。",
+      "EmptyEnabled": "未启用任何监听，点击“管理监听…”选择要监听的方法。",
+      "DialogTitle": "管理方法监听",
+      "SearchPlaceholder": "搜索方法名…",
+      "SearchEmpty": "没有匹配的方法。",
+      "DialogClose": "关闭",
       "Parameters": "参数：{0}",
-      "ReceivedCount": "接收次数：{0}",
-      "Empty": "请先连接到 Hub 以加载可用的方法。"
+      "ReceivedCount": "接收次数：{0}"
     },
     "MethodInvoker": {
       "Title": "方法调用",

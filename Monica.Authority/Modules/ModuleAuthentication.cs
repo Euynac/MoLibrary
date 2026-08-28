@@ -155,7 +155,14 @@ public class ModuleAuthenticationOption : ModuleOptions<ModuleAuthentication>
 {
     internal List<string> QueryStringAccessTokenPathPrefixes { get; } = [];
 
-    internal void AllowQueryStringAccessTokens(IEnumerable<string> pathPrefixes)
+    /// <summary>
+    /// Adds path prefixes where bearer tokens may also be read from the <c>access_token</c> query-string parameter.
+    /// </summary>
+    /// <remarks>
+    /// Browser transports such as WebSocket cannot set the Authorization header, so narrowly scoped transport paths
+    /// (for example SignalR hub routes) need query-string token support. Site-wide <c>/</c> prefixes are rejected.
+    /// </remarks>
+    public void AllowQueryStringAccessTokens(IEnumerable<string> pathPrefixes)
     {
         ArgumentNullException.ThrowIfNull(pathPrefixes);
         var normalizedPrefixes = pathPrefixes

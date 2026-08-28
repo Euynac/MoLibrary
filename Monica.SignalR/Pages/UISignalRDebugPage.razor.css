@@ -166,22 +166,80 @@
     flex-wrap: wrap;
 }
 
+.signalr-panel ::deep .signalr-listener-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin-bottom: 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.signalr-panel ::deep .signalr-listener-actions,
+.signalr-panel ::deep .signalr-listener-dialog-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 .signalr-panel ::deep .signalr-listener-list {
     display: flex;
     flex-direction: column;
+    max-height: 260px;
+    overflow-y: auto;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
-    overflow: hidden;
 }
 
 .signalr-panel ::deep .signalr-listener-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px 16px;
-    padding: 12px 14px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 8px 14px;
     border-bottom: 1px solid var(--mud-palette-lines-default);
     background: var(--mud-palette-surface);
     transition: background-color 140ms ease;
+}
+
+.signalr-panel ::deep .signalr-listener-row--manage {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 10px 14px;
+}
+
+.signalr-panel ::deep .signalr-listener-row--manage .mud-typography-caption {
+    grid-column: 1 / -1;
+}
+
+.signalr-panel ::deep .signalr-listener-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.signalr-panel ::deep .signalr-listener-count {
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-font-family-mono);
+    white-space: nowrap;
+}
+
+.signalr-panel ::deep .signalr-listener-dialog-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+}
+
+.signalr-panel ::deep .signalr-target-users .signalr-target-username {
+    color: var(--mud-palette-primary);
+}
+
+.signalr-panel ::deep .signalr-target-users .signalr-target-identifier {
+    font-family: var(--mo-font-family-mono);
+    font-size: .85em;
 }
 
 .signalr-panel ::deep .signalr-listener-row:last-child { border-bottom: 0; }
@@ -217,7 +275,8 @@
     .signalr-panel ::deep > .mud-paper,
     .signalr-status-rail ::deep .signalr-settings { padding: 16px !important; }
     .signalr-panel ::deep .signalr-component-header { align-items: flex-start; }
-    .signalr-panel ::deep .signalr-connection-actions .mud-button-root { width: 100%; margin-left: 0 !important; }
+    .signalr-panel ::deep .signalr-connection-actions .mud-button-root,
+    .signalr-panel ::deep .signalr-listener-actions .mud-button-root { width: 100%; margin-left: 0 !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

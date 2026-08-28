@@ -39,14 +39,16 @@
                                          AvailableHubs="@PageState.AvailableHubs"
                                          IsConnecting="@PageState.ConnectionState.IsConnecting"
                                          IsConnected="@PageState.ConnectionState.IsConnected"
+                                         CanGenerateTestToken="@PageState.CanGenerateTestToken"
                                          OnConnect="ConnectAsync"
+                                         OnTestUserConnect="TestUserConnectAsync"
                                          OnDisconnect="DisconnectAsync"
                                          OnRefreshHubs="LoadHubsAsync" />
             </div>
 
             <aside class="signalr-status-rail">
                 <div class="signalr-panel signalr-panel--status">
-                    <SignalRConnectionStatus ConnectionState="@PageState.ConnectionState" SelectedHubRoute="@PageState.SelectedHubRoute" />
+                    <SignalRConnectionStatus ConnectionState="@PageState.ConnectionState" SelectedHubRoute="@PageState.SelectedHubRoute" IsServerSideAnonymous="@PageState.IsServerSideAnonymous" />
                 </div>
 
                 <MudPaper Class="signalr-settings" Elevation="0">
@@ -155,6 +157,25 @@
         SnackBar.Add(
             success
                 ? L["Pages:SignalRDebug:Notifications:ConnectSuccess"].Value
+                : L["Pages:SignalRDebug:Notifications:ConnectFailed"].Value,
+            success ? Severity.Success : Severity.Error);
+    }
+
+    /// <summary>
+    /// Mints a random test-user token, fills the token field, and connects with it.
+    /// </summary>
+    private async Task TestUserConnectAsync()
+    {
+        if (!PageState.CanGenerateTestToken)
+        {
+            SnackBar.Add(L["Pages:SignalRDebug:Notifications:TestTokenUnavailable"].Value, Severity.Warning);
+            return;
+        }
+
+        var success = await PageState.TestUserConnectAsync(NavigationManager.BaseUri);
+        SnackBar.Add(
+            success
+                ? L["Pages:SignalRDebug:Notifications:TestUserConnectSuccess", PageState.LastTestUserName ?? string.Empty].Value
                 : L["Pages:SignalRDebug:Notifications:ConnectFailed"].Value,
             success ? Severity.Success : Severity.Error);
     }

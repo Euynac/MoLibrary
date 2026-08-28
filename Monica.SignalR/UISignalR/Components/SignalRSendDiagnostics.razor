@@ -122,7 +122,35 @@
                                     </HeaderContent>
                                     <RowTemplate Context="targetMetric">
                                         <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Target"]">
-                                            <MudText Typo="Typo.body2">@FormatTarget(targetMetric)</MudText>
+                                            @if (IsUserIdentifierTarget(targetMetric))
+                                            {
+                                                <span class="signalr-target-users">
+                                                    @GetUserTargetLabel(targetMetric)
+                                                    @for (var index = 0; index < targetMetric.TargetIdentifiers.Count; index++)
+                                                    {
+                                                        var identifier = targetMetric.TargetIdentifiers[index];
+                                                        var displayName = targetMetric.TargetIdentifierDisplayNames.ElementAtOrDefault(index);
+                                                        if (index > 0)
+                                                        {
+                                                            <text>, </text>
+                                                        }
+                                                        if (string.IsNullOrEmpty(displayName))
+                                                        {
+                                                            <span class="signalr-target-identifier">@identifier</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudTooltip Text="@identifier">
+                                                                <span class="signalr-target-username">@displayName</span>
+                                                            </MudTooltip>
+                                                        }
+                                                    }
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2">@FormatTarget(targetMetric)</MudText>
+                                            }
                                         </MudTd>
                                         <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Pending"]">
                                             <MudText Typo="Typo.body2">@targetMetric.PendingSendCount</MudText>
@@ -244,19 +272,30 @@
                 "UISignalR:SendDiagnostics:Targets:GroupExceptIdentifiers",
                 "UISignalR:SendDiagnostics:Targets:GroupExceptCount",
                 metric),
-            SignalRSendTargetKind.User => FormatIdentifierTarget(
-                "UISignalR:SendDiagnostics:Targets:UserIdentifiers",
-                "UISignalR:SendDiagnostics:Targets:UserCount",
-                metric),
-            SignalRSendTargetKind.Users => FormatIdentifierTarget(
-                "UISignalR:SendDiagnostics:Targets:UsersIdentifiers",
-                "UISignalR:SendDiagnostics:Targets:UsersCount",
-                metric),
+            // User targets with captured identifiers render through the username-first tooltip markup instead.
+            SignalRSendTargetKind.User => L["UISignalR:SendDiagnostics:Targets:UserCount", metric.TargetCount].Value,
+            SignalRSendTargetKind.Users => L["UISignalR:SendDiagnostics:Targets:UsersCount", metric.TargetCount].Value,
             _ => FormatIdentifierTarget(
                 "UISignalR:SendDiagnostics:Targets:UnknownIdentifiers",
                 "UISignalR:SendDiagnostics:Targets:UnknownCount",
                 metric)
         };
+    }
+
+    /// <summary>
+    /// Whether the metric is a user target with captured identifiers that can render username-first.
+    /// </summary>
+    private static bool IsUserIdentifierTarget(SignalRSendMetricInfo metric)
+    {
+        return metric.TargetKind is SignalRSendTargetKind.User or SignalRSendTargetKind.Users
+               && metric.TargetIdentifiers.Count > 0;
+    }
+
+    private string GetUserTargetLabel(SignalRSendMetricInfo metric)
+    {
+        return metric.TargetKind == SignalRSendTargetKind.User
+            ? L["UISignalR:SendDiagnostics:Targets:UserTargetLabel"].Value
+            : L["UISignalR:SendDiagnostics:Targets:UsersTargetLabel"].Value;
     }
 
     private string FormatIdentifierTarget(

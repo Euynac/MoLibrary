@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
+using Monica.Authority.Identity.Models;
+using Monica.SignalR.Abstractions;
 using Monica.SignalR.Models;
 
 namespace Monica.SignalR.Metrics;
@@ -10,7 +12,8 @@ internal sealed class SignalRSendMetricsHubClients<TContract>(
     IHubClients<TContract> inner,
     SignalRSendMetrics metrics,
     string hubName,
-    bool includeTargetIdentifiers)
+    bool includeTargetIdentifiers,
+    ISignalRConnectionRegistry connectionRegistry)
     : IHubClients<TContract>
     where TContract : class
 {
@@ -74,7 +77,11 @@ internal sealed class SignalRSendMetricsHubClients<TContract>(
     {
         return Track(
             inner.User(userId),
-            SignalRSendTarget.Create(SignalRSendTargetKind.User, userId, includeTargetIdentifiers));
+            SignalRSendTarget.Create(
+                SignalRSendTargetKind.User,
+                [userId],
+                [ResolveUserName(userId)],
+                includeTargetIdentifiers));
     }
 
     /// <inheritdoc />
@@ -82,7 +89,11 @@ internal sealed class SignalRSendMetricsHubClients<TContract>(
     {
         return Track(
             inner.Users(userIds),
-            SignalRSendTarget.Create(SignalRSendTargetKind.Users, userIds, includeTargetIdentifiers));
+            SignalRSendTarget.Create(
+                SignalRSendTargetKind.Users,
+                userIds,
+                userIds.Select(ResolveUserName).ToList(),
+                includeTargetIdentifiers));
     }
 
     private TContract Track(TContract clientProxy, SignalRSendTarget target)
@@ -90,5 +101,30 @@ internal sealed class SignalRSendMetricsHubClients<TContract>(
         return metrics.IsEnabled
             ? SignalRSendMetricsDispatch<TContract>.Create(clientProxy, metrics, hubName, target)
             : clientProxy;
+    }
+
+    /// <summary>
+    /// Resolves the username behind a user identifier from the online connection registry.
+    /// </summary>
+    /// <remarks>
+    /// The linear registry scan runs only when diagnostic target identifier capture is enabled, which is an
+    /// opt-in trusted-diagnostics setting, so the cost is acceptable. Users without a live connection resolve to an
+    /// empty display name and the raw identifier is shown instead.
+    /// </remarks>
+    private string ResolveUserName(string userId)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return string.Empty;
+        }
+
+        return connectionRegistry.GetConnectionInfos()
+            .Where(connection => string.Equals(
+                connection.ClaimsPrincipal.FindFirst(AuthorityClaimTypes.UserId)?.Value,
+                userId,
+                StringComparison.Ordinal))
+            .Select(connection => connection.ClaimsPrincipal.Identity?.Name)
+            .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name))
+            ?? string.Empty;
     }
 }

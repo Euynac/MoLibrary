@@ -8,7 +8,8 @@ namespace Monica.SignalR.Metrics;
 /// </summary>
 internal sealed class SignalRSendMetric(
     SignalRSendMetricKey key,
-    IReadOnlyList<string> targetIdentifiers)
+    IReadOnlyList<string> targetIdentifiers,
+    IReadOnlyList<string> targetIdentifierDisplayNames)
 {
     private long _pendingSendCount;
     private long _startedCount;
@@ -75,6 +76,7 @@ internal sealed class SignalRSendMetric(
             TargetKind = key.TargetKind,
             TargetCount = key.TargetCount,
             TargetIdentifiers = targetIdentifiers.ToList(),
+            TargetIdentifierDisplayNames = targetIdentifierDisplayNames.ToList(),
             PendingSendCount = Interlocked.Read(ref _pendingSendCount),
             StartedCount = startedCount,
             CompletedCount = completedCount,

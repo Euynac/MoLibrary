@@ -54,6 +54,9 @@ public class ModuleSignalR : MonicaModule<ModuleSignalROption>, IWebHostRequired
     {
         module.Require<ModuleJsonSerialization, ModuleJsonSerializationOption>();
         module.RequireFeature(SERVICES_FEATURE);
+        // Browser WebSocket transports pass the access token via query string; the optional edge lets this module
+        // register its mapped hub routes as allowed query-string token paths when the authentication module is present.
+        module.AfterIfPresent<ModuleAuthentication, ModuleAuthenticationOption>();
     }
 
     public override void ConfigureServices(ModuleContext<ModuleSignalROption> context)
@@ -74,6 +77,16 @@ public class ModuleSignalR : MonicaModule<ModuleSignalROption>, IWebHostRequired
 
     public override void ConfigureEndpoints(WebModuleContext<ModuleSignalROption> context)
     {
+        // JwtBearer reads the allowed path-prefix list per request, so extending it during startup is safe. Only the
+        // exact mapped hub routes are allowed, matching ASP.NET Core's guidance for browser WebSocket transports.
+        if (Option.HubRegistrations.Count > 0
+            && TryGetOptions<ModuleAuthentication, ModuleAuthenticationOption>(out var authenticationOption)
+            && authenticationOption is not null)
+        {
+            authenticationOption.AllowQueryStringAccessTokens(
+                Option.HubRegistrations.Select(registration => registration.HubRoute));
+        }
+
         var app = context.ApplicationBuilder;
         UseEndpoints(context, endpoints =>
         {

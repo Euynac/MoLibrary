@@ -8,17 +8,20 @@
     </div>
     <MudGrid>
         <MudItem xs="12" md="6">
-            <MudTextField @bind-Value="AccessToken" 
-                        Label="@L["UISignalR:ConnectionConfig:AccessTokenLabel"]" 
+            <MudTextField T="string"
+                        Value="@AccessToken"
+                        ValueChanged="@((string value) => OnAccessTokenChangedInternal(value))"
+                        Label="@L["UISignalR:ConnectionConfig:AccessTokenLabel"]"
                         Variant="Variant.Outlined"
                         HelperText="@L["UISignalR:ConnectionConfig:AccessTokenHelper"]" />
         </MudItem>
         <MudItem xs="12" md="6">
-            <MudSelect @bind-Value="SelectedHubRoute" 
-                     Label="@L["UISignalR:ConnectionConfig:HubUrlLabel"]" 
+            <MudSelect T="string"
+                     Value="@SelectedHubRoute"
+                     ValueChanged="@((string value) => OnSelectedHubRouteChangedInternal(value))"
+                     Label="@L["UISignalR:ConnectionConfig:HubUrlLabel"]"
                      Variant="Variant.Outlined"
-                     HelperText="@L["UISignalR:ConnectionConfig:HubUrlHelper"]"
-                     T="string">
+                     HelperText="@L["UISignalR:ConnectionConfig:HubUrlHelper"]">
                 @foreach (var hub in AvailableHubs)
                 {
                     <MudSelectItem Value="@hub.Route">@hub.HubName (@hub.Route)</MudSelectItem>
@@ -26,8 +29,8 @@
             </MudSelect>
         </MudItem>
         <MudItem xs="12" Class="signalr-connection-actions">
-            <MudButton Variant="Variant.Filled" 
-                     Color="Color.Primary" 
+            <MudButton Variant="Variant.Filled"
+                     Color="Color.Primary"
                      OnClick="ConnectAsync"
                      Disabled="IsConnecting || string.IsNullOrEmpty(SelectedHubRoute)">
                 @if (IsConnecting)
@@ -45,16 +48,29 @@
                     </MudText>
                 }
             </MudButton>
-            <MudButton Variant="Variant.Outlined" 
-                     Color="Color.Secondary" 
+            @if (CanGenerateTestToken)
+            {
+                <MudTooltip Text="@L["UISignalR:ConnectionConfig:TestUserConnectHelper"]">
+                    <MudButton Variant="Variant.Outlined"
+                             Color="Color.Tertiary"
+                             OnClick="TestUserConnectAsync"
+                             Disabled="IsConnecting || string.IsNullOrEmpty(SelectedHubRoute)"
+                             Class="ms-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Science" />
+                        <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:TestUserConnect"]</MudText>
+                    </MudButton>
+                </MudTooltip>
+            }
+            <MudButton Variant="Variant.Outlined"
+                     Color="Color.Secondary"
                      OnClick="DisconnectAsync"
                      Disabled="!IsConnected"
                      Class="ms-2">
                 <MudIcon Icon="@Icons.Material.Filled.PowerOff" />
                 <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:Disconnect"]</MudText>
             </MudButton>
-            <MudButton Variant="Variant.Outlined" 
-                     Color="Color.Info" 
+            <MudButton Variant="Variant.Outlined"
+                     Color="Color.Info"
                      OnClick="RefreshHubsAsync"
                      Class="ms-2">
                 <MudIcon Icon="@Icons.Material.Filled.Refresh" />
@@ -101,9 +117,19 @@
     [Parameter] public bool IsConnected { get; set; }
 
     /// <summary>
+    /// Whether the host allows generating a random test-user token for local debugging.
+    /// </summary>
+    [Parameter] public bool CanGenerateTestToken { get; set; }
+
+    /// <summary>
     /// Connection callback
     /// </summary>
     [Parameter] public EventCallback OnConnect { get; set; }
+
+    /// <summary>
+    /// Test-user connection callback that generates a random token first and then connects
+    /// </summary>
+    [Parameter] public EventCallback OnTestUserConnect { get; set; }
 
     /// <summary>
     /// Disconnect callback
@@ -124,6 +150,14 @@
     }
 
     /// <summary>
+    /// Generates a random test-user token, fills the token field, and connects.
+    /// </summary>
+    private async Task TestUserConnectAsync()
+    {
+        await OnTestUserConnect.InvokeAsync();
+    }
+
+    /// <summary>
     /// Disconnect async
     /// </summary>
     private async Task DisconnectAsync()
@@ -138,4 +172,16 @@
     {
         await OnRefreshHubs.InvokeAsync();
     }
-} 
+
+    private void OnAccessTokenChangedInternal(string value)
+    {
+        AccessToken = value;
+        AccessTokenChanged.InvokeAsync(value);
+    }
+
+    private void OnSelectedHubRouteChangedInternal(string value)
+    {
+        SelectedHubRoute = value;
+        SelectedHubRouteChanged.InvokeAsync(value);
+    }
+}

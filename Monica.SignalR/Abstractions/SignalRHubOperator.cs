@@ -47,7 +47,8 @@ public abstract class SignalRHubOperator<TContract, THub, TUser>(
             hubContext.Clients,
             sendMetrics,
             typeof(THub).Name,
-            sendMetrics.IncludeTargetIdentifiers)
+            sendMetrics.IncludeTargetIdentifiers,
+            connectionRegistry)
         : hubContext.Clients;
 
     /// <inheritdoc />

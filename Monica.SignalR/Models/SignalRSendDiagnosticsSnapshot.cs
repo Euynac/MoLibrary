@@ -175,6 +175,16 @@ public sealed class SignalRSendMetricInfo
     public List<string> TargetIdentifiers { get; init; } = [];
 
     /// <summary>
+    /// Gets or sets the human-friendly display names aligned by index with <see cref="TargetIdentifiers"/>.
+    /// </summary>
+    /// <remarks>
+    /// Names are resolved from the online connection registry at capture time, so entries are empty for
+    /// identifiers without a resolvable display name (for example a user target with no live connection).
+    /// Renderers fall back to the raw identifier for empty entries.
+    /// </remarks>
+    public List<string> TargetIdentifierDisplayNames { get; init; } = [];
+
+    /// <summary>
     /// Gets or sets the current number of in-flight send tasks for this metric.
     /// </summary>
     public long PendingSendCount { get; init; }

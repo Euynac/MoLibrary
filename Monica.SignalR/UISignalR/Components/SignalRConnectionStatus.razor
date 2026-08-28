@@ -24,6 +24,12 @@
             @L["UISignalR:ConnectionStatus:CurrentHub", SelectedHubRoute]
         </MudText>
     }
+    @if (IsServerSideAnonymous)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+            @L["UISignalR:ConnectionStatus:AnonymousWarning"]
+        </MudAlert>
+    }
     <MudText Typo="Typo.body2" Class="mt-1">
         @L["UISignalR:ConnectionStatus:TotalReceivedMessages", ConnectionState.TotalReceivedMessages]
     </MudText>
@@ -39,6 +45,11 @@
     /// Selected Hub route
     /// </summary>
     [Parameter] public string SelectedHubRoute { get; set; } = "";
+
+    /// <summary>
+    /// Whether the connection is established but the server-side registry treats it as anonymous.
+    /// </summary>
+    [Parameter] public bool IsServerSideAnonymous { get; set; }
 
     /// <summary>
     /// Get connection status color

@@ -31,6 +31,8 @@
         "LoadSendDiagnosticsFailed": "Failed to load SignalR send diagnostics.",
         "ConnectSuccess": "SignalR connection established successfully.",
         "ConnectFailed": "Failed to connect to SignalR.",
+        "TestTokenUnavailable": "Test-user token generation is unavailable: it requires the Development environment (or an explicit ModuleSignalRUIOption.EnableTestUserConnection override) and the Monica authentication module.",
+        "TestUserConnectSuccess": "Generated an access token for test user {0} and connected successfully.",
         "DisconnectSuccess": "SignalR connection closed.",
         "DisconnectFailed": "Failed to disconnect the SignalR connection.",
         "SendMessageFailed": "Failed to send the message.",
@@ -67,13 +69,16 @@
       "Connect": "Connect",
       "Reconnect": "Reconnect",
       "Disconnect": "Disconnect",
-      "RefreshHubInfo": "Refresh hub metadata"
+      "RefreshHubInfo": "Refresh hub metadata",
+      "TestUserConnect": "Connect as test user",
+      "TestUserConnectHelper": "Mints an access token for a random test user and connects immediately; the token is filled into the input for breakpoint debugging."
     },
     "ConnectionStatus": {
       "Title": "Connection Status",
       "ConnectionId": "Connection ID: {0}",
       "CurrentHub": "Current hub: {0}",
-      "TotalReceivedMessages": "Total received messages: {0}"
+      "TotalReceivedMessages": "Total received messages: {0}",
+      "AnonymousWarning": "The connection is established, but the server treats it as anonymous, so it will not appear in the connected-user list. The access token may be missing, invalid, or expired, or it was not accepted for the WebSocket transport."
     },
     "ConnectedUsers": {
       "Title": "Connected Users ({0})",
@@ -137,9 +142,9 @@
         "GroupsCount": "Group targets: {0}",
         "GroupExceptIdentifiers": "Group except: {0}",
         "GroupExceptCount": "Group except targets: {0}",
-        "UserIdentifiers": "User target: {0}",
+        "UserTargetLabel": "User target: ",
         "UserCount": "User targets: {0}",
-        "UsersIdentifiers": "User targets: {0}",
+        "UsersTargetLabel": "User targets: ",
         "UsersCount": "User targets: {0}",
         "UnknownIdentifiers": "Target: {0}",
         "UnknownCount": "Target identifiers: {0}"
@@ -147,11 +152,20 @@
     },
     "MethodListener": {
       "Title": "Hub Method Listeners",
+      "Manage": "Manage listeners…",
       "EnableAll": "Enable all",
       "DisableAll": "Disable all",
+      "EnabledSummary": "{0}/{1} enabled",
+      "TotalReceived": "{0} received in total",
+      "StopListening": "Stop listening",
+      "Empty": "Connect to a hub first to load the available methods.",
+      "EmptyEnabled": "No listeners are enabled. Use \"Manage listeners…\" to pick the methods to listen to.",
+      "DialogTitle": "Manage hub method listeners",
+      "SearchPlaceholder": "Search methods…",
+      "SearchEmpty": "No matching methods.",
+      "DialogClose": "Close",
       "Parameters": "Parameters: {0}",
-      "ReceivedCount": "Received count: {0}",
-      "Empty": "Connect to a hub first to load the available methods."
+      "ReceivedCount": "Received count: {0}"
     },
     "MethodInvoker": {
       "Title": "Method Invocation",

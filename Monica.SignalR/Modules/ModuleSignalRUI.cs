@@ -42,6 +42,7 @@ public class ModuleSignalRUI : MonicaModule<ModuleSignalRUIOption>, IUIModule
         var services = context.Services;
         services.AddScoped<SignalRDebugPageStateFactory>();
         services.AddScoped<SignalRInvocationArgumentParser>();
+        services.AddSingleton<SignalRDebugTestTokenService>();
     }
 
     public override void Describe(ModuleDescriptor module)
@@ -75,4 +76,20 @@ public class ModuleSignalRUIOption : ModuleOptions<ModuleSignalRUI>
     /// Gets or sets the default bearer token prefilled on the SignalR debug page before a browser connection is opened.
     /// </summary>
     public string? DefaultAccessToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the SignalR debug page may mint a random test-user access token for local debugging.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The default is <see langword="null"/>, which enables the capability only when the host runs in the Development
+    /// environment; set <see langword="true"/> or <see langword="false"/> to force the behavior in any environment.
+    /// The capability also requires the Monica authentication module to be registered.
+    /// </para>
+    /// <para>
+    /// The minted token is a fully valid JWT for a random user identity, so enabling it on a publicly reachable host
+    /// effectively bypasses authentication. Keep it disabled outside trusted debugging environments.
+    /// </para>
+    /// </remarks>
+    public bool? EnableTestUserConnection { get; set; }
 }
