@@ -99,8 +99,7 @@
                                 title="@declaration.JobKey"
                                 aria-label="@L["Catalog:Actions:CopyKey"]"
                                 @onclick="@(() => CopyJobKeyAsync(declaration.JobKey))">
-                            <code>@declaration.JobKey</code>
-                            <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
+                            @declaration.JobKey
                         </button>
                     </div>
                 </MudTd>

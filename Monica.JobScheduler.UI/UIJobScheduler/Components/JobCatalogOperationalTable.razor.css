@@ -97,7 +97,7 @@
 
 .catalog-table__identity-name,
 .catalog-table__identity span,
-.catalog-table__identity code,
+.catalog-table__identity-key,
 .catalog-table__owner span {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -130,37 +130,22 @@
 }
 
 .catalog-table__identity-key {
-    display: inline-flex;
+    display: block;
     max-width: 100%;
-    align-items: center;
-    gap: 4px;
+    overflow: hidden;
     padding: 0;
     border: 0;
     background: none;
-    color: inherit;
-    cursor: pointer;
-    font: inherit;
-    text-align: left;
-}
-
-.catalog-table__identity-key code {
     color: var(--mud-palette-text-secondary);
+    cursor: pointer;
     font-family: var(--mo-font-family-mono);
     font-size: 0.7rem;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.catalog-table__identity-key ::deep .mud-icon-root {
-    flex: 0 0 auto;
-    color: var(--mud-palette-text-disabled);
-    transition: color 140ms ease;
-}
-
-.catalog-table__identity-key:hover code {
-    color: var(--mud-palette-primary);
-}
-
-.catalog-table__identity-key:hover ::deep .mud-icon-root,
-.catalog-table__identity-key:focus-visible ::deep .mud-icon-root {
+.catalog-table__identity-key:hover {
     color: var(--mud-palette-primary);
 }
 
