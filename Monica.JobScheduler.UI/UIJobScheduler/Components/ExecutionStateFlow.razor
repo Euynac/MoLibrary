@@ -18,41 +18,80 @@
     </header>
 
     <div class="execution-flow__body">
-        <div class="execution-flow__chart" role="img" aria-label="@L["Overview:Queue:AriaLabel"]">
-            <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-                <circle class="execution-flow__track" cx="50" cy="50" r="38" pathLength="100" />
-                @if (total > 0)
-                {
-                    @foreach (var state in States)
+        <div class="execution-flow__chart-column">
+            <div class="execution-flow__chart"
+                 role="group"
+                 aria-label="@L["Overview:Queue:AriaLabel"]"
+                 aria-describedby="execution-flow-hover-hint">
+                <svg viewBox="0 0 100 100" focusable="false">
+                    <circle class="execution-flow__track" cx="50" cy="50" r="38" pathLength="100" />
+                    @if (total > 0)
                     {
-                        var length = Counts.GetValueOrDefault(state) * 100d / total;
-                        if (length > 0)
+                        @foreach (var state in States)
                         {
-                            <circle class="execution-flow__segment execution-flow__segment--@state.ToString().ToLowerInvariant()"
-                                    cx="50"
-                                    cy="50"
-                                    r="38"
-                                    pathLength="100"
-                                    stroke-dasharray="@FormatSegment(length)"
-                                    stroke-dashoffset="@FormatOffset(offset)" />
-                            offset += length;
+                            var count = Counts.GetValueOrDefault(state);
+                            var length = count * 100d / total;
+                            if (length > 0)
+                            {
+                                <circle class="@GetSegmentClass(state)"
+                                        cx="50"
+                                        cy="50"
+                                        r="38"
+                                        pathLength="100"
+                                        stroke-dasharray="@FormatSegment(length)"
+                                        stroke-dashoffset="@FormatOffset(offset)"
+                                        tabindex="0"
+                                        role="img"
+                                        aria-label="@GetSegmentTooltip(state, count, total)"
+                                        @onmouseenter="@(() => SetActiveState(state))"
+                                        @onmouseleave="ClearActiveState"
+                                        @onfocus="@(() => SetActiveState(state))"
+                                        @onblur="ClearActiveState">
+                                    <title>@GetSegmentTooltip(state, count, total)</title>
+                                </circle>
+                                offset += length;
+                            }
                         }
                     }
+                </svg>
+                @if (_activeState is { } activeState)
+                {
+                    var activeCount = Counts.GetValueOrDefault(activeState);
+                    <div class="execution-flow__total execution-flow__total--detail"
+                         data-state="@activeState.ToString().ToLowerInvariant()"
+                         aria-live="polite">
+                        <span class="execution-flow__total-state">
+                            <span class="execution-flow__state-dot" aria-hidden="true"></span>
+                            @L[$"ExecutionStates:{activeState}"]
+                        </span>
+                        <strong>@activeCount</strong>
+                        <span class="execution-flow__total-share">@FormatShare(activeCount, total)</span>
+                    </div>
                 }
-            </svg>
-            <div class="execution-flow__total">
-                <strong>@total</strong>
-                <span>@L["Overview:Queue:Total"]</span>
+                else
+                {
+                    <div class="execution-flow__total">
+                        <strong>@total</strong>
+                        <span>@L["Overview:Queue:Total"]</span>
+                    </div>
+                }
             </div>
+            <p id="execution-flow-hover-hint" class="execution-flow__hint">
+                @L["Overview:Queue:HoverHint"]
+            </p>
         </div>
 
         <div class="execution-flow__legend">
             @foreach (var state in States)
             {
                 var count = Counts.GetValueOrDefault(state);
-                <a class="execution-flow__state"
+                <a class="@GetLegendClass(state)"
                    data-state="@state.ToString().ToLowerInvariant()"
-                   href="@GetExecutionHref(state)">
+                   href="@GetExecutionHref(state)"
+                   @onmouseenter="@(() => SetActiveState(state))"
+                   @onmouseleave="ClearActiveState"
+                   @onfocus="@(() => SetActiveState(state))"
+                   @onblur="ClearActiveState">
                     <span class="execution-flow__state-dot" aria-hidden="true"></span>
                     <span>@L[$"ExecutionStates:{state}"]</span>
                     <strong>@count</strong>
@@ -73,12 +112,39 @@
     public IReadOnlyDictionary<JobExecutionState, int> Counts { get; set; } =
         new Dictionary<JobExecutionState, int>();
 
+    private JobExecutionState? _activeState;
+
     private static string GetExecutionHref(JobExecutionState state) =>
         $"/job-scheduler/executions?states={Uri.EscapeDataString(state.ToString())}";
 
     private static string FormatShare(int count, int total) => total == 0
         ? "—"
         : (count / (double)total).ToString("P0", CultureInfo.CurrentCulture);
+
+    private string GetSegmentTooltip(JobExecutionState state, int count, int total) => L[
+        "Overview:Queue:SegmentTooltip",
+        L[$"ExecutionStates:{state}"],
+        count,
+        FormatShare(count, total)];
+
+    private string GetSegmentClass(JobExecutionState state)
+    {
+        var stateClass = $"execution-flow__segment execution-flow__segment--{state.ToString().ToLowerInvariant()}";
+        return _activeState is null
+            ? stateClass
+            : $"{stateClass} {(_activeState == state
+                ? "execution-flow__segment--active"
+                : "execution-flow__segment--dimmed")}";
+    }
+
+    private string GetLegendClass(JobExecutionState state) =>
+        _activeState == state
+            ? "execution-flow__state execution-flow__state--active"
+            : "execution-flow__state";
+
+    private void SetActiveState(JobExecutionState state) => _activeState = state;
+
+    private void ClearActiveState() => _activeState = null;
 
     private static string FormatSegment(double length)
         => $"{length.ToString("0.###", CultureInfo.InvariantCulture)} {(100 - length).ToString("0.###", CultureInfo.InvariantCulture)}";

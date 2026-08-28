@@ -118,7 +118,9 @@
       "Title": "Execution state",
       "Description": "Current durable ledger distribution by lifecycle state.",
       "Total": "Executions",
-      "AriaLabel": "Durable execution state counts"
+      "AriaLabel": "Durable execution state counts",
+      "SegmentTooltip": "{0}: {1} execution(s), {2} of total",
+      "HoverHint": "Hover a ring segment or legend row to inspect its details"
     },
     "Attention": {
       "Title": "Needs attention",

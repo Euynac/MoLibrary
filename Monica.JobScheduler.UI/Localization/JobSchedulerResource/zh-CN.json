@@ -118,7 +118,9 @@
       "Title": "执行状态",
       "Description": "当前持久化执行账本的生命周期分布。",
       "Total": "执行",
-      "AriaLabel": "持久化执行状态统计"
+      "AriaLabel": "持久化执行状态统计",
+      "SegmentTooltip": "{0}：{1} 次执行，占比 {2}",
+      "HoverHint": "悬停环段或图例项查看详情"
     },
     "Attention": {
       "Title": "需要关注",

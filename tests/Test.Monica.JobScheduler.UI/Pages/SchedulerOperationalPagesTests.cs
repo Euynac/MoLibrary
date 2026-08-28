@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Results;
 using Monica.JobScheduler.Models;
@@ -48,6 +49,86 @@ public sealed class SchedulerOperationalPagesTests
             cut.Markup.Should().Contain("Overview:Attention:Title");
             cut.Markup.Should().Contain("execution-flow__chart");
         });
+    }
+
+    [Fact]
+    public async Task ExecutionStateFlow_ShouldRenderExecutionRingWithoutSegmentGap()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+
+        var cut = context.Render<ExecutionStateFlow>(parameters => parameters
+            .Add(component => component.Counts, new Dictionary<JobExecutionState, int>
+            {
+                [JobExecutionState.Succeeded] = 1
+            }));
+
+        var segment = cut.Find(".execution-flow__segment");
+        segment.GetAttribute("stroke-dasharray").Should().Be("100 0");
+        segment.GetAttribute("stroke-dashoffset").Should().Be("0");
+    }
+
+    [Fact]
+    public async Task ExecutionStateFlow_ShouldIdentifyTheActiveSegmentAndItsLegendRow()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+
+        var cut = context.Render<ExecutionStateFlow>(parameters => parameters
+            .Add(component => component.Counts, new Dictionary<JobExecutionState, int>
+            {
+                [JobExecutionState.Succeeded] = 3,
+                [JobExecutionState.Failed] = 1
+            }));
+
+        var succeededSegment = cut.Find(".execution-flow__segment--succeeded");
+        succeededSegment.QuerySelector("title")!.TextContent.Should()
+            .Be("Overview:Queue:SegmentTooltip [ExecutionStates:Succeeded, 3, 75%]");
+
+        var failedSegment = cut.Find(".execution-flow__segment--failed");
+        failedSegment.QuerySelector("title")!.TextContent.Should()
+            .Be("Overview:Queue:SegmentTooltip [ExecutionStates:Failed, 1, 25%]");
+
+        cut.Markup.Should().Contain("Overview:Queue:HoverHint");
+
+        succeededSegment.TriggerEvent("onmouseenter", new MouseEventArgs());
+
+        cut.Find(".execution-flow__segment--succeeded").ClassList
+            .Should().Contain("execution-flow__segment--active");
+        cut.Find(".execution-flow__segment--failed").ClassList
+            .Should().Contain("execution-flow__segment--dimmed");
+        cut.Find(".execution-flow__state[data-state='succeeded']").ClassList
+            .Should().Contain("execution-flow__state--active");
+        cut.Find(".execution-flow__total--detail").TextContent
+            .Should().Contain("ExecutionStates:Succeeded").And.Contain("3").And.Contain("75%");
+
+        cut.Find(".execution-flow__segment--succeeded")
+            .TriggerEvent("onmouseleave", new MouseEventArgs());
+
+        cut.FindAll(".execution-flow__segment--active").Should().BeEmpty();
+        cut.Find(".execution-flow__total").TextContent.Should().Contain("Overview:Queue:Total");
+    }
+
+    [Fact]
+    public async Task ExecutionStateFlow_ShouldExposeTheSameDetailsForKeyboardFocus()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+
+        var cut = context.Render<ExecutionStateFlow>(parameters => parameters
+            .Add(component => component.Counts, new Dictionary<JobExecutionState, int>
+            {
+                [JobExecutionState.Failed] = 2
+            }));
+
+        var failedSegment = cut.Find(".execution-flow__segment--failed");
+        failedSegment.GetAttribute("tabindex").Should().Be("0");
+        failedSegment.GetAttribute("aria-label").Should()
+            .Be("Overview:Queue:SegmentTooltip [ExecutionStates:Failed, 2, 100%]");
+
+        failedSegment.TriggerEvent("onfocus", new FocusEventArgs());
+
+        cut.Find(".execution-flow__segment--failed").ClassList
+            .Should().Contain("execution-flow__segment--active");
+        cut.Find(".execution-flow__state[data-state='failed']").ClassList
+            .Should().Contain("execution-flow__state--active");
     }
 
     [Fact]
