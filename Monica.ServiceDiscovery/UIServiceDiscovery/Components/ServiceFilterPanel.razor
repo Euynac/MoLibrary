@@ -4,92 +4,102 @@
 @using Monica.ServiceDiscovery.UIServiceDiscovery.Support
 @inject IStringLocalizer<ServiceDiscoveryResource> L
 
-<MudPaper Class="service-filter-panel" Elevation="0" Outlined="true">
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="4">
-            <MudTextField @bind-Value="FilterText"
-                          Label="@L["ServiceFilter:Labels:Search"]"
-                          HelperText="@L["ServiceFilter:Labels:SearchHelp"]"
-                          Variant="Variant.Outlined"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true"
-                          DebounceInterval="300"
-                          OnDebounceIntervalElapsed="OnFilterTextChanged" />
-        </MudItem>
-        <MudItem xs="12" md="4">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["ServiceFilter:Labels:StatusFilter"]</MudText>
-            <div class="d-flex flex-wrap gap-1 mb-2">
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Text"
-                           Color="Color.Primary"
-                           OnClick="SelectAllStatuses">
-                    @L["Shared:Actions:SelectAll"]
-                </MudButton>
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Text"
-                           Color="Color.Secondary"
-                           OnClick="ClearAllStatuses">
-                    @L["Shared:Actions:Clear"]
-                </MudButton>
+<div class="service-filter-panel">
+    <MudPaper Class="service-filter-panel__surface" Elevation="0" Outlined="true">
+        <div class="service-filter-panel__main">
+            <div class="service-filter-panel__search">
+                <MudTextField @bind-Value="FilterText"
+                              Label="@L["ServiceFilter:Labels:Search"]"
+                              HelperText="@L["ServiceFilter:Labels:SearchHelp"]"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true"
+                              DebounceInterval="300"
+                              OnDebounceIntervalElapsed="OnFilterTextChanged" />
             </div>
-            <MudChipSet T="ServiceStatus"
-                        SelectionMode="SelectionMode.MultiSelection"
-                        SelectedValues="SelectedStatuses"
-                        SelectedValuesChanged="OnSelectedStatusesChanged">
-                @foreach (var status in AllStatuses)
-                {
-                    var isSelected = SelectedStatuses.Contains(status);
-                    <MudChip T="ServiceStatus"
-                             Value="status"
-                             Color="@status.GetColor()"
-                             Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
-                             Size="Size.Small">
-                        @GetStatusLabel(status)
-                    </MudChip>
-                }
-            </MudChipSet>
-        </MudItem>
-        <MudItem xs="12" md="4">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["ServiceFilter:Labels:DomainFilter"]</MudText>
-            <div class="d-flex flex-wrap gap-1 mb-2">
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Text"
-                           Color="Color.Primary"
-                           OnClick="SelectAllDomains">
-                    @L["Shared:Actions:SelectAll"]
-                </MudButton>
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Text"
-                           Color="Color.Secondary"
-                           OnClick="ClearAllDomains">
-                    @L["Shared:Actions:Clear"]
-                </MudButton>
+            <div class="service-filter-panel__filter">
+                <div class="service-filter-panel__filter-heading">
+                    <MudText Typo="Typo.subtitle2">@L["ServiceFilter:Labels:StatusFilter"]</MudText>
+                    <div class="service-filter-panel__filter-actions">
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   OnClick="SelectAllStatuses">
+                            @L["Shared:Actions:SelectAll"]
+                        </MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Secondary"
+                                   OnClick="ClearAllStatuses">
+                            @L["Shared:Actions:Clear"]
+                        </MudButton>
+                    </div>
+                </div>
+                <div class="service-filter-panel__chips">
+                    <MudChipSet T="ServiceStatus"
+                                SelectionMode="SelectionMode.MultiSelection"
+                                SelectedValues="SelectedStatuses"
+                                SelectedValuesChanged="OnSelectedStatusesChanged">
+                        @foreach (var status in AllStatuses)
+                        {
+                            var isSelected = SelectedStatuses.Contains(status);
+                            <MudChip T="ServiceStatus"
+                                     Value="status"
+                                     Color="@status.GetColor()"
+                                     Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
+                                     Size="Size.Small">
+                                @GetStatusLabel(status)
+                            </MudChip>
+                        }
+                    </MudChipSet>
+                </div>
             </div>
-            <MudChipSet T="string"
-                        SelectionMode="SelectionMode.MultiSelection"
-                        SelectedValues="SelectedDomains"
-                        SelectedValuesChanged="OnSelectedDomainsChanged">
-                @foreach (var domain in AllDomains)
-                {
-                    var isSelected = SelectedDomains.Contains(domain);
-                    <MudChip T="string"
-                             Value="domain"
-                             Color="@(isSelected ? Color.Info : Color.Default)"
-                             Size="Size.Small">
-                        @domain
-                    </MudChip>
-                }
-            </MudChipSet>
-        </MudItem>
-        <MudItem xs="12" sm="6">
+            <div class="service-filter-panel__filter">
+                <div class="service-filter-panel__filter-heading">
+                    <MudText Typo="Typo.subtitle2">@L["ServiceFilter:Labels:DomainFilter"]</MudText>
+                    <div class="service-filter-panel__filter-actions">
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   OnClick="SelectAllDomains">
+                            @L["Shared:Actions:SelectAll"]
+                        </MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Secondary"
+                                   OnClick="ClearAllDomains">
+                            @L["Shared:Actions:Clear"]
+                        </MudButton>
+                    </div>
+                </div>
+                <div class="service-filter-panel__chips">
+                    <MudChipSet T="string"
+                                SelectionMode="SelectionMode.MultiSelection"
+                                SelectedValues="SelectedDomains"
+                                SelectedValuesChanged="OnSelectedDomainsChanged">
+                        @foreach (var domain in AllDomains)
+                        {
+                            var isSelected = SelectedDomains.Contains(domain);
+                            <MudChip T="string"
+                                     Value="domain"
+                                     Color="@(isSelected ? Color.Info : Color.Default)"
+                                     Size="Size.Small">
+                                @domain
+                            </MudChip>
+                        }
+                    </MudChipSet>
+                </div>
+            </div>
+        </div>
+        <div class="service-filter-panel__footer">
             <MudSwitch T="bool" Value="ShowOnlyWithInstances"
                        ValueChanged="OnShowOnlyWithInstancesChanged"
                        Label="@L["ServiceFilter:Labels:ShowOnlyWithInstances"]"
                        Color="Color.Primary" />
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+        </div>
+    </MudPaper>
+</div>
 
 
 @code {

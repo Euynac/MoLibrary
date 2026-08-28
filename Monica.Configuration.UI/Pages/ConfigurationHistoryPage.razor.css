@@ -8,11 +8,51 @@
     padding-block: clamp(1rem, 2vw, 1.5rem);
 }
 
-.configuration-history-table ::deep .mud-chip {
+.configuration-history-filters,
+.configuration-history-table-scroll {
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-history-filters ::deep .mud-paper {
+    width: 100%;
+    min-width: 0;
+    border-color: var(--mud-palette-divider);
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface));
+}
+
+.configuration-history-filters ::deep .configuration-history-filter-grid {
+    min-width: 0;
+}
+
+.configuration-history-filter-action {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    padding-block: 0.5rem 0.25rem;
+}
+
+.configuration-history-filter-action ::deep .mud-button-root {
+    block-size: 2.5rem;
+    min-block-size: 2.5rem;
+}
+
+.configuration-history-table-scroll ::deep .mud-table {
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-history-table-scroll ::deep .mud-table-container {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.configuration-history-table-scroll ::deep .mud-chip {
     max-width: 100%;
 }
 
-.configuration-history-table ::deep .mud-table-cell {
+.configuration-history-table-scroll ::deep .mud-table-cell {
     vertical-align: middle;
 }
 
@@ -51,4 +91,10 @@
 
 .configuration-history-tooltip-lines > div + div {
     margin-top: 0.25rem;
+}
+
+@media (max-width: 599.98px) {
+    .configuration-history-filter-action {
+        padding-block: 0;
+    }
 }

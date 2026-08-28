@@ -28,70 +28,73 @@
             <ConfigurationMetadataStoreDiagnosticAlert Diagnostic="@_metadataStoreDiagnostic" />
         }
 
-        <MudPaper Outlined="true" Class="pa-3">
-            <MudGrid Spacing="2">
-                <MudItem xs="12" md="3" lg="2">
-                    <MudSelect T="string"
-                               @bind-Value="_definitionKey"
-                               Label="@L["State:Columns:Definition"]"
-                               Variant="Variant.Outlined"
-                               Margin="Margin.Dense"
-                               Clearable="true">
-                        @foreach (var definition in _definitions)
-                        {
-                            <MudSelectItem T="string"
-                                           Value="@definition.DefinitionKey"
-                                           Disabled="@(!definition.CanManage)">
-                                @DefinitionFilterLabel(definition)
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" md="3" lg="3">
-                    <MudTextField T="string"
-                                  @bind-Value="_pathText"
-                                  Label="@L["Value:Path"]"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" md="2">
-                    <MudSelect T="string"
-                               @bind-Value="_targetFilter"
-                               ToStringFunc="TargetFilterText"
-                               Label="@L["History:Filters:Target"]"
-                               Variant="Variant.Outlined"
-                               Margin="Margin.Dense">
-                        <MudSelectItem T="string" Value="@TARGET_FILTER_ALL">@L["History:Filters:TargetAll"]</MudSelectItem>
-                        <MudSelectItem T="string" Value="@TARGET_FILTER_MONICA">@L["History:Filters:TargetMonica"]</MudSelectItem>
-                        <MudSelectItem T="string" Value="@TARGET_FILTER_EXTERNAL">@L["History:Filters:TargetExternal"]</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" md="2">
-                    <MudDatePicker @bind-Date="_fromDate"
-                                   Label="@L["History:Filters:From"]"
+        <div class="configuration-history-filters">
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudGrid Spacing="2" Class="configuration-history-filter-grid">
+                    <MudItem xs="12" md="2" lg="2">
+                        <MudSelect T="string"
+                                   @bind-Value="_definitionKey"
+                                   Label="@L["State:Columns:Definition"]"
                                    Variant="Variant.Outlined"
                                    Margin="Margin.Dense"
-                                   Editable="true" />
-                </MudItem>
-                <MudItem xs="12" md="2">
-                    <MudDatePicker @bind-Date="_toDate"
-                                   Label="@L["History:Filters:To"]"
+                                   Clearable="true">
+                            @foreach (var definition in _definitions)
+                            {
+                                <MudSelectItem T="string"
+                                               Value="@definition.DefinitionKey"
+                                               Disabled="@(!definition.CanManage)">
+                                    @DefinitionFilterLabel(definition)
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="2" lg="3">
+                        <MudTextField T="string"
+                                      @bind-Value="_pathText"
+                                      Label="@L["Value:Path"]"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudSelect T="string"
+                                   @bind-Value="_targetFilter"
+                                   ToStringFunc="TargetFilterText"
+                                   Label="@L["History:Filters:Target"]"
                                    Variant="Variant.Outlined"
-                                   Margin="Margin.Dense"
-                                   Editable="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudStack Row="true" Justify="Justify.FlexEnd">
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.Search"
-                                   OnClick="LoadAsync">
-                            @L["Common:Actions:Search"]
-                        </MudButton>
-                    </MudStack>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
+                                   Margin="Margin.Dense">
+                            <MudSelectItem T="string" Value="@TARGET_FILTER_ALL">@L["History:Filters:TargetAll"]</MudSelectItem>
+                            <MudSelectItem T="string" Value="@TARGET_FILTER_MONICA">@L["History:Filters:TargetMonica"]</MudSelectItem>
+                            <MudSelectItem T="string" Value="@TARGET_FILTER_EXTERNAL">@L["History:Filters:TargetExternal"]</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudDatePicker @bind-Date="_fromDate"
+                                       Label="@L["History:Filters:From"]"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Editable="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudDatePicker @bind-Date="_toDate"
+                                       Label="@L["History:Filters:To"]"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Editable="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="2" lg="1">
+                        <div class="configuration-history-filter-action">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Search"
+                                       FullWidth="true"
+                                       OnClick="LoadAsync">
+                                @L["Common:Actions:Search"]
+                            </MudButton>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </div>
 
         <MudTabs Rounded="true" ApplyEffectsToContainer="true">
             <MudTabPanel Text="@L["History:Tabs:Mutations"]" Icon="@Icons.Material.Filled.List">
@@ -105,7 +108,8 @@
                 }
                 else
                 {
-                    <MudTable T="ConfigurationHistoryDisplayRow" Items="@_displayHistory" Dense="true" Hover="true" Elevation="0" Class="configuration-history-table">
+                    <div class="configuration-history-table-scroll">
+                    <MudTable T="ConfigurationHistoryDisplayRow" Items="@_displayHistory" Dense="true" Hover="true" Elevation="0">
                         <HeaderContent>
                             <MudTh>@L["History:Columns:Time"]</MudTh>
                             <MudTh>@L["State:Columns:Definition"]</MudTh>
@@ -194,6 +198,7 @@
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
+                    </div>
                     @if (_historyHasMore)
                     {
                         <MudStack Row="true" Justify="Justify.Center" Class="mt-3">
@@ -218,6 +223,7 @@
                 }
                 else
                 {
+                    <div class="configuration-history-table-scroll">
                     <MudTable T="ConfigurationMutationGroup" Items="@_groups" Dense="true" Hover="true" Elevation="0">
                         <HeaderContent>
                             <MudTh>@L["Group:Label"]</MudTh>
@@ -275,6 +281,7 @@
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
+                    </div>
                     @if (_groupsHaveMore)
                     {
                         <MudStack Row="true" Justify="Justify.Center" Class="mt-3">

@@ -37,28 +37,30 @@
                         </div>
                     </TitleAccessory>
                     <Actions>
-                        <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
-                            <MudButton Variant="Variant.Outlined"
-                                       StartIcon="@Icons.Material.Filled.UploadFile"
-                                       Disabled="@(!CanUseCatalogOperations)"
-                                       OnClick="OpenImportDialog">
-                                @L["Common:Actions:Import"]
-                            </MudButton>
-                        </MudTooltip>
-                        <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Export")">
-                            <MudButton Variant="Variant.Outlined"
-                                       StartIcon="@Icons.Material.Filled.Download"
-                                       Disabled="@(!CanUseCatalogOperations)"
-                                       OnClick="() => OpenExportDialog(null, null)">
-                                @L["Common:Actions:Export"]
-                            </MudButton>
-                        </MudTooltip>
-                        <MudTooltip Text="@L["Common:Actions:Refresh"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                           Variant="Variant.Outlined"
-                                           OnClick="LoadDefinitionsAsync"
-                                           aria-label="@L["Common:Actions:Refresh"]" />
-                        </MudTooltip>
+                        <div class="configuration-state-actions">
+                            <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Import")">
+                                <MudButton Variant="Variant.Outlined"
+                                           StartIcon="@Icons.Material.Filled.UploadFile"
+                                           Disabled="@(!CanUseCatalogOperations)"
+                                           OnClick="OpenImportDialog">
+                                    @L["Common:Actions:Import"]
+                                </MudButton>
+                            </MudTooltip>
+                            <MudTooltip Text="@CatalogOperationTooltip("Common:Actions:Export")">
+                                <MudButton Variant="Variant.Outlined"
+                                           StartIcon="@Icons.Material.Filled.Download"
+                                           Disabled="@(!CanUseCatalogOperations)"
+                                           OnClick="() => OpenExportDialog(null, null)">
+                                    @L["Common:Actions:Export"]
+                                </MudButton>
+                            </MudTooltip>
+                            <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                               Variant="Variant.Outlined"
+                                               OnClick="LoadDefinitionsAsync"
+                                               aria-label="@L["Common:Actions:Refresh"]" />
+                            </MudTooltip>
+                        </div>
                     </Actions>
                 </ConfigurationPageHeader>
                 @if (!_loadingDefinitions)

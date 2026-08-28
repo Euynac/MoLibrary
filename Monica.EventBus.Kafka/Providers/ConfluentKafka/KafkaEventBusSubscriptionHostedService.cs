@@ -159,8 +159,8 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
                 ex);
         }
 
-        // Confluent.Kafka 2.13.0 Consumer.Close enters a librdkafka LeaveGroup path that can
-        // dereference a missing coordinator. Consumer.Dispose uses NO_CONSUMER_CLOSE instead.
+        // Consumer.Close enters a librdkafka LeaveGroup path that can dereference a missing
+        // coordinator. Consumer.Dispose uses NO_CONSUMER_CLOSE instead.
     }
 
     /// <summary>

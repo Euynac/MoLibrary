@@ -1,12 +1,23 @@
 .service-list {
+    max-width: 100%;
     min-width: 0;
+    width: 100%;
 }
 
 .service-list ::deep .service-list__grid {
     border: 1px solid var(--mud-palette-divider);
     border-radius: 8px;
     box-shadow: none;
-    overflow: hidden;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+}
+
+.service-list ::deep .service-list__grid .mud-table-container {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    width: 100%;
 }
 
 .service-list ::deep .service-list__grid .mud-table-head {
@@ -15,6 +26,16 @@
 
 .service-list ::deep .service-list__grid .mud-table-row {
     transition: background-color 150ms ease;
+}
+
+.service-list ::deep .mo-context-menu-root {
+    display: block !important;
+    height: 1px;
+    inset: 0 auto auto 0;
+    overflow: hidden;
+    pointer-events: none;
+    position: fixed;
+    width: 1px;
 }
 
 .service-list ::deep .service-list__instance-status {
