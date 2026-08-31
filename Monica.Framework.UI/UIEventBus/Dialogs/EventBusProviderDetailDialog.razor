@@ -185,8 +185,8 @@
                                     <PropertyColumn Property="x => x.TopicName" Title="@L["Providers:Columns:Topic"]" />
                                     <TemplateColumn Title="@L["Providers:Columns:State"]">
                                         <CellTemplate>
-                                            <MudChip T="string" Size="Size.Small" Color="@context.Item.StateColor">
-                                                @L.GetSubscriptionStateText(context.Item.State)
+                                            <MudChip T="string" Size="Size.Small" Color="@context.Item.DisplayStateColor">
+                                                @L.GetSubscriptionDisplayStateText(context.Item)
                                             </MudChip>
                                         </CellTemplate>
                                     </TemplateColumn>

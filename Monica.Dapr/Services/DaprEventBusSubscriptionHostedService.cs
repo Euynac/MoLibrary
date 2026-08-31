@@ -12,6 +12,7 @@ using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Dapr.Abstractions;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
+using Monica.EventBus.Models;
 using Monica.EventBus.Services.Support;
 
 namespace Monica.Dapr.Services;
@@ -24,7 +25,8 @@ namespace Monica.Dapr.Services;
 /// </summary>
 internal class DaprEventBusSubscriptionHostedService(
     DaprPublishSubscribeClient daprClient,
-    IEventSubscriptionRegistry subscriptionManager, 
+    IEventSubscriptionRegistry subscriptionManager,
+    ITopicSubscriptionStatusStore topicStatusStore,
     IHostApplicationLifetime applicationLifetime,
     IDistributedEventBus eventBus,
     IObservableInstanceRegistry observableManager,
@@ -39,6 +41,7 @@ internal class DaprEventBusSubscriptionHostedService(
     : EventBusSubscriptionHostedServiceBase(
         subscriptionManager,
         eventBus,
+        topicStatusStore,
         observableManager,
         hostedServiceOptions,
         serviceScopeFactory,
@@ -56,6 +59,9 @@ internal class DaprEventBusSubscriptionHostedService(
     /// </summary>
     public override string ServiceName => $"DaprEventBus{(ServiceKey != null ? $"_{ServiceKey}" : "")}";
     public override string? ServiceGroupId => nameof(ModuleEventBus);
+
+    /// <inheritdoc />
+    protected override EventBusProviderKind ProviderKind => EventBusProviderKind.Dapr;
 
     private readonly ConcurrentDictionary<string, DaprTopicSubscription> _daprSubscriptionsByTopic = new();
     private readonly ConcurrentDictionary<string, byte> _recoveringTopics = new();
@@ -120,6 +126,24 @@ internal class DaprEventBusSubscriptionHostedService(
         if (!healthCoordinator.IsHealthy)
         {
             Volatile.Write(ref _wasHealthy, 0);
+
+            // The sidecar being unhealthy means no topic is delivering messages, even when the
+            // SDK streams have not faulted yet. Mark live topics as recovering so the gap is
+            // visible immediately. Topics already recovering (for example from a real stream
+            // fault) keep their existing failure counters, so this fires once per outage.
+            foreach (var topicName in _daprSubscriptionsByTopic.Keys)
+            {
+                if (TopicStatusStore.Get(ServiceKey, topicName)?.State
+                    is not (TopicSubscriptionRuntimeState.Subscribing or TopicSubscriptionRuntimeState.Healthy))
+                {
+                    continue;
+                }
+
+                TopicStatusStore.ReportState(
+                    ServiceKey, topicName, ProviderKind, TopicSubscriptionRuntimeState.Recovering,
+                    "The Dapr sidecar is unhealthy; topic subscriptions are not receiving messages.");
+            }
+
             return;
         }
 
@@ -204,6 +228,7 @@ internal class DaprEventBusSubscriptionHostedService(
             }
             catch (Exception ex) when (ex is JsonException or NotSupportedException)
             {
+                TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Rejected malformed Dapr message for topic {message.Topic}", ex);
                 RecordState(
                     $"Rejected malformed Dapr message for topic {message.Topic}",
                     HostedServiceState.Degraded,
@@ -216,6 +241,7 @@ internal class DaprEventBusSubscriptionHostedService(
             }
             catch (Exception ex)
             {
+                TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Error deserializing Dapr message for topic {message.Topic}", ex);
                 RecordState(
                     $"Error deserializing Dapr message for topic {message.Topic}",
                     HostedServiceState.Degraded,
@@ -229,6 +255,7 @@ internal class DaprEventBusSubscriptionHostedService(
 
             if (eventData is null)
             {
+                TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Dapr message for topic {message.Topic} deserialized to null");
                 RecordState($"Failed to deserialize message for topic {message.Topic}", HostedServiceState.Degraded);
                 Logger.LogWarning(
                     "Dropping Dapr message for topic {Topic} because it deserialized to null",
@@ -247,12 +274,15 @@ internal class DaprEventBusSubscriptionHostedService(
                 // Bound our wait while allowing the handler task to retain and dispose its scope when it finishes.
                 await handlingTask.WaitAsync(ct);
 
+                TopicStatusStore.ReportMessageProcessed(ServiceKey, message.Topic);
+
                 return TopicResponseAction.Success;
             }
             catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
             {
                 _ = ObserveLateMessageHandlingAsync(handlingTask, message.Topic);
 
+                TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Dapr message handling deadline elapsed for topic {message.Topic}", ex);
                 RecordState(
                     $"Dapr message handling deadline elapsed for topic {message.Topic}",
                     HostedServiceState.Degraded,
@@ -265,6 +295,7 @@ internal class DaprEventBusSubscriptionHostedService(
             }
             catch (Exception ex)
             {
+                TopicStatusStore.ReportError(ServiceKey, message.Topic, $"Error handling Dapr message for topic {message.Topic}", ex);
                 RecordState($"Error handling Dapr message for topic {message.Topic}",
                     HostedServiceState.Degraded, ex);
 
@@ -278,6 +309,12 @@ internal class DaprEventBusSubscriptionHostedService(
 
     private void OnSubscriptionReceiverCreated(string topicName)
     {
+        // A receiver generation exists but must survive the stability window before the topic
+        // counts as healthy again.
+        TopicStatusStore.ReportState(
+            ServiceKey, topicName, ProviderKind, TopicSubscriptionRuntimeState.Subscribing,
+            $"Dapr streaming receiver created for topic {topicName}");
+
         Logger.LogInformation(
             "Dapr streaming receiver created for topic {Topic} (ServiceKey: {ServiceKey})",
             topicName,
@@ -287,6 +324,10 @@ internal class DaprEventBusSubscriptionHostedService(
     private void OnSubscriptionStable(string topicName)
     {
         _recoveringTopics.TryRemove(topicName, out _);
+
+        TopicStatusStore.ReportState(
+            ServiceKey, topicName, ProviderKind, TopicSubscriptionRuntimeState.Healthy,
+            $"Dapr subscription for topic {topicName} is stable");
 
         if (_recoveringTopics.IsEmpty)
         {
@@ -302,6 +343,12 @@ internal class DaprEventBusSubscriptionHostedService(
     private void OnSubscriptionRecoveryScheduled(string topicName, Exception exception, TimeSpan delay)
     {
         _recoveringTopics[topicName] = 0;
+
+        TopicStatusStore.ReportState(
+            ServiceKey, topicName, ProviderKind, TopicSubscriptionRuntimeState.Recovering,
+            $"Dapr subscription for topic {topicName} failed; recovery is scheduled in {delay}",
+            exception);
+
         RecordState(
             $"Dapr subscription for topic {topicName} failed; recovery is scheduled in {delay}",
             HostedServiceState.Degraded,
@@ -317,6 +364,11 @@ internal class DaprEventBusSubscriptionHostedService(
 
     private void OnSubscriptionCleanupFailed(string topicName, Exception exception)
     {
+        TopicStatusStore.ReportError(
+            ServiceKey, topicName,
+            $"Failed to clean up a Dapr subscription generation for topic {topicName}",
+            exception);
+
         RecordState(
             $"Failed to clean up a Dapr subscription generation for topic {topicName}",
             HostedServiceState.Degraded,
@@ -331,6 +383,13 @@ internal class DaprEventBusSubscriptionHostedService(
     private void OnSubscriptionSupervisorFailed(string topicName, Exception exception)
     {
         _recoveringTopics[topicName] = 0;
+
+        TopicStatusStore.ReportState(
+            ServiceKey, topicName, ProviderKind, TopicSubscriptionRuntimeState.Failed,
+            $"Dapr subscription supervisor terminated unexpectedly for topic {topicName}; " +
+            "the topic will not receive messages until the application restarts",
+            exception);
+
         RecordState(
             $"Dapr subscription supervisor terminated unexpectedly for topic {topicName}",
             HostedServiceState.Faulted,

@@ -42,8 +42,8 @@
                         </MudChip>
                     </MudTd>
                     <MudTd DataLabel="@L["SubscriptionTable:Columns:State"]">
-                        <MudChip T="string" Color="@context.StateColor" Size="Size.Small">
-                            @L.GetSubscriptionStateText(context.State)
+                        <MudChip T="string" Color="@context.DisplayStateColor" Size="Size.Small">
+                            @L.GetSubscriptionDisplayStateText(context)
                         </MudChip>
                     </MudTd>
                 </RowTemplate>

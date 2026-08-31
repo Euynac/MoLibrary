@@ -15,6 +15,18 @@
     font-family: var(--mo-font-family-mono);
 }
 
+.subscription-detail-wrapper ::deep .subscription-detail__error-text,
+.subscription-detail__error-text {
+    margin: 0;
+    padding: 8px 12px;
+    white-space: pre-wrap;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+}
+
 .subscription-detail-wrapper ::deep .subscription-detail__timeline-label {
     font-weight: 600;
 }

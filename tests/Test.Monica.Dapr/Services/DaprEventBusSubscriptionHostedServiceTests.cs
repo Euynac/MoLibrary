@@ -435,6 +435,90 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         await fixture.HandlerDisposed.WaitAsync(TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public async Task TopicStatus_WhenStabilityPeriodPasses_ReportsHealthy()
+    {
+        using var fixture = await CreateFixtureAsync((_, _) => Task.CompletedTask);
+
+        await WaitUntilAsync(
+            () => fixture.TopicStatusStore.Get(null, "test.progress")?.State
+                == TopicSubscriptionRuntimeState.Healthy,
+            TestContext.Current.CancellationToken);
+
+        var status = fixture.TopicStatusStore.Get(null, "test.progress")!;
+        Assert.Equal(TopicSubscriptionRuntimeState.Healthy, status.State);
+        Assert.Equal(EventBusProviderKind.Dapr, status.Provider);
+        Assert.Equal(0, status.ConsecutiveFailures);
+    }
+
+    [Fact]
+    public async Task TopicStatus_WhenBackgroundStreamFails_ReportsRecoveringWithError()
+    {
+        using var fixture = await CreateFixtureAsync((_, _) => Task.CompletedTask);
+        // Recovering is transient (it flips back to Subscribing once the backoff elapses),
+        // so observe the change stream instead of polling the current state.
+        var observed = new ConcurrentQueue<TopicSubscriptionStatus>();
+        fixture.TopicStatusStore.StatusChanged += status => observed.Enqueue(status);
+
+        await fixture.Client.Options.ErrorHandler!(new DaprException("stream closed"));
+        await WaitUntilAsync(
+            () => observed.Any(status => status.State == TopicSubscriptionRuntimeState.Recovering),
+            TestContext.Current.CancellationToken);
+
+        var recovering = observed.First(status => status.State == TopicSubscriptionRuntimeState.Recovering);
+        Assert.Equal(1, recovering.ConsecutiveFailures);
+        Assert.Equal(1, recovering.RecoveryCount);
+        Assert.NotNull(recovering.LastErrorMessage);
+        Assert.Contains("stream closed", recovering.LastErrorException);
+    }
+
+    [Fact]
+    public async Task TopicStatus_WhenMessageHandled_RecordsProcessedCount()
+    {
+        using var fixture = await CreateFixtureAsync((_, _) => Task.CompletedTask);
+
+        var first = await fixture.HandleAsync(
+            "{\"value\":\"one\"}", TestContext.Current.CancellationToken);
+        var second = await fixture.HandleAsync(
+            "{\"value\":\"two\"}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(TopicResponseAction.Success, first);
+        Assert.Equal(TopicResponseAction.Success, second);
+        var status = fixture.TopicStatusStore.Get(null, "test.progress")!;
+        Assert.Equal(2, status.ProcessedMessages);
+        Assert.NotNull(status.LastMessageReceivedAt);
+    }
+
+    [Fact]
+    public async Task TopicStatus_WhenMessageIsMalformed_ReportsErrorWithoutFailingTopic()
+    {
+        using var fixture = await CreateFixtureAsync((_, _) => Task.CompletedTask);
+
+        await fixture.HandleAsync("{not-json", TestContext.Current.CancellationToken);
+
+        var status = fixture.TopicStatusStore.Get(null, "test.progress")!;
+        Assert.Equal(1, status.MessageErrorCount);
+        Assert.NotNull(status.LastErrorMessage);
+        Assert.NotEqual(TopicSubscriptionRuntimeState.Failed, status.State);
+        Assert.NotEqual(TopicSubscriptionRuntimeState.Stopped, status.State);
+    }
+
+    [Fact]
+    public async Task TopicStatus_WhenLastSubscriptionForTopicIsRemoved_ReportsStopped()
+    {
+        using var fixture = await CreateFixtureAsync((_, _) => Task.CompletedTask);
+        var extra = await fixture.AddSubscriptionAsync("test.audit");
+        await WaitUntilAsync(
+            () => fixture.TopicStatusStore.Get(null, "test.audit") is not null,
+            TestContext.Current.CancellationToken);
+
+        await fixture.RemoveSubscriptionAsync(extra);
+        await WaitUntilAsync(
+            () => fixture.TopicStatusStore.Get(null, "test.audit")?.State
+                == TopicSubscriptionRuntimeState.Stopped,
+            TestContext.Current.CancellationToken);
+    }
+
     private static async Task<TestFixture> CreateFixtureAsync(
         Func<TestEvent, CancellationToken, Task> handler,
         int initialSubscriptionFailures = 0,
@@ -460,9 +544,11 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             SubscriptionRecoveryStabilityPeriod = TimeSpan.FromMilliseconds(100)
         };
         configureOptions?.Invoke(eventBusOptions);
+        var topicStatusStore = new TopicSubscriptionStatusStore();
         var service = new DaprEventBusSubscriptionHostedService(
             client,
             registry,
+            topicStatusStore,
             Substitute.For<IHostApplicationLifetime>(),
             eventBus,
             new ObservableInstanceRegistry(Options.Create(new ModuleObservableInstanceOption())),
@@ -497,7 +583,7 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         await WaitUntilAsync(
             () => client.HasSubscription,
             TestContext.Current.CancellationToken);
-        return new TestFixture(serviceProvider, service, registry, client, logger, handlerDisposed.Task);
+        return new TestFixture(serviceProvider, service, registry, client, logger, handlerDisposed.Task, topicStatusStore);
     }
 
     private static DaprEventBusSubscriptionHostedService CreateUnstartedService(
@@ -516,6 +602,7 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         return new DaprEventBusSubscriptionHostedService(
             client,
             subscriptionRegistry,
+            new TopicSubscriptionStatusStore(),
             Substitute.For<IHostApplicationLifetime>(),
             eventBus,
             new ObservableInstanceRegistry(Options.Create(new ModuleObservableInstanceOption())),
@@ -545,8 +632,11 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
         EventSubscriptionRegistry registry,
         CapturingDaprPublishSubscribeClient client,
         TestLogger<DaprEventBusSubscriptionHostedService> logger,
-        Task handlerDisposed) : IDisposable
+        Task handlerDisposed,
+        TopicSubscriptionStatusStore topicStatusStore) : IDisposable
     {
+        public TopicSubscriptionStatusStore TopicStatusStore { get; } = topicStatusStore;
+
         public CapturingDaprPublishSubscribeClient Client { get; } = client;
 
         public TestLogger<DaprEventBusSubscriptionHostedService> Logger { get; } = logger;
@@ -581,7 +671,7 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
             return service.StopAsync(cancellationToken);
         }
 
-        public async Task AddSubscriptionAsync(string topicName)
+        public async Task<IEventSubscription> AddSubscriptionAsync(string topicName)
         {
             var subscription = await registry.SubscribeAsync(new EventSubscriptionDescriptor
             {
@@ -598,6 +688,16 @@ public sealed class DaprEventBusSubscriptionHostedServiceTests
                 EventSubscriptionChangeType.Added,
                 subscription,
                 DateTime.UtcNow));
+            return subscription;
+        }
+
+        public Task RemoveSubscriptionAsync(IEventSubscription subscription)
+        {
+            service.OnNext(new EventSubscriptionChange(
+                EventSubscriptionChangeType.Removed,
+                subscription,
+                DateTime.UtcNow));
+            return Task.CompletedTask;
         }
 
         public void Dispose()

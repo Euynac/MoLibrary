@@ -16,6 +16,7 @@
       "AriaLabel": "事件总线运行摘要",
       "Subscriptions": "订阅",
       "Active": "活动路由",
+      "Unhealthy": "异常订阅",
       "Providers": "提供程序",
       "RecentChanges": "近期变更"
     },
@@ -74,7 +75,8 @@
       "StaticMethod": "静态方法",
       "InstanceMethod": "实例方法",
       "TestListening": "测试监听中",
-      "RunningFor": "已运行 {0}"
+      "RunningFor": "已运行 {0}",
+      "RuntimeError": "最近错误：{0}（{1}）"
     },
     "States": {
       "Empty": "暂无订阅数据"
@@ -85,6 +87,7 @@
     "Clear": "清空过滤",
     "Provider": "Provider",
     "Status": "状态",
+    "RuntimeStatus": "运行状态",
     "Scope": "范围",
     "DiscoveryMode": "发现方式",
     "Search": "搜索",
@@ -120,6 +123,7 @@
       "BasicInformation": "基本信息",
       "HandlerInformation": "处理器信息",
       "Lifecycle": "生命周期",
+      "Runtime": "运行时状态",
       "Metadata": "元数据"
     },
     "Fields": {
@@ -145,6 +149,21 @@
       "CurrentState": "当前状态",
       "ActiveRunning": "活跃 - 已运行 {0}"
     },
+    "Runtime": {
+      "NoData": "Provider 尚未上报该主题的运行时状态。",
+      "State": "运行状态",
+      "StateSince": "当前状态开始于",
+      "Provider": "上报 Provider",
+      "ConsecutiveFailures": "连续失败次数",
+      "RecoveryCount": "累计恢复次数",
+      "MessageErrorCount": "消息处理错误",
+      "ProcessedMessages": "累计消费消息",
+      "LastMessageAt": "最后收到消息",
+      "LastError": "最近错误",
+      "LastErrorAt": "最近错误时间",
+      "ExceptionDetails": "异常详情",
+      "RecentErrors": "最近错误记录"
+    },
     "States": {
       "NotSelected": "未选择订阅"
     }
@@ -165,6 +184,7 @@
     "Card": {
       "Subscriptions": "订阅：{0}",
       "Active": "活跃：{0}",
+      "UnhealthyTopics": "异常主题：{0}",
       "ViewDetails": "查看详情"
     },
     "Detail": {
@@ -294,6 +314,13 @@
     }
   },
   "Api": {
+    "TopicStatus": {
+      "List": {
+        "Name": "获取主题运行状态",
+        "Summary": "获取主题订阅运行状态",
+        "Description": "获取所有分布式主题订阅的运行时健康状态，包括连接中、恢复中、故障状态以及最近错误信息。"
+      }
+    },
     "Subscriptions": {
       "List": {
         "Name": "获取所有订阅",
@@ -342,6 +369,7 @@
       "GetSubscriptionDetailFailed": "获取订阅详情失败：{0}",
       "FilterSubscriptionsFailed": "过滤订阅失败：{0}",
       "StatisticsFailed": "统计失败：{0}",
+      "GetTopicStatusesFailed": "获取主题运行状态失败：{0}",
       "AlreadyActive": "订阅已经是活跃状态",
       "CannotActivateDisposed": "无法激活已释放的订阅",
       "Activated": "订阅已激活",
@@ -402,6 +430,13 @@
       "Inactive": "未激活",
       "Disposed": "已释放"
     },
+    "RuntimeStates": {
+      "Subscribing": "连接中",
+      "Healthy": "健康",
+      "Recovering": "恢复中",
+      "Failed": "故障",
+      "Stopped": "已停止"
+    },
     "ChangeTypes": {
       "Added": "添加",
       "Activated": "激活",
@@ -415,6 +450,7 @@
     "ProviderKinds": {
       "Local": "本地",
       "Dapr": "Dapr",
+      "Kafka": "Kafka",
       "Unknown": "未知"
     },
     "Duration": {

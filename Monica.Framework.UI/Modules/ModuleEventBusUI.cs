@@ -121,6 +121,18 @@ public class ModuleEventBusUI : MonicaModule<ModuleEventBusUIOption>, IWebHostRe
                 .WithSummary(localizer["Api:Subscriptions:Statistics:Summary"].Value)
                 .WithDescription(localizer["Api:Subscriptions:Statistics:Description"].Value);
 
+            // Get runtime status of all topic subscriptions
+            endpoints.MapGet("/eventbus-ui/topic-status",
+                ([FromServices] EventBusMonitorService service) =>
+                {
+                    var result = service.GetAllTopicStatuses();
+                    return result.GetResponse();
+                })
+                .WithName(localizer["Api:TopicStatus:List:Name"].Value)
+                .WithTags(tagName)
+                .WithSummary(localizer["Api:TopicStatus:List:Summary"].Value)
+                .WithDescription(localizer["Api:TopicStatus:List:Description"].Value);
+
             // Activate subscription
             endpoints.MapPost("/eventbus-ui/subscriptions/{id:guid}/activate",
                 async ([FromRoute] Guid id,

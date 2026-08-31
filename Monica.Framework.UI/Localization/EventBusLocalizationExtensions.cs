@@ -39,6 +39,50 @@ public static class EventBusLocalizationExtensions
     }
 
     /// <summary>
+    /// Gets localized display text for a topic subscription runtime state.
+    /// </summary>
+    public static string GetTopicRuntimeStateText(this IStringLocalizer localizer, TopicSubscriptionRuntimeState state)
+    {
+        return state switch
+        {
+            TopicSubscriptionRuntimeState.Subscribing => localizer["Shared:RuntimeStates:Subscribing"].Value,
+            TopicSubscriptionRuntimeState.Healthy => localizer["Shared:RuntimeStates:Healthy"].Value,
+            TopicSubscriptionRuntimeState.Recovering => localizer["Shared:RuntimeStates:Recovering"].Value,
+            TopicSubscriptionRuntimeState.Failed => localizer["Shared:RuntimeStates:Failed"].Value,
+            TopicSubscriptionRuntimeState.Stopped => localizer["Shared:RuntimeStates:Stopped"].Value,
+            _ => localizer["Shared:Labels:Unknown"].Value
+        };
+    }
+
+    /// <summary>
+    /// Gets the effective localized status text for a subscription row: the runtime health text
+    /// when the runtime state overrides the display, otherwise the registration state text.
+    /// </summary>
+    public static string GetSubscriptionDisplayStateText(this IStringLocalizer localizer, SubscriptionViewModel subscription)
+    {
+        return subscription.IsRuntimeStateDisplayed && subscription.TopicStatus is { } status
+            ? localizer.GetTopicRuntimeStateText(status.State)
+            : localizer.GetSubscriptionStateText(subscription.State);
+    }
+
+    /// <summary>
+    /// Builds the tooltip text describing the most recent error of a subscription's topic,
+    /// or an empty string when no error was reported.
+    /// </summary>
+    public static string BuildTopicRuntimeErrorTooltip(this IStringLocalizer localizer, SubscriptionViewModel subscription)
+    {
+        if (subscription.TopicStatus is not { LastErrorMessage: { } message } status)
+        {
+            return string.Empty;
+        }
+
+        var occurredAt = status.LastErrorAt.HasValue
+            ? localizer.FormatEventBusRelativeTime(status.LastErrorAt.Value)
+            : string.Empty;
+        return localizer["SubscriptionTable:Labels:RuntimeError", message, occurredAt].Value;
+    }
+
+    /// <summary>
     /// Gets localized display text for a subscription change type.
     /// </summary>
     public static string GetSubscriptionChangeTypeText(this IStringLocalizer localizer, EventSubscriptionChangeType changeType)
@@ -62,6 +106,7 @@ public static class EventBusLocalizationExtensions
         {
             EventBusProviderKind.Local => localizer["Shared:ProviderKinds:Local"].Value,
             EventBusProviderKind.Dapr => localizer["Shared:ProviderKinds:Dapr"].Value,
+            EventBusProviderKind.Kafka => localizer["Shared:ProviderKinds:Kafka"].Value,
             _ => localizer["Shared:ProviderKinds:Unknown"].Value
         };
     }

@@ -37,6 +37,14 @@
                 </MudText>
             </MudStack>
 
+            @if (Provider.UnhealthyTopicCount > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined"
+                         Icon="@Icons.Material.Filled.HeartBroken">
+                    @L["Providers:Card:UnhealthyTopics", Provider.UnhealthyTopicCount]
+                </MudChip>
+            }
+
             @* Capability label *@
             <div class="d-flex flex-wrap gap-1">
                 @if (Provider.SupportsBulkPublish)

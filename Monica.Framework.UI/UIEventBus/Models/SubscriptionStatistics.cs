@@ -32,6 +32,17 @@ public class SubscriptionStatistics
     /// </summary>
     public int DisposedSubscriptions { get; set; }
 
+    /// <summary>
+    /// Number of subscriptions registered as active whose underlying topic subscription is
+    /// recovering or terminally failed, and therefore not actually receiving messages.
+    /// </summary>
+    public int UnhealthySubscriptions { get; set; }
+
+    /// <summary>
+    /// Number of distributed topic subscriptions currently recovering or terminally failed.
+    /// </summary>
+    public int UnhealthyTopics { get; set; }
+
     #endregion
 
     #region Scope Statistics

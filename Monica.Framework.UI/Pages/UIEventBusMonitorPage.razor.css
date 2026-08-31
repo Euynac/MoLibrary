@@ -35,6 +35,7 @@
 .event-bus-pulse--primary { --pulse-color: var(--mud-palette-primary); }
 .event-bus-pulse--success { --pulse-color: var(--mud-palette-success); }
 .event-bus-pulse--info { --pulse-color: var(--mud-palette-info); }
+.event-bus-pulse--error { --pulse-color: var(--mud-palette-error); }
 .event-bus-pulse--tertiary { --pulse-color: var(--mud-palette-tertiary); }
 
 .ui-event-bus-tabs ::deep > .mud-tabs > .mud-tabs-tabbar,
