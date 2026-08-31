@@ -1,34 +1,25 @@
 # Profiles and source minimums
 
-Profiles are optional repository initialization presets. Installing or exploring Guide does not select one.
+Profiles are optional repository initialization presets. Installing or exploring Guide does not select one. `init` confirms a profile; `configure --workspace <path>` installs that profile's closure into the project's configured skill directories (`skillTargets`, default `.agents/skills`).
 
 ## Application
 
-Install the common `$monica-application` and ProjectUnit closure only after the user selects application initialization. Select an architecture capability only when needed. No source binding is required: the user may bind Monica, Monica.Docs, both, or neither.
+Initialize with `--capability microservice` or `--capability modular-monolith` (exactly one; `ui` is optional). The managed instruction block routes to `$monica-guide` and `$monica-application`. No source binding is required: the user may bind Monica, Monica.Docs, both, or neither.
 
 ## Extension author
 
-Install the framework, architecture, development, third-party extension, and testing closure; enable UI/design only when selected. Require an exact Monica binding only when work depends on framework internals. Generated extensions continue consuming Monica through NuGet; never add the bound source as a project reference.
+Extension work consumes Monica through immutable NuGet packages. A Monica `ProjectReference` inside the workspace is an `init` blocker — bind exact Monica source separately as a lookup locator instead, and never add the bound source as a project reference.
 
 ## Framework contributor
 
-Install the framework development and testing closure. Require the global Monica binding to match the active canonical Monica workspace commit for exact contribution operations. The binding remains lookup-only; write authorization comes from the current task and active checkout, not Guide state.
+Requires the workspace to be the canonical `Tairitsua/Monica` checkout at its Git root (origin or upstream identity). The global Monica binding should point at the commit being worked on for exact navigation; it remains lookup-only, and write authorization comes from the current task and active checkout, not from Guide state.
 
 ## Docs contributor
 
-Install docs authoring plus the Monica.Docs application closure. Require the Monica binding to match the framework consumed by the docs workspace and the Monica.Docs binding to match the active docs checkout. Both bindings remain lookup-only.
+Requires the canonical `Tairitsua/Monica.Docs` checkout. The Monica.Docs binding locates the docs source; the Monica binding locates the framework the docs describe. Both remain lookup-only.
 
 ## Detection and versions
 
-Infer profiles from canonical Git identity first, then characteristic files. Detection is advisory. Treat empty, mixed, ambiguous, or non-Monica repositories as normal toolbox contexts until the user chooses initialization.
+The engine infers the candidate profile from canonical Git identity first, then characteristic files (framework markers, docs tree, package/project references, extension markers, service/domain layout). Detection is advisory and never auto-confirms; ambiguous repositories need an explicit user choice.
 
-Resolve framework versions in this order:
-
-1. Monica `ProjectReference` source metadata.
-2. `packages.lock.json` and `obj/project.assets.json` resolved versions.
-3. central package management.
-4. project package declarations.
-
-Fail exact-parity operations on mixed versions, ranges, unavailable immutable releases, missing identity/commit, or an incompatible binding. A normal `source resolve` still returns a usable mismatched or dirty checkout with explicit warnings.
-
-When cache resolution is needed but `inspect-dependency-source` is unavailable, report the `cached-source-resolution` prerequisite instead of inventing a source. Use only its catalog-pinned immutable distribution and never install it without current-session approval. This capability is toolbox-wide, not owned by a profile.
+Framework versions resolve for display in this order: project-reference root properties, resolved `packages.lock.json`/`obj/project.assets.json` versions, central package management, then project declarations. Mixed versions surface as warnings. When cache resolution is needed but `inspect-dependency-source` is unavailable, report the prerequisite instead of inventing a source; use only its pinned immutable distribution and never install it without current-session approval.

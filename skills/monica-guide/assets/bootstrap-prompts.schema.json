@@ -44,20 +44,31 @@
     "distribution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["skillsCli", "immutableSkillUrlTemplate"],
+      "required": [
+        "repository",
+        "installer",
+        "immutableSkillUrlTemplate"
+      ],
       "properties": {
-        "skillsCli": {
+        "repository": {
+          "type": "string",
+          "const": "Tairitsua/Monica"
+        },
+        "installer": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["package", "version"],
+          "required": [
+            "assetNameTemplate",
+            "sha256SumsAsset"
+          ],
           "properties": {
-            "package": {
+            "assetNameTemplate": {
               "type": "string",
-              "const": "skills"
+              "const": "monica-guide-v{version}-{rid}.zip"
             },
-            "version": {
+            "sha256SumsAsset": {
               "type": "string",
-              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+              "const": "SHA256SUMS"
             }
           }
         },
@@ -70,8 +81,12 @@
     "verifiedAgentTargets": {
       "type": "array",
       "prefixItems": [
-        { "const": "codex" },
-        { "const": "claude-code" }
+        {
+          "const": "codex"
+        },
+        {
+          "const": "claude-code"
+        }
       ],
       "items": false,
       "minItems": 2,
@@ -80,7 +95,10 @@
     "fallback": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["installCommand", "verifyCommand"],
+      "required": [
+        "installCommand",
+        "verifyCommand"
+      ],
       "properties": {
         "installCommand": {
           "type": "string",
@@ -95,10 +113,17 @@
     "locales": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["en-US", "zh-CN"],
+      "required": [
+        "en-US",
+        "zh-CN"
+      ],
       "properties": {
-        "en-US": { "$ref": "#/$defs/localizedPrompt" },
-        "zh-CN": { "$ref": "#/$defs/localizedPrompt" }
+        "en-US": {
+          "$ref": "#/$defs/localizedPrompt"
+        },
+        "zh-CN": {
+          "$ref": "#/$defs/localizedPrompt"
+        }
       }
     }
   },
@@ -106,7 +131,9 @@
     "localizedPrompt": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["prompt"],
+      "required": [
+        "prompt"
+      ],
       "properties": {
         "prompt": {
           "type": "string",

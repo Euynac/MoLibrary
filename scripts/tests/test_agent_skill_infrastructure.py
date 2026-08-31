@@ -162,7 +162,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             / "bootstrap-prompts.schema.json",
         )
         self.assertTrue(
-            any("must not select a host, profile, or initialization path" in error for error in validation.errors),
+            any("must not select a host or concrete profile" in error for error in validation.errors),
             validation.errors,
         )
 
@@ -178,7 +178,7 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
         )
         prompt = bootstrap["locales"]["en-US"]
         prompt["prompt"] = prompt["prompt"].replace(
-            "This installation changes my user-level skill directory. ",
+            "The installation stays inside this repository. ",
             "",
         )
         validation = validator.Validation()

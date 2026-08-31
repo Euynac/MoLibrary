@@ -28,8 +28,140 @@ env:
   PYTHONDONTWRITEBYTECODE: 1
 
 jobs:
+  guide-bundle:
+    name: Build and smoke the unified guide bundle (${{ matrix.rid }})
+    runs-on: ${{ matrix.runs-on }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            runs-on: windows-latest
+            tfm: net10.0-windows
+            entry: Monica.Guide.exe
+            environment: windows
+          - rid: linux-x64
+            runs-on: ubuntu-latest
+            tfm: net10.0
+            entry: Monica.Guide
+            environment: linux
+          - rid: osx-arm64
+            runs-on: macos-latest
+            tfm: net10.0
+            entry: Monica.Guide
+            environment: macos
+
+    env:
+      CONFIGURATION: Release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5.2.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          if [[ -z "${VERSION}" ]]; then
+            echo "Version is required." >&2
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag_name=v${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish the unified Monica Guide executable
+        shell: bash
+        run: |
+          dotnet publish Monica.Guide.App/Monica.Guide.App.csproj \
+            --configuration "${CONFIGURATION}" \
+            --framework ${{ matrix.tfm }} \
+            --runtime ${{ matrix.rid }} \
+            --self-contained false \
+            --output artifacts/guide-publish \
+            -p:Version=${{ steps.version.outputs.version }} \
+            -p:SatelliteResourceLanguages=zh-Hans \
+            -p:DebugType=None \
+            -p:GenerateDocumentationFile=false
+
+      - name: Build the unified guide release bundle
+        shell: bash
+        run: |
+          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+          python scripts/build_monica_guide_bundle.py build \
+            --tag "${{ steps.version.outputs.tag_name }}" \
+            --rid ${{ matrix.rid }} \
+            --publish-dir artifacts/guide-publish \
+            --output-dir artifacts/guide-bundle \
+            --dotnet-sdk "$(dotnet --version)"
+          mkdir -p artifacts/guide-release
+          cp "artifacts/guide-bundle/monica-guide-${{ steps.version.outputs.tag_name }}-${{ matrix.rid }}.zip" \
+            artifacts/guide-release/
+
+      - name: Smoke test the guide executable against the released bundle
+        shell: bash
+        run: |
+          export MONICA_GUIDE_DATA_ROOT="$(pwd)/.tmp-guide-state"
+          mkdir -p artifacts/guide-extracted
+          python - <<'PY'
+          import zipfile
+          import glob
+          archive = glob.glob("artifacts/guide-bundle/monica-guide-*-*.zip")[0]
+          with zipfile.ZipFile(archive) as bundle:
+              bundle.extractall("artifacts/guide-extracted")
+          PY
+          ENTRY="artifacts/guide-extracted/app/${{ matrix.entry }}"
+          if [[ "${{ matrix.rid }}" != "win-x64" ]]; then
+            chmod +x "${ENTRY}"
+          fi
+          digest() { python -c "import json,sys;print(json.load(open(sys.argv[1]))['plan']['planDigest'])" "$1"; }
+          ENVIRONMENT="${{ matrix.environment }}"
+
+          "${ENTRY}" configure --product monica --environment "${ENVIRONMENT}" --target shared --json > smoke-configure-preview.json
+          PLAN_DIGEST="$(digest smoke-configure-preview.json)"
+          "${ENTRY}" configure --product monica --environment "${ENVIRONMENT}" --target shared \
+            --apply --plan-digest "${PLAN_DIGEST}" --json > smoke-configure-apply.json
+          test -f "${HOME}/.agents/skills/monica-guide/SKILL.md"
+          "${ENTRY}" status --product monica --json > smoke-status.json
+          python - <<'PY'
+          import json
+          status = json.load(open("smoke-status.json", encoding="utf-8-sig"))
+          assert status["status"] == "ready", status["status"]
+          check_prefix = "skills.${{ matrix.environment }}.shared.catalog"
+          installed = any(check["id"].startswith(check_prefix)
+                          and check["status"] == "ok"
+                          for check in status["checks"])
+          assert installed, "installed skill projection was not verified"
+          PY
+
+          "${ENTRY}" unconfigure --product monica --environment "${ENVIRONMENT}" --target shared --json > smoke-unconfigure-preview.json
+          PLAN_DIGEST="$(digest smoke-unconfigure-preview.json)"
+          "${ENTRY}" unconfigure --product monica --environment "${ENVIRONMENT}" --target shared \
+            --apply --plan-digest "${PLAN_DIGEST}" --json > smoke-unconfigure-apply.json
+          test ! -e "${HOME}/.agents/skills/monica-guide"
+
+      - name: Upload the unified guide bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: monica-guide-bundle-${{ steps.version.outputs.version }}-${{ matrix.rid }}
+          path: artifacts/guide-release/*
+          if-no-files-found: error
+
   release:
     name: Build, pack, and release
+    needs: guide-bundle
     runs-on: ubuntu-latest
 
     env:
@@ -278,42 +410,21 @@ jobs:
             --output artifacts/agent-skills \
             "${HISTORY_ARGS[@]}"
 
-      - name: Smoke test tag-based Agent Skill discovery and installation
+      - name: Download the unified guide bundles
+        uses: actions/download-artifact@v7
+        with:
+          pattern: monica-guide-bundle-${{ steps.version.outputs.version }}-*
+          path: artifacts/guide-release
+          merge-multiple: true
+
+      - name: Compose the release digest manifest
         shell: bash
         run: |
-          SKILLS_CLI_VERSION="$(node -p 'require("./.monica/agent-skill-catalog.json").distribution.skillsCli.version')"
-          SOURCE_ROOT_URL="https://github.com/Tairitsua/Monica/tree/${{ steps.version.outputs.tag_name }}"
-          DIRECT_SKILL_URL="${SOURCE_ROOT_URL}/skills/monica-guide"
-          npx --yes "skills@${SKILLS_CLI_VERSION}" add "${SOURCE_ROOT_URL}" --list | grep -F "monica-guide"
-          npx --yes "skills@${SKILLS_CLI_VERSION}" add "${DIRECT_SKILL_URL}" -g -a codex -a claude-code -s monica-guide -y
-          npx --yes "skills@${SKILLS_CLI_VERSION}" ls -g -a codex --json > artifacts/agent-skills/codex-discovery.json
-          npx --yes "skills@${SKILLS_CLI_VERSION}" ls -g -a claude-code --json > artifacts/agent-skills/claude-discovery.json
-          for agent_name in codex claude; do
-            INSTALLED_SKILL_PATH="$(node -e '
-              const fs = require("fs");
-              const name = process.argv[1];
-              const entries = JSON.parse(fs.readFileSync(`artifacts/agent-skills/${name}-discovery.json`, "utf8"));
-              if (!Array.isArray(entries)) process.exit(1);
-              const installed = entries.find((entry) => entry.name === "monica-guide" && entry.scope === "global");
-              if (!installed || typeof installed.path !== "string") process.exit(1);
-              process.stdout.write(installed.path);
-            ' "${agent_name}")"
-            python3 scripts/verify_installed_agent_skill.py \
-              --index artifacts/agent-skills/agent-skill-index.json \
-              --manifest artifacts/agent-skills/agent-skill-manifest.json \
-              --catalog artifacts/agent-skills/agent-skill-catalog.json \
-              --tag "${{ steps.version.outputs.tag_name }}" \
-              --skill monica-guide \
-              --path "${INSTALLED_SKILL_PATH}"
+          SKILLS_ZIP="artifacts/agent-skills/monica-agent-skills-${{ steps.version.outputs.tag_name }}.zip"
+          : > artifacts/guide-release/SHA256SUMS
+          for asset in artifacts/guide-release/*.zip "${SKILLS_ZIP}"; do
+            echo "$(sha256sum "${asset}" | cut -d' ' -f1)  $(basename "${asset}")" >> artifacts/guide-release/SHA256SUMS
           done
-
-      - name: Remove smoke-test installation
-        if: always()
-        continue-on-error: true
-        run: |
-          SKILLS_CLI_VERSION="$(node -p 'require("./.monica/agent-skill-catalog.json").distribution.skillsCli.version')"
-          npx --yes "skills@${SKILLS_CLI_VERSION}" remove -g -a codex -a claude-code -s monica-guide -y || \
-            echo "Smoke-test cleanup was incomplete; the hosted runner is ephemeral."
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@v7
@@ -375,6 +486,8 @@ jobs:
             artifacts/agent-skills/agent-skill-index.json
             artifacts/agent-skills/agent-skill-manifest.json
             artifacts/agent-skills/monica-agent-skills-${{ steps.version.outputs.tag_name }}.zip
+            artifacts/guide-release/monica-guide-${{ steps.version.outputs.tag_name }}-*.zip
+            artifacts/guide-release/SHA256SUMS
 
       - name: Record source-index roll-forward gate
         shell: bash

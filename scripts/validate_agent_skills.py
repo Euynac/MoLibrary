@@ -37,8 +37,6 @@ CATALOG_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-catalog.json"
 INDEX_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-index.json"
 CATALOG_SCHEMA_PATH = REPOSITORY_ROOT / ".monica" / "schemas" / "agent-skill-catalog.schema.json"
 INDEX_SCHEMA_PATH = REPOSITORY_ROOT / ".monica" / "schemas" / "agent-skill-index.schema.json"
-CATALOG_SNAPSHOT_PATH = REPOSITORY_ROOT / "skills" / "monica-guide" / "assets" / "default-catalog.json"
-INDEX_SNAPSHOT_PATH = REPOSITORY_ROOT / "skills" / "monica-guide" / "assets" / "default-index.json"
 BOOTSTRAP_TOKEN_PATTERN = re.compile(r"\{\{[A-Z0-9_]+\}\}")
 SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SKILL_REFERENCE_PATTERN = re.compile(r"\$((?:monica|mo)-[a-z0-9-]+)")
@@ -322,17 +320,10 @@ def validate_bootstrap_prompts(
     """Validate executable website prompts against the release catalog contract."""
 
     validate_schema(validation, bootstrap, schema_path, "bootstrap prompts")
-    cli = catalog["distribution"]["skillsCli"]
-    cli_reference = f"{cli['package']}@{cli['version']}"
-    expected_distribution = {
-        "skillsCli": cli,
-        "immutableSkillUrlTemplate": catalog["distribution"][
-            "immutableSkillUrlTemplate"
-        ],
-    }
+    expected_distribution = dict(catalog["distribution"])
     validation.check(
         bootstrap.get("distribution") == expected_distribution,
-        "bootstrap prompts: distribution must exactly match the catalog-pinned CLI and URL template",
+        "bootstrap prompts: distribution must exactly match the catalog installer and URL template",
     )
     validation.check(
         bootstrap.get("immutableRef") == "{{MONICA_IMMUTABLE_REF}}",
@@ -348,19 +339,13 @@ def validate_bootstrap_prompts(
         "bootstrap prompts: verified agent targets must remain informational Codex and Claude Code metadata",
     )
 
-    direct_url = (
-        "https://github.com/Tairitsua/Monica/tree/"
-        "{{MONICA_IMMUTABLE_REF}}/skills/monica-guide"
-    )
     expected_fallback = {
-        "installCommand": (
-            f"npx --yes {cli_reference} add {direct_url} -g -s monica-guide"
-        ),
-        "verifyCommand": f"npx --yes {cli_reference} ls -g --json",
+        "installCommand": "$monica-guide configure --workspace <workspace>",
+        "verifyCommand": "$monica-guide status --workspace <workspace>",
     }
     validation.check(
         bootstrap.get("fallback") == expected_fallback,
-        "bootstrap prompts: interactive fallback commands must match the catalog-pinned, agent-neutral contract",
+        "bootstrap prompts: interactive fallback commands must match the catalog-pinned, platform-neutral contract",
     )
 
     entries = list(bootstrap_prompt_entries(bootstrap))
@@ -372,12 +357,23 @@ def validate_bootstrap_prompts(
     for locale, prompt in entries:
         label = f"bootstrap {locale}"
         validation.check(
-            cli_reference in prompt and "skills@latest" not in prompt,
-            f"{label}: must use catalog-pinned {cli_reference}",
+            "$monica-guide init --workspace" in prompt
+            and "$monica-guide configure --workspace" in prompt,
+            f"{label}: must bootstrap the project directory through the unified guide executable",
         )
         validation.check(
-            direct_url in prompt,
-            f"{label}: must install from the direct immutable skill URL",
+            "{rid}" in prompt
+            and "Monica.Guide.exe" not in prompt
+            and "win-x64" not in prompt,
+            f"{label}: must name the platform through the rid placeholder, never a single-platform executable or asset",
+        )
+        validation.check(
+            "--environment" not in prompt and "--target shared" not in prompt,
+            f"{label}: must not default to a machine-wide global install",
+        )
+        validation.check(
+            "SHA256SUMS" in prompt and "npx" not in prompt,
+            f"{label}: must verify the release digest and avoid ad-hoc CLI installers",
         )
         required_fragments = [
             "$monica-guide",
@@ -398,34 +394,36 @@ def validate_bootstrap_prompts(
                 for fragment in (
                     "--apply",
                     "--agent",
-                    "--profile",
+                    "--profile application",
+                    "--profile extension",
+                    "--profile framework",
+                    "--profile docs",
                     "-a codex",
                     "-a claude-code",
-                    "init --",
                 )
             ),
-            f"{label}: universal bootstrap must not select a host, profile, or initialization path",
+            f"{label}: universal bootstrap must not select a host or concrete profile by itself",
         )
         locale_safety = (
             (
-                "This installation changes my user-level skill directory.",
+                "The installation stays inside this repository.",
                 "restart the host only if discovery still fails",
                 "ask what I want to do next",
                 "approve its preview",
                 "After that installation, these restrictions apply",
-                "Do not initialize a repository",
+                "Do not initialize another repository",
                 "bind or unbind source",
                 "make any other file changes",
                 "remote mutations",
             )
             if locale == "en-US"
             else (
-                "这次安装会更改我的用户级 Skill 目录。",
+                "只写入本仓库内部",
                 "只有发现仍失败时才重启宿主",
                 "询问我下一步想做什么",
                 "批准其预览",
                 "完成这次安装后",
-                "不要初始化仓库",
+                "不要初始化其他仓库",
                 "绑定或解绑源码",
                 "再修改其他文件",
                 "远程变更",
@@ -535,27 +533,8 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
     retired_occurrences = find_retired_alias_occurrences(
         REPOSITORY_ROOT,
         aliases,
-        allowed_files=(
-            CATALOG_PATH,
-            CATALOG_SNAPSHOT_PATH,
-            REPOSITORY_ROOT
-            / ".agents"
-            / "skills"
-            / "monica-guide"
-            / "assets"
-            / "default-catalog.json",
-            REPOSITORY_ROOT
-            / ".claude"
-            / "skills"
-            / "monica-guide"
-            / "assets"
-            / "default-catalog.json",
-        ),
-        allowed_roots=(
-            REPOSITORY_ROOT / "skills" / "monica-guide" / "tests",
-            REPOSITORY_ROOT / ".agents" / "skills" / "monica-guide" / "tests",
-            REPOSITORY_ROOT / ".claude" / "skills" / "monica-guide" / "tests",
-        ),
+        allowed_files=(CATALOG_PATH,),
+        allowed_roots=(),
     )
     validation.check(
         not retired_occurrences,
@@ -768,16 +747,6 @@ def main() -> int:
         validate_schema(validation, index, INDEX_SCHEMA_PATH, "index")
         validate_catalog(validation, catalog)
         validate_index(validation, index)
-        validation.check(
-            CATALOG_SNAPSHOT_PATH.is_file()
-            and CATALOG_SNAPSHOT_PATH.read_bytes() == CATALOG_PATH.read_bytes(),
-            "monica-guide default catalog snapshot is stale; run scripts/sync_agent_skills.py --write",
-        )
-        validation.check(
-            INDEX_SNAPSHOT_PATH.is_file()
-            and INDEX_SNAPSHOT_PATH.read_bytes() == INDEX_PATH.read_bytes(),
-            "monica-guide default index snapshot is stale; run scripts/sync_agent_skills.py --write",
-        )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         validation.errors.append(str(exc))
         catalog = {}

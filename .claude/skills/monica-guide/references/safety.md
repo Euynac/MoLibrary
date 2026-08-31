@@ -2,47 +2,27 @@
 
 ## Discovery and instruction reloads
 
-- Treat every `--agent` value as an Agent Skills target identifier. Verify it with the catalog-pinned `npx skills ls -g -a <target> --json`; do not restrict targets to a Guide-owned allowlist or infer their directories.
-- Codex scans repository `.agents/skills` directories up to the repository root and user `$HOME/.agents/skills`. It detects installed or changed skills live; restart only when the new skill does not appear. `AGENTS.md` discovery occurs once per run, so start a new run after Guide-managed instruction changes.
-- Claude Code live-watches `~/.claude/skills` and project `.claude/skills`; restart only when the top-level skills directory did not exist at session start. `CLAUDE.md` and its relative `@AGENTS.md` import load at session start, so start a new session after instruction changes.
-- For other hosts, rely on their reported Agent Skills discovery behavior. Restart only after independent installed-skill verification still cannot make Guide discoverable.
-- Guide rewrites only its exact marked span in `AGENTS.md` and its exact owned `@AGENTS.md` line in `CLAUDE.md`; every surrounding byte, including line endings, trailing spaces, and blank lines, is preserved. Malformed or duplicate markers/imports fail closed.
-- Nested instruction files are diagnostic-only unless the user explicitly repeats `--nested-instruction <relative-path>` during `init`, `configure`, or `update`. Selection is limited to existing, non-symlinked nested `AGENTS.md` and `CLAUDE.md` files that discovery already reported. Unselected files are never rewritten.
-- `instruction_reload_required` appears only when the approved plan would actually change a root or explicitly selected nested instruction file. An idempotent plan does not request a reload.
-- Use the exact `distribution.skillsCli.version` pinned by the catalog. For the current catalog, verify source discovery with `npx --yes skills@1.5.21 add <immutable-skill-url> --list` and installed discovery with `npx --yes skills@1.5.21 ls -g -a <agent> --json`. Offline install and CLI verification commands add npm's `--offline` before the pinned package spec.
+- Skill projections are ordinary directories. The default is project-local (the workspace's `skillTargets`, typically `.agents/skills`, which Codex and Agent Skills hosts scan up the repository tree); global catalogs at `~/.agents/skills` and `~/.claude/skills` are explicit opt-ins selected per environment. The engine installs with whole-directory staging swaps and never merges into existing skill directories.
+- Codex scans repository `.agents/skills` directories up to the repository root and user `~/.agents/skills`; it detects installed or changed skills live. `AGENTS.md` discovery occurs once per run, so start a new run after guide-managed instruction changes.
+- Claude Code live-watches `~/.claude/skills`; restart only when the top-level skills directory did not exist at session start. `CLAUDE.md` and its relative `@AGENTS.md` import load at session start, so start a new session after instruction changes.
+- The engine rewrites only its exact marked span in `AGENTS.md` and its exact owned `@AGENTS.md` line in `CLAUDE.md`; every surrounding byte, including line endings and blank lines, is preserved. Malformed or duplicate markers or imports fail closed.
+- Nested `AGENTS.md`/`CLAUDE.md` files are diagnosed and reported but never rewritten by the engine.
+- The reload warning appears only when the approved plan would actually change an instruction file; an idempotent plan requests no reload.
 
 ## Offline and release integrity
 
-Use only the bundled catalog or an explicitly selected locally cached catalog/index whose digest matches the immutable release metadata. Offline mutation additionally requires an exact verified local/cached Monica source whose complete catalog-managed skill bytes match the target release manifest. Install each selected skill from that source's local `skills/<name>` directory with `npx --offline --yes skills@<pinned-version>` and run any CLI-based discovery verification with the same npm offline flag. Never use a GitHub URL, refresh, fetch, substitute another release, or fall back to a moving branch. A missing or mismatched local source is a blocker and produces no install or verification actions.
+Offline operation uses the installed bundle, the local ledger, and local bindings only. The engine performs no network traffic except the explicit update check on the wizard's Update page (GitHub over HTTPS, digest-verified against the release `SHA256SUMS`). Never replace an unavailable immutable release with a branch or another version.
 
-`source bind` may consume `inspect-dependency-source resolve <repository> --ref <exact-ref> --json` for either catalog-declared first-party repository. This resolver operation revalidates an existing local/catalog artifact and is safe in offline mode; never invoke its add, refresh, or fetch workflows. Require a successful exit, `verification_state: verified`, exact provenance, a readable absolute path, and a matching commit. Re-run cache resolution before apply and reject a source path or commit switch even when bytes happen to match. Never edit catalog-managed source.
+`source bind` may consume `inspect-dependency-source resolve <repository> --ref <exact-ref> --json` for either first-party repository. The resolver operation revalidates an existing cached artifact and is safe offline; never invoke its add, refresh, or fetch workflows. Require a successful exit, `verification_state: verified`, exact provenance, a readable absolute path, and the matching commit. Never edit catalog-managed source.
 
-Global bindings are lookup locators, not authorization. Observe checkout dirtiness, path health, and compatibility on every `source resolve`. Return a usable dirty or mismatched binding with warnings; block only an operation that explicitly requires exact parity or cannot establish repository identity and commit.
-
-The `source` channel always installs from the exact bound Monica checkout. It never turns the selected commit into a GitHub installation URL.
+Global bindings are lookup locators, not authorization. Observe checkout dirtiness, path health, and identity on every `source resolve`. Return a usable dirty or moved binding with warnings; operations that need exact parity decide for themselves whether to reject it.
 
 ## Global release constraint
 
-One user-level installation can have only one active Monica release. When project expectation and user state differ, diagnose the conflict and require an explicit global switch or a project upgrade. Never claim simultaneous global multi-version isolation.
+One user-level installation holds one active release per product, recorded in the unified ledger; every workspace installs from that same release, so projects never pin divergent skill versions. When a repository's expectation and the installed release differ, diagnose the conflict and require an explicit reconfigure from one complete bundle; never mix files across releases. Retired skill aliases still present in a target root are diagnosed by `doctor` (`stale-alias` checks) with the canonical replacement; directories no release owns are reported as unmanaged.
 
-The immutable index is the sole skill-version authority. Its per-skill digest is the verification contract; its positive revision and immutable `lastChangedIn` tag are readable release history. Releases form one strict chronological sequence across stable and preview: unchanged digests preserve revision/origin, while new or changed digests use the next revision and the current tag. Reject forks, duplicate timestamps, metadata-only jumps, missing origins, and removed-then-reintroduced lineages before planning.
-
-A targeted update never creates a mixed global release. Expand required dependencies, compare the entire managed union, and block if any skill outside the selection changed digest or cannot pass final discovery/content verification. A full update repairs missing or tampered installations and still verifies every managed skill before committing user or project release state.
-
-## Global install compensation
-
-Before global mutation, snapshot the planned Monica skills and planned file actions into a private transaction directory beside user state. Mark each skill or file before attempting it. On any protected failure, restore only attempted files and skills; compare canonical paths, discovery memberships, CLI-reported provenance, bytes, and portable file modes with the pre-apply inventory. Do not touch unrelated or unattempted skills.
-
-Restore remote provenance only from the prior immutable Monica ref. A local-source reinstall can preserve an existing lock entry only when no binding removal is needed; otherwise fail closed offline rather than contacting the network or losing provenance. Reject pre-existing skills whose only memberships or provenance cannot be represented by the pinned CLI. The recovery contract intentionally excludes per-agent copy-versus-symlink topology because `skills@1.5.21` does not expose it.
-
-Delete the snapshot after a fully committed plan or fully verified compensation. If removal, restoration, verification, or cleanup is incomplete, retain private evidence and surface it in `status` and `doctor`; all later mutations fail with `global_skill_recovery_required` until it is reconciled. A cleanup failure never initiates rollback after an already committed operation. Describe this as compensating behavior because process or machine termination can interrupt either mutation or recovery.
+Apply safety is structural: every mutation is previewed with a digest, applied under the engine mutation lock through staging directories, and verified against the catalog afterwards. A failed apply leaves installed skills untouched — staged trees are swapped in only after they are complete — and stale staging directories never block the next run.
 
 ## Contribution safety
 
-Preferences mean:
-
-- `never`: do not prepare remote contributions.
-- `prepare`: prepare local drafts and plans without remote mutation.
-- `ask`: ask before preparing a contribution path.
-
-All three still require fresh approval before remote Issue/Discussion/PR creation, branch creation, pushing, or draft PR publication. Suspected vulnerabilities always use the private security route regardless of preference.
+Route contribution preparation to `$monica-contribution`. Local classification and drafting need no further approval; every remote mutation (Issue/Discussion/PR creation, branch creation, pushing, draft PR publication) requires fresh current-session approval. Suspected vulnerabilities always use the private security route.

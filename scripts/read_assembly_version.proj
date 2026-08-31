@@ -1,0 +1,11 @@
+<Project>
+  <!-- Sidecar invoked by build_monica_guide_bundle.py: GetAssemblyIdentity resolves
+       AssemblyName.Version from the published PE metadata without loading the assembly,
+       on every host that runs the .NET SDK. -->
+  <Target Name="WriteAssemblyVersion">
+    <GetAssemblyIdentity AssemblyFiles="$(AssemblyPath)">
+      <Output TaskParameter="Assemblies" PropertyName="AssemblyIdentities" />
+    </GetAssemblyIdentity>
+    <WriteLinesToFile File="$(ReportPath)" Lines="$(AssemblyIdentities)" Overwrite="true" />
+  </Target>
+</Project>

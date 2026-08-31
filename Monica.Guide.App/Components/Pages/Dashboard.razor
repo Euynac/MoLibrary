@@ -1,0 +1,338 @@
+@page "/"
+@implements IDisposable
+
+<h1 class="page-title">@Session.T("dashboard")</h1>
+<p class="page-sub">@Session.T("title")</p>
+
+@if (Model is null)
+{
+    <div class="card">
+        <h2>@Session.T("health-checks")</h2>
+        @if (Phases.Count > 0)
+        {
+            <PhaseProgress Phases="Phases" Active="Busy"/>
+        }
+        else
+        {
+            <div class="loading"><span class="spinner"></span>@Session.T("diagnosing")</div>
+        }
+    </div>
+}
+else
+{
+    var errors = Model.Checks.Items.Count(static item => item.Status == GuideCheckStatus.Error);
+    var warnings = Model.Checks.Items.Count(static item => item.Status == GuideCheckStatus.Warning);
+
+    <div class="card">
+        <div class="hero">
+            <div class="hero-badge @HeroClass">
+                <Icon Name="@HeroIcon" Size="26"/>
+            </div>
+            <div class="hero-main">
+                <h2 class="hero-title">
+                    @(errors > 0
+                        ? $"{errors} {Session.T("summary-attention")}"
+                        : warnings > 0
+                            ? $"{warnings} {Session.T("summary-attention")}"
+                            : Session.T("summary-ok"))
+                    @if (Model.CockpitRunning)
+                    {
+                        <span class="badge ok">● @Session.T("running")</span>
+                    }
+                    else if (Session.CurrentProduct.ServesLoopback && Model.InstalledVersion is not null)
+                    {
+                        <span class="badge warning">@Session.T("stopped")</span>
+                    }
+                    else if (Model.InstalledVersion is null)
+                    {
+                        <span class="badge neutral">@Session.T("not-installed")</span>
+                    }
+                </h2>
+                <p class="hero-sub">@Model.SummaryMessage</p>
+            </div>
+            <div class="hero-side">
+                <div class="hero-version">@(Model.InstalledVersion ?? "—")</div>
+                <div class="hero-version-label">@Session.T("installed-version")</div>
+            </div>
+        </div>
+        <div class="actions">
+            @if (Model.InstalledVersion is null)
+            {
+                <a class="btn btn-primary btn-lg" href="install">
+                    <Icon Name="rocket" Size="16"/>
+                    @Session.T("go-install")
+                </a>
+            }
+            else
+            {
+                <a class="btn btn-secondary" href="install">
+                    <Icon Name="rocket" Size="16"/>
+                    @Session.T("go-install")
+                </a>
+                @if (Session.CurrentProduct.ServesLoopback)
+                {
+                    @if (!Model.CockpitRunning)
+                    {
+                        <button class="btn btn-primary" disabled="@StartBusy" @onclick="StartCockpitAsync">
+                            <Icon Name="power" Size="16"/>
+                            @Session.T("start-cockpit")
+                        </button>
+                    }
+                    else
+                    {
+                        <a class="btn btn-primary" href="@CockpitUrl" target="_blank">
+                            <Icon Name="external" Size="16"/>
+                            @Session.T("open-cockpit")
+                        </a>
+                        <button class="btn btn-secondary" disabled="@StopBusy" @onclick="StopCockpitAsync">
+                            <Icon Name="power" Size="16"/>
+                            @Session.T("stop-cockpit")
+                        </button>
+                    }
+                }
+                <a class="btn btn-secondary" href="uninstall">
+                    <Icon Name="uninstall" Size="16"/>
+                    @Session.T("go-uninstall")
+                </a>
+            }
+            <button class="btn btn-ghost" disabled="@Busy" @onclick="() => RunLoadAsync(true)">
+                <Icon Name="update" Size="16"/>
+                @Session.T("refresh")
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="stat-grid">
+            <div class="stat">
+                <div class="label"><Icon Name="folder" Size="14"/> @Session.T("location")</div>
+                <div class="value"><span class="mono">@(Model.BundleRoot ?? "—")</span></div>
+            </div>
+            @if (Session.CurrentProduct.ServesLoopback)
+            {
+                <div class="stat">
+                    <div class="label"><Icon Name="zap" Size="14"/> @Session.T("port")</div>
+                    <div class="value">@Model.ConfiguredPort</div>
+                </div>
+            }
+            <div class="stat">
+                <div class="label"><Icon Name="folder" Size="14"/> @Session.T("workspace-summary")</div>
+                <div class="value chips">
+                    @if (WorkspaceSummary is null)
+                    {
+                        <span class="chip">—</span>
+                    }
+                    else
+                    {
+                        <a class="chip ok" href="workspaces">@WorkspaceSummary.Text</a>
+                    }
+                </div>
+            </div>
+            <div class="stat">
+                <div class="label"><Icon Name="host" Size="14"/> @Session.T("detected-agents")</div>
+                <div class="value chips">
+                    @if (Model.Presence.Count == 0)
+                    {
+                        <span class="chip">—</span>
+                    }
+                    @foreach (var presence in Model.Presence)
+                    {
+                        <span class="chip">@presence.Agent @@ @presence.EnvironmentSelector</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Integration is { Installed: true })
+    {
+        <div class="card">
+            <h2>@Session.T("integration")</h2>
+            <div class="switch-row">
+                <span class="switch-text">
+                    <span class="primary">@Session.T("desktop-shortcut")</span>
+                    <span class="secondary">@Session.T("integration-note")</span>
+                </span>
+                <label class="switch">
+                    <input type="checkbox" checked="@Integration.DesktopShortcut"
+                           disabled="@IntegrationBusy"
+                           @onchange="e => ToggleIntegrationAsync(desktop: (bool)e.Value!, startMenu: Integration!.StartMenuShortcut, autoStart: Integration.AutoStart)"/>
+                    <span class="track"></span>
+                </label>
+            </div>
+            <div class="switch-row">
+                <span class="switch-text">
+                    <span class="primary">@Session.T("startmenu-shortcut")</span>
+                </span>
+                <label class="switch">
+                    <input type="checkbox" checked="@Integration.StartMenuShortcut"
+                           disabled="@IntegrationBusy"
+                           @onchange="e => ToggleIntegrationAsync(desktop: Integration!.DesktopShortcut, startMenu: (bool)e.Value!, autoStart: Integration.AutoStart)"/>
+                    <span class="track"></span>
+                </label>
+            </div>
+            <div class="switch-row">
+                <span class="switch-text">
+                    <span class="primary">@Session.T("autostart")</span>
+                </span>
+                <label class="switch">
+                    <input type="checkbox" checked="@Integration.AutoStart"
+                           disabled="@IntegrationBusy"
+                           @onchange="e => ToggleIntegrationAsync(desktop: Integration!.DesktopShortcut, startMenu: Integration.StartMenuShortcut, autoStart: (bool)e.Value!)"/>
+                    <span class="track"></span>
+                </label>
+            </div>
+            @if (Integration.Error is not null)
+            {
+                <p class="error-text">@Integration.Error</p>
+            }
+        </div>
+    }
+
+    <div class="card">
+        <h2>@Session.T("health-checks")</h2>
+        <CheckList View="Model.Checks" EmptyText="@Session.T("operating")"/>
+    </div>
+
+    @if (Model.Error is not null)
+    {
+        <div class="card danger-zone">
+            <div class="banner banner-error">
+                <Icon Name="error-circle" Size="18"/>
+                <span>@Model.Error</span>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Inject]
+    private SetupFacade Facade { get; set; } = default!;
+
+    [Inject]
+    private SetupSession Session { get; set; } = default!;
+
+    private SetupDashboardView? Model { get; set; }
+
+    private SetupDesktopIntegrationView? Integration { get; set; }
+
+    private sealed record WorkspaceSummaryView(string Text);
+
+    private WorkspaceSummaryView? WorkspaceSummary { get; set; }
+
+    private List<GuidePhase> Phases { get; set; } = [];
+
+    private bool Busy { get; set; }
+
+    private bool StartBusy { get; set; }
+
+    private bool StopBusy { get; set; }
+
+    private bool IntegrationBusy { get; set; }
+
+    private string CockpitUrl => $"http://localhost:{Model?.ConfiguredPort}{Session.CurrentProduct.DefaultRoutes.GetValueOrDefault("ui", "/")}";
+
+    private string HeroClass => Model?.Checks.Status switch
+    {
+        GuideStatus.Ready => string.Empty,
+        GuideStatus.Warning => "warn",
+        _ => "error"
+    };
+
+    private string HeroIcon => Model?.Checks.Status switch
+    {
+        GuideStatus.Ready => "check-circle",
+        GuideStatus.Warning => "alert",
+        _ => "error-circle"
+    };
+
+    protected override void OnInitialized()
+    {
+        Session.LanguageChanged += OnLanguageChanged;
+        // Prerendering paints the shell instantly; the interactive circuit starts the real
+        // diagnosis so no render thread is ever blocked by host-process inspection.
+        if (RendererInfo.IsInteractive)
+        {
+            _ = RunLoadAsync();
+        }
+    }
+
+    private async Task RunLoadAsync(bool force = false)
+    {
+        Busy = true;
+        Phases = [];
+        var progress = new Progress<GuidePhase>(phase =>
+        {
+            Phases.Add(phase);
+            StateHasChanged();
+        });
+        try
+        {
+            Model = await Facade.LoadDashboardAsync(force, progress);
+            Session.PresenceCache = Model.Presence;
+            Session.CachedPort = Model.ConfiguredPort;
+            Integration = await Task.Run(() => Facade.LoadDesktopIntegration());
+            var workspaces = await Facade.ListWorkspacesAsync();
+            WorkspaceSummary = workspaces.Count == 0
+                ? null
+                : new WorkspaceSummaryView(
+                    $"{workspaces.Count} · {workspaces.Count(static workspace => workspace.Issues.Count == 0 && workspace.DirectoryExists)} {Session.T("workspace-summary-healthy")}");
+        }
+        finally
+        {
+            Busy = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task StartCockpitAsync()
+    {
+        StartBusy = true;
+        try
+        {
+            await Task.Run(() => Facade.TryStartProduct(out _));
+            await RunLoadAsync(true);
+        }
+        finally
+        {
+            StartBusy = false;
+        }
+    }
+
+    private async Task StopCockpitAsync()
+    {
+        StopBusy = true;
+        try
+        {
+            await Task.Run(() => Facade.TryStopProduct(out _));
+            await RunLoadAsync(true);
+        }
+        finally
+        {
+            StopBusy = false;
+        }
+    }
+
+    private async Task ToggleIntegrationAsync(bool desktop, bool startMenu, bool autoStart)
+    {
+        if (Integration is null)
+        {
+            return;
+        }
+
+        IntegrationBusy = true;
+        try
+        {
+            Integration = await Task.Run(() => Facade.ApplyDesktopIntegration(desktop, startMenu, autoStart));
+        }
+        finally
+        {
+            IntegrationBusy = false;
+        }
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Session.LanguageChanged -= OnLanguageChanged;
+}

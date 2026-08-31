@@ -79,16 +79,19 @@
     "distribution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "skillsCli", "immutableSkillUrlTemplate"],
+      "required": ["repository", "installer", "immutableSkillUrlTemplate"],
       "properties": {
         "repository": { "type": "string", "const": "Tairitsua/Monica" },
-        "skillsCli": {
+        "installer": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["package", "version"],
+          "required": ["assetNameTemplate", "sha256SumsAsset"],
           "properties": {
-            "package": { "type": "string", "const": "skills" },
-            "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+            "assetNameTemplate": {
+              "type": "string",
+              "const": "monica-guide-v{version}-{rid}.zip"
+            },
+            "sha256SumsAsset": { "type": "string", "const": "SHA256SUMS" }
           }
         },
         "immutableSkillUrlTemplate": {

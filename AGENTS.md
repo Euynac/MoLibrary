@@ -2,6 +2,14 @@
 
 Monica is a modular .NET infrastructure library designed for flexibility and performance. Each module can be used independently without requiring the entire framework.
 
+## Unified Guide Engine
+
+`Monica.Guide.Engine` is the shared, preview-first guide engine for every Monica agent product (skill catalog installation, descriptor-driven release validation, update staging, the unified ownership ledger, workspace bootstrap, and global source bindings); `Monica.Guide.App` builds the unified guide executable — `Monica.Guide.exe` on Windows, `Monica.Guide` on Linux and macOS — published per platform (win-x64, linux-x64, osx-arm64) as the token-gated setup wizard plus CLI. Neither is published as a NuGet package. Product definitions in `KnownAgentProducts` are the single source of each product's release contract; consuming products such as Monica.Workflow pin the engine to their definition and must never grow a local copy of guide behavior.
+
+Skills install **project-first**: `configure --workspace <path>` installs the workspace's confirmed profile closure into the workspace-local directories configured in `.monica/guide.json` (`skillTargets`, default `.agents/skills`); the global catalogs (`~/.agents/skills`, `~/.claude/skills`) are explicit opt-ins. Initialized workspaces are registered in the engine registry (`state/workspaces.json`), and `guide workspaces` plus the wizard's Workspaces page list them all.
+
+The engine also owns the capabilities of the retired Node-based monica-guide engine: `guide init`/`guide forget` write the workspace `.monica/guide.json` and the marker-bounded managed instruction block in `AGENTS.md` (plus the Guide-owned `@AGENTS.md` import in `CLAUDE.md`); `guide source list|resolve|bind|unbind` maintain the global first-party source binding ledger (`state/source-bindings.json`, verified local Git checkouts or the pinned `inspect-dependency-source` resolver); doctor diagnoses retired skill aliases and the legacy Node state. The `skills/monica-guide` skill is a teaching and routing layer only — the authoritative engine behavior lives in the executable, and no local engine scripts may be reintroduced there. The workspace-facing catalog projection (managed instruction templates, source repositories, aliases) is authored once in `.monica/agent-skill-catalog.json` and projected into release bundles by `scripts/build_monica_guide_bundle.py`.
+
 ## Skills
 
 Proactively invoke these skills when encountering relevant development patterns:

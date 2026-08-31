@@ -19,8 +19,6 @@ from typing import Iterable
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-catalog.json"
 INDEX_PATH = REPOSITORY_ROOT / ".monica" / "agent-skill-index.json"
-CATALOG_SNAPSHOT_PATH = REPOSITORY_ROOT / "skills" / "monica-guide" / "assets" / "default-catalog.json"
-INDEX_SNAPSHOT_PATH = REPOSITORY_ROOT / "skills" / "monica-guide" / "assets" / "default-index.json"
 PROJECTION_PATHS = (
     REPOSITORY_ROOT / ".agents" / "skills",
     REPOSITORY_ROOT / ".claude" / "skills",
@@ -32,29 +30,6 @@ REPLACE_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4, 0.8)
 
 class ProjectionError(RuntimeError):
     """Raised when the canonical tree or a projection is invalid."""
-
-
-def sync_guide_snapshots(*, write: bool) -> bool:
-    """Keep Guide's offline defaults byte-equivalent to the machine contracts."""
-
-    clean = True
-    for source, snapshot in (
-        (CATALOG_PATH, CATALOG_SNAPSHOT_PATH),
-        (INDEX_PATH, INDEX_SNAPSHOT_PATH),
-    ):
-        expected = source.read_bytes()
-        actual = snapshot.read_bytes() if snapshot.is_file() else None
-        if actual == expected:
-            print(f"[ok] {snapshot.relative_to(REPOSITORY_ROOT)}")
-            continue
-        clean = False
-        if write:
-            snapshot.parent.mkdir(parents=True, exist_ok=True)
-            snapshot.write_bytes(expected)
-            print(f"[written] {snapshot.relative_to(REPOSITORY_ROOT)}")
-        else:
-            print(f"[drift] {snapshot.relative_to(REPOSITORY_ROOT)}")
-    return clean
 
 
 def _load_catalog() -> dict[str, object]:
@@ -374,15 +349,11 @@ def main() -> int:
         catalog = _load_catalog()
         skill_roots = _load_managed_skills(catalog)
         retired_aliases = _load_retired_aliases(catalog)
-        snapshots_clean = sync_guide_snapshots(write=args.write)
         expected = build_manifest(skill_roots)
         if args.write:
             write_projections(skill_roots, expected, retired_aliases)
             return 0
-        projections_clean = check_projections(
-            expected, set(skill_roots), retired_aliases
-        )
-        return 0 if snapshots_clean and projections_clean else 1
+        return 0 if check_projections(expected, set(skill_roots), retired_aliases) else 1
     except (OSError, ProjectionError) as exc:
         print(f"[error] {exc}", file=sys.stderr)
         return 2

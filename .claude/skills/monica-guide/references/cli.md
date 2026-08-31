@@ -1,53 +1,42 @@
 # CLI and state contract
 
-Run the dependency-free Node.js entry point by absolute path:
+The engine is the `Monica.Guide` executable (`Monica.Guide.exe` on Windows, `Monica.Guide` on Linux and macOS), exposed as `$monica-guide` once located. See the skill front page for how to locate it (installed executable or `dotnet run --project Monica.Guide.App` inside a canonical checkout). Every command accepts `--json` for the stable machine envelope; this page describes the human-facing surface.
 
 ```bash
-node "<skill-dir>/scripts/monica-guide.mjs" [intent] [options]
+$monica-guide <command> [options]
 ```
 
-No intent is equivalent to `overview`.
+## Read-only commands
 
-## Read-only intents
-
-| Intent | Behavior |
+| Command | Behavior |
 | --- | --- |
-| `overview` | Explain toolbox capabilities, active/bundled release, agent targets, global first-party source bindings, and suggested next actions. It never requires a workspace. |
-| `status` | Show global skill and binding state. Add `--workspace <path>` for advisory repository detection, configured expectations, and compatibility. |
-| `doctor` | Diagnose global health. Add `--workspace <path>` for repository checks; add `--json` for the stable machine envelope. |
-| `source list` | List the global Monica and Monica.Docs binding summaries. |
-| `source resolve --repository monica\|docs` | Validate and return the selected global binding. Add `--workspace <path>` to compare it with that repository’s expected framework or checkout commit. |
+| `overview` | Installed products, versions, detected agent hosts, and next actions. Never requires a workspace. |
+| `workspaces` | Every registered workspace with live health: profile, directory presence, installed-versus-profile skill counts, and instruction currency. |
+| `status` | Installed skill projections per environment and target, recorded release identity, and host detection. Add `--workspace <path>` for repository detection and managed-instruction health. |
+| `doctor` | Everything `status` checks plus the live loopback runtime probes for products that serve one. Workspace and source-binding checks are appended like every other check. |
+| `source list` | One summary check per declared first-party repository (Monica, Monica.Docs). |
+| `source resolve --repository monica\|docs` | Observe the stored binding: canonical identity, stored and observed commits, exact ref, provenance, absolute path, dirty/path health, and warnings. |
 
-`source resolve --json` returns canonical repository identity, stored and observed commits, exact ref, provenance, resolution kind, absolute path, path/dirty health, compatibility, and warnings. A usable dirty or mismatched lookup remains visible with warnings; exact-parity operations may reject it.
+## Mutating commands
 
-## Mutating intents
-
-| Intent | Behavior |
+| Command | Behavior |
 | --- | --- |
-| `init` | Initialize selected project configuration, profile skill closure, managed instructions, and conditional Claude import. Requires `--workspace`, immutable release selection, profile confirmation, and at least one validated `--agent`. |
-| `update` | Resolve the configured release, reinstall only selected new/changed/unhealthy Monica skills, verify the complete managed set, and atomically switch the one global release. |
-| `configure` | Change profile, channel, capabilities, agent targets, or managed instructions for an initialized workspace. |
-| `source bind --repository monica\|docs` | Add or replace one global verified binding from `--source-path` or an exact `--source-ref` resolved through `--source-resolver`. |
-| `source unbind --repository monica\|docs` | Remove that repository’s global binding or discard unresolved migration candidates. |
-| `contribute` | Set or inspect the local `never`, `prepare`, or `ask` preference and route to `$monica-contribution`. |
-| `forget` | Remove repository Guide configuration, Guide-owned instruction text, and that workspace’s preferences. It never removes global source bindings or unrelated skills. |
+| `configure --workspace <path>` | **The default skill flow**: install the workspace profile's closure into the workspace's project directories (`skillTargets` in `.monica/guide.json`, default `.agents/skills`). `--profile` overrides the closure for this run without rewriting the configuration. Requires a prior `init`; native environments only. |
+| `configure` (global) | Explicit machine-wide install into selected environments and targets (`--environment` × `--target shared\|claude`), optionally narrowed by `--profile <name>` or repeated `--skill <name>`. Without environments it refreshes every recorded installation from the running bundle — the release update path, which replays project installations too. Products with a serve port accept `--port`. |
+| `unconfigure` | Remove recorded skill projections: `--workspace <path>` for one workspace's installations, `--target`/`--environment` for global ones, or everything when unscoped. A full unconfigure removes the product's ledger entry, locator, and desktop integration. |
+| `init --workspace <path>` | Write `.monica/guide.json` (profile, capabilities, optional `skillTargets`) and the managed `AGENTS.md` instruction block, and register the workspace in the engine registry. Requires an explicit `--profile`; the application profile additionally requires exactly one of `--capability microservice` or `--capability modular-monolith`. |
+| `forget --workspace <path>` | Remove exactly the guide-owned workspace artifacts: the managed block, the Guide-owned `@AGENTS.md` import, `.monica/guide.json`, the project skill installations recorded for that workspace, and its registry entry. |
+| `source bind --repository <repo>` | Add or replace one global binding from `--source-path <checkout> [--source-ref <tag\|commit>]`, or from `--source-ref <exact-ref>` resolved through the pinned `inspect-dependency-source` skill (discoverable via `--source-resolver <path>`). |
+| `source unbind --repository <repo>` | Remove that repository's global binding. |
 
-Every mutating intent is a dry run unless both `--apply` and `--plan-digest <digest>` are present. Apply rebuilds the plan from current state, validates local preconditions under an exclusive state lock, and rejects drift. Do not hold the lock while fetching network release data.
+Every mutating command is a preview until both `--apply` and `--plan-digest <sha256>` are present. Apply rebuilds the plan from current state under the engine mutation lock and rejects any drift through the digest gate. Exit codes: `0` ready, `1` warnings, `3` errors or blockers, `2` usage or operational failure.
 
-Common options include `--workspace`, `--profile`, `--channel`, repeated `--capability`, repeated `--agent`, `--catalog`, `--index`, `--offline`, and `--json`. Agent values are pinned `npx skills` target identifiers; verify each independently through `skills ls -g -a <target> --json`. Only `claude-code` enables the root `CLAUDE.md` import behavior.
+## State model
 
-`source bind` accepts either `--source-path <absolute-path> [--source-ref <exact-ref>]` or `--source-ref <exact-ref> [--source-resolver <path>]`. It never stores access, dirtiness, verification status, or compatibility observations. `source list` and `source resolve` are always read-only.
+- **Unified guide ledger** — `<engine root>/state/guide.json` holds one entry per installed product: executable, bundle root, release manifest digest, and every skill installation with per-skill tree digests. Installation identity is the environment plus the normalized target root, so project directories and global catalogs coexist and refresh together. The engine root is `%LOCALAPPDATA%\Monica` on Windows, `~/.local/share/Monica` on Linux, `~/Library/Application Support/Monica` on macOS; `MONICA_GUIDE_DATA_ROOT` overrides it.
+- **Workspace registry** — `<engine root>/state/workspaces.json` registers every initialized workspace (path, product, profile, capabilities) so listing surfaces can find them all; the portable truth stays in each workspace's `.monica/guide.json`.
+- **Source bindings** — `<engine root>/state/source-bindings.json` maps exactly `Tairitsua/Monica` and `Tairitsua/Monica.Docs` to one binding each (repository, ref, commit, source path, resolution kind, provenance). It stores no access, dirtiness, or permission state; observations happen at lookup time.
+- **Workspace configuration** — `.monica/guide.json` in the repository is shareable and portable: schema version, product id, confirmed profile, capabilities, instruction block version, the Claude-import ownership flag, and the optional `skillTargets` list of workspace-relative skill directories. It never contains absolute paths or timestamps.
+- **Release manifest and skill catalog** — the installed bundle root keeps `release-manifest.json` and `skills/catalog.json`; the catalog is the sole authority for which skill directories exist, their digests, profile memberships, managed instruction templates, source repositories, and retired aliases.
 
-Exit codes are `0` for success, `1` for warning-only diagnostics, `3` for domain blockers or unhealthy results, and `2` for invocation, operational, or internal failures.
-
-## Repository state
-
-`.monica/guide.json` is shareable and contains only the confirmed profile/channel/capabilities, expected immutable catalog release, managed instruction version, and the minimal ownership flag for a Guide-managed Claude import. Agent targets remain user-global and are never written to repository state. The file never contains local paths, timestamps, source bindings, or contribution preferences.
-
-## User state
-
-Private state schema v4 contains one active global skill release, managed skill metadata, agent targets, a repository-keyed global `sourceBindings` map, workspace and contribution preferences, migration candidates, cached release contracts, and timestamped observations.
-
-Binding keys are exactly `Tairitsua/Monica` and `Tairitsua/Monica.Docs`. Persist only repository, ref, commit, provenance, resolution kind, and source path. Migrating v3 promotes identical legacy Monica bindings, retains conflicting values as explicit candidates, and blocks mutations until `source bind` chooses a replacement or `source unbind` discards them.
-
-Any Guide output that includes source bindings or local paths—including `overview`, `source list`, `source resolve`, `status`, and `doctor`—can expose private absolute paths. Keep it local and do not commit or share it by default. State locking uses a random owner token; never delete or replace a lock that the current process does not own. Diagnose stale/dead owners and require explicit recovery instead of automatic takeover.
+Any guide output that includes source bindings or local paths can expose private absolute paths. Keep it local; do not commit or share it by default. Never expose the guide executable or any product's loopback surface beyond localhost.
