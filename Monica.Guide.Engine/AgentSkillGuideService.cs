@@ -1146,33 +1146,42 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         IProgress<GuidePhase>? progress,
         CancellationToken cancellationToken)
     {
-        var checks = new List<GuideCheck>();
-        foreach (var agent in Enum.GetValues<GuideAgent>())
+        // Each candidate probe shells out into the environment (WSL hops included), so every
+        // probe reports its own phase and the probes run concurrently: the Node-based hosts
+        // (claude) take seconds per version read while native CLIs return instantly, and a
+        // sequential loop would always pay their sum instead of the slowest one.
+        var probes = await Task.WhenAll(Enum.GetValues<GuideAgent>().Select(agent => ProbeHostAsync(
+            environment, agent, progress, cancellationToken)));
+        // The probes run concurrently; the enum order keeps the check output deterministic.
+        return probes.Where(static check => check is not null).Cast<GuideCheck>().ToList();
+    }
+
+    private async Task<GuideCheck?> ProbeHostAsync(
+        GuideEnvironment environment,
+        GuideAgent agent,
+        IProgress<GuidePhase>? progress,
+        CancellationToken cancellationToken)
+    {
+        var command = agent.ToString().ToLowerInvariant();
+        ReportPhase(progress, $"status.hosts.{environment.Selector}.{command}",
+            $"Detecting {command} in {environment.Selector}…");
+        if (!_runtime.CommandExists(environment, command))
         {
-            var command = agent.ToString().ToLowerInvariant();
-            // Each candidate probe shells out into the environment (WSL hops included), so
-            // every probe reports its own phase; host detection is the slowest diagnosis step.
-            ReportPhase(progress, $"status.hosts.{environment.Selector}.{command}",
-                $"Detecting {command} in {environment.Selector}…");
-            if (!_runtime.CommandExists(environment, command))
-            {
-                continue;
-            }
-            var version = await _runtime.CommandVersionAsync(environment, command, cancellationToken);
-            var details = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["environment"] = environment.Selector,
-                ["version"] = version ?? string.Empty
-            };
-            checks.Add(Check(
-                $"agent.{command}.{environment.Selector}.detected",
-                GuideCheckStatus.Ok,
-                version is null
-                    ? $"{agent} detected in {environment.Selector}; its version could not be read."
-                    : $"{agent} {version} detected in {environment.Selector}.")
-                with { Details = details });
+            return null;
         }
-        return checks;
+        var version = await _runtime.CommandVersionAsync(environment, command, cancellationToken);
+        var details = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["environment"] = environment.Selector,
+            ["version"] = version ?? string.Empty
+        };
+        return Check(
+            $"agent.{command}.{environment.Selector}.detected",
+            GuideCheckStatus.Ok,
+            version is null
+                ? $"{agent} detected in {environment.Selector}; its version could not be read."
+                : $"{agent} {version} detected in {environment.Selector}.")
+            with { Details = details };
     }
 
     /// <summary>Loads the catalog's file bytes once, keyed by skill name and ordered by relative path.</summary>

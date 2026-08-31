@@ -178,7 +178,7 @@ else
 
     @if (Operation is not null)
     {
-        <div class="card">
+        <div class="card" id="plan-card">
             <h2>@Session.T("step-execute")</h2>
             @if (Operation.Error is not null)
             {
@@ -199,7 +199,7 @@ else
                 <div class="actions" style="margin-top:0">
                     <button class="btn btn-primary" disabled="@Busy" @onclick="ApplyAsync">
                         <Icon Name="rocket" Size="16"/>
-                        @Session.T(ApplyAction == "forget" ? "execute-uninstall" : "execute-install")
+                        @Session.T(ApplyAction == "forget" ? "ws-apply-forget" : "ws-apply-install")
                     </button>
                 </div>
                 <p class="card-note">@Session.T("digest-note")</p>
@@ -220,6 +220,9 @@ else
 
     [Inject]
     private SetupSession Session { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime Js { get; set; } = default!;
 
     private static readonly string[] Profiles = ["application", "extension-author", "framework-contributor", "docs-contributor"];
     private static readonly string[] Architectures = ["microservice", "modular-monolith"];
@@ -371,6 +374,8 @@ else
         {
             Busy = false;
         }
+
+        await RevealPlanAsync();
     }
 
     private async Task InstallAsync(SetupWorkspaceView workspace)
@@ -390,6 +395,8 @@ else
         {
             Busy = false;
         }
+
+        await RevealPlanAsync();
     }
 
     private async Task ForgetAsync(SetupWorkspaceView workspace)
@@ -404,6 +411,31 @@ else
         finally
         {
             Busy = false;
+        }
+
+        await RevealPlanAsync();
+    }
+
+    /// <summary>
+    /// Brings the digest-locked plan card into view after a preview so the second, applying
+    /// click is unmissable: every workspace mutation is preview-first and applies nothing by itself.
+    /// </summary>
+    private async Task RevealPlanAsync()
+    {
+        if (Operation?.PlanDigest is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.InvokeVoidAsync(
+                "eval",
+                "document.getElementById('plan-card')?.scrollIntoView({behavior:'smooth', block:'start'})");
+        }
+        catch (JSDisconnectedException)
+        {
+            // A disconnected circuit has nothing left to scroll to.
         }
     }
 
