@@ -48,11 +48,13 @@ public sealed class SetupSession
 
     public int? CachedPort { get; set; }
 
+    /// <summary>
+    /// The one full dashboard diagnosis of this wizard run. Host and runtime probing shells
+    /// out to agent CLIs and takes seconds, so it starts in the background at startup,
+    /// serves every later surface from this cache, and is replaced only by an explicit
+    /// refresh or a product switch.
+    /// </summary>
     public SetupDashboardView? DashboardCache { get; set; }
-
-    public DateTimeOffset? DashboardCachedAt { get; set; }
-
-    public static readonly TimeSpan DashboardCacheTtl = TimeSpan.FromSeconds(10);
 
     public void ToggleLanguage()
     {
@@ -62,7 +64,8 @@ public sealed class SetupSession
 
     /// <summary>
     /// Switches the wizard to one product definition, resetting every product-derived input
-    /// (port default, staged update, approved plan digest). A no-op for the same product.
+    /// (port default, staged update, approved plan digest, cached dashboard) so the next
+    /// load observes the new product. A no-op for the same product.
     /// </summary>
     public void SwitchProduct(AgentProductDefinition product)
     {
@@ -76,6 +79,8 @@ public sealed class SetupSession
         Port = product.DefaultPort?.ToString() ?? string.Empty;
         PlanDigest = null;
         StagedUpdateBundle = null;
+        DashboardCache = null;
+        CachedPort = null;
     }
 
     /// <summary>Resolves one localized setup label for the current language.</summary>
@@ -102,6 +107,7 @@ public static class SetupText
         ["running"] = "运行中",
         ["stopped"] = "未运行",
         ["detected-agents"] = "检测到的宿主",
+        ["detecting-hosts"] = "正在检测宿主…",
         ["status-checks"] = "配置状态",
         ["health-checks"] = "健康检查",
         ["go-install"] = "安装或升级",
@@ -200,6 +206,16 @@ public static class SetupText
         ["ws-already-initialized"] = "已初始化",
         ["ws-profile-required"] = "请选择项目类型。",
         ["ws-architecture-required"] = "application 类型需要选择一种架构。",
+        ["ws-inspecting"] = "正在检测项目类型、能力与框架版本…",
+        ["ws-detect-not-directory"] = "该路径不是存在的目录,请检查后重试。",
+        ["ws-detect-framework"] = "检测到 Monica 框架仓库。",
+        ["ws-detect-docs"] = "检测到 Monica.Docs 仓库。",
+        ["ws-detect-extension"] = "检测到 Monica 扩展特征。",
+        ["ws-detect-application"] = "检测到 Monica 包或项目引用。",
+        ["ws-detect-ambiguous-both"] = "同时检测到应用与扩展特征;请显式选择项目类型。",
+        ["ws-detect-ambiguous-unscanned"] = "检测到应用特征,但有界源码扫描无法排除扩展;请显式选择项目类型。",
+        ["ws-detect-ambiguous-exhausted"] = "在有界源码扫描结束前没有发现决定性特征;请显式选择项目类型。",
+        ["ws-detect-ambiguous-none"] = "未发现规范仓库标识或特征文件;请显式选择项目类型。",
         ["workspace-summary"] = "工作区",
         ["workspace-summary-healthy"] = "切健康",
         ["global-targets"] = "整机全局安装(可选)",
@@ -225,6 +241,7 @@ public static class SetupText
         ["running"] = "Running",
         ["stopped"] = "Stopped",
         ["detected-agents"] = "Detected hosts",
+        ["detecting-hosts"] = "Detecting hosts…",
         ["status-checks"] = "Configuration status",
         ["health-checks"] = "Health checks",
         ["go-install"] = "Install or update",
@@ -323,6 +340,16 @@ public static class SetupText
         ["ws-already-initialized"] = "already initialized",
         ["ws-profile-required"] = "Select a profile.",
         ["ws-architecture-required"] = "The application profile requires one architecture.",
+        ["ws-inspecting"] = "Detecting the profile, capabilities, and framework version…",
+        ["ws-detect-not-directory"] = "The path is not an existing directory; check it and try again.",
+        ["ws-detect-framework"] = "Monica framework repository detected.",
+        ["ws-detect-docs"] = "Monica.Docs repository detected.",
+        ["ws-detect-extension"] = "Monica extension characteristics detected.",
+        ["ws-detect-application"] = "Monica package or project references detected.",
+        ["ws-detect-ambiguous-both"] = "Both application and extension characteristics were detected; select a profile explicitly.",
+        ["ws-detect-ambiguous-unscanned"] = "Application characteristics were detected, but bounded source scanning could not rule out an extension; select a profile explicitly.",
+        ["ws-detect-ambiguous-exhausted"] = "No decisive characteristics were found before the bounded source scan was exhausted; select a profile explicitly.",
+        ["ws-detect-ambiguous-none"] = "No canonical repository identity or characteristic files were found; select a profile explicitly.",
         ["workspace-summary"] = "Workspaces",
         ["workspace-summary-healthy"] = "healthy",
         ["global-targets"] = "Machine-wide global install (optional)",

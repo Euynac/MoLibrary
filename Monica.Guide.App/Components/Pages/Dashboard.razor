@@ -4,24 +4,17 @@
 <h1 class="page-title">@Session.T("dashboard")</h1>
 <p class="page-sub">@Session.T("title")</p>
 
-@if (Model is null)
+@if (Shell is null && Model is null)
 {
     <div class="card">
         <h2>@Session.T("health-checks")</h2>
-        @if (Phases.Count > 0)
-        {
-            <PhaseProgress Phases="Phases" Active="Busy"/>
-        }
-        else
-        {
-            <div class="loading"><span class="spinner"></span>@Session.T("diagnosing")</div>
-        }
+        <div class="loading"><span class="spinner"></span>@Session.T("diagnosing")</div>
     </div>
 }
 else
 {
-    var errors = Model.Checks.Items.Count(static item => item.Status == GuideCheckStatus.Error);
-    var warnings = Model.Checks.Items.Count(static item => item.Status == GuideCheckStatus.Warning);
+    var errors = Model?.Checks.Items.Count(static item => item.Status == GuideCheckStatus.Error) ?? 0;
+    var warnings = Model?.Checks.Items.Count(static item => item.Status == GuideCheckStatus.Warning) ?? 0;
 
     <div class="card">
         <div class="hero">
@@ -30,33 +23,35 @@ else
             </div>
             <div class="hero-main">
                 <h2 class="hero-title">
-                    @(errors > 0
-                        ? $"{errors} {Session.T("summary-attention")}"
-                        : warnings > 0
-                            ? $"{warnings} {Session.T("summary-attention")}"
-                            : Session.T("summary-ok"))
-                    @if (Model.CockpitRunning)
-                    {
-                        <span class="badge ok">● @Session.T("running")</span>
-                    }
-                    else if (Session.CurrentProduct.ServesLoopback && Model.InstalledVersion is not null)
-                    {
-                        <span class="badge warning">@Session.T("stopped")</span>
-                    }
-                    else if (Model.InstalledVersion is null)
+                    @(Model is null
+                        ? Session.T("diagnosing")
+                        : errors > 0
+                            ? $"{errors} {Session.T("summary-attention")}"
+                            : warnings > 0
+                                ? $"{warnings} {Session.T("summary-attention")}"
+                                : Session.T("summary-ok"))
+                    @if (InstalledVersion is null)
                     {
                         <span class="badge neutral">@Session.T("not-installed")</span>
                     }
+                    else if (Shell!.CockpitRunning)
+                    {
+                        <span class="badge ok">● @Session.T("running")</span>
+                    }
+                    else if (Session.CurrentProduct.ServesLoopback)
+                    {
+                        <span class="badge warning">@Session.T("stopped")</span>
+                    }
                 </h2>
-                <p class="hero-sub">@Model.SummaryMessage</p>
+                <p class="hero-sub">@(Model?.SummaryMessage ?? Session.T("diagnosing"))</p>
             </div>
             <div class="hero-side">
-                <div class="hero-version">@(Model.InstalledVersion ?? "—")</div>
+                <div class="hero-version">@(InstalledVersion ?? "—")</div>
                 <div class="hero-version-label">@Session.T("installed-version")</div>
             </div>
         </div>
         <div class="actions">
-            @if (Model.InstalledVersion is null)
+            @if (InstalledVersion is null)
             {
                 <a class="btn btn-primary btn-lg" href="install">
                     <Icon Name="rocket" Size="16"/>
@@ -71,7 +66,7 @@ else
                 </a>
                 @if (Session.CurrentProduct.ServesLoopback)
                 {
-                    @if (!Model.CockpitRunning)
+                    @if (!Shell!.CockpitRunning)
                     {
                         <button class="btn btn-primary" disabled="@StartBusy" @onclick="StartCockpitAsync">
                             <Icon Name="power" Size="16"/>
@@ -95,7 +90,7 @@ else
                     @Session.T("go-uninstall")
                 </a>
             }
-            <button class="btn btn-ghost" disabled="@Busy" @onclick="() => RunLoadAsync(true)">
+            <button class="btn btn-ghost" disabled="@Busy" @onclick="() => LoadAsync(true)">
                 <Icon Name="update" Size="16"/>
                 @Session.T("refresh")
             </button>
@@ -106,13 +101,13 @@ else
         <div class="stat-grid">
             <div class="stat">
                 <div class="label"><Icon Name="folder" Size="14"/> @Session.T("location")</div>
-                <div class="value"><span class="mono">@(Model.BundleRoot ?? "—")</span></div>
+                <div class="value"><span class="mono">@(Shell?.BundleRoot ?? "—")</span></div>
             </div>
             @if (Session.CurrentProduct.ServesLoopback)
             {
                 <div class="stat">
                     <div class="label"><Icon Name="zap" Size="14"/> @Session.T("port")</div>
-                    <div class="value">@Model.ConfiguredPort</div>
+                    <div class="value">@(Shell?.ConfiguredPort ?? 0)</div>
                 </div>
             }
             <div class="stat">
@@ -131,11 +126,15 @@ else
             <div class="stat">
                 <div class="label"><Icon Name="host" Size="14"/> @Session.T("detected-agents")</div>
                 <div class="value chips">
-                    @if (Model.Presence.Count == 0)
+                    @if (Model is null)
+                    {
+                        <span class="chip">@Session.T("detecting-hosts")</span>
+                    }
+                    else if (Model.Presence.Count == 0)
                     {
                         <span class="chip">—</span>
                     }
-                    @foreach (var presence in Model.Presence)
+                    @foreach (var presence in Model?.Presence ?? [])
                     {
                         <span class="chip">@presence.Agent @@ @presence.EnvironmentSelector</span>
                     }
@@ -191,15 +190,33 @@ else
 
     <div class="card">
         <h2>@Session.T("health-checks")</h2>
-        <CheckList View="Model.Checks" EmptyText="@Session.T("operating")"/>
+        @if (Model is null)
+        {
+            @if (Phases.Count > 0)
+            {
+                <PhaseProgress Phases="Phases" Active="Busy"/>
+            }
+            else
+            {
+                <div class="loading"><span class="spinner"></span>@Session.T("diagnosing")</div>
+            }
+        }
+        else
+        {
+            @if (Busy && Phases.Count > 0)
+            {
+                <PhaseProgress Phases="Phases" Active="Busy"/>
+            }
+            <CheckList View="Model.Checks" EmptyText="@Session.T("operating")"/>
+        }
     </div>
 
-    @if (Model.Error is not null)
+    @if (Model?.Error is { } error)
     {
         <div class="card danger-zone">
             <div class="banner banner-error">
                 <Icon Name="error-circle" Size="18"/>
-                <span>@Model.Error</span>
+                <span>@error</span>
             </div>
         </div>
     }
@@ -211,6 +228,9 @@ else
 
     [Inject]
     private SetupSession Session { get; set; } = default!;
+
+    /// <summary>Fast structural facts; painted before the full diagnosis completes.</summary>
+    private SetupDashboardShellView? Shell { get; set; }
 
     private SetupDashboardView? Model { get; set; }
 
@@ -230,10 +250,13 @@ else
 
     private bool IntegrationBusy { get; set; }
 
-    private string CockpitUrl => $"http://localhost:{Model?.ConfiguredPort}{Session.CurrentProduct.DefaultRoutes.GetValueOrDefault("ui", "/")}";
+    private string? InstalledVersion => Shell?.InstalledVersion;
+
+    private string CockpitUrl => $"http://localhost:{Shell?.ConfiguredPort ?? 0}{Session.CurrentProduct.DefaultRoutes.GetValueOrDefault("ui", "/")}";
 
     private string HeroClass => Model?.Checks.Status switch
     {
+        null => string.Empty,
         GuideStatus.Ready => string.Empty,
         GuideStatus.Warning => "warn",
         _ => "error"
@@ -241,6 +264,7 @@ else
 
     private string HeroIcon => Model?.Checks.Status switch
     {
+        null => "info",
         GuideStatus.Ready => "check-circle",
         GuideStatus.Warning => "alert",
         _ => "error-circle"
@@ -250,33 +274,35 @@ else
     {
         Session.LanguageChanged += OnLanguageChanged;
         // Prerendering paints the shell instantly; the interactive circuit starts the real
-        // diagnosis so no render thread is ever blocked by host-process inspection.
+        // loads so no render thread is ever blocked by host-process inspection.
         if (RendererInfo.IsInteractive)
         {
-            _ = RunLoadAsync();
+            _ = LoadAsync();
         }
     }
 
-    private async Task RunLoadAsync(bool force = false)
+    private async Task LoadAsync(bool force = false)
     {
         Busy = true;
         Phases = [];
-        var progress = new Progress<GuidePhase>(phase =>
-        {
-            Phases.Add(phase);
-            StateHasChanged();
-        });
         try
         {
-            Model = await Facade.LoadDashboardAsync(force, progress);
-            Session.PresenceCache = Model.Presence;
-            Session.CachedPort = Model.ConfiguredPort;
+            // Stage one paints the structural facts within milliseconds; stage two joins
+            // the startup warmup or session cache for the full diagnosis, so agent-host
+            // detection never blocks the first Overview render.
+            Shell = await Facade.LoadDashboardShellAsync();
+            await InvokeAsync(StateHasChanged);
+
             Integration = await Task.Run(() => Facade.LoadDesktopIntegration());
-            var workspaces = await Facade.ListWorkspacesAsync();
-            WorkspaceSummary = workspaces.Count == 0
-                ? null
-                : new WorkspaceSummaryView(
-                    $"{workspaces.Count} · {workspaces.Count(static workspace => workspace.Issues.Count == 0 && workspace.DirectoryExists)} {Session.T("workspace-summary-healthy")}");
+            await LoadWorkspaceSummaryAsync();
+            await InvokeAsync(StateHasChanged);
+
+            var progress = new Progress<GuidePhase>(phase =>
+            {
+                Phases.Add(phase);
+                StateHasChanged();
+            });
+            Model = await Facade.LoadDashboardAsync(force, progress);
         }
         finally
         {
@@ -286,13 +312,22 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task LoadWorkspaceSummaryAsync()
+    {
+        var workspaces = await Facade.ListWorkspacesAsync();
+        WorkspaceSummary = workspaces.Count == 0
+            ? null
+            : new WorkspaceSummaryView(
+                $"{workspaces.Count} · {workspaces.Count(static workspace => workspace.Issues.Count == 0 && workspace.DirectoryExists)} {Session.T("workspace-summary-healthy")}");
+    }
+
     private async Task StartCockpitAsync()
     {
         StartBusy = true;
         try
         {
             await Task.Run(() => Facade.TryStartProduct(out _));
-            await RunLoadAsync(true);
+            await LoadAsync(true);
         }
         finally
         {
@@ -306,7 +341,7 @@ else
         try
         {
             await Task.Run(() => Facade.TryStopProduct(out _));
-            await RunLoadAsync(true);
+            await LoadAsync(true);
         }
         finally
         {

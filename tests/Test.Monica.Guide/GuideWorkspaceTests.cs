@@ -277,6 +277,61 @@ public sealed class GuideWorkspaceTests
         Assert.Throws<InvalidOperationException>(() => GuideInstructionBlock.EnsureClaudeImport("@AGENTS.md\n@AGENTS.md\n"));
     }
 
+    [Fact]
+    public void DetectCandidate_ReportsStableOutcomeCodes()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService();
+        fixture.WriteProject("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="Monica.Core" Version="1.2.3" />
+              </ItemGroup>
+            </Project>
+            """);
+
+        var application = service.DetectCandidate(fixture.Workspace);
+        Assert.Equal(GuideWorkspaceDetectionOutcome.ApplicationCharacteristics, application.Outcome);
+        Assert.Equal("application", application.CandidateProfile);
+        Assert.False(application.Initialized);
+
+        // Adding extension source characteristics turns the candidate ambiguous instead of
+        // guessing; the outcome code is what the wizard localizes for explicit selection.
+        File.WriteAllText(
+            fixture.WorkspaceFile("ModuleOrders.cs"),
+            "public sealed class ModuleOrders : ModuleRegistration<ModuleOrders> { }");
+        var ambiguous = service.DetectCandidate(fixture.Workspace);
+        Assert.Equal(GuideWorkspaceDetectionOutcome.AmbiguousApplicationAndExtension, ambiguous.Outcome);
+        Assert.Null(ambiguous.CandidateProfile);
+        Assert.Equal("ambiguous", ambiguous.Confidence);
+    }
+
+    [Fact]
+    public void DetectCandidate_FlagsMissingDirectoryWithoutDetecting()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService();
+        var missing = Path.Combine(Path.GetTempPath(), $"guide-missing-{Guid.NewGuid():N}");
+
+        var candidate = service.DetectCandidate(missing);
+
+        Assert.Equal(GuideWorkspaceDetectionOutcome.NotADirectory, candidate.Outcome);
+        Assert.Null(candidate.CandidateProfile);
+    }
+
+    [Fact]
+    public void DetectCandidate_TrustsCanonicalRemoteIdentityWithoutStatusScan()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService(new RemoteGitProbe(fixture.Workspace, "https://github.com/Tairitsua/Monica.git"));
+
+        var candidate = service.DetectCandidate(fixture.Workspace);
+
+        Assert.Equal(GuideWorkspaceDetectionOutcome.FrameworkRepository, candidate.Outcome);
+        Assert.Equal("framework-contributor", candidate.CandidateProfile);
+        Assert.Equal("canonical", candidate.Confidence);
+    }
+
     private sealed class WorkspaceFixture : IDisposable
     {
         internal const string MarkerStart = "<!-- monica-guide:managed:start -->";
@@ -300,8 +355,8 @@ public sealed class GuideWorkspaceTests
         internal string SkillsRoot { get; }
         internal string ConfigFile => Path.Combine(Workspace, ".monica", "guide.json");
 
-        internal GuideWorkspaceService CreateService()
-            => new(Product, EnginePaths, LoadCatalog(), new NoGitProbe());
+        internal GuideWorkspaceService CreateService(IGuideGitProbe? git = null)
+            => new(Product, EnginePaths, LoadCatalog(), git ?? new NoGitProbe());
 
         internal GuideWorkspaceInitRequest InitRequest(string? profile = null, string? capability = null, string? second = null)
         {
@@ -450,6 +505,24 @@ public sealed class GuideWorkspaceTests
     private sealed class NoGitProbe : IGuideGitProbe
     {
         public GuideGitInfo? Describe(string path) => null;
+
+        public GuideGitIdentity? FindIdentity(string path) => null;
+
+        public string? ResolveTagCommit(string repositoryRoot, string tag) => null;
+    }
+
+    /// <summary>
+    /// Canonical remote identity for one path. <see cref="IGuideGitProbe.Describe"/> throws
+    /// because detection must never pay for the commit and worktree-status scan it does.
+    /// </summary>
+    private sealed class RemoteGitProbe(string root, string remote) : IGuideGitProbe
+    {
+        public GuideGitInfo? Describe(string path) => throw new NotSupportedException("Detection must use the identity probe.");
+
+        public GuideGitIdentity? FindIdentity(string path)
+            => string.Equals(path, root, StringComparison.OrdinalIgnoreCase)
+                ? new GuideGitIdentity(root, GuideGitProbe.CanonicalRepository(remote))
+                : null;
 
         public string? ResolveTagCommit(string repositoryRoot, string tag) => null;
     }

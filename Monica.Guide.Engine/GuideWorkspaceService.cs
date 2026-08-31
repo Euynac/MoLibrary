@@ -10,6 +10,40 @@ public sealed record GuideWorkspaceInitRequest(
     IReadOnlyList<string>? Capabilities = null);
 
 /// <summary>
+/// Stable machine outcome of workspace detection. Interactive surfaces localize this
+/// code; the English <c>Reason</c> stays the CLI's machine-facing explanation.
+/// </summary>
+public enum GuideWorkspaceDetectionOutcome
+{
+    /// <summary>The path is not an existing directory; detection did not run.</summary>
+    NotADirectory,
+
+    /// <summary>The canonical Monica framework repository (remote identity or characteristics).</summary>
+    FrameworkRepository,
+
+    /// <summary>The canonical Monica.Docs repository (remote identity or characteristics).</summary>
+    DocsRepository,
+
+    /// <summary>Unambiguous Monica extension characteristics.</summary>
+    ExtensionCharacteristics,
+
+    /// <summary>Unambiguous Monica package or project references.</summary>
+    ApplicationCharacteristics,
+
+    /// <summary>Both application and extension characteristics; a profile must be chosen explicitly.</summary>
+    AmbiguousApplicationAndExtension,
+
+    /// <summary>Application characteristics, but bounded source scanning could not rule out an extension.</summary>
+    AmbiguousApplicationUnscanned,
+
+    /// <summary>The bounded source scan was exhausted before any decisive characteristic.</summary>
+    AmbiguousScanExhausted,
+
+    /// <summary>No canonical identity or characteristic files at all.</summary>
+    AmbiguousNoCharacteristics
+}
+
+/// <summary>
 /// Workspace bootstrap for skill-catalog products. <c>init</c> writes the repository-shared
 /// <c>.monica/guide.json</c> profile configuration and one guide-owned instruction block into
 /// the root <c>AGENTS.md</c> (plus the minimal <c>@AGENTS.md</c> import for Claude Code when a
@@ -138,6 +172,7 @@ public sealed partial class GuideWorkspaceService
 
     /// <summary>Advisory workspace detection for interactive surfaces (the wizard's add flow).</summary>
     public sealed record GuideWorkspaceCandidate(
+        GuideWorkspaceDetectionOutcome Outcome,
         string? CandidateProfile,
         string Confidence,
         string Reason,
@@ -154,13 +189,16 @@ public sealed partial class GuideWorkspaceService
         var root = Path.GetFullPath(workspace);
         if (!Directory.Exists(root))
         {
-            return new GuideWorkspaceCandidate(null, string.Empty, $"Workspace is not a directory: {root}.",
+            return new GuideWorkspaceCandidate(
+                GuideWorkspaceDetectionOutcome.NotADirectory,
+                null, string.Empty, $"Workspace is not a directory: {root}.",
                 [], null, null, false, null);
         }
 
         var detection = Detect(root);
         var config = GuideWorkspaceStore.LoadConfig(root, out _);
         return new GuideWorkspaceCandidate(
+            detection.Outcome,
             detection.CandidateProfile,
             detection.Confidence,
             detection.Reason,
@@ -790,6 +828,7 @@ public sealed partial class GuideWorkspaceService
     // ---------------------------------------------------------------------------------------------
 
     internal sealed record GuideWorkspaceDetection(
+        GuideWorkspaceDetectionOutcome Outcome,
         string? Identity,
         string? GitRoot,
         string? CandidateProfile,
@@ -804,7 +843,10 @@ public sealed partial class GuideWorkspaceService
 
     private GuideWorkspaceDetection Detect(string root)
     {
-        var git = _git.Describe(root);
+        // Detection runs on every wizard interaction with a candidate path; the identity
+        // probe skips commit resolution and the worktree status scan, which can take
+        // seconds on large checkouts and whose facts detection never uses.
+        var git = _git.FindIdentity(root);
         var identity = git?.CanonicalRemote;
         var isMonicaFramework = File.Exists(Path.Combine(root, "Monica.slnx"))
                                 && Directory.Exists(Path.Combine(root, "Monica.Core"));
@@ -831,53 +873,62 @@ public sealed partial class GuideWorkspaceService
         var hasMicroservice = portablePaths.Any(static file => MicroservicePathPattern().IsMatch(file));
         var hasModularMonolith = portablePaths.Any(static file => ModularMonolithPathPattern().IsMatch(file));
 
+        GuideWorkspaceDetectionOutcome outcome;
         string? candidate;
         string confidence;
         string reason;
         if (IsCanonical(identity, "Tairitsua/Monica") || isMonicaFramework)
         {
+            outcome = GuideWorkspaceDetectionOutcome.FrameworkRepository;
             candidate = PROFILE_FRAMEWORK;
             confidence = IsCanonical(identity, "Tairitsua/Monica") ? "canonical" : "characteristic";
             reason = "Monica framework repository detected.";
         }
         else if (IsCanonical(identity, "Tairitsua/Monica.Docs") || isMonicaDocs)
         {
+            outcome = GuideWorkspaceDetectionOutcome.DocsRepository;
             candidate = PROFILE_DOCS;
             confidence = IsCanonical(identity, "Tairitsua/Monica.Docs") ? "canonical" : "characteristic";
             reason = "Monica.Docs repository detected.";
         }
         else if (hasExtension && hasApplication)
         {
+            outcome = GuideWorkspaceDetectionOutcome.AmbiguousApplicationAndExtension;
             candidate = null;
             confidence = "ambiguous";
             reason = "Both application and extension characteristics were detected; select a profile explicitly.";
         }
         else if (hasExtension)
         {
+            outcome = GuideWorkspaceDetectionOutcome.ExtensionCharacteristics;
             candidate = PROFILE_EXTENSION;
             confidence = "characteristic";
             reason = "Monica extension characteristics detected.";
         }
         else if (hasApplication && sourceScan.Truncated)
         {
+            outcome = GuideWorkspaceDetectionOutcome.AmbiguousApplicationUnscanned;
             candidate = null;
             confidence = "ambiguous";
             reason = "Application characteristics were detected, but bounded source scanning could not rule out an extension; select a profile explicitly.";
         }
         else if (hasApplication)
         {
+            outcome = GuideWorkspaceDetectionOutcome.ApplicationCharacteristics;
             candidate = PROFILE_APPLICATION;
             confidence = "characteristic";
             reason = "Monica package or project references detected.";
         }
         else if (sourceScan.Truncated)
         {
+            outcome = GuideWorkspaceDetectionOutcome.AmbiguousScanExhausted;
             candidate = null;
             confidence = "ambiguous";
             reason = "No decisive characteristics were found before the bounded source scan was exhausted; select a profile explicitly.";
         }
         else
         {
+            outcome = GuideWorkspaceDetectionOutcome.AmbiguousNoCharacteristics;
             candidate = null;
             confidence = "ambiguous";
             reason = "No canonical repository identity or characteristic files were found.";
@@ -907,6 +958,7 @@ public sealed partial class GuideWorkspaceService
             .OrderBy(static item => item, StringComparer.Ordinal)
             .ToArray();
         return new GuideWorkspaceDetection(
+            outcome,
             identity,
             git?.Root,
             candidate,
@@ -928,7 +980,7 @@ public sealed partial class GuideWorkspaceService
     /// </summary>
     private static (string? Version, string? Tier, IReadOnlyList<string> Issues) DetectFrameworkVersion(
         string root,
-        GuideGitInfo? git,
+        GuideGitIdentity? git,
         string projectText,
         IReadOnlyList<string> inventory)
     {

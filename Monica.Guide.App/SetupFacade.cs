@@ -19,6 +19,17 @@ public sealed record SetupDashboardView(
     IReadOnlyList<SetupAgentPresence> Presence,
     string? Error);
 
+/// <summary>
+/// The structural dashboard facts available in milliseconds: recorded installation
+/// identity and loopback reachability. The overview paints these instantly while the
+/// full diagnosis (health checks, detected agent hosts) completes in the background.
+/// </summary>
+public sealed record SetupDashboardShellView(
+    string? InstalledVersion,
+    string? BundleRoot,
+    bool CockpitRunning,
+    int ConfiguredPort);
+
 /// <summary>Result of one preview or apply operation.</summary>
 public sealed record SetupOperationView(
     bool Applied,
@@ -65,6 +76,7 @@ public sealed record SetupWorkspaceView(
 
 /// <summary>Advisory detection of one workspace candidate for the add-workspace flow.</summary>
 public sealed record SetupWorkspaceDetectionView(
+    GuideWorkspaceDetectionOutcome Outcome,
     string? CandidateProfile,
     string Confidence,
     string Reason,
@@ -93,6 +105,12 @@ public sealed class SetupFacade(SetupSession session)
         Converters = { new JsonStringEnumConverter() }
     };
 
+    private readonly object _dashboardGate = new();
+
+    private Task<SetupDashboardView>? _dashboardLoad;
+
+    private int _dashboardSequence;
+
     private AgentProductDefinition Product => session.CurrentProduct;
 
     /// <summary>Path of the installed executable, or null when nothing is configured.</summary>
@@ -104,30 +122,93 @@ public sealed class SetupFacade(SetupSession session)
             applicationDirectory: applicationDirectory,
             currentVersion: () => GuideAppInfo.CurrentVersion);
 
-    /// <summary>Loads installation state, runtime health, and detected agent hosts.</summary>
-    public async Task<SetupDashboardView> LoadDashboardAsync(
+    /// <summary>
+    /// Starts the one background diagnosis of this wizard run. Host detection shells out to
+    /// agent CLIs and takes seconds, so it must never sit in front of the first Overview
+    /// paint; every page load joins the started task or reads the session cache instead.
+    /// </summary>
+    public void StartDashboardWarmup() => _ = WarmDashboardAsync();
+
+    private async Task WarmDashboardAsync()
+    {
+        try
+        {
+            await LoadDashboardAsync();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // A warmup failure must not crash the process; the next page load surfaces it.
+            session.DashboardCache = new SetupDashboardView(
+                null, null, false, CurrentPort(),
+                new SetupChecksView(GuideStatus.Error, []),
+                exception.Message, [], exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// Loads installation state, runtime health, and detected agent hosts. The result is
+    /// cached for the whole wizard run; <paramref name="force"/> reruns the diagnosis for
+    /// an explicit refresh while concurrent callers always join the in-flight load.
+    /// </summary>
+    public Task<SetupDashboardView> LoadDashboardAsync(
         bool force = false,
         IProgress<GuidePhase>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        if (!force
-            && session.DashboardCache is { } cached
-            && session.DashboardCachedAt is { } cachedAt
-            && DateTimeOffset.UtcNow - cachedAt < SetupSession.DashboardCacheTtl)
+        lock (_dashboardGate)
         {
-            return cached;
-        }
+            if (!force && session.DashboardCache is { } cached)
+            {
+                return Task.FromResult(cached);
+            }
 
-        // The guide engine still has synchronous prefixes (bundle hashing, WSL discovery),
-        // so the whole diagnosis runs off any Blazor render thread.
-        var view = await Task.Run(
-            () => LoadDashboardUncachedAsync(progress, cancellationToken),
-            cancellationToken);
-        session.DashboardCache = view;
-        session.DashboardCachedAt = DateTimeOffset.UtcNow;
-        session.PresenceCache = view.Presence;
-        session.CachedPort = view.ConfiguredPort;
-        return view;
+            if (!force && _dashboardLoad is not null)
+            {
+                return _dashboardLoad;
+            }
+
+            // A forced refresh supersedes an older in-flight load; the sequence keeps the
+            // slower older result from overwriting the newer one in the session cache.
+            var sequence = ++_dashboardSequence;
+            _dashboardLoad = RunDashboardLoadAsync(sequence, progress, cancellationToken);
+            return _dashboardLoad;
+        }
+    }
+
+    private async Task<SetupDashboardView> RunDashboardLoadAsync(
+        int sequence,
+        IProgress<GuidePhase>? progress,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // The guide engine still has synchronous prefixes (bundle hashing, WSL discovery),
+            // so the whole diagnosis runs off any Blazor render thread.
+            var view = await Task.Run(
+                () => LoadDashboardUncachedAsync(progress, cancellationToken),
+                cancellationToken);
+            lock (_dashboardGate)
+            {
+                if (sequence == _dashboardSequence)
+                {
+                    session.DashboardCache = view;
+                    session.PresenceCache = view.Presence;
+                    session.CachedPort = view.ConfiguredPort;
+                }
+            }
+
+            return view;
+        }
+        finally
+        {
+            lock (_dashboardGate)
+            {
+                if (_dashboardLoad is not null && sequence == _dashboardSequence)
+                {
+                    _dashboardLoad = null;
+                }
+            }
+        }
     }
 
     private async Task<SetupDashboardView> LoadDashboardUncachedAsync(
@@ -169,6 +250,17 @@ public sealed class SetupFacade(SetupSession session)
         => Product.ServesLoopback
             ? GuideProductConfiguration.Load(Product).Port
             : 0;
+
+    /// <summary>
+    /// Reads the fast structural dashboard facts: the recorded locator and one loopback
+    /// reachability probe. No subprocesses, no bundle hashing, no host detection.
+    /// </summary>
+    public async Task<SetupDashboardShellView> LoadDashboardShellAsync(CancellationToken cancellationToken = default)
+    {
+        var (locator, port) = await Task.Run(() => (ReadLocator(), CurrentPort()), cancellationToken);
+        var running = Product.ServesLoopback && await IsPortListeningAsync(port);
+        return new SetupDashboardShellView(locator?.ProductVersion, locator?.BundleRoot, running, port);
+    }
 
     /// <summary>Validates one extracted bundle candidate directory for the session product.</summary>
     public SetupBundleView ValidateBundle(string path)
@@ -310,7 +402,9 @@ public sealed class SetupFacade(SetupSession session)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
-            return new SetupWorkspaceDetectionView(null, string.Empty, string.Empty, [], null, false, string.Empty);
+            return new SetupWorkspaceDetectionView(
+                GuideWorkspaceDetectionOutcome.NotADirectory, null, string.Empty, string.Empty,
+                [], null, false, string.Empty);
         }
 
         return await Task.Run(() =>
@@ -318,6 +412,7 @@ public sealed class SetupFacade(SetupSession session)
             var candidate = new GuideWorkspaceService(Product, GuidePaths.ForCurrentUser(), LoadWorkspaceCatalog())
                 .DetectCandidate(path);
             return new SetupWorkspaceDetectionView(
+                candidate.Outcome,
                 candidate.CandidateProfile,
                 candidate.Confidence,
                 candidate.Reason,

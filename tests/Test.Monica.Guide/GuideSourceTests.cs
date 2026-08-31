@@ -284,6 +284,11 @@ public sealed class GuideSourceTests
             return new GuideGitInfo(SourceFixture.Commit, path, GuideGitProbe.CanonicalRepository(remote), Dirty);
         }
 
+        public GuideGitIdentity? FindIdentity(string path)
+            => Remotes.TryGetValue(path, out var remote)
+                ? new GuideGitIdentity(path, GuideGitProbe.CanonicalRepository(remote))
+                : null;
+
         public string? ResolveTagCommit(string repositoryRoot, string tag)
             => TagCommits.TryGetValue(tag, out var commit) ? commit : null;
     }

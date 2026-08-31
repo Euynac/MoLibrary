@@ -71,7 +71,7 @@ else
                        placeholder="@WorkspacePlaceholder"/>
                 @if (SetupFolderPicker.IsSupported)
                 {
-                    <button type="button" class="btn btn-secondary" disabled="@PickBusy" @onclick="BrowseWorkspaceAsync">
+                    <button type="button" class="btn btn-secondary" disabled="@(PickBusy || Inspecting)" @onclick="BrowseWorkspaceAsync">
                         <Icon Name="folder" Size="16"/>
                         @Session.T("browse")
                     </button>
@@ -79,12 +79,22 @@ else
             </div>
             <span class="hint">@Session.T("ws-path-hint")</span>
         </div>
-        @if (Detection is { CandidateProfile: not null } or { Reason.Length: > 0 })
+        @if (Inspecting)
         {
-            <div class="banner @(Detection.Initialized ? "banner-ok" : "banner-info")">
-                <Icon Name="@(Detection.Initialized ? "check-circle" : "info")" Size="18"/>
+            <div class="loading"><span class="spinner"></span>@Session.T("ws-inspecting")</div>
+        }
+        else if (Detection is not null)
+        {
+            <div class="banner @(Detection.Outcome == GuideWorkspaceDetectionOutcome.NotADirectory
+                                     ? "banner-error"
+                                     : Detection.Initialized ? "banner-ok" : "banner-info")">
+                <Icon Name="@(Detection.Initialized
+                                  ? "check-circle"
+                                  : Detection.Outcome == GuideWorkspaceDetectionOutcome.NotADirectory
+                                      ? "error-circle"
+                                      : "info")" Size="18"/>
                 <span>
-                    @(Detection.Reason)
+                    @DetectionText
                     @if (Detection.FrameworkVersion is not null)
                     {
                         <span> · @Session.T("version") @Detection.FrameworkVersion</span>
@@ -96,7 +106,7 @@ else
                 </span>
             </div>
         }
-        @if (Detection is { Initialized: false, CandidateProfile: not null })
+        @if (Detection is { Initialized: false, Outcome: not GuideWorkspaceDetectionOutcome.NotADirectory })
         {
             <div class="field">
                 <label>@Session.T("ws-profile")</label>
@@ -113,7 +123,10 @@ else
                         </label>
                     }
                 </div>
-                <span class="hint">@Session.T("ws-profile-hint") @(Session.T("ws-candidate")): @Detection.CandidateProfile (@Detection.Confidence))</span>
+                @if (Detection.CandidateProfile is { } candidate)
+                {
+                    <span class="hint">@Session.T("ws-profile-hint") @(Session.T("ws-candidate")): @candidate (@Detection.Confidence)</span>
+                }
             </div>
             @if (SelectedProfile == "application")
             {
@@ -135,7 +148,7 @@ else
                 </div>
             }
             <div class="actions" style="margin-top:0">
-                <button class="btn btn-primary" disabled="@(Busy || SelectedProfile is null)" @onclick="InitPreviewAsync">
+                <button class="btn btn-primary" disabled="@(Busy || Inspecting || SelectedProfile is null)" @onclick="InitPreviewAsync">
                     <Icon Name="file" Size="16"/>
                     @Session.T("ws-init-preview")
                 </button>
@@ -213,6 +226,8 @@ else
 
     private bool PickBusy { get; set; }
 
+    private bool Inspecting { get; set; }
+
     private List<SetupWorkspaceView> Registered { get; set; } = [];
 
     private string CandidatePath { get; set; } = string.Empty;
@@ -222,6 +237,20 @@ else
         => OperatingSystem.IsWindows() ? @"D:\Code\MyMonicaApp" : "~/code/MyMonicaApp";
 
     private SetupWorkspaceDetectionView? Detection { get; set; }
+
+    /// <summary>Localized detection verdict; recomputed per render so language switches apply.</summary>
+    private string DetectionText => Detection?.Outcome switch
+    {
+        GuideWorkspaceDetectionOutcome.FrameworkRepository => Session.T("ws-detect-framework"),
+        GuideWorkspaceDetectionOutcome.DocsRepository => Session.T("ws-detect-docs"),
+        GuideWorkspaceDetectionOutcome.ExtensionCharacteristics => Session.T("ws-detect-extension"),
+        GuideWorkspaceDetectionOutcome.ApplicationCharacteristics => Session.T("ws-detect-application"),
+        GuideWorkspaceDetectionOutcome.AmbiguousApplicationAndExtension => Session.T("ws-detect-ambiguous-both"),
+        GuideWorkspaceDetectionOutcome.AmbiguousApplicationUnscanned => Session.T("ws-detect-ambiguous-unscanned"),
+        GuideWorkspaceDetectionOutcome.AmbiguousScanExhausted => Session.T("ws-detect-ambiguous-exhausted"),
+        GuideWorkspaceDetectionOutcome.AmbiguousNoCharacteristics => Session.T("ws-detect-ambiguous-none"),
+        _ => Session.T("ws-detect-not-directory")
+    };
 
     private string? SelectedProfile { get; set; }
 
@@ -249,17 +278,37 @@ else
 
     private async Task InspectAsync()
     {
+        Detection = null;
+        ValidationError = null;
+        SelectedProfile = null;
+        SelectedArchitecture = null;
         if (string.IsNullOrWhiteSpace(CandidatePath))
         {
-            Detection = null;
             return;
         }
 
-        Detection = await Facade.InspectWorkspaceAsync(CandidatePath);
-        SelectedProfile = Detection.CandidateProfile is not null && Profiles.Contains(Detection.CandidateProfile)
-            ? Detection.CandidateProfile
-            : null;
-        SelectedArchitecture = null;
+        // Detection walks the candidate tree and probes Git identity, so it can take a
+        // moment on large checkouts; the inspecting state keeps that visible, and a
+        // superseded path simply discards its own slower result.
+        var inspectedPath = CandidatePath;
+        Inspecting = true;
+        try
+        {
+            var detection = await Facade.InspectWorkspaceAsync(inspectedPath);
+            if (!string.Equals(CandidatePath, inspectedPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            Detection = detection;
+            SelectedProfile = detection.CandidateProfile is { } candidate && Profiles.Contains(candidate)
+                ? candidate
+                : null;
+        }
+        finally
+        {
+            Inspecting = false;
+        }
     }
 
     private async Task BrowseWorkspaceAsync()

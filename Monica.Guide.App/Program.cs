@@ -72,6 +72,12 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 await app.StartAsync();
+
+// The one host-and-runtime diagnosis of this run starts immediately in the background:
+// agent-host detection shells out to agent CLIs and takes seconds, and the Overview must
+// paint instantly from the cache instead of waiting for it on every visit.
+app.Services.GetRequiredService<SetupFacade>().StartDashboardWarmup();
+
 var address = app.Urls.FirstOrDefault(static url => url.StartsWith("http://127.0.0.1", StringComparison.Ordinal))
               ?? $"http://127.0.0.1:{options.Port}";
 var setupUrl = $"{address}/s/{token}/";
