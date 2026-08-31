@@ -71,7 +71,7 @@ public sealed partial class GuideWorkspaceService
 
     private static readonly string[] IGNORED_DIRECTORIES =
     [
-        ".git", "bin", "obj", "artifacts", "node_modules", "skills", ".agents", ".claude", ".codex"
+        ".git", ".tmp", "bin", "obj", "artifacts", "node_modules", "skills", ".agents", ".claude", ".codex"
     ];
 
     private static readonly string[] ARCHITECTURE_CAPABILITIES = [CAPABILITY_MICROSERVICE, CAPABILITY_MODULAR_MONOLITH];
@@ -854,6 +854,35 @@ public sealed partial class GuideWorkspaceService
                            && Directory.Exists(Path.Combine(root, "docs", "zh-CN"))
                            && Directory.Exists(Path.Combine(root, "frontend", "monica-docs-web"));
 
+        // Repository outcomes are decided by identity and root markers alone; walking a
+        // framework checkout file by file can take minutes and cannot change the result,
+        // so the characteristic scan below only runs for ordinary project workspaces.
+        if (IsCanonical(identity, "Tairitsua/Monica") || isMonicaFramework)
+        {
+            return RepositoryDetection(
+                root,
+                git,
+                GuideWorkspaceDetectionOutcome.FrameworkRepository,
+                PROFILE_FRAMEWORK,
+                IsCanonical(identity, "Tairitsua/Monica") ? "canonical" : "characteristic",
+                "Monica framework repository detected.",
+                // The framework's own UI projects are the one capability the framework
+                // profile's conditional skills depend on; the architecture path patterns
+                // never match a framework checkout's layout.
+                Directory.Exists(Path.Combine(root, "Monica.UI")));
+        }
+        if (IsCanonical(identity, "Tairitsua/Monica.Docs") || isMonicaDocs)
+        {
+            return RepositoryDetection(
+                root,
+                git,
+                GuideWorkspaceDetectionOutcome.DocsRepository,
+                PROFILE_DOCS,
+                IsCanonical(identity, "Tairitsua/Monica.Docs") ? "canonical" : "characteristic",
+                "Monica.Docs repository detected.",
+                includeUiCapability: false);
+        }
+
         var inventory = WalkFiles(root).ToArray();
         var projectFiles = inventory.Where(IsProjectFile).ToArray();
         var projectText = string.Join("\n", projectFiles.Select(ReadText));
@@ -877,21 +906,7 @@ public sealed partial class GuideWorkspaceService
         string? candidate;
         string confidence;
         string reason;
-        if (IsCanonical(identity, "Tairitsua/Monica") || isMonicaFramework)
-        {
-            outcome = GuideWorkspaceDetectionOutcome.FrameworkRepository;
-            candidate = PROFILE_FRAMEWORK;
-            confidence = IsCanonical(identity, "Tairitsua/Monica") ? "canonical" : "characteristic";
-            reason = "Monica framework repository detected.";
-        }
-        else if (IsCanonical(identity, "Tairitsua/Monica.Docs") || isMonicaDocs)
-        {
-            outcome = GuideWorkspaceDetectionOutcome.DocsRepository;
-            candidate = PROFILE_DOCS;
-            confidence = IsCanonical(identity, "Tairitsua/Monica.Docs") ? "canonical" : "characteristic";
-            reason = "Monica.Docs repository detected.";
-        }
-        else if (hasExtension && hasApplication)
+        if (hasExtension && hasApplication)
         {
             outcome = GuideWorkspaceDetectionOutcome.AmbiguousApplicationAndExtension;
             candidate = null;
@@ -970,6 +985,70 @@ public sealed partial class GuideWorkspaceService
             tier,
             issues,
             nested);
+    }
+
+    /// <summary>
+    /// Detection for the canonical framework and docs repositories without the characteristic
+    /// scan: the workspace is the repository itself, so only its own version, the framework
+    /// UI capability, and nested agent instruction files remain relevant.
+    /// </summary>
+    private static GuideWorkspaceDetection RepositoryDetection(
+        string root,
+        GuideGitIdentity? git,
+        GuideWorkspaceDetectionOutcome outcome,
+        string profile,
+        string confidence,
+        string reason,
+        bool includeUiCapability)
+    {
+        var capabilities = includeUiCapability ? [CAPABILITY_UI] : Array.Empty<string>();
+        var rootVersion = FrameworkRootVersion(git?.Root ?? root);
+        return new GuideWorkspaceDetection(
+            outcome,
+            git?.CanonicalRemote,
+            git?.Root,
+            profile,
+            confidence,
+            reason,
+            capabilities,
+            HasMonicaProjectReference: false,
+            rootVersion,
+            rootVersion is null ? null : "framework-root",
+            FrameworkVersionIssues: [],
+            NestedAgentFiles(root));
+    }
+
+    /// <summary>Names-only walk collecting nested agent instruction files; no content is read.</summary>
+    private static string[] NestedAgentFiles(string root)
+    {
+        var nested = new List<string>();
+        var queue = new Queue<string>();
+        queue.Enqueue(root);
+        while (queue.Count > 0)
+        {
+            var directory = queue.Dequeue();
+            foreach (var child in Directory.EnumerateDirectories(directory))
+            {
+                if (!IGNORED_DIRECTORIES.Contains(Path.GetFileName(child), StringComparer.OrdinalIgnoreCase))
+                {
+                    queue.Enqueue(child);
+                }
+            }
+
+            foreach (var file in Directory.EnumerateFiles(directory))
+            {
+                if (Path.GetFileName(file) is AGENTS_FILE_NAME or CLAUDE_FILE_NAME)
+                {
+                    var relative = PortableRelative(root, file);
+                    if (relative.Contains('/'))
+                    {
+                        nested.Add(relative);
+                    }
+                }
+            }
+        }
+
+        return nested.OrderBy(static item => item, StringComparer.Ordinal).ToArray();
     }
 
     /// <summary>

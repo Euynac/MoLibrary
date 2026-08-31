@@ -81,7 +81,10 @@ else
         </div>
         @if (Inspecting)
         {
-            <div class="loading"><span class="spinner"></span>@Session.T("ws-inspecting")</div>
+            <div class="loading">
+                <span class="spinner"></span>
+                <span>@Session.T("ws-inspecting") <span class="mono">@CandidatePath</span></span>
+            </div>
         }
         else if (Detection is not null)
         {
@@ -110,7 +113,7 @@ else
         {
             <div class="field">
                 <label>@Session.T("ws-profile")</label>
-                <div class="option-grid">
+                <div class="option-grid wide">
                     @foreach (var profile in Profiles)
                     {
                         var selected = SelectedProfile == profile;
@@ -119,6 +122,7 @@ else
                                    @onchange="() => SelectProfile(profile)"/>
                             <span class="option-main">
                                 <span class="option-title">@profile</span>
+                                <span class="option-desc">@Session.T($"ws-profile-desc-{profile}")</span>
                             </span>
                         </label>
                     }
@@ -198,7 +202,7 @@ else
                         @Session.T(ApplyAction == "forget" ? "execute-uninstall" : "execute-install")
                     </button>
                 </div>
-                <p class="page-sub">@Session.T("digest-note")</p>
+                <p class="card-note">@Session.T("digest-note")</p>
             }
             <CheckList View="Operation.Checks"/>
             <PlanGroups View="Operation.Plan"/>
