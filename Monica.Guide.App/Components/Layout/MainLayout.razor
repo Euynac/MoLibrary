@@ -4,31 +4,32 @@
 <div class="shell">
     <aside class="sidebar">
         <div class="brand">
-            <div class="brand-mark">MG</div>
-            <div class="brand-text">
-                <div class="brand-name">Monica Guide</div>
-                <div class="brand-sub" title="@GuideAppInfo.CurrentVersion">@Session.T("title") · @ProductVersion</div>
+            <div class="brand-row">
+                <span class="monica-mark" aria-hidden="true">
+                    <i class="mark-plane mark-plane-violet"></i>
+                    <i class="mark-plane mark-plane-ink"></i>
+                    <i class="mark-cut"></i>
+                </span>
+                <div class="brand-text">
+                    <div class="brand-name">Monica Guide</div>
+                </div>
             </div>
+            <span class="release-stamp" title="@GuideAppInfo.CurrentVersion">@ProductVersion</span>
         </div>
         <nav class="nav">
             <NavLink class="nav-item" ActiveClass="active" href="" Match="NavLinkMatch.All">
-                <Icon Name="overview" Size="18"/>
                 <span>@Session.T("dashboard")</span>
             </NavLink>
             <NavLink class="nav-item" ActiveClass="active" href="workspaces">
-                <Icon Name="folder" Size="18"/>
                 <span>@Session.T("workspaces")</span>
             </NavLink>
             <NavLink class="nav-item" ActiveClass="active" href="install">
-                <Icon Name="rocket" Size="18"/>
                 <span>@Session.T("install")</span>
             </NavLink>
             <NavLink class="nav-item" ActiveClass="active" href="update">
-                <Icon Name="update" Size="18"/>
                 <span>@Session.T("update")</span>
             </NavLink>
             <NavLink class="nav-item" ActiveClass="active" href="uninstall">
-                <Icon Name="uninstall" Size="18"/>
                 <span>@Session.T("uninstall")</span>
             </NavLink>
         </nav>
