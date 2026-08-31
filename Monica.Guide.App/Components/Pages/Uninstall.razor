@@ -1,7 +1,7 @@
 @page "/uninstall"
 @implements IDisposable
 
-<h1 class="page-title">@Session.T("uninstall")</h1>
+<h1 class="page-title">@Session.CurrentProduct.DisplayName · @Session.T("uninstall")</h1>
 <p class="page-sub">@Session.T("data-retention-note")</p>
 
 <div class="card">

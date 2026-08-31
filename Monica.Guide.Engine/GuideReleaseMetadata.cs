@@ -106,7 +106,7 @@ public static class GuideReleaseMetadata
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentException.ThrowIfNullOrWhiteSpace(manifest.ProductVersion);
         if (expectedProductVersion is not null
-            && !string.Equals(manifest.ProductVersion, expectedProductVersion, StringComparison.Ordinal))
+            && !string.Equals(SemVerCore(manifest.ProductVersion), SemVerCore(expectedProductVersion), StringComparison.Ordinal))
         {
             throw new InvalidDataException(
                 $"Release manifest version '{manifest.ProductVersion}' does not match the expected product '{expectedProductVersion}'.");
@@ -125,6 +125,16 @@ public static class GuideReleaseMetadata
                 $"Release CLR assembly version '{manifest.AssemblyVersion}' does not match the running AssemblyName.Version "
                 + $"'{expectedAssemblyVersion}'.");
         }
+    }
+
+    /// <summary>
+    /// Strips SemVer build metadata (everything from <c>+</c>) so an informational version that
+    /// appends the source revision still equals the manifest's pure release identity.
+    /// </summary>
+    internal static string SemVerCore(string version)
+    {
+        var metadata = version.IndexOf('+');
+        return metadata < 0 ? version : version[..metadata];
     }
 
     private static void ValidateManifest(

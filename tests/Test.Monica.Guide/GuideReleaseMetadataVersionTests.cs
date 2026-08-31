@@ -70,6 +70,16 @@ public sealed class GuideReleaseMetadataVersionTests
     }
 
     [Fact]
+    public void ValidateVersionProjection_IgnoresSourceRevisionMetadataOnTheExpectedVersion()
+    {
+        // The running informational version appends the source revision; the manifest records
+        // the pure release identity, so equality must hold across the '+' build metadata.
+        GuideReleaseMetadata.ValidateVersionProjection(
+            Manifest("1.2.3.4"),
+            expectedProductVersion: "0.3.0+89fae7bcb98c1b5fd30019217859e8a96fba0d73");
+    }
+
+    [Fact]
     public void ValidateVersionProjection_RejectsProductVersionAndMcpVersionDrift()
     {
         var versionDrift = Assert.Throws<InvalidDataException>(

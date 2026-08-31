@@ -245,7 +245,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         // Host detection shells out per candidate command, so environments are scanned
         // concurrently and the ordered results drive the deterministic check output below.
         var detectedByEnvironment = await Task.WhenAll(inspectionEnvironments.Select(environment =>
-            Task.Run(() => DetectHostsAsync(environment, cancellationToken), cancellationToken)));
+            Task.Run(() => DetectHostsAsync(environment, progress, cancellationToken), cancellationToken)));
         foreach (var environmentChecks in detectedByEnvironment)
         {
             checks.AddRange(environmentChecks);
@@ -1143,12 +1143,17 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
     /// <summary>Advisory host detection with best-effort CLI versions; never gates configuration.</summary>
     private async Task<List<GuideCheck>> DetectHostsAsync(
         GuideEnvironment environment,
+        IProgress<GuidePhase>? progress,
         CancellationToken cancellationToken)
     {
         var checks = new List<GuideCheck>();
         foreach (var agent in Enum.GetValues<GuideAgent>())
         {
             var command = agent.ToString().ToLowerInvariant();
+            // Each candidate probe shells out into the environment (WSL hops included), so
+            // every probe reports its own phase; host detection is the slowest diagnosis step.
+            ReportPhase(progress, $"status.hosts.{environment.Selector}.{command}",
+                $"Detecting {command} in {environment.Selector}…");
             if (!_runtime.CommandExists(environment, command))
             {
                 continue;
@@ -1812,7 +1817,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             var serverVersion = RequiredString(serverInfo, "version");
             var protocolVersion = RequiredString(initializeResult, "protocolVersion");
             if (serverName != _definition.McpServerName
-                || serverVersion != expectedVersion)
+                || GuideReleaseMetadata.SemVerCore(serverVersion) != GuideReleaseMetadata.SemVerCore(expectedVersion))
             {
                 throw new InvalidDataException(
                     $"MCP server identity mismatch: observed {serverName} {serverVersion}; expected {_definition.McpServerName} {expectedVersion}.");

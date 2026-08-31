@@ -7,7 +7,7 @@
 @if (Shell is null && Model is null)
 {
     <div class="card">
-        <h2>@Session.T("health-checks")</h2>
+        <h2>@Session.CurrentProduct.DisplayName · @Session.T("health-checks")</h2>
         <div class="loading"><span class="spinner"></span>@Session.T("diagnosing")</div>
     </div>
 }
@@ -46,6 +46,7 @@ else
                 <p class="hero-sub">@(Model?.SummaryMessage ?? Session.T("diagnosing"))</p>
             </div>
             <div class="hero-side">
+                <div class="hero-product">@Session.CurrentProduct.DisplayName</div>
                 <div class="hero-version">@(InstalledVersion ?? "—")</div>
                 <div class="hero-version-label">@Session.T("installed-version")</div>
             </div>
@@ -189,7 +190,7 @@ else
     }
 
     <div class="card">
-        <h2>@Session.T("health-checks")</h2>
+        <h2>@Session.CurrentProduct.DisplayName · @Session.T("health-checks")</h2>
         @if (Model is null)
         {
             @if (Phases.Count > 0)
@@ -273,6 +274,10 @@ else
     protected override void OnInitialized()
     {
         Session.LanguageChanged += OnLanguageChanged;
+        // The startup warmup owns the first diagnosis; the facade broadcasts its phases, so
+        // this page shows the steps even when it only joins the in-flight load.
+        Facade.DashboardPhaseReported += OnDashboardPhase;
+        Phases = [.. Facade.RecentDashboardPhases];
         // Prerendering paints the shell instantly; the interactive circuit starts the real
         // loads so no render thread is ever blocked by host-process inspection.
         if (RendererInfo.IsInteractive)
@@ -284,7 +289,12 @@ else
     private async Task LoadAsync(bool force = false)
     {
         Busy = true;
-        Phases = [];
+        // A forced refresh starts a clean phase log; joining the warmup or the session cache
+        // keeps the seeded phases so the first paint already shows the diagnosis steps.
+        if (force)
+        {
+            Phases = [];
+        }
         try
         {
             // Stage one paints the structural facts within milliseconds; stage two joins
@@ -297,12 +307,7 @@ else
             await LoadWorkspaceSummaryAsync();
             await InvokeAsync(StateHasChanged);
 
-            var progress = new Progress<GuidePhase>(phase =>
-            {
-                Phases.Add(phase);
-                StateHasChanged();
-            });
-            Model = await Facade.LoadDashboardAsync(force, progress);
+            Model = await Facade.LoadDashboardAsync(force);
         }
         finally
         {
@@ -369,5 +374,16 @@ else
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => Session.LanguageChanged -= OnLanguageChanged;
+    private void OnDashboardPhase(GuidePhase phase)
+        => _ = InvokeAsync(() =>
+        {
+            Phases.Add(phase);
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        Session.LanguageChanged -= OnLanguageChanged;
+        Facade.DashboardPhaseReported -= OnDashboardPhase;
+    }
 }

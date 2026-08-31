@@ -111,6 +111,49 @@ public sealed class SetupFacade(SetupSession session)
 
     private int _dashboardSequence;
 
+    private readonly object _dashboardPhaseLogLock = new();
+
+    private readonly Queue<GuidePhase> _recentDashboardPhases = new();
+
+    /// <summary>
+    /// Live phases of the running dashboard diagnosis, raised to every subscriber no matter which
+    /// caller started the load — the startup warmup owns the first load, yet the Overview page
+    /// must still show the diagnosis steps.
+    /// </summary>
+    public event Action<GuidePhase>? DashboardPhaseReported;
+
+    /// <summary>The diagnosis phases recorded so far this load, so a late Overview subscriber catches up.</summary>
+    public IReadOnlyList<GuidePhase> RecentDashboardPhases
+    {
+        get
+        {
+            lock (_dashboardPhaseLogLock)
+            {
+                return [.. _recentDashboardPhases];
+            }
+        }
+    }
+
+    private IProgress<GuidePhase> BroadcastDashboardProgress(IProgress<GuidePhase>? caller)
+        => new BroadcastProgress(caller, this);
+
+    private sealed class BroadcastProgress(IProgress<GuidePhase>? caller, SetupFacade owner) : IProgress<GuidePhase>
+    {
+        public void Report(GuidePhase phase)
+        {
+            lock (owner._dashboardPhaseLogLock)
+            {
+                owner._recentDashboardPhases.Enqueue(phase);
+                while (owner._recentDashboardPhases.Count > 64)
+                {
+                    owner._recentDashboardPhases.Dequeue();
+                }
+            }
+            caller?.Report(phase);
+            owner.DashboardPhaseReported?.Invoke(phase);
+        }
+    }
+
     private AgentProductDefinition Product => session.CurrentProduct;
 
     /// <summary>Path of the installed executable, or null when nothing is configured.</summary>
@@ -170,7 +213,11 @@ public sealed class SetupFacade(SetupSession session)
             // A forced refresh supersedes an older in-flight load; the sequence keeps the
             // slower older result from overwriting the newer one in the session cache.
             var sequence = ++_dashboardSequence;
-            _dashboardLoad = RunDashboardLoadAsync(sequence, progress, cancellationToken);
+            lock (_dashboardPhaseLogLock)
+            {
+                _recentDashboardPhases.Clear();
+            }
+            _dashboardLoad = RunDashboardLoadAsync(sequence, BroadcastDashboardProgress(progress), cancellationToken);
             return _dashboardLoad;
         }
     }

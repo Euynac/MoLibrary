@@ -1,7 +1,7 @@
 @page "/install"
 @implements IDisposable
 
-<h1 class="page-title">@Session.T("install")</h1>
+<h1 class="page-title">@Session.CurrentProduct.DisplayName · @Session.T("install")</h1>
 <p class="page-sub">@Session.T("digest-note")</p>
 
 <div class="steps">
@@ -55,7 +55,7 @@ else
                         @(Bundle.HasManifest ? Session.T("bundle-valid") : Session.T("bundle-no-manifest"))
                         @if (Bundle.ProductVersion is not null)
                         {
-                            <span>· <strong>v@Bundle.ProductVersion</strong> (@Bundle.Tag)</span>
+                            <span>· <strong>@(Bundle.ProductName ?? Session.CurrentProduct.ProductName) v@(Bundle.ProductVersion)</strong></span>
                         }
                     </span>
                 </div>
