@@ -21,7 +21,9 @@ if (options.CliArguments is { } cliArguments)
 }
 
 var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
-var product = options.Product ?? KnownAgentProducts.Monica;
+// The wizard face resolves its product from the bundle structure exactly like the CLI face,
+// so double-clicking a product bundle's setup executable opens that product's wizard.
+var product = options.Product ?? GuideAppOptions.DetectDefaultProduct();
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {

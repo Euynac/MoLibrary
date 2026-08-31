@@ -81,8 +81,9 @@ public sealed record GuideAppOptions(int Port, bool OpenBrowser, string? BundleP
     /// <summary>
     /// The product this executable belongs to by structure: the bundle that ships it declares
     /// its product id; outside a bundle the guide serves the Monica skill catalog by default.
+    /// Both faces use it, so a product bundle's setup wizard opens pinned to that product.
     /// </summary>
-    private static AgentProductDefinition DetectDefaultProduct()
+    internal static AgentProductDefinition DetectDefaultProduct()
     {
         var bundleRoot = GuideSetupPresenter.DetectBundleRootByStructure(AppContext.BaseDirectory);
         if (bundleRoot is null)
