@@ -46,6 +46,7 @@ public static class ModuleProjectUnitsBuilderExtensions
 public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebModule
 {
     private readonly ProjectUnitDiscoveryPlan _discoveryPlan = new();
+    private ProjectUnitCatalog? _catalog;
 
     /// <inheritdoc />
     public override void Describe(ModuleDescriptor module)
@@ -59,17 +60,8 @@ public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebMo
     public override void ConfigureServices(ModuleContext<ModuleProjectUnitsOption> context)
     {
         var services = context.Services;
-        var namingOptions = CreateEffectiveNamingOptions(context.Modules);
 
-        services.AddSingleton(serviceProvider => ProjectUnitCatalog.CreateCompleted(
-            Option,
-            namingOptions,
-            Logger,
-            _discoveryPlan.GetRequiredSnapshot(),
-            Option.ParseUnitDetails
-                ? serviceProvider.GetService<IXmlDocumentationService>()
-                : null,
-            serviceProvider.GetService<IConfigurationDefinitionRegistry>()));
+        services.AddSingleton(ResolveCatalog);
         services.AddSingleton<IProjectUnitCatalog>(serviceProvider =>
             serviceProvider.GetRequiredService<ProjectUnitCatalog>());
         services.TryAddScoped<IProjectUnitRequirementLinkResolver, NullProjectUnitRequirementLinkResolver>();
@@ -89,6 +81,43 @@ public class ModuleProjectUnits : MonicaModule<ModuleProjectUnitsOption>, IWebMo
         discovery.Match(
             TypeQuery.All,
             (_, matches) => _discoveryPlan.Publish(matches.Select(static match => match.Shape)));
+    }
+
+    /// <inheritdoc />
+    public override void PostConfigureServices(ModuleContext<ModuleProjectUnitsOption> context)
+    {
+        // Structural analysis must complete during composition: Monica.Configuration publishes
+        // definition metadata while the host pipeline is built, so options-usage inference enriches
+        // the definition registry before any publication snapshot can observe the scanner's
+        // unresolved defaults.
+        _catalog = ProjectUnitCatalog.CreateAnalyzed(
+            Option,
+            CreateEffectiveNamingOptions(context.Modules),
+            Logger,
+            _discoveryPlan.GetRequiredSnapshot(),
+            ResolveDefinitionRegistry(context.Services));
+    }
+
+    private ProjectUnitCatalog ResolveCatalog(IServiceProvider serviceProvider)
+    {
+        var catalog = _catalog
+            ?? throw new InvalidOperationException(
+                $"{nameof(ModuleProjectUnits)} structural analysis has not completed for this host.");
+        catalog.AttachDocumentation(Option.ParseUnitDetails
+            ? serviceProvider.GetService<IXmlDocumentationService>()
+            : null);
+        return catalog;
+    }
+
+    // ModuleConfiguration exposes its definition registry as an instance singleton, so composition-time
+    // inference can pull the live instance from the finalized service collection without a provider.
+    private static IConfigurationDefinitionRegistry? ResolveDefinitionRegistry(IServiceCollection services)
+    {
+        return services
+            .LastOrDefault(descriptor =>
+                !descriptor.IsKeyedService
+                && descriptor.ServiceType == typeof(IConfigurationDefinitionRegistry))
+            ?.ImplementationInstance as IConfigurationDefinitionRegistry;
     }
 
     private sealed class RequestFilterDto
