@@ -214,7 +214,11 @@ public static class GuideSetupPresenter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(baseDirectory);
         var current = Path.GetFullPath(baseDirectory).TrimEnd(Path.DirectorySeparatorChar);
-        if (!string.Equals(Path.GetFileName(current), "setup", StringComparison.OrdinalIgnoreCase))
+        // The guide ships as a separate setup tree beside the product app (setup/) or as the
+        // product app itself (app/, the Monica catalog bundle layout).
+        var leaf = Path.GetFileName(current);
+        if (!string.Equals(leaf, "setup", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(leaf, "app", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }

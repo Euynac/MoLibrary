@@ -122,7 +122,7 @@ public sealed class GuideSetupPresenterTests
     }
 
     [Fact]
-    public void DetectBundleRootByStructure_ShouldResolveTheBundleContainingTheSetupExecutable()
+    public void DetectBundleRootByStructure_ShouldResolveTheBundleContainingTheGuideExecutable()
     {
         using var root = new TempDirectory();
         var bundle = System.IO.Path.Combine(root.Path, "monica-workflow-v0.1.6-win-x64");
@@ -132,6 +132,9 @@ public sealed class GuideSetupPresenterTests
         File.WriteAllText(System.IO.Path.Combine(bundle, "skills", "catalog.json"), "{}");
 
         GuideSetupPresenter.DetectBundleRootByStructure(System.IO.Path.Combine(bundle, "setup"))
+            .Should().Be(bundle);
+        // The Monica catalog bundle ships the guide as the app itself, without a setup tree.
+        GuideSetupPresenter.DetectBundleRootByStructure(System.IO.Path.Combine(bundle, "app"))
             .Should().Be(bundle);
         GuideSetupPresenter.DetectBundleRootByStructure(bundle).Should().BeNull();
         GuideSetupPresenter.DetectBundleRootByStructure(System.IO.Path.Combine(root.Path, "elsewhere"))
