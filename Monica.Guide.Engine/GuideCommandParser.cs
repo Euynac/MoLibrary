@@ -4,6 +4,8 @@ namespace Monica.Guide;
 public static class GuideCommandParser
 {
     private static readonly string[] SOURCE_ACTIONS = ["list", "resolve", "bind", "unbind"];
+    private static readonly string[] ISSUE_ACTIONS = ["status", "set"];
+    private static readonly string[] ISSUE_MODES = ["prepare", "ask", "never"];
     private static readonly string[] MUTATING_COMMANDS = ["configure", "unconfigure", "init", "forget", "source"];
 
     public static GuideCommand Parse(IReadOnlyList<string> arguments)
@@ -16,7 +18,7 @@ public static class GuideCommandParser
 
         var command = arguments[0].Trim().ToLowerInvariant();
         if (command is not ("overview" or "status" or "doctor" or "configure" or "unconfigure"
-                or "init" or "forget" or "source" or "workspaces"))
+                or "init" or "forget" or "source" or "issue" or "workspaces"))
         {
             throw new GuideUsageException($"Unknown guide command '{arguments[0]}'.");
         }
@@ -38,6 +40,8 @@ public static class GuideCommandParser
         string? sourceRef = null;
         string? sourceResolver = null;
         string? sourceAction = null;
+        string? issueAction = null;
+        string? issueMode = null;
         int? port = null;
         var apply = false;
         string? digest = null;
@@ -49,6 +53,12 @@ public static class GuideCommandParser
             if (command == "source" && sourceAction is null && !option.StartsWith('-'))
             {
                 sourceAction = option.Trim().ToLowerInvariant();
+                continue;
+            }
+
+            if (command == "issue" && issueAction is null && !option.StartsWith('-'))
+            {
+                issueAction = option.Trim().ToLowerInvariant();
                 continue;
             }
 
@@ -90,6 +100,9 @@ public static class GuideCommandParser
                 case "--source-resolver":
                     sourceResolver = Path.GetFullPath(Next(arguments, ref index, option));
                     break;
+                case "--mode":
+                    issueMode = Next(arguments, ref index, option).Trim().ToLowerInvariant();
+                    break;
                 case "--port":
                     if (!int.TryParse(Next(arguments, ref index, option), out var parsedPort)
                         || parsedPort is < 1 or > 65535)
@@ -122,7 +135,7 @@ public static class GuideCommandParser
         }
 
         ValidateOptions(
-            command, sourceAction, targets, environments, skills, capabilities, profile, workspace,
+            command, sourceAction, issueAction, issueMode, targets, environments, skills, capabilities, profile, workspace,
             repository, sourcePath, sourceRef, sourceResolver, port, apply, digest, locale);
         if (targets.Distinct().Count() != targets.Count)
         {
@@ -134,7 +147,8 @@ public static class GuideCommandParser
         }
         return new GuideCommand(
             command, targets, environments, skills, profile, executable, releaseManifest, port, digest, apply, locale, json,
-            sourceAction, workspace, capabilities, repository, sourcePath, sourceRef, sourceResolver);
+            sourceAction, workspace, capabilities, repository, sourcePath, sourceRef, sourceResolver,
+            issueAction, issueMode);
     }
 
     public static GuideEnvironment ParseEnvironment(string selector)
@@ -189,6 +203,8 @@ public static class GuideCommandParser
     private static void ValidateOptions(
         string command,
         string? sourceAction,
+        string? issueAction,
+        string? issueMode,
         IReadOnlyList<GuideTarget> targets,
         IReadOnlyList<GuideEnvironment> environments,
         IReadOnlyList<string> skills,
@@ -233,6 +249,39 @@ public static class GuideCommandParser
         else if (sourceAction is not null)
         {
             throw new GuideUsageException("A source action is valid only for the source command.");
+        }
+
+        if (command == "issue")
+        {
+            if (issueAction is null || !ISSUE_ACTIONS.Contains(issueAction))
+            {
+                throw new GuideUsageException(
+                    $"issue requires one action: {string.Join(", ", ISSUE_ACTIONS)}.");
+            }
+
+            if (issueAction == "set" && issueMode is null)
+            {
+                throw new GuideUsageException("issue set requires --mode <prepare|ask|never>.");
+            }
+
+            if (issueAction == "status" && issueMode is not null)
+            {
+                throw new GuideUsageException("--mode is valid only for issue set.");
+            }
+
+            if (issueMode is not null && !ISSUE_MODES.Contains(issueMode))
+            {
+                throw new GuideUsageException($"--mode must be one of: {string.Join(", ", ISSUE_MODES)}.");
+            }
+        }
+        else if (issueAction is not null)
+        {
+            throw new GuideUsageException("An issue action is valid only for the issue command.");
+        }
+
+        if (issueMode is not null && command != "issue")
+        {
+            throw new GuideUsageException("--mode is valid only for issue.");
         }
 
         if (repository is not null && command != "source")
@@ -372,7 +421,9 @@ public sealed record GuideCommand(
     string? Repository = null,
     string? SourcePath = null,
     string? SourceRef = null,
-    string? ResolverPath = null);
+    string? ResolverPath = null,
+    string? IssueAction = null,
+    string? IssueMode = null);
 
 /// <summary>Invalid command-line invocation; maps to exit code 2.</summary>
 public sealed class GuideUsageException(string message) : Exception(message);

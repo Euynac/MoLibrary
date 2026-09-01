@@ -7,7 +7,7 @@ namespace Monica.Guide.App;
 public sealed record GuideAppOptions(int Port, bool OpenBrowser, string? BundlePath, AgentProductDefinition? Product)
 {
     private static readonly string[] CliCommands =
-        ["overview", "status", "doctor", "configure", "unconfigure", "init", "forget", "source", "workspaces"];
+        ["overview", "status", "doctor", "configure", "unconfigure", "init", "forget", "source", "issue", "workspaces"];
 
     /// <summary>The guide CLI arguments to dispatch, or null to launch the wizard.</summary>
     public string[]? CliArguments { get; private set; }
@@ -57,7 +57,7 @@ public sealed record GuideAppOptions(int Port, bool OpenBrowser, string? BundleP
                         break;
                     }
                     throw new ArgumentException(
-                        $"Unknown guide argument '{args[index]}'. Usage: Monica.Guide [overview|status|doctor|configure|unconfigure|init|forget|source <action>|workspaces] [--product monica|workflow] ... | [--no-open-browser] [--port <1-65535>] [--bundle <path>]");
+                        $"Unknown guide argument '{args[index]}'. Usage: Monica.Guide [overview|status|doctor|configure|unconfigure|init|forget|source <action>|issue <action>|workspaces] [--product monica|workflow] ... | [--no-open-browser] [--port <1-65535>] [--bundle <path>]");
             }
         }
 

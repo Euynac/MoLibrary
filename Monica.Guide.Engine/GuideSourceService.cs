@@ -27,6 +27,14 @@ public sealed record GuideSourceObservation(
     string? Identity,
     IReadOnlyList<GuideCheck> Warnings);
 
+/// <summary>One declared source repository with its stored binding and live observation.</summary>
+public sealed record GuideSourceRepositoryStatus(
+    string Repository,
+    IReadOnlyList<string> Aliases,
+    GuideSourceBinding? Binding,
+    GuideSourceObservation? Observation,
+    GuideCheck? LedgerIssue);
+
 /// <summary>Desired source binding change.</summary>
 public sealed record GuideSourceBindRequest(
     string Repository,
@@ -113,6 +121,28 @@ public sealed class GuideSourceService
                 ? "No global source bindings are recorded."
                 : $"{ledger.Bindings.Count} global source binding(s) recorded.",
             ["Bindings are global lookup locators; they never grant write permission."]);
+    }
+
+    /// <summary>
+    /// Projects every declared repository with its stored binding and live observation. The
+    /// projection is read-only and powers observing surfaces; unbound repositories carry null
+    /// binding fields instead of a warning.
+    /// </summary>
+    public IReadOnlyList<GuideSourceRepositoryStatus> Describe()
+    {
+        var (ledger, ledgerIssue) = LoadLedger();
+        return DeclaredRepositories()
+            .Select(item =>
+            {
+                var binding = ledger?.Bindings.GetValueOrDefault(item.Repository);
+                return new GuideSourceRepositoryStatus(
+                    item.Repository,
+                    item.Aliases,
+                    binding,
+                    binding is null ? null : Observe(binding),
+                    ledgerIssue);
+            })
+            .ToArray();
     }
 
     /// <summary>Observes one stored binding without mutating anything.</summary>

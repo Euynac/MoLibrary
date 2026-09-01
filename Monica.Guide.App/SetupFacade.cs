@@ -74,6 +74,20 @@ public sealed record SetupWorkspaceView(
     bool InstructionsCurrent,
     IReadOnlyList<string> Issues);
 
+/// <summary>One declared first-party source repository with its live binding observation.</summary>
+public sealed record SetupSourceRepositoryView(
+    string Repository,
+    IReadOnlyList<string> Aliases,
+    bool Bound,
+    string? SourcePath,
+    string? Ref,
+    string? Commit,
+    string? ObservedCommit,
+    string? PathHealth,
+    bool? Dirty,
+    IReadOnlyList<SetupCheckView> Warnings,
+    string? LedgerIssue);
+
 /// <summary>Advisory detection of one workspace candidate for the add-workspace flow.</summary>
 public sealed record SetupWorkspaceDetectionView(
     GuideWorkspaceDetectionOutcome Outcome,
@@ -271,6 +285,11 @@ public sealed class SetupFacade(SetupSession session)
                 new GuideInspectRequest(),
                 progress: progress,
                 cancellationToken: cancellationToken);
+            // Source bindings are machine-global; the dashboard observes recorded bindings
+            // exactly like the CLI doctor does, so a moved or missing checkout surfaces here too.
+            var sourceChecks = new GuideSourceService(GuidePaths.ForCurrentUser(), LoadWorkspaceCatalog())
+                .HealthChecks();
+            var checks = health.Checks.Concat(sourceChecks).ToArray();
             var locator = ReadLocator();
             var port = CurrentPort();
             return new SetupDashboardView(
@@ -278,7 +297,7 @@ public sealed class SetupFacade(SetupSession session)
                 locator?.BundleRoot,
                 Product.ServesLoopback && await IsPortListeningAsync(port),
                 port,
-                GuideSetupPresenter.PresentChecks(health.Checks, health.Status),
+                GuideSetupPresenter.PresentChecks(checks, WorstStatus(health.Status, sourceChecks)),
                 health.Summary.Message,
                 GuideSetupPresenter.DeriveAgentPresence(
                     new GuideReport(health.SchemaVersion, health.ProductVersion, health.Status, health.Checks, health.Summary, health.Plan)),
@@ -610,6 +629,107 @@ public sealed class SetupFacade(SetupSession session)
     {
         GuidePreferencesStore.Save(Product, GuidePreferencesStore.Load(Product) with { GlobalGuideSkill = enabled });
         session.DashboardCache = null;
+    }
+
+    /// <summary>Machine-global issue-reporting mode shared by every product guide on this host.</summary>
+    public GuideIssueReportingMode GetIssueReporting()
+        => GuideIssuePreferencesStore.Load(GuidePaths.ForCurrentUser()).IssueReporting;
+
+    /// <summary>Sets the machine-global issue-reporting mode; it bounds preparation only.</summary>
+    public void SetIssueReporting(GuideIssueReportingMode mode)
+        => GuideIssuePreferencesStore.Save(
+            GuidePaths.ForCurrentUser(),
+            GuideIssuePreferencesStore.Load(GuidePaths.ForCurrentUser()) with { IssueReporting = mode });
+
+    /// <summary>Observes every declared first-party source repository and its global binding.</summary>
+    public async Task<IReadOnlyList<SetupSourceRepositoryView>> ListSourcesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var enginePaths = GuidePaths.ForCurrentUser();
+        var statuses = await Task.Run(
+            () => new GuideSourceService(enginePaths, LoadWorkspaceCatalog()).Describe(),
+            cancellationToken);
+        return statuses
+            .Select(static status => new SetupSourceRepositoryView(
+                status.Repository,
+                status.Aliases,
+                status.Binding is not null,
+                status.Binding?.SourcePath,
+                status.Binding?.Ref,
+                status.Binding?.Commit,
+                status.Observation?.ObservedCommit,
+                status.Observation?.PathHealth,
+                status.Observation?.Dirty,
+                (status.Observation?.Warnings ?? [])
+                    .Select(static warning => new SetupCheckView(
+                        warning.Id, warning.Status, warning.Message, warning.Remediation))
+                    .ToArray(),
+                status.LedgerIssue?.Message))
+            .ToArray();
+    }
+
+    /// <summary>Previews binding one verified local checkout globally.</summary>
+    public Task<SetupOperationView> PreviewSourceBindAsync(
+        string repository,
+        string sourcePath,
+        IProgress<GuidePhase>? progress = null,
+        CancellationToken cancellationToken = default)
+        => SourceOperationAsync(
+            () => CreateSourceService().BindAsync(
+                new GuideSourceBindRequest(repository, sourcePath, null), null, progress, cancellationToken),
+            cancellationToken);
+
+    /// <summary>Applies the digest-locked global source binding plan.</summary>
+    public Task<SetupOperationView> ApplySourceBindAsync(
+        string repository,
+        string sourcePath,
+        string planDigest,
+        IProgress<GuidePhase>? progress = null,
+        CancellationToken cancellationToken = default)
+        => SourceOperationAsync(
+            () => CreateSourceService().BindAsync(
+                new GuideSourceBindRequest(repository, sourcePath, null), planDigest, progress, cancellationToken),
+            cancellationToken);
+
+    /// <summary>Previews removing one global source binding.</summary>
+    public Task<SetupOperationView> PreviewSourceUnbindAsync(
+        string repository,
+        CancellationToken cancellationToken = default)
+        => SourceOperationAsync(
+            () => CreateSourceService().UnbindAsync(repository, null, null, cancellationToken),
+            cancellationToken);
+
+    /// <summary>Applies the digest-locked source unbinding plan.</summary>
+    public Task<SetupOperationView> ApplySourceUnbindAsync(
+        string repository,
+        string planDigest,
+        CancellationToken cancellationToken = default)
+        => SourceOperationAsync(
+            () => CreateSourceService().UnbindAsync(repository, planDigest, null, cancellationToken),
+            cancellationToken);
+
+    private GuideSourceService CreateSourceService()
+        => new(GuidePaths.ForCurrentUser(), LoadWorkspaceCatalog());
+
+    private async Task<SetupOperationView> SourceOperationAsync(
+        Func<Task<GuideReport>> operation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var report = await Task.Run(operation, cancellationToken);
+            if (report.Plan?.Applied == true)
+            {
+                // A recorded binding changes what the dashboard's source health checks observe.
+                session.DashboardCache = null;
+            }
+
+            return ToOperationView(report);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return ErrorView(exception.Message);
+        }
     }
 
     /// <summary>Previews removal of the selected guide-owned skill targets (all when null).</summary>
@@ -1065,6 +1185,25 @@ public sealed class SetupFacade(SetupSession session)
             GuideSetupPresenter.PresentPlan(report.Plan),
             report.Plan?.PlanDigest,
             report.Status == GuideStatus.Error ? report.Summary.Message : null);
+
+    /// <summary>Aggregates appended checks into the worst observed status without downgrading.</summary>
+    private static GuideStatus WorstStatus(GuideStatus current, IEnumerable<GuideCheck> appended)
+    {
+        foreach (var check in appended)
+        {
+            if (check.Status == GuideCheckStatus.Error)
+            {
+                return GuideStatus.Error;
+            }
+
+            if (check.Status == GuideCheckStatus.Warning && current == GuideStatus.Ready)
+            {
+                current = GuideStatus.Warning;
+            }
+        }
+
+        return current;
+    }
 
     private static SetupOperationView ErrorView(string message)
         => new(false, GuideStatus.Error, new SetupChecksView(GuideStatus.Error, []), new SetupPlanView(false, 0, []), null, message);

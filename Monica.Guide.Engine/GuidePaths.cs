@@ -23,6 +23,9 @@ public sealed class GuidePaths
     /// <summary>Mutex serializing guide mutations across every product.</summary>
     public string GuideLockFile => Path.Combine(StateDirectory, "guide.lock");
 
+    /// <summary>Machine-global issue-reporting preference shared by every installed product.</summary>
+    public string IssuePreferencesFile => Path.Combine(StateDirectory, "issue-preferences.json");
+
     public string LogsDirectory => Path.Combine(EngineDataRoot, "logs");
 
     public static GuidePaths ForCurrentUser(IGuideHostEnvironment? environment = null)

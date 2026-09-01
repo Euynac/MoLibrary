@@ -56,6 +56,7 @@ public static class GuideCommandRunner
                 "forget" => await ForgetWorkspaceAsync(definition, resolvedEnginePaths, command, progress, cancellationToken),
                 "workspaces" => ListWorkspaces(definition, resolvedEnginePaths),
                 "source" => await SourceAsync(definition, resolvedEnginePaths, command, cancellationToken),
+                "issue" => IssueAsync(resolvedEnginePaths, command),
                 _ => throw new GuideUsageException($"Unknown command '{command.Name}'.")
             };
             // Engine-level extensions (global source bindings, the retired Node-era state, and
@@ -250,6 +251,47 @@ public static class GuideCommandRunner
                $"{definition.DisplayName} is not installed or its bundle defines no workspace profiles; install it with guide configure before initializing a workspace.");
 
     /// <summary>
+    /// Reads or sets the machine-global issue-reporting mode. The write is an immediate
+    /// preference save — like the wizard's preference toggle it is not governed state and
+    /// takes no plan digest; the mode bounds preparation only and never authorizes a remote
+    /// action.
+    /// </summary>
+    private static GuideReport IssueAsync(GuidePaths enginePaths, GuideCommand command)
+    {
+        if (command.IssueAction == "set")
+        {
+            GuideIssuePreferencesStore.Save(
+                enginePaths,
+                GuideIssuePreferencesStore.Load(enginePaths) with
+                {
+                    IssueReporting = Enum.Parse<GuideIssueReportingMode>(command.IssueMode!, ignoreCase: true)
+                });
+        }
+
+        var mode = GuideIssuePreferencesStore.Load(enginePaths).IssueReporting;
+        var modeName = mode.ToString().ToLowerInvariant();
+        var check = new GuideCheck(
+            "issue.reporting",
+            GuideCheckStatus.Ok,
+            $"Issue reporting mode: {modeName}. {mode.Describe()}",
+            null,
+            new Dictionary<string, string> { ["mode"] = modeName });
+        return new GuideReport(
+            GuideContractVersions.CURRENT,
+            AgentGuideInfo.CurrentVersion(),
+            GuideStatus.Ready,
+            [check],
+            new GuideSummary(
+                command.IssueAction!,
+                command.IssueAction == "set"
+                    ? $"Issue reporting mode set to {modeName}."
+                    : $"Issue reporting mode is {modeName}.",
+                DateTimeOffset.UtcNow,
+                ["The mode bounds preparation only; a persisted preference never authorizes a remote action."]),
+            null);
+    }
+
+    /// <summary>
     /// Appends engine-level checks to read-only reports: global source binding health, the
     /// retired Node-era guide state, and — for status and doctor with --workspace — the
     /// workspace instruction inspection. Products without a workspace catalog skip both.
@@ -267,8 +309,11 @@ public static class GuideCommandRunner
 
         var catalog = GuideWorkspaceService.TryLoadProductCatalog(definition, enginePaths);
         var checks = new List<GuideCheck>();
-        if (catalog?.SourceRepositories is { Count: > 0 })
+        if (catalog is not null)
         {
+            // Bindings are machine-global and shared by every product, so each product's
+            // read-only surfaces observe recorded bindings; the service stays silent while
+            // nothing is bound.
             checks.AddRange(new GuideSourceService(enginePaths, catalog).HealthChecks());
             var legacy = LegacyNodeStateCheck();
             if (legacy is not null)
@@ -436,5 +481,6 @@ public static class GuideCommandRunner
         "       guide workspaces [--json]\n" +
         "       guide source <list|resolve|bind|unbind> [--repository monica|docs] " +
         "[--source-path <path>] [--source-ref <ref>] [--source-resolver <path>] " +
-        "[--apply --plan-digest <sha256>]";
+        "[--apply --plan-digest <sha256>]\n" +
+        "       guide issue <status|set> [--mode prepare|ask|never]";
 }

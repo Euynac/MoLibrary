@@ -234,6 +234,48 @@ public sealed class GuideSourceTests
         Assert.Null(GuideGitProbe.CanonicalRepository(null));
     }
 
+    [Fact]
+    public async Task Describe_ProjectsDeclaredRepositoriesWithLiveObservation()
+    {
+        using var fixture = new SourceFixture();
+        var service = fixture.CreateService();
+
+        // Unbound repositories carry null binding fields instead of a warning.
+        var unbound = Assert.Single(service.Describe(), status => status.Repository == "Tairitsua/Monica");
+        Assert.Null(unbound.Binding);
+        Assert.Null(unbound.Observation);
+        Assert.Null(unbound.LedgerIssue);
+        Assert.Contains("monica", unbound.Aliases);
+
+        var request = new GuideSourceBindRequest("Tairitsua/Monica", fixture.CheckoutPath, null);
+        var preview = await service.BindAsync(request, cancellationToken: CancellationToken);
+        await service.BindAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        var bound = Assert.Single(service.Describe(), status => status.Repository == "Tairitsua/Monica");
+        Assert.Equal(fixture.CheckoutPath, bound.Binding!.SourcePath);
+        Assert.Equal(SourceFixture.Commit, bound.Binding.Commit);
+        Assert.Equal("available", bound.Observation!.PathHealth);
+        Assert.Equal(SourceFixture.Commit, bound.Observation.ObservedCommit);
+    }
+
+    [Fact]
+    public void Describe_SurfacesAnUnreadableLedgerOnEveryRepository()
+    {
+        using var fixture = new SourceFixture();
+        Directory.CreateDirectory(Path.GetDirectoryName(fixture.LedgerFile)!);
+        File.WriteAllText(fixture.LedgerFile, "not json");
+        var service = fixture.CreateService();
+
+        var statuses = service.Describe();
+
+        Assert.All(statuses, status =>
+        {
+            Assert.Null(status.Binding);
+            Assert.NotNull(status.LedgerIssue);
+            Assert.Equal("source.bindings.ledger", status.LedgerIssue!.Id);
+        });
+    }
+
     private sealed class SourceFixture : IDisposable
     {
         internal const string Commit = "0123456789abcdef0123456789abcdef01234567";
