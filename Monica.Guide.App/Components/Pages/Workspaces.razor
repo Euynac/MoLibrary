@@ -10,6 +10,23 @@
 }
 else
 {
+    @if (Session.CurrentProduct.GlobalGuideSkill is not null)
+    {
+        <div class="card">
+            <div class="switch-row">
+                <span class="switch-text">
+                    <span class="primary">@string.Format(Session.T("ws-global-guide-title"), Session.CurrentProduct.GlobalGuideSkill)</span>
+                    <span class="secondary">@string.Format(Session.T("ws-global-guide-note"), Session.CurrentProduct.GlobalGuideSkill)</span>
+                </span>
+                <label class="switch">
+                    <input type="checkbox" checked="@GlobalGuideSkill"
+                           disabled="@PreferenceBusy"
+                           @onchange="e => SetGlobalGuideSkillAsync((bool)e.Value!)"/>
+                    <span class="track"></span>
+                </label>
+            </div>
+        </div>
+    }
     @if (Registered.Count == 0)
     {
         <div class="card">
@@ -235,6 +252,24 @@ else
 
     private bool Inspecting { get; set; }
 
+    private bool GlobalGuideSkill { get; set; }
+
+    private bool PreferenceBusy { get; set; }
+
+    private async Task SetGlobalGuideSkillAsync(bool enabled)
+    {
+        PreferenceBusy = true;
+        try
+        {
+            GlobalGuideSkill = enabled;
+            await Task.Run(() => Facade.SetGlobalGuideSkill(enabled));
+        }
+        finally
+        {
+            PreferenceBusy = false;
+        }
+    }
+
     private List<SetupWorkspaceView> Registered { get; set; } = [];
 
     private string CandidatePath { get; set; } = string.Empty;
@@ -276,6 +311,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         Session.LanguageChanged += OnLanguageChanged;
+        GlobalGuideSkill = await Task.Run(() => Facade.GetGlobalGuideSkill());
         await ReloadAsync();
         Loading = false;
     }

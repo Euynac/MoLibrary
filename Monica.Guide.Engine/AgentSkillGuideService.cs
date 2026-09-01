@@ -961,8 +961,10 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         CancellationToken cancellationToken)
     {
         var targetName = TargetCheckName(installation.Target, installation.TargetRoot);
+        // Check ids keep the collision-proof digest name; humans see the project path.
+        var targetLabel = installation.WorkspaceRoot ?? $"the {targetName} target";
         ReportPhase(progress, $"status.skills.{installation.Environment.Selector}.{targetName}",
-            $"Verifying the {targetName} skill projection in {installation.Environment.Selector} ({installation.Trees.Count} skills)…");
+            $"Verifying the skill projection for {targetLabel} in {installation.Environment.Selector} ({installation.Trees.Count} skills)…");
         var checks = new List<GuideCheck>();
         var drift = false;
         var environment = installation.Environment;
@@ -1047,7 +1049,9 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         checks.Add(Check(
             $"skills.{environment.Selector}.{targetName}.catalog",
             drift ? GuideCheckStatus.Warning : GuideCheckStatus.Ok,
-            drift ? "An installed skill tree drifted or disappeared." : "All installed skill trees match their recorded digests.",
+            drift
+                ? $"An installed skill tree drifted or disappeared for {targetLabel}."
+                : $"All installed skill trees match their recorded digests ({targetLabel}).",
             drift ? "Review local changes, then reinstall from one immutable release." : null));
         // Project directories are workspace territory: repositories may legitimately carry
         // projections the guide does not own (for example a synced checkout), so the foreign
@@ -1332,7 +1336,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             }
 
             var profile = request.Profile ?? config.Profile;
-            var selected = SelectProfileClosure(catalog, profile, checks);
+            var selected = SelectProfileClosure(catalog, profile, checks, WorkspaceGuideSkillExclusion());
             if (selected is null)
             {
                 return (null, [], null);
@@ -1391,7 +1395,8 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
     internal static IReadOnlyList<SkillCatalogEntry>? SelectProfileClosure(
         SkillCatalog catalog,
         string profile,
-        ICollection<GuideCheck> checks)
+        ICollection<GuideCheck> checks,
+        string? excludedSkill = null)
     {
         var inProfile = catalog.Skills
             .Where(skill => skill.Profiles?.Contains(profile, StringComparer.Ordinal) == true)
@@ -1407,8 +1412,35 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             return null;
         }
 
-        return inProfile;
+        if (excludedSkill is null)
+        {
+            return inProfile;
+        }
+
+        // The global-first preference keeps the product's guide skill out of workspace
+        // closures; the next workspace configure treats an existing local copy as a stale
+        // tree and its plan removes it, while disabling the preference restores it.
+        var filtered = inProfile
+            .Where(skill => !string.Equals(skill.Name, excludedSkill, StringComparison.Ordinal))
+            .ToArray();
+        return filtered.Length == 0
+            ? inProfile
+            : filtered;
     }
+
+    /// <summary>
+    /// The guide skill this product keeps out of workspace closures while the global-first
+    /// preference is enabled, or null when the preference is off or the product declares none.
+    /// </summary>
+    private string? WorkspaceGuideSkillExclusion()
+        => WorkspaceGuideSkillExclusion(_definition, _productPaths);
+
+    /// <summary>Preference-aware exclusion shared with the workspace service's counting surfaces.</summary>
+    internal static string? WorkspaceGuideSkillExclusion(AgentProductDefinition definition, AgentProductPaths productPaths)
+        => definition.GlobalGuideSkill is not null
+           && GuidePreferencesStore.Load(definition, productPaths).GlobalGuideSkill
+            ? definition.GlobalGuideSkill
+            : null;
 
     /// <summary>
     /// Registers an initialized workspace during a workspace configure when it is not in the

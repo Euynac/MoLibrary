@@ -79,6 +79,7 @@ public sealed partial class GuideWorkspaceService
     private readonly AgentProductDefinition _definition;
     private readonly GuidePaths _enginePaths;
     private readonly SkillCatalog? _catalog;
+    private readonly AgentProductPaths _productPaths;
     private readonly IGuideGitProbe _git;
 
     /// <summary>
@@ -89,6 +90,7 @@ public sealed partial class GuideWorkspaceService
         AgentProductDefinition definition,
         GuidePaths enginePaths,
         SkillCatalog? catalog,
+        AgentProductPaths? productPaths = null,
         IGuideGitProbe? git = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
@@ -96,6 +98,7 @@ public sealed partial class GuideWorkspaceService
         _definition = definition;
         _enginePaths = enginePaths;
         _catalog = catalog;
+        _productPaths = productPaths ?? AgentProductPaths.ForCurrentUser(definition);
         _git = git ?? new GuideGitProbe();
     }
 
@@ -303,7 +306,11 @@ public sealed partial class GuideWorkspaceService
     private (int Installed, int ProfileCount) CountWorkspaceSkills(string workspace, string profile)
     {
         var closure = _catalog is not null
-            ? AgentGuideService.SelectProfileClosure(_catalog, profile, new List<GuideCheck>())
+            ? AgentGuideService.SelectProfileClosure(
+                _catalog,
+                profile,
+                new List<GuideCheck>(),
+                AgentGuideService.WorkspaceGuideSkillExclusion(_definition, _productPaths))
             : null;
         if (closure is null || !File.Exists(_enginePaths.GuideLedgerFile))
         {

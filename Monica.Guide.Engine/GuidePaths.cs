@@ -76,6 +76,8 @@ public sealed class AgentProductPaths
 
     public string ServerConfigurationFile => Path.Combine(ConfigurationDirectory, "server.json");
 
+    public string GuidePreferencesFile => Path.Combine(ConfigurationDirectory, "preferences.json");
+
     public string InstallationLocatorFile => Path.Combine(ProductDataRoot, "installation.json");
 
     public string TransactionDirectory => Path.Combine(ProductDataRoot, "transactions");

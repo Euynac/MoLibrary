@@ -598,6 +598,20 @@ public sealed class SetupFacade(SetupSession session)
     private SkillCatalog? LoadWorkspaceCatalog()
         => GuideWorkspaceService.TryLoadProductCatalog(Product, GuidePaths.ForCurrentUser());
 
+    /// <summary>Whether workspace installs keep the product's guide skill out of project closures.</summary>
+    public bool GetGlobalGuideSkill()
+        => GuidePreferencesStore.Load(Product).GlobalGuideSkill;
+
+    /// <summary>
+    /// Sets the global-first guide-skill preference. The next workspace update converges:
+    /// enabling removes per-workspace copies of the guide skill, disabling reinstalls them.
+    /// </summary>
+    public void SetGlobalGuideSkill(bool enabled)
+    {
+        GuidePreferencesStore.Save(Product, GuidePreferencesStore.Load(Product) with { GlobalGuideSkill = enabled });
+        session.DashboardCache = null;
+    }
+
     /// <summary>Previews removal of the selected guide-owned skill targets (all when null).</summary>
     public async Task<SetupOperationView> PreviewUninstallAsync(
         GuideUnconfigureRequest request,

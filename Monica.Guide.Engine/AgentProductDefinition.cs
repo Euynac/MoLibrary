@@ -73,6 +73,13 @@ public sealed record AgentProductDefinition
     /// </summary>
     public string? DoctorReadOnlyTool { get; init; }
 
+    /// <summary>
+    /// The product's guide skill: workspace-independent product infrastructure that the
+    /// global-first preference keeps out of per-workspace closures and installs once at the
+    /// user level instead. Null for products without such a skill.
+    /// </summary>
+    public string? GlobalGuideSkill { get; init; }
+
     /// <summary>Named scenario routes a release must declare exactly; null skips the pin.</summary>
     public IReadOnlyList<string>? SupportedRoutes { get; init; }
 

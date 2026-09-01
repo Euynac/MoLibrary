@@ -342,6 +342,7 @@ public sealed class GuideWorkspaceTests
         internal WorkspaceFixture()
         {
             EnginePaths = new GuidePaths(Path.Combine(_root, "engine-data"));
+            ProductPaths = new AgentProductPaths(Path.Combine(_root, "product-data"));
             Workspace = Path.Combine(_root, "workspace");
             SkillsRoot = Path.Combine(_root, "bundle", "skills");
             Directory.CreateDirectory(Workspace);
@@ -351,12 +352,13 @@ public sealed class GuideWorkspaceTests
         internal static AgentProductDefinition Product => KnownAgentProducts.Monica;
         internal static GuideInstructionMarkers Markers { get; } = new(MarkerStart, MarkerEnd);
         internal GuidePaths EnginePaths { get; }
+        internal AgentProductPaths ProductPaths { get; }
         internal string Workspace { get; }
         internal string SkillsRoot { get; }
         internal string ConfigFile => Path.Combine(Workspace, ".monica", "guide.json");
 
         internal GuideWorkspaceService CreateService(IGuideGitProbe? git = null)
-            => new(Product, EnginePaths, LoadCatalog(), git ?? new NoGitProbe());
+            => new(Product, EnginePaths, LoadCatalog(), ProductPaths, git ?? new NoGitProbe());
 
         internal GuideWorkspaceInitRequest InitRequest(string? profile = null, string? capability = null, string? second = null)
         {

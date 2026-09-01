@@ -52,6 +52,7 @@ public static class KnownAgentProducts
         GitHubSlug = "Tairitsua/Monica",
         ArchiveAssetNameTemplate = "monica-guide-v{version}-{rid}.zip",
         BundleDirectoryPrefix = "monica-guide-",
+        GlobalGuideSkill = "monica-guide",
         Tagline = "the Monica toolbox: agent skills, framework guidance, and this guide.",
         ProductDataRootName = "Monica",
     };
@@ -79,6 +80,7 @@ public static class KnownAgentProducts
         GitHubSlug = "Tairitsua/Monica.Workflow",
         ArchiveAssetNameTemplate = "monica-workflow-v{version}-{rid}.zip",
         BundleDirectoryPrefix = "monica-workflow-",
+        GlobalGuideSkill = "monica-workflow-guide",
         McpServerName = "monica-workflow",
         McpPath = "/mcp/monica-workflow",
         DoctorReadOnlyTool = "list-document-contracts",

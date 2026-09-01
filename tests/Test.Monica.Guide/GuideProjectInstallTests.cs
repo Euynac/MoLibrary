@@ -171,6 +171,77 @@ public sealed class GuideProjectInstallTests
     }
 
     [Fact]
+    public async Task ConfigureWorkspace_ConvergesGuideSkillWithGlobalFirstPreference()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application");
+        var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+        var guideDirectory = Path.Combine(fixture.ProjectSkillRoot(workspace), ProjectFixture.GuideSkill);
+
+        void SetPreference(bool enabled)
+            => GuidePreferencesStore.Save(
+                ProjectFixture.Product,
+                new GuidePreferences(GuidePreferences.CurrentSchemaVersion, enabled),
+                fixture.ProductPaths);
+
+        // Preference off: the workspace closure installs the guide skill locally.
+        SetPreference(false);
+        using (var service = fixture.CreateService())
+        {
+            var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        }
+
+        Assert.True(Directory.Exists(guideDirectory));
+
+        // Enabling global-first makes the next workspace update remove the local copy.
+        SetPreference(true);
+        using (var service = fixture.CreateService())
+        {
+            var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            Assert.Contains(preview.Plan!.Actions, action =>
+                action.Kind == GuidePlanActionKind.DeleteSkillDirectory
+                && action.Target.EndsWith(ProjectFixture.GuideSkill, StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(preview.Plan.Actions, action =>
+                action.Kind == GuidePlanActionKind.ReplaceSkillDirectory
+                && action.Target.EndsWith(ProjectFixture.GuideSkill, StringComparison.OrdinalIgnoreCase));
+            var applied = await service.ApplyConfigureAsync(request, preview.Plan.PlanDigest, cancellationToken: CancellationToken);
+            Assert.True(applied.Plan!.Applied);
+        }
+
+        Assert.False(Directory.Exists(guideDirectory));
+        Assert.True(Directory.Exists(Path.Combine(fixture.ProjectSkillRoot(workspace), ProjectFixture.ApplicationSkill)));
+
+        // Disabling again restores the local copy on the next workspace update.
+        SetPreference(false);
+        using (var service = fixture.CreateService())
+        {
+            var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            Assert.Contains(preview.Plan!.Actions, action =>
+                action.Kind == GuidePlanActionKind.ReplaceSkillDirectory
+                && action.Target.EndsWith(ProjectFixture.GuideSkill, StringComparison.OrdinalIgnoreCase));
+            var applied = await service.ApplyConfigureAsync(request, preview.Plan.PlanDigest, cancellationToken: CancellationToken);
+            Assert.True(applied.Plan!.Applied);
+        }
+
+        Assert.True(Directory.Exists(guideDirectory));
+    }
+
+    [Fact]
+    public void GuidePreferences_DefaultToGlobalFirstAndRoundTrip()
+    {
+        using var fixture = new ProjectFixture();
+
+        Assert.True(GuidePreferencesStore.Load(ProjectFixture.Product, fixture.ProductPaths).GlobalGuideSkill);
+
+        GuidePreferencesStore.Save(
+            ProjectFixture.Product,
+            new GuidePreferences(GuidePreferences.CurrentSchemaVersion, GlobalGuideSkill: false),
+            fixture.ProductPaths);
+        Assert.False(GuidePreferencesStore.Load(ProjectFixture.Product, fixture.ProductPaths).GlobalGuideSkill);
+    }
+
+    [Fact]
     public async Task WorkspaceLifecycle_RegistersListsAndReportsSkillHealth()
     {
         using var fixture = new ProjectFixture();
@@ -257,6 +328,7 @@ public sealed class GuideProjectInstallTests
     {
         internal const string ApplicationSkill = "monica-application";
         internal const string ExtensionSkill = "monica-extension";
+        internal const string GuideSkill = "monica-guide";
         private readonly string _root = Path.Combine(Path.GetTempPath(), $"guide-project-{Guid.NewGuid():N}");
 
         internal ProjectFixture()
@@ -342,7 +414,8 @@ public sealed class GuideProjectInstallTests
             foreach (var (name, role, profiles) in new[]
                      {
                          (ApplicationSkill, "development", new[] { "monica-application" }),
-                         (ExtensionSkill, "development", new[] { "monica-extension" })
+                         (ExtensionSkill, "development", new[] { "monica-extension" }),
+                         (GuideSkill, "router", new[] { "monica-application" })
                      })
             {
                 var skillRoot = Path.Combine(SkillsRoot, name);
