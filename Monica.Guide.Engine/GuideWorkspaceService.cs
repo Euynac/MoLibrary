@@ -258,12 +258,16 @@ public sealed partial class GuideWorkspaceService
                                        && config.InstructionBlockVersion == entry.InstructionBlockVersion;
             var (installed, profileCount) = CountWorkspaceSkills(entry.Workspace, entry.Profile);
             var instructionsCurrent = false;
+            var instructionsComparable = false;
             if (config is not null)
             {
-                var markers = _catalog?.ManagedInstructions?.Markers;
+                var managed = _catalog?.ManagedInstructions;
                 var agentsText = ReadText(Path.Combine(entry.Workspace, AGENTS_FILE_NAME));
-                instructionsCurrent = markers is not null
-                                      && GuideInstructionBlock.State(agentsText, markers) == GuideInstructionBlockStatus.Valid;
+                // Without a catalog the expected body is unknowable, so staleness stays silent.
+                instructionsComparable = managed is not null && managed.Templates.ContainsKey(config.Profile);
+                instructionsCurrent = instructionsComparable
+                                      && GuideInstructionBlock.State(agentsText, managed!.Markers) == GuideInstructionBlockStatus.Valid
+                                      && InstructionsMatch(agentsText, config.Profile, managed.Markers);
             }
 
             if (!exists)
@@ -277,6 +281,10 @@ public sealed partial class GuideWorkspaceService
             else if (!configurationCurrent)
             {
                 issues.Add("The workspace was re-initialized with a different profile or instruction version.");
+            }
+            else if (instructionsComparable && !instructionsCurrent)
+            {
+                issues.Add("The managed instruction block is stale; update the workspace to converge it.");
             }
 
             if (exists && profileCount > 0 && installed < profileCount)
@@ -381,6 +389,110 @@ public sealed partial class GuideWorkspaceService
             : null;
         var (prepared, blockers) = BuildInitPlan(request);
         return await CompleteAsync(prepared, blockers, expectedDigest, progress, cancellationToken);
+    }
+
+    /// <summary>
+    /// Converges the managed instruction surface during a workspace configure, so machine
+    /// projection switches (source hints, issue policy) and catalog template changes apply
+    /// with the same update that refreshes skills. The repository-shared configuration and
+    /// the registry entry record the block version actually written.
+    /// </summary>
+    internal void ConvergeInstructions(
+        string workspaceRoot,
+        ICollection<GuideCheck> checks,
+        List<GuidePlannedMutation> mutations)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
+        var root = Path.GetFullPath(workspaceRoot);
+        var config = GuideWorkspaceStore.LoadConfig(root, out _);
+        if (config is null || !Instructions.Templates.ContainsKey(config.Profile))
+        {
+            return;
+        }
+
+        var markers = Instructions.Markers;
+        var agentsPath = Path.Combine(root, AGENTS_FILE_NAME);
+        var agentsText = ReadText(agentsPath);
+        if (GuideInstructionBlock.State(agentsText, markers) == GuideInstructionBlockStatus.Malformed)
+        {
+            checks.Add(Check("workspace.instructions", GuideCheckStatus.Error,
+                $"Root {AGENTS_FILE_NAME} contains malformed or duplicate guide markers."));
+            return;
+        }
+
+        var changed = false;
+        var agentsAfter = GuideInstructionBlock.Upsert(agentsText, RenderInstructions(config.Profile), markers);
+        if (!string.Equals(agentsText, agentsAfter, StringComparison.Ordinal))
+        {
+            GuideMutations.AddLocalWrite(
+                "workspace.instructions.agents",
+                agentsPath,
+                GuidePlanning.Utf8(agentsAfter),
+                $"Update the root managed instruction block in {AGENTS_FILE_NAME} to the current catalog and machine state.",
+                mutations);
+            changed = true;
+        }
+
+        var wantsClaude = WantsClaudeImport();
+        var claudePath = Path.Combine(root, CLAUDE_FILE_NAME);
+        var claudeText = ReadText(claudePath);
+        if (wantsClaude)
+        {
+            var claudeAfter = GuideInstructionBlock.EnsureClaudeImport(claudeText);
+            if (!string.Equals(claudeText, claudeAfter, StringComparison.Ordinal))
+            {
+                GuideMutations.AddLocalWrite(
+                    "workspace.instructions.claude",
+                    claudePath,
+                    GuidePlanning.Utf8(claudeAfter),
+                    $"Ensure the minimal {CLAUDE_IMPORT_LINE} import in {CLAUDE_FILE_NAME}.",
+                    mutations);
+                changed = true;
+            }
+        }
+        else if (config.ManagedClaudeImport && claudeText.Length > 0)
+        {
+            var claudeAfter = GuideInstructionBlock.RemoveClaudeImport(claudeText);
+            if (!string.Equals(claudeText, claudeAfter, StringComparison.Ordinal))
+            {
+                changed = AddClaudeImportRemoval(claudePath, claudeAfter, mutations) || changed;
+            }
+        }
+
+        if (changed)
+        {
+            checks.Add(Check("workspace.instructions.converged", GuideCheckStatus.Ok,
+                $"The managed instruction block in {AGENTS_FILE_NAME} converges with the current catalog and machine state."));
+        }
+
+        if (config.InstructionBlockVersion == Instructions.Version && config.ManagedClaudeImport == wantsClaude)
+        {
+            return;
+        }
+
+        GuideMutations.AddLocalWrite(
+            "workspace.config.write",
+            GuideWorkspaceStore.ConfigPath(root),
+            GuidePlanning.JsonBytes(config with
+            {
+                InstructionBlockVersion = Instructions.Version,
+                ManagedClaudeImport = wantsClaude
+            }),
+            "Record the converged instruction block version in the workspace configuration.",
+            mutations);
+        GuideMutations.AddLocalWrite(
+            "workspace.registry.write",
+            GuideWorkspaceRegistryFile.PathFor(_enginePaths),
+            GuidePlanning.JsonBytes(GuideWorkspaceRegistryFile.Upsert(
+                GuideWorkspaceRegistryFile.Load(_enginePaths),
+                new GuideWorkspaceEntry(
+                    root,
+                    _definition.ProductId,
+                    config.Profile,
+                    config.Capabilities,
+                    Instructions.Version))),
+            "Record the converged instruction block version in the engine registry.",
+            mutations);
     }
 
     /// <summary>Previews or applies removing every guide-owned workspace artifact.</summary>
@@ -1363,7 +1475,67 @@ public sealed partial class GuideWorkspaceService
                        ?? throw new InvalidDataException($"Catalog does not define instructions for profile '{profile}'.");
         var skills = string.Join(", ", template.Skills.Select(static name => $"${name}"));
         var rules = string.Join("\n", template.Rules.Select(static rule => $"- {rule}"));
-        return $"## Monica agent workflow\n\nProfile skills: {skills}.\n\n{rules}";
+        return $"## Monica agent workflow\n\nProfile skills: {skills}.\n\n{rules}{ProjectedTail()}";
+    }
+
+    private string? _projectedTail;
+
+    /// <summary>
+    /// Machine-state sections appended to every managed block: verified first-party source
+    /// locators and the issue-reporting policy, each gated by its machine-global switch.
+    /// Cached per service instance because binding observation probes Git once, not once
+    /// per rendered workspace.
+    /// </summary>
+    private string ProjectedTail()
+    {
+        if (_projectedTail is not null)
+        {
+            return _projectedTail;
+        }
+
+        var sections = new List<string>();
+        var projection = GuideWorkspaceProjectionStore.Load(_enginePaths);
+        if (projection.SourceHints)
+        {
+            var bound = new GuideSourceService(_enginePaths, _catalog).Describe()
+                .Where(static status => status.Binding is not null)
+                .OrderBy(static status => status.Repository, StringComparer.Ordinal)
+                .ToArray();
+            if (bound.Length > 0)
+            {
+                var lines = bound
+                    .Select(static status =>
+
+                        // The stored binding carries exact provenance; live health stays a
+                        // lookup-time concern so the block does not churn with every checkout.
+                        $"- {status.Binding!.Repository} verified checkout (lookup only, never write permission): {status.Binding.SourcePath} (commit {(status.Binding.Commit.Length > 12 ? status.Binding.Commit[..12] : status.Binding.Commit)}).")
+                    .ToList();
+                lines.Add("- Bindings can move or go stale; re-verify with the guide's `source resolve` before relying on a path.");
+                sections.Add($"## First-party source on this machine\n\n{string.Join("\n", lines)}");
+            }
+        }
+
+        if (projection.IssuePolicy)
+        {
+            var mode = GuideIssuePreferencesStore.Load(_enginePaths).IssueReporting;
+            var modeName = mode.ToString().ToLowerInvariant();
+            sections.Add(
+                "## Issue reporting policy\n\n" +
+                $"- Machine policy is '{modeName}': {mode.Describe()}\n" +
+                "- A persisted policy never authorizes a remote action; current-session approval names the exact action and target.");
+        }
+
+        _projectedTail = sections.Count == 0 ? string.Empty : $"\n\n{string.Join("\n\n", sections)}";
+        return _projectedTail;
+    }
+
+    /// <summary>Whether the managed body equals the currently rendered instructions, machine projection included.</summary>
+    private bool InstructionsMatch(string agentsText, string profile, GuideInstructionMarkers markers)
+    {
+        var expected = $"\n{RenderInstructions(profile).Trim()}\n";
+        var actual = GuideInstructionBlock.NormalizeNewlines(
+            GuideInstructionBlock.Body(agentsText, markers) ?? string.Empty);
+        return string.Equals(actual, expected, StringComparison.Ordinal);
     }
 
     /// <summary>The catalog required by init, inspect, and forget; registry-only surfaces tolerate a null catalog.</summary>
@@ -1502,15 +1674,12 @@ public sealed partial class GuideWorkspaceService
                     "Run guide init again and approve the plan."));
                 break;
             case GuideInstructionBlockStatus.Valid when config is not null:
-                var expected = $"\n{RenderInstructions(config.Profile).Trim()}\n";
-                var actual = GuideInstructionBlock.NormalizeNewlines(
-                    GuideInstructionBlock.Body(agentsText, markers) ?? string.Empty);
-                checks.Add(string.Equals(actual, expected, StringComparison.Ordinal)
+                checks.Add(InstructionsMatch(agentsText, config.Profile, markers)
                     ? Check("workspace.instructions", GuideCheckStatus.Ok,
                         $"Root {AGENTS_FILE_NAME} has one current managed instruction block.")
                     : Check("workspace.instructions", GuideCheckStatus.Error,
-                        $"Root {AGENTS_FILE_NAME} managed body does not match the configured profile template.",
-                        "Run guide init again and approve the plan."));
+                        $"Root {AGENTS_FILE_NAME} managed body does not match the configured profile template or machine state.",
+                        "Run guide init again and approve the plan, or update the workspace to converge it."));
                 if (config.InstructionBlockVersion != Instructions.Version)
                 {
                     checks.Add(Check("workspace.instructions", GuideCheckStatus.Warning,

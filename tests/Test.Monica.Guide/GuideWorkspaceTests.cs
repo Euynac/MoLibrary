@@ -100,6 +100,58 @@ public sealed class GuideWorkspaceTests
     }
 
     [Fact]
+    public async Task Init_ProjectsBoundSourcesAndTheIssuePolicyIntoTheManagedBlock()
+    {
+        using var fixture = new WorkspaceFixture();
+        var root = Path.GetDirectoryName(fixture.Workspace)!;
+        var checkout = Path.Combine(root, "checkout");
+        Directory.CreateDirectory(checkout);
+        var bindRequest = new GuideSourceBindRequest("monica", checkout, null);
+        var source = new GuideSourceService(fixture.EnginePaths, null, new CanonicalCheckoutProbe(checkout));
+        var bind = await source.BindAsync(bindRequest, cancellationToken: CancellationToken);
+        await source.BindAsync(bindRequest, bind.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        var service = fixture.CreateService();
+        fixture.WriteProject("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="Monica.Core" Version="1.2.3" />
+              </ItemGroup>
+            </Project>
+            """);
+        var request = fixture.InitRequest(profile: "application", capability: "microservice");
+        var preview = await service.InitAsync(request, cancellationToken: CancellationToken);
+        await service.InitAsync(request, preview.Plan.PlanDigest, cancellationToken: CancellationToken);
+
+        var agents = await File.ReadAllTextAsync(fixture.WorkspaceFile("AGENTS.md"), CancellationToken);
+        Assert.Contains("## First-party source on this machine", agents, StringComparison.Ordinal);
+        Assert.Contains(checkout, agents, StringComparison.Ordinal);
+        Assert.Contains("lookup only, never write permission", agents, StringComparison.Ordinal);
+        Assert.Contains("(commit 0123456789ab).", agents, StringComparison.Ordinal);
+        Assert.Contains("## Issue reporting policy", agents, StringComparison.Ordinal);
+        Assert.Contains("Machine policy is 'prepare'", agents, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Init_OmitsProjectionSectionsWhenTheSwitchesAreOff()
+    {
+        using var fixture = new WorkspaceFixture();
+        GuideWorkspaceProjectionStore.Save(
+            fixture.EnginePaths,
+            new GuideWorkspaceProjection(GuideWorkspaceProjection.CurrentSchemaVersion, SourceHints: false, IssuePolicy: false));
+        var service = fixture.CreateService();
+        fixture.WriteProject(string.Empty);
+        var request = fixture.InitRequest(profile: "application", capability: "microservice");
+        var preview = await service.InitAsync(request, cancellationToken: CancellationToken);
+        await service.InitAsync(request, preview.Plan.PlanDigest, cancellationToken: CancellationToken);
+
+        var agents = await File.ReadAllTextAsync(fixture.WorkspaceFile("AGENTS.md"), CancellationToken);
+        Assert.Contains("Profile skills: $monica-guide.", agents, StringComparison.Ordinal);
+        Assert.DoesNotContain("First-party source on this machine", agents, StringComparison.Ordinal);
+        Assert.DoesNotContain("Issue reporting policy", agents, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Init_RejectsStalePlanDigestAndFileDrift()
     {
         using var fixture = new WorkspaceFixture();

@@ -88,6 +88,9 @@ public sealed record SetupSourceRepositoryView(
     IReadOnlyList<SetupCheckView> Warnings,
     string? LedgerIssue);
 
+/// <summary>Machine-global switches projecting machine state into workspace instruction blocks.</summary>
+public sealed record SetupWorkspaceProjectionView(bool SourceHints, bool IssuePolicy);
+
 /// <summary>Advisory detection of one workspace candidate for the add-workspace flow.</summary>
 public sealed record SetupWorkspaceDetectionView(
     GuideWorkspaceDetectionOutcome Outcome,
@@ -640,6 +643,26 @@ public sealed class SetupFacade(SetupSession session)
         => GuideIssuePreferencesStore.Save(
             GuidePaths.ForCurrentUser(),
             GuideIssuePreferencesStore.Load(GuidePaths.ForCurrentUser()) with { IssueReporting = mode });
+
+    /// <summary>Machine-global workspace instruction projection switches.</summary>
+    public SetupWorkspaceProjectionView GetWorkspaceProjection()
+    {
+        var projection = GuideWorkspaceProjectionStore.Load(GuidePaths.ForCurrentUser());
+        return new SetupWorkspaceProjectionView(projection.SourceHints, projection.IssuePolicy);
+    }
+
+    /// <summary>
+    /// Sets the machine-global projection switches. Workspaces converge on their next
+    /// initialization or update, mirroring the global-first guide-skill preference.
+    /// </summary>
+    public void SetWorkspaceProjection(bool sourceHints, bool issuePolicy)
+        => GuideWorkspaceProjectionStore.Save(
+            GuidePaths.ForCurrentUser(),
+            GuideWorkspaceProjectionStore.Load(GuidePaths.ForCurrentUser()) with
+            {
+                SourceHints = sourceHints,
+                IssuePolicy = issuePolicy
+            });
 
     /// <summary>Observes every declared first-party source repository and its global binding.</summary>
     public async Task<IReadOnlyList<SetupSourceRepositoryView>> ListSourcesAsync(

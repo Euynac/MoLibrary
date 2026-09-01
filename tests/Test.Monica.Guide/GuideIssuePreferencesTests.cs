@@ -108,6 +108,26 @@ public sealed class GuideIssuePreferencesTests
         Assert.Equal(GuideIssueReportingMode.Never, GuideIssuePreferencesStore.Load(root.Paths).IssueReporting);
     }
 
+    [Fact]
+    public void WorkspaceProjection_DefaultsOnAndRoundTrips()
+    {
+        using var root = new TempEngineRoot();
+        var projection = GuideWorkspaceProjectionStore.Load(root.Paths);
+        Assert.True(projection.SourceHints);
+        Assert.True(projection.IssuePolicy);
+
+        GuideWorkspaceProjectionStore.Save(root.Paths, projection with { SourceHints = false });
+        var saved = GuideWorkspaceProjectionStore.Load(root.Paths);
+        Assert.Equal(GuideWorkspaceProjection.CurrentSchemaVersion, saved.SchemaVersion);
+        Assert.False(saved.SourceHints);
+        Assert.True(saved.IssuePolicy);
+
+        File.WriteAllText(
+            root.Paths.WorkspaceProjectionFile,
+            """{"schemaVersion":99,"sourceHints":true,"issuePolicy":true}""");
+        Assert.Throws<InvalidDataException>(() => GuideWorkspaceProjectionStore.Load(root.Paths));
+    }
+
     private sealed class TempEngineRoot : IDisposable
     {
         private readonly string _root = Path.Combine(Path.GetTempPath(), $"guide-issue-{Guid.NewGuid():N}");

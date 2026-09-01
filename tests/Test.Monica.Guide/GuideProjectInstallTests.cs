@@ -228,6 +228,92 @@ public sealed class GuideProjectInstallTests
     }
 
     [Fact]
+    public async Task ConfigureWorkspace_ConvergesMachineProjectionIntoInstructions()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application");
+        var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+        var agentsFile = Path.Combine(workspace, "AGENTS.md");
+
+        void SetProjection(bool sourceHints, bool issuePolicy)
+            => GuideWorkspaceProjectionStore.Save(
+                fixture.EnginePaths,
+                new GuideWorkspaceProjection(GuideWorkspaceProjection.CurrentSchemaVersion, sourceHints, issuePolicy));
+
+        async Task ApplyAsync()
+        {
+            using var service = fixture.CreateService();
+            var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        }
+
+        // Defaults on, no binding yet: the first update creates the block with the issue policy.
+        await ApplyAsync();
+        var agents = await File.ReadAllTextAsync(agentsFile, CancellationToken);
+        Assert.Contains("## Issue reporting policy", agents, StringComparison.Ordinal);
+        Assert.DoesNotContain("First-party source on this machine", agents, StringComparison.Ordinal);
+
+        // Binding a verified source makes the next update project the locator into the block.
+        var root = Path.GetDirectoryName(fixture.BundleRoot)!;
+        var checkout = Path.Combine(root, "checkout");
+        Directory.CreateDirectory(checkout);
+        var source = new GuideSourceService(fixture.EnginePaths, null, new CanonicalCheckoutProbe(checkout));
+        var bindRequest = new GuideSourceBindRequest("monica", checkout, null);
+        var bind = await source.BindAsync(bindRequest, cancellationToken: CancellationToken);
+        await source.BindAsync(bindRequest, bind.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        using (var service = fixture.CreateService())
+        {
+            var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            Assert.Contains(preview.Plan!.Actions, action =>
+                action.Kind == GuidePlanActionKind.WriteFile
+                && action.Target.EndsWith("AGENTS.md", StringComparison.OrdinalIgnoreCase));
+            await service.ApplyConfigureAsync(request, preview.Plan.PlanDigest, cancellationToken: CancellationToken);
+        }
+
+        agents = await File.ReadAllTextAsync(agentsFile, CancellationToken);
+        Assert.Contains("First-party source on this machine", agents, StringComparison.Ordinal);
+        Assert.Contains(checkout, agents, StringComparison.Ordinal);
+
+        // Turning both switches off removes the sections with the next update.
+        SetProjection(false, false);
+        await ApplyAsync();
+        agents = await File.ReadAllTextAsync(agentsFile, CancellationToken);
+        Assert.DoesNotContain("First-party source on this machine", agents, StringComparison.Ordinal);
+        Assert.DoesNotContain("## Issue reporting policy", agents, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ListWorkspaces_FlagsStaleInstructionsAfterAProjectionChange()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application");
+        using (var service = fixture.CreateService())
+        {
+            var preview = await service.PreviewConfigureAsync(
+                new GuideConfigureRequest(null, null, [], Workspace: workspace),
+                cancellationToken: CancellationToken);
+            await service.ApplyConfigureAsync(
+                new GuideConfigureRequest(null, null, [], Workspace: workspace),
+                preview.Plan!.PlanDigest,
+                cancellationToken: CancellationToken);
+        }
+
+        var workspaceService = new GuideWorkspaceService(ProjectFixture.Product, fixture.EnginePaths, fixture.LoadCatalog());
+        var current = workspaceService.ListWorkspaces().Single();
+        Assert.True(current.InstructionsCurrent);
+
+        GuideWorkspaceProjectionStore.Save(
+            fixture.EnginePaths,
+            new GuideWorkspaceProjection(GuideWorkspaceProjection.CurrentSchemaVersion, SourceHints: true, IssuePolicy: false));
+        workspaceService = new GuideWorkspaceService(ProjectFixture.Product, fixture.EnginePaths, fixture.LoadCatalog());
+        var stale = workspaceService.ListWorkspaces().Single();
+
+        Assert.False(stale.InstructionsCurrent);
+        Assert.Contains(stale.Issues, issue => issue.Contains("stale", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void GuidePreferences_DefaultToGlobalFirstAndRoundTrip()
     {
         using var fixture = new ProjectFixture();
