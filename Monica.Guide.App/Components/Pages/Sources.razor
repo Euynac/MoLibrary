@@ -20,8 +20,8 @@ else
                     <input type="radio" name="issue-mode" checked="@selected" disabled="@PreferenceBusy"
                            @onchange="() => SetIssueModeAsync(mode)"/>
                     <span class="option-main">
-                        <span class="option-title">@Session.T($"src-issue-mode-{mode}")</span>
-                        <span class="option-desc">@Session.T($"src-issue-desc-{mode}")</span>
+                        <span class="option-title">@Session.T($"src-issue-mode-{ModeKey(mode)}")</span>
+                        <span class="option-desc">@Session.T($"src-issue-desc-{ModeKey(mode)}")</span>
                     </span>
                 </label>
             }
@@ -329,6 +329,9 @@ else
 
     private bool RepositoryHealthy(SetupSourceRepositoryView repository)
         => repository.Bound && repository.PathHealth == "available" && repository.Dirty != true;
+
+    private static string ModeKey(GuideIssueReportingMode mode)
+        => mode.ToString().ToLowerInvariant();
 
     private static string ShortCommit(string? commit)
         => commit is null ? string.Empty : commit.Length > 12 ? commit[..12] : commit;
