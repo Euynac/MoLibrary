@@ -55,6 +55,21 @@
                 </MudSelect>
             </MudItem>
 
+            <!-- Runtime status filtering -->
+            <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
+                <MudSelect T="string"
+                          Label="@L["SubscriptionFilter:RuntimeStatus"]"
+                          @bind-Value="SelectedTopicRuntimeState"
+                          OpenChanged="ApplyFilterOnSelectClosedAsync">
+                    <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Subscribing)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Subscribing)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Healthy)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Healthy)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Recovering)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Recovering)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Failed)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Failed)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(TopicSubscriptionRuntimeState.Stopped)">@L.GetTopicRuntimeStateText(TopicSubscriptionRuntimeState.Stopped)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
             <!-- Range filtering -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="string"
@@ -152,6 +167,22 @@
         }
     }
 
+    private string SelectedTopicRuntimeState
+    {
+        get => Filter?.TopicRuntimeState?.ToString() ?? AllSelectionValue;
+        set
+        {
+            if (Filter is null)
+            {
+                return;
+            }
+
+            Filter.TopicRuntimeState = Enum.TryParse<TopicSubscriptionRuntimeState>(value, out var runtimeState)
+                ? runtimeState
+                : null;
+        }
+    }
+
     private string SelectedScope
     {
         get => Filter?.Scope?.ToString() ?? AllSelectionValue;
@@ -214,6 +245,7 @@
 
         int count = 0;
         if (Filter.State.HasValue) count++;
+        if (Filter.TopicRuntimeState.HasValue) count++;
         if (Filter.Scope.HasValue) count++;
         if (Filter.IsAutoDiscovered.HasValue) count++;
         if (!string.IsNullOrWhiteSpace(Filter.SearchText)) count++;

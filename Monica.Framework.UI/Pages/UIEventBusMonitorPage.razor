@@ -49,6 +49,10 @@
             <MudIcon Icon="@Icons.Material.Filled.Bolt" />
             <span><small>@L["Page:Summary:Active"]</small><strong>@(_statistics?.ActiveSubscriptions ?? 0)</strong></span>
         </article>
+        <article class="event-bus-pulse event-bus-pulse--error">
+            <MudIcon Icon="@Icons.Material.Filled.HeartBroken" />
+            <span><small>@L["Page:Summary:Unhealthy"]</small><strong>@(_statistics?.UnhealthySubscriptions ?? 0)</strong></span>
+        </article>
         <article class="event-bus-pulse event-bus-pulse--info">
             <MudIcon Icon="@Icons.Material.Filled.Hub" />
             <span><small>@L["Page:Summary:Providers"]</small><strong>@_providers.Count</strong></span>
@@ -258,6 +262,9 @@
                 if (_filter.State.HasValue && s.State != _filter.State.Value)
                     return false;
 
+                if (_filter.TopicRuntimeState.HasValue && s.TopicRuntimeState != _filter.TopicRuntimeState.Value)
+                    return false;
+
                 if (_filter.Scope.HasValue && s.Scope != _filter.Scope.Value)
                     return false;
 
@@ -316,11 +323,15 @@
             var reader = MonitorService.SubscribeToChanges();
             await foreach (var change in reader.ReadAllAsync(ct))
             {
-                // Add to recent changes list
-                _recentChanges.Insert(0, change);
-                if (_recentChanges.Count > 100)
+                // Only registry changes feed the recent-changes list; runtime-status changes
+                // still trigger a refresh of the subscriptions and statistics.
+                if (change is EventBusMonitorChange.SubscriptionChanged subscriptionChange)
                 {
-                    _recentChanges.RemoveAt(100);
+                    _recentChanges.Insert(0, subscriptionChange.Change);
+                    if (_recentChanges.Count > 100)
+                    {
+                        _recentChanges.RemoveAt(100);
+                    }
                 }
 
                 // Refresh subscription list and statistics

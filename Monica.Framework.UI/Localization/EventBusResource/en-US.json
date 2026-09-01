@@ -16,6 +16,7 @@
       "AriaLabel": "Event bus runtime summary",
       "Subscriptions": "Subscriptions",
       "Active": "Active routes",
+      "Unhealthy": "Unhealthy",
       "Providers": "Providers",
       "RecentChanges": "Recent changes"
     },
@@ -74,7 +75,8 @@
       "StaticMethod": "Static method",
       "InstanceMethod": "Instance method",
       "TestListening": "Test listener active",
-      "RunningFor": "Running for {0}"
+      "RunningFor": "Running for {0}",
+      "RuntimeError": "Last error: {0} ({1})"
     },
     "States": {
       "Empty": "No subscriptions found."
@@ -85,6 +87,7 @@
     "Clear": "Clear Filters",
     "Provider": "Provider",
     "Status": "Status",
+    "RuntimeStatus": "Runtime status",
     "Scope": "Scope",
     "DiscoveryMode": "Discovery Mode",
     "Search": "Search",
@@ -120,6 +123,7 @@
       "BasicInformation": "Basic Information",
       "HandlerInformation": "Handler Information",
       "Lifecycle": "Lifecycle",
+      "Runtime": "Runtime Status",
       "Metadata": "Metadata"
     },
     "Fields": {
@@ -145,6 +149,21 @@
       "CurrentState": "Current State",
       "ActiveRunning": "Active - running for {0}"
     },
+    "Runtime": {
+      "NoData": "The provider has not reported runtime status for this topic yet.",
+      "State": "Runtime state",
+      "StateSince": "In state since",
+      "Provider": "Reporting provider",
+      "ConsecutiveFailures": "Consecutive failures",
+      "RecoveryCount": "Total recoveries",
+      "MessageErrorCount": "Message errors",
+      "ProcessedMessages": "Processed messages",
+      "LastMessageAt": "Last message received",
+      "LastError": "Last error",
+      "LastErrorAt": "Last error at",
+      "ExceptionDetails": "Exception details",
+      "RecentErrors": "Recent errors"
+    },
     "States": {
       "NotSelected": "No subscription selected."
     }
@@ -165,6 +184,7 @@
     "Card": {
       "Subscriptions": "Subscriptions: {0}",
       "Active": "Active: {0}",
+      "UnhealthyTopics": "Unhealthy topics: {0}",
       "ViewDetails": "View Details"
     },
     "Detail": {
@@ -294,6 +314,13 @@
     }
   },
   "Api": {
+    "TopicStatus": {
+      "List": {
+        "Name": "Get topic runtime status",
+        "Summary": "Get topic subscription runtime status",
+        "Description": "Gets the runtime health of all distributed topic subscriptions, including subscribing, recovering, and failed states together with the most recent error information."
+      }
+    },
     "Subscriptions": {
       "List": {
         "Name": "Get all subscriptions",
@@ -342,6 +369,7 @@
       "GetSubscriptionDetailFailed": "Failed to get subscription details: {0}",
       "FilterSubscriptionsFailed": "Failed to filter subscriptions: {0}",
       "StatisticsFailed": "Failed to calculate statistics: {0}",
+      "GetTopicStatusesFailed": "Failed to get topic runtime statuses: {0}",
       "AlreadyActive": "Subscription is already active.",
       "CannotActivateDisposed": "Cannot activate a disposed subscription.",
       "Activated": "Subscription activated.",
@@ -402,6 +430,13 @@
       "Inactive": "Inactive",
       "Disposed": "Disposed"
     },
+    "RuntimeStates": {
+      "Subscribing": "Subscribing",
+      "Healthy": "Healthy",
+      "Recovering": "Recovering",
+      "Failed": "Failed",
+      "Stopped": "Stopped"
+    },
     "ChangeTypes": {
       "Added": "Added",
       "Activated": "Activated",
@@ -415,6 +450,7 @@
     "ProviderKinds": {
       "Local": "Local",
       "Dapr": "Dapr",
+      "Kafka": "Kafka",
       "Unknown": "Unknown"
     },
     "Duration": {

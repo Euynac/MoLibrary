@@ -44,6 +44,7 @@ public class ModuleEventBus : MonicaModule<ModuleEventBusOption>
         var services = context.Services;
         // Register core EventBus services (shared across all EventBus instances)
         services.AddSingleton<IEventSubscriptionRegistry, EventSubscriptionRegistry>();
+        services.AddSingleton<ITopicSubscriptionStatusStore, TopicSubscriptionStatusStore>();
         services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();
         services.AddSingleton<ILocalEventBus, LocalEventBus>();
         services.AddSingleton(_autoDiscovery);

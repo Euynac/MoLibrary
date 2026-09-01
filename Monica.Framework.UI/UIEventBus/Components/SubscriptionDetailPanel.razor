@@ -1,4 +1,5 @@
 @using Monica.Framework.UI.UIEventBus.Models
+@using Monica.EventBus.Models
 @inject IStringLocalizer<EventBusResource> L
 
 @if (Subscription != null)
@@ -65,6 +66,126 @@
                     </MudCardContent>
                 </MudCard>
             </MudItem>
+
+            <!-- Runtime status (distributed providers only) -->
+            @if (Subscription.Scope == EventBus.Models.EventSubscriptionScope.Distributed)
+            {
+                <MudItem xs="12">
+                    <MudCard Elevation="2">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Color="Color.Tertiary" />
+                                    <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:Runtime"]</MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            @if (Subscription.TopicStatus is { } status)
+                            {
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:State"]</MudText>
+                                            <MudChip T="string" Color="@SubscriptionViewModel.GetRuntimeStateColor(status.State)" Size="Size.Small">
+                                                @L.GetTopicRuntimeStateText(status.State)
+                                            </MudChip>
+                                        </MudStack>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:StateSince"]</MudText>
+                                            <MudText Typo="Typo.body2">@L.FormatEventBusRelativeTime(status.StateChangedAt)</MudText>
+                                        </MudStack>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:Provider"]</MudText>
+                                            <MudText Typo="Typo.body2">@L.GetProviderKindText(status.Provider)</MudText>
+                                        </MudStack>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:ConsecutiveFailures"]</MudText>
+                                            <MudText Typo="Typo.body2">@status.ConsecutiveFailures</MudText>
+                                        </MudStack>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:RecoveryCount"]</MudText>
+                                            <MudText Typo="Typo.body2">@status.RecoveryCount</MudText>
+                                        </MudStack>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:MessageErrorCount"]</MudText>
+                                            <MudText Typo="Typo.body2">@status.MessageErrorCount</MudText>
+                                        </MudStack>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:ProcessedMessages"]</MudText>
+                                            <MudText Typo="Typo.body2">@status.ProcessedMessages</MudText>
+                                        </MudStack>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:LastMessageAt"]</MudText>
+                                            <MudText Typo="Typo.body2">@(status.LastMessageReceivedAt.HasValue ? L.FormatEventBusRelativeTime(status.LastMessageReceivedAt.Value) : "-")</MudText>
+                                        </MudStack>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:LastErrorAt"]</MudText>
+                                            <MudText Typo="Typo.body2">@(status.LastErrorAt.HasValue ? L.FormatEventBusRelativeTime(status.LastErrorAt.Value) : "-")</MudText>
+                                        </MudStack>
+                                    </MudItem>
+
+                                    @if (!string.IsNullOrEmpty(status.LastErrorMessage))
+                                    {
+                                        <MudItem xs="12">
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:LastError"]</MudText>
+                                                <MudText Typo="Typo.body2">@status.LastErrorMessage</MudText>
+                                                @if (!string.IsNullOrEmpty(status.LastErrorException))
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:ExceptionDetails"]</MudText>
+                                                    <pre class="subscription-detail__technical subscription-detail__error-text">@status.LastErrorException</pre>
+                                                }
+                                            </MudStack>
+                                        </MudItem>
+                                    }
+
+                                    @if (status.RecentErrors.Count > 0)
+                                    {
+                                        <MudItem xs="12">
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:RecentErrors"]</MudText>
+                                                <MudList T="string" Dense="true">
+                                                    @foreach (var error in status.RecentErrors.Reverse())
+                                                    {
+                                                        <MudListItem T="string">
+                                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                                <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Color="Color.Error" />
+                                                                <MudText Typo="Typo.body2" Class="subscription-detail__technical">@error.Message</MudText>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L.FormatEventBusRelativeTime(error.OccurredAt)</MudText>
+                                                            </MudStack>
+                                                        </MudListItem>
+                                                    }
+                                                </MudList>
+                                            </MudStack>
+                                        </MudItem>
+                                    }
+                                </MudGrid>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["SubscriptionDetail:Runtime:NoData"]</MudText>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
 
             <!-- Processor information -->
             <MudItem xs="12">

@@ -90,9 +90,21 @@
             </MudTd>
             <MudTd DataLabel="@L["SubscriptionTable:Columns:State"]">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                    <MudChip T="string" Color="@context.StateColor" Size="Size.Small">
-                        @L.GetSubscriptionStateText(context.State)
-                    </MudChip>
+                    @if (context.IsRuntimeStateDisplayed)
+                    {
+                        <MudTooltip Text="@L.BuildTopicRuntimeErrorTooltip(context)">
+                            <MudChip T="string" Color="@context.DisplayStateColor" Size="Size.Small"
+                                     Icon="@Icons.Material.Filled.ErrorOutline">
+                                @L.GetSubscriptionDisplayStateText(context)
+                            </MudChip>
+                        </MudTooltip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="@context.DisplayStateColor" Size="Size.Small">
+                            @L.GetSubscriptionStateText(context.State)
+                        </MudChip>
+                    }
                     @if (IsTestListening(context))
                     {
                         <MudTooltip Text="@L["SubscriptionTable:Labels:TestListening"]">

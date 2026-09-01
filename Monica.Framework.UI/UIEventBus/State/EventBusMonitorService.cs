@@ -17,16 +17,18 @@ namespace Monica.Framework.UI.UIEventBus.State;
 /// </summary>
 public sealed class EventBusMonitorService(
     IEventSubscriptionRegistry subscriptionManager,
+    ITopicSubscriptionStatusStore topicStatusStore,
     ILocalEventBus localEventBus,
     IDistributedEventBus distributedEventBus,
     IStringLocalizer<EventBusResource> localizer,
     ILogger<EventBusMonitorService> logger) : IAsyncDisposable
 {
     private readonly IEventSubscriptionRegistry _subscriptionManager = subscriptionManager;
+    private readonly ITopicSubscriptionStatusStore _topicStatusStore = topicStatusStore;
 
     // Change channels in real time
-    private readonly Channel<SubscriptionChangeViewModel> _changesChannel =
-        Channel.CreateUnbounded<SubscriptionChangeViewModel>();
+    private readonly Channel<EventBusMonitorChange> _changesChannel =
+        Channel.CreateUnbounded<EventBusMonitorChange>();
 
     // Observable subscription list
     private readonly List<IDisposable> _observableSubscriptions = new();
@@ -58,8 +60,8 @@ public sealed class EventBusMonitorService(
                             return;
                         }
 
-                        var vm = MapToChangeViewModel(change);
-                        _changesChannel.Writer.TryWrite(vm);
+                        _changesChannel.Writer.TryWrite(
+                            new EventBusMonitorChange.SubscriptionChanged(MapToChangeViewModel(change)));
                         logger.LogDebug("Local subscription change: {ChangeType} - {EventType}",
                             change.ChangeType, change.Subscription.EventType.Name);
                     }));
@@ -73,12 +75,15 @@ public sealed class EventBusMonitorService(
                             return;
                         }
 
-                        var vm = MapToChangeViewModel(change);
-                        _changesChannel.Writer.TryWrite(vm);
+                        _changesChannel.Writer.TryWrite(
+                            new EventBusMonitorChange.SubscriptionChanged(MapToChangeViewModel(change)));
                         logger.LogDebug("Distributed subscription change: {ChangeType} - {EventType}",
                             change.ChangeType, change.Subscription.EventType.Name);
                     }));
                 _observableSubscriptions.Add(distSub);
+
+                // Topic runtime-status changes also refresh the monitor views
+                _topicStatusStore.StatusChanged += OnTopicStatusChanged;
 
                 _initialized = true;
                 logger.LogInformation("EventBusMonitorService initialized successfully");
@@ -89,6 +94,11 @@ public sealed class EventBusMonitorService(
                 throw;
             }
         }
+    }
+
+    private void OnTopicStatusChanged(TopicSubscriptionStatus status)
+    {
+        _changesChannel.Writer.TryWrite(new EventBusMonitorChange.TopicStatusChanged(status));
     }
 
     /// <summary>
@@ -199,8 +209,18 @@ public sealed class EventBusMonitorService(
             var result = allSubs
                 .ToList()
                 .Select(MapToViewModel)
-                .OrderByDescending(s => s.CreatedAt)
                 .ToList();
+
+            // Runtime-state filtering applies to the mapped view because the topic status join
+            // happens during mapping.
+            if (filter.TopicRuntimeState.HasValue)
+            {
+                result = result
+                    .Where(s => s.TopicRuntimeState == filter.TopicRuntimeState.Value)
+                    .ToList();
+            }
+
+            result = result.OrderByDescending(s => s.CreatedAt).ToList();
 
             logger.LogDebug("Filtered subscriptions: {Count} results", result.Count);
             return Res.Ok(result);
@@ -220,32 +240,34 @@ public sealed class EventBusMonitorService(
         try
         {
             var allSubs = GetVisibleSubscriptions();
+            var viewModels = allSubs.Select(MapToViewModel).ToList();
 
             var stats = new SubscriptionStatistics
             {
-                TotalSubscriptions = allSubs.Count,
-                ActiveSubscriptions = allSubs.Count(s => s.State == EventSubscriptionState.Active),
-                InactiveSubscriptions = allSubs.Count(s => s.State == EventSubscriptionState.Inactive),
-                PendingSubscriptions = allSubs.Count(s => s.State == EventSubscriptionState.Pending),
-                DisposedSubscriptions = allSubs.Count(s => s.State == EventSubscriptionState.Disposed),
-                LocalSubscriptions = allSubs.Count(s => s.Scope == EventSubscriptionScope.Local),
-                DistributedSubscriptions = allSubs.Count(s => s.Scope == EventSubscriptionScope.Distributed),
-                AutoDiscoveredCount = allSubs.Count(s => s.IsAutoDiscovered),
-                ManualSubscriptionCount = allSubs.Count(s => !s.IsAutoDiscovered),
-                ActionHandlerCount = allSubs.Count(s => s.HandlerType == null),
-                TypeHandlerCount = allSubs.Count(s => s.HandlerType != null),
-                TopEventTypes = allSubs
+                TotalSubscriptions = viewModels.Count,
+                ActiveSubscriptions = viewModels.Count(s => s.State == EventSubscriptionState.Active),
+                InactiveSubscriptions = viewModels.Count(s => s.State == EventSubscriptionState.Inactive),
+                PendingSubscriptions = viewModels.Count(s => s.State == EventSubscriptionState.Pending),
+                DisposedSubscriptions = viewModels.Count(s => s.State == EventSubscriptionState.Disposed),
+                UnhealthySubscriptions = viewModels.Count(s => s.IsUnhealthy),
+                LocalSubscriptions = viewModels.Count(s => s.Scope == EventSubscriptionScope.Local),
+                DistributedSubscriptions = viewModels.Count(s => s.Scope == EventSubscriptionScope.Distributed),
+                AutoDiscoveredCount = viewModels.Count(s => s.IsAutoDiscovered),
+                ManualSubscriptionCount = viewModels.Count(s => !s.IsAutoDiscovered),
+                ActionHandlerCount = viewModels.Count(s => s.HandlerType == null),
+                TypeHandlerCount = viewModels.Count(s => s.HandlerType != null),
+                TopEventTypes = viewModels
                     .GroupBy(s => s.EventType)
                     .OrderByDescending(g => g.Count())
                     .Take(10)
                     .Select(g => new EventTypeCount
                     {
-                        EventType = g.Key.GetCleanFullName(),
-                        EventTypeShortName = g.Key.GetCleanName(),
+                        EventType = g.Key,
+                        EventTypeShortName = g.First().EventTypeShortName,
                         Count = g.Count()
                     })
                     .ToList(),
-                TopTopics = allSubs
+                TopTopics = viewModels
                     .GroupBy(s => s.TopicName)
                     .OrderByDescending(g => g.Count())
                     .Take(10)
@@ -257,8 +279,11 @@ public sealed class EventBusMonitorService(
                     .ToList()
             };
 
-            logger.LogDebug("Generated statistics: Total={Total}, Active={Active}",
-                stats.TotalSubscriptions, stats.ActiveSubscriptions);
+            stats.UnhealthyTopics = _topicStatusStore.GetAll()
+                .Count(t => t.State is TopicSubscriptionRuntimeState.Recovering or TopicSubscriptionRuntimeState.Failed);
+
+            logger.LogDebug("Generated statistics: Total={Total}, Active={Active}, Unhealthy={Unhealthy}",
+                stats.TotalSubscriptions, stats.ActiveSubscriptions, stats.UnhealthySubscriptions);
 
             return Res.Ok(stats);
         }
@@ -400,10 +425,26 @@ public sealed class EventBusMonitorService(
     /// <summary>
     /// Subscribe to real-time change notifications
     /// </summary>
-    public ChannelReader<SubscriptionChangeViewModel> SubscribeToChanges()
+    public ChannelReader<EventBusMonitorChange> SubscribeToChanges()
     {
         EnsureInitialized();
         return _changesChannel.Reader;
+    }
+
+    /// <summary>
+    /// Get the runtime status snapshots of all known topic subscriptions.
+    /// </summary>
+    public Res<List<TopicSubscriptionStatus>> GetAllTopicStatuses()
+    {
+        try
+        {
+            return Res.Ok(_topicStatusStore.GetAll().ToList());
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get topic statuses");
+            return Res.Fail(localizer["Services:Monitor:GetTopicStatusesFailed", ex.GetMessageRecursively()], ResStatus.InternalError);
+        }
     }
 
     #endregion
@@ -442,6 +483,12 @@ public sealed class EventBusMonitorService(
             vm.ActionDeclaringType = subscription.GetMetadata<string>(SubscriptionMetadataKeys.ActionDeclaringType);
             vm.ActionMethodSignature = subscription.GetMetadata<string>(SubscriptionMetadataKeys.ActionMethodSignature);
             vm.ActionIsStatic = subscription.GetMetadata<bool?>(SubscriptionMetadataKeys.ActionIsStatic);
+        }
+
+        // Distributed subscriptions join the runtime health reported by their provider
+        if (subscription.Scope == EventSubscriptionScope.Distributed)
+        {
+            vm.TopicStatus = _topicStatusStore.Get(subscription.ServiceKey, subscription.TopicName);
         }
 
         return vm;
@@ -488,6 +535,9 @@ public sealed class EventBusMonitorService(
             }
         }
         _observableSubscriptions.Clear();
+
+        // Detach the topic status change handler
+        _topicStatusStore.StatusChanged -= OnTopicStatusChanged;
 
         // CloseChannel
         _changesChannel.Writer.Complete();

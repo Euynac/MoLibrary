@@ -110,6 +110,54 @@ public class SubscriptionViewModel
     };
 
     /// <summary>
+    /// Runtime health of the underlying topic subscription, reported by the distributed provider.
+    /// <see langword="null"/> for local subscriptions or before the provider reports anything.
+    /// </summary>
+    public TopicSubscriptionStatus? TopicStatus { get; set; }
+
+    /// <summary>
+    /// The runtime state of the underlying topic subscription, if reported.
+    /// </summary>
+    public TopicSubscriptionRuntimeState? TopicRuntimeState => TopicStatus?.State;
+
+    /// <summary>
+    /// Whether the status chip must display the runtime health instead of the registration state:
+    /// true for distributed subscriptions registered as Active whose topic is not currently healthy.
+    /// </summary>
+    public bool IsRuntimeStateDisplayed =>
+        Scope == EventSubscriptionScope.Distributed &&
+        State == EventSubscriptionState.Active &&
+        TopicStatus is { State: not TopicSubscriptionRuntimeState.Healthy };
+
+    /// <summary>
+    /// Whether the subscription is registered as Active but its topic is currently not delivering
+    /// messages (recovering after failures or terminally failed).
+    /// </summary>
+    public bool IsUnhealthy =>
+        Scope == EventSubscriptionScope.Distributed &&
+        State == EventSubscriptionState.Active &&
+        TopicStatus is { State: TopicSubscriptionRuntimeState.Recovering or TopicSubscriptionRuntimeState.Failed };
+
+    /// <summary>
+    /// The color corresponding to a topic subscription runtime state.
+    /// </summary>
+    public static Color GetRuntimeStateColor(TopicSubscriptionRuntimeState state) => state switch
+    {
+        TopicSubscriptionRuntimeState.Healthy => Color.Success,
+        TopicSubscriptionRuntimeState.Subscribing => Color.Info,
+        TopicSubscriptionRuntimeState.Recovering => Color.Warning,
+        TopicSubscriptionRuntimeState.Failed or TopicSubscriptionRuntimeState.Stopped => Color.Error,
+        _ => Color.Default
+    };
+
+    /// <summary>
+    /// The effective status chip color: runtime health color when the runtime state is displayed,
+    /// otherwise the registration state color.
+    /// </summary>
+    public Color DisplayStateColor =>
+        IsRuntimeStateDisplayed && TopicStatus is { } status ? GetRuntimeStateColor(status.State) : StateColor;
+
+    /// <summary>
     /// The color corresponding to the subscription range
     /// </summary>
     public Color ScopeColor => Scope == EventSubscriptionScope.Local ? Color.Info : Color.Secondary;

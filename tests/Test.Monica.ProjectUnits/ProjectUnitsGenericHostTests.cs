@@ -1,6 +1,8 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Monica.Configuration.Abstractions;
+using Monica.Configuration.Models;
 using Monica.Core;
 using Monica.Core.Modularity.Extensions;
 using Monica.Modules;
@@ -29,6 +31,30 @@ public sealed class ProjectUnitsGenericHostTests
             snapshot.ModuleType == typeof(ModuleProjectUnits)
             && snapshot.IsWebModule
             && !snapshot.RequiresWebHost);
+    }
+
+    [Fact]
+    public void Composition_ShouldEnrichReloadBehaviorBeforeCatalogResolution()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddMonica(monica =>
+        {
+            monica.ConfigureTypeDiscovery(options => options
+                .ExcludeDefault()
+                .Add(typeof(ProjectUnitCatalogTests).Assembly));
+            monica.AddConfiguration();
+            monica.AddProjectUnits();
+        });
+
+        using var host = builder.Build();
+        var registry = host.Services.GetRequiredService<IConfigurationDefinitionRegistry>();
+
+        // Deliberately resolves no IProjectUnitCatalog: reload-behavior inference must have enriched
+        // the definition registry during composition so metadata publication never observes the
+        // scanner's unresolved defaults.
+        registry.TryGet("Test.ReloadableOptions", out var definition).Should().BeTrue();
+        definition!.ReloadBehaviorObservationKind.Should().Be(ConfigurationReloadBehaviorObservationKind.Inferred);
+        definition.ReloadBehavior.Should().Be(ConfigurationReloadBehavior.OnlineReloadable);
     }
 
     [Fact]

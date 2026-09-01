@@ -21,6 +21,7 @@ namespace Monica.EventBus.Services.Support;
 public abstract class EventBusSubscriptionHostedServiceBase(
     IEventSubscriptionRegistry subscriptionManager,
     IEventBus eventBus,
+    ITopicSubscriptionStatusStore topicStatusStore,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IServiceScopeFactory serviceScopeFactory,
@@ -30,11 +31,23 @@ public abstract class EventBusSubscriptionHostedServiceBase(
 {
     protected readonly IEventSubscriptionRegistry SubscriptionManager = subscriptionManager;
     protected readonly IEventBus EventBus = eventBus;
+
+    /// <summary>
+    /// Store receiving runtime health reports for the topics this service manages.
+    /// </summary>
+    protected readonly ITopicSubscriptionStatusStore TopicStatusStore = topicStatusStore;
+
     /// <inheritdoc />
     public override string? ServiceKey { get; } = serviceKey;
 
     /// <inheritdoc />
     public override string? ServiceGroupId => nameof(ModuleEventBus);
+
+    /// <summary>
+    /// The provider kind reported with topic status transitions. Derived services override
+    /// this so monitoring can attribute topic health to the concrete provider.
+    /// </summary>
+    protected virtual EventBusProviderKind ProviderKind => EventBusProviderKind.Unknown;
 
     /// <summary>
     /// Tracks subscription information per topic.
@@ -220,7 +233,21 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             {
                 RecordState($"Creating external subscription for topic {topicName}", HostedServiceState.Running);
 
-                await CreateExternalSubscriptionForTopicAsync(topicName, eventType, cancellationToken);
+                TopicStatusStore.ReportState(
+                    ServiceKey, topicName, ProviderKind, TopicSubscriptionRuntimeState.Subscribing,
+                    $"Creating external subscription for topic {topicName}");
+
+                try
+                {
+                    await CreateExternalSubscriptionForTopicAsync(topicName, eventType, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    TopicStatusStore.ReportState(
+                        ServiceKey, topicName, ProviderKind, TopicSubscriptionRuntimeState.Failed,
+                        $"Failed to create external subscription for topic {topicName}", ex);
+                    throw;
+                }
 
                 RecordState($"Successfully created external subscription for topic {topicName}", HostedServiceState.Running);
             }
@@ -271,6 +298,10 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             if (shouldRemoveExternal && topicToRemove != null)
             {
                 RecordState($"Removing external subscription for topic {topicToRemove}", HostedServiceState.Running);
+
+                TopicStatusStore.ReportState(
+                    ServiceKey, topicToRemove, ProviderKind, TopicSubscriptionRuntimeState.Stopped,
+                    $"Removed external subscription for topic {topicToRemove}");
 
                 await RemoveExternalSubscriptionForTopicAsync(topicToRemove, cancellationToken);
 
@@ -335,6 +366,10 @@ public abstract class EventBusSubscriptionHostedServiceBase(
         foreach (var (topicName, eventType) in topics)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            TopicStatusStore.ReportState(
+                ServiceKey, topicName, ProviderKind, TopicSubscriptionRuntimeState.Subscribing,
+                $"Recreating external subscription for topic {topicName}");
 
             await CreateExternalSubscriptionForTopicAsync(topicName, eventType, cancellationToken);
         }

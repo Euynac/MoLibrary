@@ -53,6 +53,12 @@ public class EventBusProviderInfo
     public int ActiveSubscriptionCount { get; set; }
 
     /// <summary>
+    /// Number of this provider's topic subscriptions currently recovering or terminally failed.
+    /// Always zero for local providers.
+    /// </summary>
+    public int UnhealthyTopicCount { get; set; }
+
+    /// <summary>
     /// Check if the Provider supports batch publishing
     /// </summary>
     public bool SupportsBulkPublish => Capabilities.HasFlag(EventBusProviderCapabilities.BulkPublish);

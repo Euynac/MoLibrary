@@ -13,6 +13,13 @@ public class SubscriptionFilter
     public EventSubscriptionState? State { get; set; }
 
     /// <summary>
+    /// Filter by the runtime state of the underlying topic subscription
+    /// (recovering, failed, and so on). Only distributed subscriptions with a reported
+    /// runtime state can match.
+    /// </summary>
+    public TopicSubscriptionRuntimeState? TopicRuntimeState { get; set; }
+
+    /// <summary>
     /// Filter by range
     /// </summary>
     public EventSubscriptionScope? Scope { get; set; }
@@ -42,6 +49,7 @@ public class SubscriptionFilter
     /// </summary>
     public bool HasAnyFilter =>
         State.HasValue ||
+        TopicRuntimeState.HasValue ||
         Scope.HasValue ||
         !string.IsNullOrWhiteSpace(ServiceKey) ||
         IsAutoDiscovered.HasValue ||
@@ -54,6 +62,7 @@ public class SubscriptionFilter
     public void Clear()
     {
         State = null;
+        TopicRuntimeState = null;
         Scope = null;
         ServiceKey = null;
         IsAutoDiscovered = null;
@@ -69,6 +78,7 @@ public class SubscriptionFilter
         return new SubscriptionFilter
         {
             State = State,
+            TopicRuntimeState = TopicRuntimeState,
             Scope = Scope,
             ServiceKey = ServiceKey,
             IsAutoDiscovered = IsAutoDiscovered,

@@ -9,6 +9,7 @@ using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Kafka.Abstractions;
 using Monica.EventBus.Kafka.Services.Support;
+using Monica.EventBus.Models;
 using Monica.EventBus.Services.Support;
 using Monica.Modules;
 
@@ -20,6 +21,7 @@ namespace Monica.EventBus.Kafka.Providers.ConfluentKafka;
 internal sealed class KafkaEventBusSubscriptionHostedService(
     IEventSubscriptionRegistry subscriptionManager,
     IDistributedEventBus eventBus,
+    ITopicSubscriptionStatusStore topicStatusStore,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IServiceScopeFactory serviceScopeFactory,
@@ -31,6 +33,7 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
     : EventBusSubscriptionHostedServiceBase(
         subscriptionManager,
         eventBus,
+        topicStatusStore,
         observableManager,
         hostedServiceOptions,
         serviceScopeFactory,
@@ -44,6 +47,9 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
 
     /// <inheritdoc />
     public override string? ServiceGroupId => nameof(ModuleEventBus);
+
+    /// <inheritdoc />
+    protected override EventBusProviderKind ProviderKind => EventBusProviderKind.Kafka;
 
     protected override Task CreateExternalSubscriptionForTopicAsync(string topicName, Type eventType, CancellationToken cancellationToken)
     {
@@ -92,6 +98,12 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
         }
         catch (Exception ex)
         {
+            TopicStatusStore.ReportState(
+                ServiceKey, topicConsumer.TopicName, ProviderKind, TopicSubscriptionRuntimeState.Failed,
+                $"Kafka consumer loop terminated for topic {topicConsumer.TopicName}; " +
+                "the topic will not receive messages until the application restarts it",
+                ex);
+
             RecordState($"Kafka consumer stopped for topic {topicConsumer.TopicName}", HostedServiceState.Degraded, ex);
         }
     }
@@ -103,6 +115,10 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
         var consumerConfig = KafkaClientConfigFactory.BuildConsumerConfig(cluster, options.Value, ServiceKey);
         using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
         consumer.Subscribe(topicConsumer.TopicName);
+
+        // The consumer proves health only by delivering its first message; assignment events are
+        // not observable through the Confluent consumer API used here.
+        var hasProvenHealthy = false;
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -120,6 +136,9 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
                     jsonSerializerOptionsProvider.SerializerOptions);
                 if (eventData is null)
                 {
+                    TopicStatusStore.ReportError(
+                        ServiceKey, topicConsumer.TopicName,
+                        $"Kafka message on topic {topicConsumer.TopicName} deserialized to null");
                     RecordState($"Kafka message on topic {topicConsumer.TopicName} deserialized to null", HostedServiceState.Degraded);
                     continue;
                 }
@@ -128,6 +147,16 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
                     topicConsumer.TopicName,
                     eventData,
                     cancellationToken);
+
+                TopicStatusStore.ReportMessageProcessed(ServiceKey, topicConsumer.TopicName);
+
+                if (!hasProvenHealthy)
+                {
+                    hasProvenHealthy = true;
+                    TopicStatusStore.ReportState(
+                        ServiceKey, topicConsumer.TopicName, ProviderKind, TopicSubscriptionRuntimeState.Healthy,
+                        $"Kafka consumer is delivering messages for topic {topicConsumer.TopicName}");
+                }
             }
             catch (OperationCanceledException)
             {
@@ -135,6 +164,11 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
             }
             catch (Exception ex)
             {
+                TopicStatusStore.ReportState(
+                    ServiceKey, topicConsumer.TopicName, ProviderKind, TopicSubscriptionRuntimeState.Recovering,
+                    $"Kafka consumer failed for topic {topicConsumer.TopicName}; retrying after backoff",
+                    ex);
+
                 RecordState($"Kafka consumer failed for topic {topicConsumer.TopicName}", HostedServiceState.Degraded, ex);
                 try
                 {
@@ -153,6 +187,10 @@ internal sealed class KafkaEventBusSubscriptionHostedService(
         }
         catch (KafkaException ex)
         {
+            TopicStatusStore.ReportError(
+                ServiceKey, topicConsumer.TopicName,
+                $"Kafka consumer final offset commit failed for topic {topicConsumer.TopicName}",
+                ex);
             RecordState(
                 $"Kafka consumer final offset commit failed for topic {topicConsumer.TopicName}",
                 HostedServiceState.Degraded,

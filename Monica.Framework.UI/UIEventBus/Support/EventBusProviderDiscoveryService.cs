@@ -25,6 +25,7 @@ public class EventBusProviderDiscoveryService(
     IServiceProvider serviceProvider,
     MonicaApplication application,
     IEventSubscriptionRegistry subscriptionManager,
+    ITopicSubscriptionStatusStore topicStatusStore,
     IStringLocalizer<EventBusResource> localizer,
     ILogger<EventBusProviderDiscoveryService> logger)
 {
@@ -285,6 +286,11 @@ public class EventBusProviderDiscoveryService(
 
             provider.SubscriptionCount = matchingSubscriptions.Count;
             provider.ActiveSubscriptionCount = matchingSubscriptions.Count(s => s.State == EventSubscriptionState.Active);
+            provider.UnhealthyTopicCount = provider.IsDistributed
+                ? topicStatusStore.GetAll().Count(t =>
+                    t.ServiceKey == provider.ServiceKey &&
+                    t.State is TopicSubscriptionRuntimeState.Recovering or TopicSubscriptionRuntimeState.Failed)
+                : 0;
         }
     }
 

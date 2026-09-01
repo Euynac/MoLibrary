@@ -21,6 +21,7 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
     private readonly Dictionary<string, Type> _enumTypes = [];
     private readonly ConcurrentDictionary<string, byte> _disabledRequestUrls = new(StringComparer.Ordinal);
     private readonly ProjectUnitFactory _unitFactory;
+    private int _documentationAttached;
 
     internal ProjectUnitCatalog(
         ModuleProjectUnitsOption options,
@@ -44,19 +45,23 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
     public IReadOnlyDictionary<string, Type> EnumTypes => _enumTypes;
 
     /// <summary>
-    /// Creates and completes one host catalog before the DI singleton becomes observable.
+    /// Creates and structurally completes one host catalog during module composition.
     /// </summary>
-    internal static ProjectUnitCatalog CreateCompleted(
+    /// <remarks>
+    /// Composition-time completion is a timing contract: Monica.Configuration publishes definition
+    /// metadata during host build, so reload-behavior inference must enrich the definition registry
+    /// before the host service provider exists. XML documentation attachment is deferred to
+    /// <see cref="AttachDocumentation"/> because the documentation service requires the built provider.
+    /// </remarks>
+    internal static ProjectUnitCatalog CreateAnalyzed(
         ModuleProjectUnitsOption options,
         ProjectUnitNamingOptions namingOptions,
         ILogger logger,
         IEnumerable<BusinessTypeShape> shapes,
-        IXmlDocumentationService? documentationService,
         IConfigurationDefinitionRegistry? configurationDefinitionRegistry)
     {
         var catalog = new ProjectUnitCatalog(options, namingOptions, logger);
         catalog.Discover(shapes);
-        catalog.ApplyDocumentation(documentationService);
         catalog.ConnectUnits();
         ProjectUnitConfigurationReloadBehaviorEnricher.Enrich(
             configurationDefinitionRegistry,
@@ -92,6 +97,22 @@ internal sealed class ProjectUnitCatalog : IProjectUnitCatalog, IRequestFilter
         {
             unit.ApplyDocumentation(documentation);
         }
+    }
+
+    /// <summary>
+    /// Attaches host-owned XML documentation once, after structural analysis is frozen.
+    /// </summary>
+    /// <param name="documentationService">
+    /// The host documentation service, or <see langword="null"/> when the module does not parse unit details.
+    /// </param>
+    internal void AttachDocumentation(IXmlDocumentationService? documentationService)
+    {
+        if (Interlocked.Exchange(ref _documentationAttached, 1) == 1)
+        {
+            return;
+        }
+
+        ApplyDocumentation(documentationService);
     }
 
     internal ProjectUnit? ResolveConstructorDependency(Type parameterType, ProjectUnit dependentUnit)

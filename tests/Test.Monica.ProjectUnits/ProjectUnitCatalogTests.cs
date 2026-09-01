@@ -148,7 +148,7 @@ public sealed class ProjectUnitCatalogTests
     }
 
     [Fact]
-    public void CreateCompleted_ShouldEnrichConfigurationReloadBehaviorAfterConnectionsExist()
+    public void CreateAnalyzed_ShouldEnrichConfigurationReloadBehaviorAfterConnectionsExist()
     {
         const string definitionKey = "Test.ReloadableOptions";
         var definition = CreateDefinition(definitionKey);
@@ -161,7 +161,7 @@ public sealed class ProjectUnitCatalogTests
             });
         var options = new ModuleProjectUnitsOption();
 
-        _ = ProjectUnitCatalog.CreateCompleted(
+        _ = ProjectUnitCatalog.CreateAnalyzed(
             options,
             options.ConventionOptions,
             NullLogger<ProjectUnitCatalog>.Instance,
@@ -170,13 +170,32 @@ public sealed class ProjectUnitCatalogTests
                 CreateShape(typeof(ReloadableOptions)),
                 CreateShape(typeof(ReloadableOptionsConsumer))
             },
-            documentationService: null,
             registry);
 
         registry.Received(1).Register(Arg.Is<ConfigurationDefinition>(registered =>
             registered.DefinitionKey == definitionKey
             && registered.ReloadBehavior == ConfigurationReloadBehavior.OnlineReloadable
             && registered.ReloadBehaviorObservationKind == ConfigurationReloadBehaviorObservationKind.Inferred));
+    }
+
+    [Fact]
+    public void AttachDocumentation_applies_once_and_keeps_analysis_results_observable()
+    {
+        var documentation = Substitute.For<IXmlDocumentationService>();
+        documentation.GetTypeDocumentation(typeof(XmlDescriptionOptions)).Returns("First application.");
+        var options = new ModuleProjectUnitsOption();
+        var catalog = ProjectUnitCatalog.CreateAnalyzed(
+            options,
+            options.ConventionOptions,
+            NullLogger<ProjectUnitCatalog>.Instance,
+            [CreateShape(typeof(XmlDescriptionOptions))],
+            configurationDefinitionRegistry: null);
+
+        catalog.AttachDocumentation(documentation);
+        catalog.AttachDocumentation(null);
+
+        catalog.FindByFullName<UnitConfiguration>(typeof(XmlDescriptionOptions).FullName)!
+            .XmlDocumentationDescription.Should().Be("First application.");
     }
 
     [Fact]
@@ -292,13 +311,14 @@ public sealed class ProjectUnitCatalogTests
         params Type[] types)
     {
         var options = new ModuleProjectUnitsOption();
-        return ProjectUnitCatalog.CreateCompleted(
+        var catalog = ProjectUnitCatalog.CreateAnalyzed(
             options,
             options.ConventionOptions,
             NullLogger<ProjectUnitCatalog>.Instance,
             types.Select(CreateShape),
-            documentation,
             configurationDefinitionRegistry: null);
+        catalog.AttachDocumentation(documentation);
+        return catalog;
     }
 
     private static BusinessTypeShape CreateShape(Type type)
