@@ -232,26 +232,106 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             }
         }
 
-        var inspectionEnvironments = (request?.Environments is { Count: > 0 }
-                ? request.Environments
-                : _runtime.DetectEnvironments()
-                    .Concat(state?.Installations.Select(static installation => installation.Environment) ?? []))
+        if (request?.DetectHosts != false)
+        {
+            var enumeration = HostDetectionEnvironments(request?.Environments, state, out var enumerationWarning);
+            if (enumerationWarning is not null)
+            {
+                checks.Add(Check("environment.enumeration", GuideCheckStatus.Warning, enumerationWarning,
+                    "Re-run host detection once the failing environment service responds."));
+            }
+            if (enumeration.Length > 0)
+            {
+                ReportPhase(progress, "status.environments", "Detecting installed agent hosts…");
+            }
+            // Host detection shells out per candidate command, so environments are scanned
+            // concurrently and the ordered results drive the deterministic check output below.
+            var detectedByEnvironment = await Task.WhenAll(enumeration.Select(environment =>
+                Task.Run(() => DetectHostsAsync(environment, progress, cancellationToken), cancellationToken)));
+            foreach (var environmentChecks in detectedByEnvironment)
+            {
+                checks.AddRange(environmentChecks);
+            }
+        }
+
+        return Report("status", checks, "Configuration status inspected.", ["Run 'guide doctor' to verify live service health."]);
+    }
+
+    /// <summary>
+    /// Environments host detection probes: every runtime-reachable environment plus those with
+    /// recorded installations, so a target environment stays observable even when runtime
+    /// enumeration no longer lists it. An enumeration warning means the returned list is
+    /// incomplete and is returned to the caller instead of being swallowed.
+    /// </summary>
+    private GuideEnvironment[] HostDetectionEnvironments(
+        IReadOnlyList<GuideEnvironment>? requested,
+        ProductGuideState? state,
+        out string? enumerationWarning)
+    {
+        enumerationWarning = null;
+        if (requested is { Count: > 0 })
+        {
+            return requested
+                .DistinctBy(static environment => environment.Selector, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        var enumeration = _runtime.DetectEnvironments();
+        enumerationWarning = enumeration.Warning;
+        return enumeration.Environments
+            .Concat(state?.Installations.Select(static installation => installation.Environment) ?? [])
             .DistinctBy(static environment => environment.Selector, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        if (inspectionEnvironments.Length > 0)
+    }
+
+    /// <summary>
+    /// Detects agent hosts in every reachable environment and persists the observation as this
+    /// machine's presence snapshot. Interactive surfaces read the persisted snapshot and call
+    /// this only on an explicit re-detection.
+    /// </summary>
+    public async Task<GuideAgentPresenceSnapshot> DetectAgentPresenceAsync(
+        IProgress<GuidePhase>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ProductGuideState? state = null;
+        try
+        {
+            state = LoadProductState(out _);
+        }
+        catch (Exception exception) when (exception is IOException or JsonException or InvalidDataException)
+        {
+            // Presence detection is advisory and must not fail on a corrupt ledger.
+        }
+
+        var warnings = new List<string>();
+        var environments = HostDetectionEnvironments(null, state, out var enumerationWarning);
+        if (enumerationWarning is not null)
+        {
+            warnings.Add(enumerationWarning);
+        }
+
+        var checks = new List<GuideCheck>();
+        if (environments.Length > 0)
         {
             ReportPhase(progress, "status.environments", "Detecting installed agent hosts…");
         }
         // Host detection shells out per candidate command, so environments are scanned
         // concurrently and the ordered results drive the deterministic check output below.
-        var detectedByEnvironment = await Task.WhenAll(inspectionEnvironments.Select(environment =>
+        var detectedByEnvironment = await Task.WhenAll(environments.Select(environment =>
             Task.Run(() => DetectHostsAsync(environment, progress, cancellationToken), cancellationToken)));
         foreach (var environmentChecks in detectedByEnvironment)
         {
             checks.AddRange(environmentChecks);
         }
 
-        return Report("status", checks, "Configuration status inspected.", ["Run 'guide doctor' to verify live service health."]);
+        var presence = GuideSetupPresenter.DeriveAgentPresence(checks);
+        var snapshot = new GuideAgentPresenceSnapshot(
+            GuideAgentPresenceSnapshot.CurrentSchemaVersion,
+            DateTimeOffset.UtcNow,
+            presence,
+            warnings);
+        GuideAgentPresenceStore.Save(_enginePaths, snapshot);
+        return snapshot;
     }
 
     public async Task<GuideHealthReport> DiagnoseAsync(
@@ -2231,7 +2311,12 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
     {
         if (!string.IsNullOrWhiteSpace(manifestPath)) return Path.GetDirectoryName(Path.GetFullPath(manifestPath))!;
         var app = Path.GetDirectoryName(executable)!;
-        return string.Equals(Path.GetFileName(app), "app", StringComparison.OrdinalIgnoreCase) ? Directory.GetParent(app)?.FullName ?? app : app;
+        // A bundle ships its entry trees as app/ (serve products) or setup/ (guide-catalog
+        // products); both resolve to the parent that carries the skills catalog.
+        return string.Equals(Path.GetFileName(app), "app", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(Path.GetFileName(app), "setup", StringComparison.OrdinalIgnoreCase)
+            ? Directory.GetParent(app)?.FullName ?? app
+            : app;
     }
 
     private string ResolveExecutable(string? requested)

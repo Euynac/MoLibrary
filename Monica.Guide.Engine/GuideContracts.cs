@@ -208,9 +208,14 @@ public sealed record GuideInstructionPreview(
     string EndMarker,
     string Body);
 
-/// <summary>Selectors shared by status and doctor.</summary>
+/// <summary>
+/// Selectors shared by status and doctor. Host detection defaults on because the CLI faces
+/// always observe live hosts; interactive surfaces that render a persisted presence
+/// snapshot instead pass <see cref="DetectHosts"/> false to skip the per-environment probes.
+/// </summary>
 public sealed record GuideInspectRequest(
-    IReadOnlyList<GuideEnvironment>? Environments = null);
+    IReadOnlyList<GuideEnvironment>? Environments = null,
+    bool DetectHosts = true);
 
 /// <summary>Stable bootstrap locator stored in the product data root after configuration.</summary>
 public sealed record GuideInstallationLocator(

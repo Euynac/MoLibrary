@@ -37,7 +37,8 @@ public static class KnownAgentProducts
 
     /// <summary>
     /// The Monica agent-skill product: the guide executable plus the co-versioned Monica
-    /// skill catalog. It runs no local service; installation projects the catalog only.
+    /// skill catalog. It runs no local service; the guide executable is the product's only
+    /// program, so its bundle ships it as the setup tree.
     /// </summary>
     public static AgentProductDefinition Monica { get; } = new()
     {
@@ -49,6 +50,7 @@ public static class KnownAgentProducts
         SupportedHosts = ["claude", "codex"],
         DotnetSdk = "10.0.101",
         Platforms = PortablePlatforms("Monica.Guide"),
+        ProgramEntryTree = "setup",
         GitHubSlug = "Tairitsua/Monica",
         ArchiveAssetNameTemplate = "monica-guide-v{version}-{rid}.zip",
         BundleDirectoryPrefix = "monica-guide-",

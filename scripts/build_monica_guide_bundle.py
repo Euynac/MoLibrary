@@ -1,7 +1,7 @@
 """Assemble the unified Monica Guide release bundle.
 
 The bundle is the self-describing artifact the shared guide engine installs: a
-framework-dependent ``app/`` publish tree (``Monica.Guide.exe`` on Windows,
+framework-dependent ``setup/`` publish tree (``Monica.Guide.exe`` on Windows,
 ``Monica.Guide`` elsewhere) beside the projected ``skills/`` catalog, with an
 engine-schema ``release-manifest.json`` covering every file byte for byte. The
 canonical ``.monica/agent-skill-catalog.json`` stays the single authoring
@@ -313,10 +313,10 @@ def verify_bundle(bundle: Path, manifest: dict, projected: dict, entry_point: st
         fail("Manifest skill projection does not exactly match the packaged catalog")
 
     program_files = [
-        record for record in manifest["files"] if record["relativePath"].startswith("app/")
+        record for record in manifest["files"] if record["relativePath"].startswith("setup/")
     ]
     if manifest["programFiles"] != program_files:
-        fail("Manifest programFiles is not the exact app/ subset of files")
+        fail("Manifest programFiles is not the exact setup/ subset of files")
     if not (bundle / entry_point).is_file():
         fail(f"Release entry point is missing: {entry_point}")
 
@@ -351,7 +351,7 @@ def command_build(args: argparse.Namespace) -> None:
     if args.rid not in PLATFORMS:
         fail(f"--rid must be one of: {', '.join(PLATFORMS)}")
     entry_name = PLATFORMS[args.rid]["entry"]
-    entry_point = f"app/{entry_name}"
+    entry_point = f"setup/{entry_name}"
     version = args.tag[1:]
     publish = Path(args.publish_dir).resolve()
     if not (publish / entry_name).is_file():
@@ -370,7 +370,7 @@ def command_build(args: argparse.Namespace) -> None:
     bundle = staging / "bundle"
     shutil.copytree(
         publish,
-        bundle / "app",
+        bundle / "setup",
         ignore=shutil.ignore_patterns("*.pdb", "*.xml"),
     )
     for skill_name in sorted(catalog["skills"]):
@@ -394,7 +394,7 @@ def command_build(args: argparse.Namespace) -> None:
         "trimmed": False,
         "publishSingleFile": False,
         "programEntryPoint": entry_point,
-        "programFiles": [record for record in files if record["relativePath"].startswith("app/")],
+        "programFiles": [record for record in files if record["relativePath"].startswith("setup/")],
         "supportedHosts": list(SUPPORTED_HOSTS),
         "supportedRoutes": [],
         "defaultRoutes": {},

@@ -45,6 +45,13 @@ public sealed record AgentProductDefinition
     /// </summary>
     public required IReadOnlyList<AgentProductPlatform> Platforms { get; init; }
 
+    /// <summary>
+    /// Bundle directory that carries the product's program entry: <c>app</c> for products
+    /// with a serve application, <c>setup</c> when the guide executable is the product's
+    /// only program. Release manifests pin the entry point against this tree.
+    /// </summary>
+    public string ProgramEntryTree { get; init; } = "app";
+
     /// <summary>GitHub repository that publishes this product's releases, for the update feed.</summary>
     public string? GitHubSlug { get; init; }
 
@@ -122,7 +129,7 @@ public sealed record AgentProductDefinition
     /// <c>app/Monica.Workflow</c>; null for skill-only products without a runnable program.
     /// </summary>
     public string? ProgramEntryPointFor(string runtimeIdentifier)
-        => PlatformFor(runtimeIdentifier) is { } platform ? $"app/{platform.ExecutableName}" : null;
+        => PlatformFor(runtimeIdentifier) is { } platform ? $"{ProgramEntryTree}/{platform.ExecutableName}" : null;
 
     /// <summary>Program entry of the running platform; null when the platform is unlisted.</summary>
     public string? CurrentProgramEntryPoint => ProgramEntryPointFor(AgentProductPlatform.CurrentRuntimeIdentifier);

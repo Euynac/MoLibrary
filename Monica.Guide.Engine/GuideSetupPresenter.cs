@@ -110,11 +110,18 @@ public static class GuideSetupPresenter
         try
         {
             // A candidate bundle may carry any product version; it is validated as a
-            // self-consistent release rather than against any one process's build.
-            var manifestDirectory = Path.Combine(candidatePath.Trim(), "app");
+            // self-consistent release rather than against any one process's build. The
+            // program tree is app/ for serve products and setup/ for guide-catalog products;
+            // the returned application directory must be the one carrying the executable.
+            var candidate = candidatePath.Trim();
+            var manifestDirectory = Path.Combine(candidate, "app");
             if (!Directory.Exists(manifestDirectory))
             {
-                manifestDirectory = candidatePath.Trim();
+                manifestDirectory = Path.Combine(candidate, "setup");
+            }
+            if (!Directory.Exists(manifestDirectory))
+            {
+                manifestDirectory = candidate;
             }
             var release = GuideReleaseMetadata.Observe(manifestDirectory, null);
             var manifest = release.Manifest;
@@ -179,8 +186,15 @@ public static class GuideSetupPresenter
     public static IReadOnlyList<SetupAgentPresence> DeriveAgentPresence(GuideReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
+        return DeriveAgentPresence(report.Checks);
+    }
+
+    /// <summary>Derives agent hosts from one set of <c>agent.*.detected</c> checks.</summary>
+    public static IReadOnlyList<SetupAgentPresence> DeriveAgentPresence(IEnumerable<GuideCheck> checks)
+    {
+        ArgumentNullException.ThrowIfNull(checks);
         var presence = new HashSet<SetupAgentPresence>();
-        foreach (var check in report.Checks)
+        foreach (var check in checks)
         {
             var segments = check.Id.Split('.');
             if (segments.Length < 4

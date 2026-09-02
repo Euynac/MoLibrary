@@ -29,6 +29,9 @@ public sealed class GuidePaths
     /// <summary>Machine-global workspace instruction projection preference.</summary>
     public string WorkspaceProjectionFile => Path.Combine(StateDirectory, "workspace-projection.json");
 
+    /// <summary>Persisted agent-host observation shared by every installed product.</summary>
+    public string AgentPresenceFile => Path.Combine(StateDirectory, "agent-presence.json");
+
     public string LogsDirectory => Path.Combine(EngineDataRoot, "logs");
 
     public static GuidePaths ForCurrentUser(IGuideHostEnvironment? environment = null)

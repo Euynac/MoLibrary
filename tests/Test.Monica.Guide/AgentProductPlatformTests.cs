@@ -54,6 +54,8 @@ public sealed class AgentProductPlatformTests
 
         monica.CurrentPlatform().Should().NotBeNull();
         monica.CurrentPlatform()!.RuntimeIdentifier.Should().Be(AgentProductPlatform.CurrentRuntimeIdentifier);
-        monica.CurrentProgramEntryPoint.Should().Be($"app/{monica.CurrentPlatform()!.ExecutableName}");
+        // The Monica guide executable is the product's only program, so its bundle ships
+        // it as the setup tree; serve products like Workflow keep the app/ tree.
+        monica.CurrentProgramEntryPoint.Should().Be($"setup/{monica.CurrentPlatform()!.ExecutableName}");
     }
 }

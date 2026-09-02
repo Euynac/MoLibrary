@@ -18,10 +18,12 @@ internal sealed class FakeRuntime(string home) : IGuideEnvironmentRuntime
     internal string Home { get; } = home;
     internal HashSet<string> FailNextDeletesOf { get; } = new(StringComparer.OrdinalIgnoreCase);
     internal bool NoCommands { get; set; }
+    internal string? EnumerationWarning { get; set; }
     internal HashSet<string> UnavailableCommands { get; } = new(StringComparer.Ordinal);
     internal HashSet<string> RedirectedPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyList<GuideEnvironment> DetectEnvironments() => [HostEnvironment];
+    public GuideEnvironmentEnumeration DetectEnvironments()
+        => new([HostEnvironment], EnumerationWarning);
 
     public bool CommandExists(GuideEnvironment environment, string command)
         => !NoCommands

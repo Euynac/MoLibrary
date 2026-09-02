@@ -40,6 +40,31 @@ public sealed class GuideProjectInstallTests
     }
 
     [Fact]
+    public async Task ConfigureWorkspace_FromSetupTreeBundlesResolvesTheParentCatalog()
+    {
+        using var fixture = new ProjectFixture();
+        // Two-tree bundle layout: the guide executable ships in setup/ beside the product app,
+        // with the skills catalog and release manifest at the shared bundle root.
+        var setupDirectory = Path.Combine(fixture.BundleRoot, "setup");
+        Directory.CreateDirectory(setupDirectory);
+        File.WriteAllText(Path.Combine(setupDirectory, "Monica.Guide.exe"), "test executable marker");
+        File.WriteAllText(
+            Path.Combine(fixture.BundleRoot, "release-manifest.json"),
+            """{"schemaVersion":1}""");
+        using var service = fixture.CreateSetupTreeService(setupDirectory);
+        var workspace = fixture.CreateWorkspace("monica-application");
+
+        var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+        var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+
+        Assert.Contains(preview.Checks, check =>
+            check.Id == "skills.catalog" && check.Status == GuideCheckStatus.Ok);
+        Assert.Contains(preview.Plan!.Actions, action =>
+            action.Kind == GuidePlanActionKind.ReplaceSkillDirectory
+            && action.Target.StartsWith(Path.Combine(workspace, ".agents", "skills"), StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task ConfigureWorkspace_HonorsCustomSkillTargetList()
     {
         using var fixture = new ProjectFixture();
@@ -449,6 +474,17 @@ public sealed class GuideProjectInstallTests
                 Runtime,
                 null,
                 ApplicationDirectory,
+                static (_, _) => Task.FromResult(false));
+
+        /// <summary>A service rooted in the setup/ tree of a two-tree bundle layout.</summary>
+        internal AgentGuideService CreateSetupTreeService(string setupDirectory)
+            => new(
+                Product,
+                EnginePaths,
+                ProductPaths,
+                Runtime,
+                null,
+                setupDirectory,
                 static (_, _) => Task.FromResult(false));
 
         internal SkillCatalog LoadCatalog()

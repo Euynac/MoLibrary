@@ -92,10 +92,9 @@ public sealed record GuideAppOptions(int Port, bool OpenBrowser, string? BundleP
         }
         try
         {
-            var manifestDirectory = Directory.Exists(Path.Combine(bundleRoot, "app"))
-                ? Path.Combine(bundleRoot, "app")
-                : bundleRoot;
-            var manifest = GuideReleaseMetadata.Observe(manifestDirectory, null).Manifest;
+            // The manifest lives at the bundle root for both layouts; ResolveManifestPath
+            // maps an entry-tree directory onto it when the root is passed directly.
+            var manifest = GuideReleaseMetadata.Observe(bundleRoot, null).Manifest;
             if (manifest is not null
                 && KnownAgentProducts.FindByProductId(manifest.ProductId) is { } product)
             {

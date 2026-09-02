@@ -17,7 +17,9 @@ public sealed record SetupDashboardView(
     SetupChecksView Checks,
     string SummaryMessage,
     IReadOnlyList<SetupAgentPresence> Presence,
-    string? Error);
+    string? Error,
+    DateTimeOffset? PresenceDetectedAt = null,
+    IReadOnlyList<string>? PresenceWarnings = null);
 
 /// <summary>
 /// The structural dashboard facts available in milliseconds: recorded installation
@@ -186,6 +188,23 @@ public sealed class SetupFacade(SetupSession session)
         }
     }
 
+    private sealed class BroadcastPresenceProgress(IProgress<GuidePhase>? caller, SetupFacade owner) : IProgress<GuidePhase>
+    {
+        public void Report(GuidePhase phase)
+        {
+            lock (owner._presencePhaseLogLock)
+            {
+                owner._recentPresencePhases.Enqueue(phase);
+                while (owner._recentPresencePhases.Count > 64)
+                {
+                    owner._recentPresencePhases.Dequeue();
+                }
+            }
+            caller?.Report(phase);
+            owner.PresencePhaseReported?.Invoke(phase);
+        }
+    }
+
     private AgentProductDefinition Product => session.CurrentProduct;
 
     /// <summary>Path of the installed executable, or null when nothing is configured.</summary>
@@ -298,9 +317,11 @@ public sealed class SetupFacade(SetupSession session)
         {
             // DiagnoseAsync internally re-runs the status inspection and appends the
             // runtime probes, so one call yields both check lists without duplicate work.
+            // Host detection stays out of the background diagnosis: the wizard renders the
+            // persisted presence snapshot and re-detects only on explicit request.
             using var service = CreateService();
             var health = await service.DiagnoseAsync(
-                new GuideInspectRequest(),
+                new GuideInspectRequest(DetectHosts: false),
                 progress: progress,
                 cancellationToken: cancellationToken);
             // Source bindings are machine-global; the dashboard observes recorded bindings
@@ -310,6 +331,9 @@ public sealed class SetupFacade(SetupSession session)
             var checks = health.Checks.Concat(sourceChecks).ToArray();
             var locator = ReadLocator();
             var port = CurrentPort();
+            // The seed detection joins the diagnosis progress broadcast, so a first run on a
+            // fresh machine shows the host-probe steps exactly like the retired live flow did.
+            var presenceSnapshot = await LoadPresenceAsync(progress, cancellationToken);
             return new SetupDashboardView(
                 locator?.ProductVersion,
                 locator?.BundleRoot,
@@ -317,9 +341,10 @@ public sealed class SetupFacade(SetupSession session)
                 port,
                 GuideSetupPresenter.PresentChecks(checks, WorstStatus(health.Status, sourceChecks)),
                 health.Summary.Message,
-                GuideSetupPresenter.DeriveAgentPresence(
-                    new GuideReport(health.SchemaVersion, health.ProductVersion, health.Status, health.Checks, health.Summary, health.Plan)),
-                null);
+                presenceSnapshot.Presence,
+                null,
+                presenceSnapshot.DetectedAt,
+                presenceSnapshot.Warnings);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -344,6 +369,122 @@ public sealed class SetupFacade(SetupSession session)
         var (locator, port) = await Task.Run(() => (ReadLocator(), CurrentPort()), cancellationToken);
         var running = Product.ServesLoopback && await IsPortListeningAsync(port);
         return new SetupDashboardShellView(locator?.ProductVersion, locator?.BundleRoot, running, port);
+    }
+
+    /// <summary>
+    /// Live phases of the running presence detection, raised to every subscriber no matter
+    /// which caller started it, so a page joining mid-detection still shows the steps.
+    /// </summary>
+    public event Action<GuidePhase>? PresencePhaseReported;
+
+    /// <summary>Raised once an explicit detection completes, carrying the persisted snapshot.</summary>
+    public event Action<GuideAgentPresenceSnapshot>? PresenceChanged;
+
+    /// <summary>The phases recorded so far this detection, so a late subscriber catches up.</summary>
+    public IReadOnlyList<GuidePhase> RecentPresencePhases
+    {
+        get
+        {
+            lock (_presencePhaseLogLock)
+            {
+                return [.. _recentPresencePhases];
+            }
+        }
+    }
+
+    private readonly object _presenceGate = new();
+
+    private Task<GuideAgentPresenceSnapshot>? _presenceDetection;
+
+    private readonly object _presencePhaseLogLock = new();
+
+    private readonly Queue<GuidePhase> _recentPresencePhases = new();
+
+    /// <summary>The in-flight explicit detection shared by every caller, or null when none runs.</summary>
+    public Task<GuideAgentPresenceSnapshot>? PresenceDetectionInProgress
+    {
+        get
+        {
+            lock (_presenceGate)
+            {
+                return _presenceDetection;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads the persisted machine presence snapshot, seeding it with one live detection when
+    /// no observation was ever recorded. An existing snapshot is never re-detected here;
+    /// explicit re-detection belongs to <see cref="DetectPresenceAsync"/>.
+    /// </summary>
+    public async Task<GuideAgentPresenceSnapshot> LoadPresenceAsync(
+        IProgress<GuidePhase>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var enginePaths = GuidePaths.ForCurrentUser();
+        var snapshot = await Task.Run(() => GuideAgentPresenceStore.Load(enginePaths), cancellationToken);
+        if (snapshot is not null)
+        {
+            session.PresenceCache = snapshot.Presence;
+            session.PresenceChecked = true;
+            return snapshot;
+        }
+
+        return await DetectPresenceAsync(progress, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs one explicit agent-host detection, persists the observation as the machine
+    /// snapshot, and propagates it into every session cache. The detection is owned by the
+    /// facade, so it keeps running and completing across page switches; concurrent callers
+    /// and late joiners share the same in-flight task.
+    /// </summary>
+    public Task<GuideAgentPresenceSnapshot> DetectPresenceAsync(
+        IProgress<GuidePhase>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        lock (_presenceGate)
+        {
+            if (_presenceDetection is not null)
+            {
+                return _presenceDetection;
+            }
+
+            var task = RunPresenceDetectionAsync(progress);
+            _presenceDetection = task;
+            return task;
+        }
+    }
+
+    private async Task<GuideAgentPresenceSnapshot> RunPresenceDetectionAsync(IProgress<GuidePhase>? progress)
+    {
+        var broadcast = new BroadcastPresenceProgress(progress, this);
+        try
+        {
+            using var service = CreateService();
+            var snapshot = await Task.Run(() => service.DetectAgentPresenceAsync(broadcast, CancellationToken.None));
+            session.PresenceCache = snapshot.Presence;
+            session.PresenceChecked = true;
+            if (session.DashboardCache is { } cached)
+            {
+                session.DashboardCache = cached with
+                {
+                    Presence = snapshot.Presence,
+                    PresenceDetectedAt = snapshot.DetectedAt,
+                    PresenceWarnings = snapshot.Warnings
+                };
+            }
+
+            PresenceChanged?.Invoke(snapshot);
+            return snapshot;
+        }
+        finally
+        {
+            lock (_presenceGate)
+            {
+                _presenceDetection = null;
+            }
+        }
     }
 
     /// <summary>Validates one extracted bundle candidate directory for the session product.</summary>
@@ -594,8 +735,11 @@ public sealed class SetupFacade(SetupSession session)
                 return ErrorView($"{Product.DisplayName} is not installed yet; no release bundle is available to install from.");
             }
 
+            // The program tree follows the product contract: app/ for serve products (the
+            // recorded executable is the product application) and setup/ for guide-catalog
+            // products where the guide itself is the program.
             var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
-            using var service = CreateService(Path.Combine(bundle, "app"));
+            using var service = CreateService(Path.Combine(bundle, Product.ProgramEntryTree));
             var report = await Task.Run(
                 () => planDigest is null
                     ? service.PreviewConfigureAsync(request, progress, cancellationToken)

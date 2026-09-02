@@ -7,7 +7,7 @@ namespace Monica.Guide;
 
 internal interface IGuideEnvironmentRuntime
 {
-    IReadOnlyList<GuideEnvironment> DetectEnvironments();
+    GuideEnvironmentEnumeration DetectEnvironments();
 
     bool CommandExists(GuideEnvironment environment, string command);
 
@@ -121,6 +121,15 @@ internal interface IGuideEnvironmentRuntime
 
 internal sealed record GuidePathObservation(bool Redirected, GuideFileSystemEntryKind? Kind);
 
+/// <summary>
+/// Runtime-reachable environments plus an enumeration warning. A warning means the list is
+/// known-incomplete (for example a stuck WSL service timing out); callers must surface it
+/// instead of silently treating the partial list as the whole machine.
+/// </summary>
+internal sealed record GuideEnvironmentEnumeration(
+    IReadOnlyList<GuideEnvironment> Environments,
+    string? Warning = null);
+
 internal sealed record GuideTreeObservation(
     IReadOnlyDictionary<string, GuidePathObservation> Paths,
     IReadOnlyDictionary<string, string> FileDigests,
@@ -139,21 +148,50 @@ internal sealed class GuideEnvironmentRuntime(IGuideHostEnvironment host)
     // listens, so host observation keeps a generous default bound.
     private static readonly TimeSpan DefaultProcessTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan ShortProcessTimeout = TimeSpan.FromSeconds(15);
+    // Cold WSL service starts can take many seconds, but a listing that exceeds this bound
+    // means the service is stuck; presence detection must not hang the wizard for a minute.
+    private static readonly TimeSpan EnumerationTimeout = TimeSpan.FromSeconds(20);
+    // A cold WSL service often finishes booting during the first listing attempt and answers
+    // the retry immediately, so one longer retry resolves cold starts without warning.
+    private static readonly TimeSpan RetryEnumerationTimeout = TimeSpan.FromSeconds(45);
     // Windows command lines are bounded near 32k characters; stay comfortably below it so
     // one batched observation can never exceed what wsl.exe can relay.
     private const int MaxScriptCharacters = 6_000;
 
-    public IReadOnlyList<GuideEnvironment> DetectEnvironments()
+    public GuideEnvironmentEnumeration DetectEnvironments()
     {
         var result = new List<GuideEnvironment>();
         if (host.Platform == GuideHostPlatform.Windows)
         {
             result.Add(new GuideEnvironment("windows", "windows"));
-            foreach (var distro in RunLocal("wsl.exe", ["--list", "--quiet"]).StandardOutput
-                         .Replace("\0", string.Empty, StringComparison.Ordinal)
-                         .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            // Listing the WSL service is normally sub-second, but a cold or stuck service can
+            // hang for a long time; the shorter bound keeps interactive detection responsive,
+            // the single retry absorbs cold service starts, and the warning keeps a list that
+            // is still incomplete from silently posing as the whole machine.
+            var listing = RunLocal("wsl.exe", ["--list", "--quiet"], EnumerationTimeout);
+            if (listing.ExitCode != 0)
             {
-                result.Add(new GuideEnvironment($"wsl:{distro}", "wsl", distro));
+                listing = RunLocal("wsl.exe", ["--list", "--quiet"], RetryEnumerationTimeout);
+            }
+            var listingText = listing.StandardOutput.Replace("\0", string.Empty, StringComparison.Ordinal);
+            var listingError = listing.StandardError.Replace("\0", string.Empty, StringComparison.Ordinal);
+            if (listing.ExitCode == 0)
+            {
+                foreach (var distro in listingText.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    result.Add(new GuideEnvironment($"wsl:{distro}", "wsl", distro));
+                }
+            }
+            else if (!ContainsNoInstalledMessage(listingText, listingError))
+            {
+                var reason = listing.ExitCode == 124
+                    ? $"WSL distribution listing timed out after {(int)EnumerationTimeout.TotalSeconds} seconds."
+                    : string.IsNullOrWhiteSpace(listingError)
+                        ? $"WSL distribution listing failed with exit code {listing.ExitCode}."
+                        : $"WSL distribution listing failed: {listingError.Trim()}";
+                return new GuideEnvironmentEnumeration(
+                    result,
+                    $"{reason} WSL environments were not probed; re-detect when the WSL service responds.");
             }
         }
         else if (host.Platform == GuideHostPlatform.Wsl)
@@ -172,8 +210,13 @@ internal sealed class GuideEnvironmentRuntime(IGuideHostEnvironment host)
             result.Add(new GuideEnvironment(kind, kind));
         }
 
-        return result.DistinctBy(static value => value.Selector, StringComparer.OrdinalIgnoreCase).ToArray();
+        return new GuideEnvironmentEnumeration(
+            result.DistinctBy(static value => value.Selector, StringComparer.OrdinalIgnoreCase).ToArray());
     }
+
+    /// <summary>A machine without WSL is a normal state, not an enumeration failure.</summary>
+    private static bool ContainsNoInstalledMessage(string output, string error)
+        => (output + error).Contains("no installed", StringComparison.OrdinalIgnoreCase);
 
     public bool CommandExists(GuideEnvironment environment, string command)
     {
@@ -1073,13 +1116,16 @@ internal sealed class GuideEnvironmentRuntime(IGuideHostEnvironment host)
     }
 
     private static GuideProcessResult RunLocal(string executable, IReadOnlyList<string> arguments)
+        => RunLocal(executable, arguments, DefaultProcessTimeout);
+
+    private static GuideProcessResult RunLocal(string executable, IReadOnlyList<string> arguments, TimeSpan timeout)
     {
         var start = CreateLocalStartInfo(executable);
         foreach (var argument in arguments)
         {
             start.ArgumentList.Add(argument);
         }
-        return RunLocalStartInfo(start, executable);
+        return RunLocalStartInfo(start, executable, timeout);
     }
 
     private static async Task<GuideProcessResult> RunLocalAsync(
@@ -1146,6 +1192,11 @@ internal sealed class GuideEnvironmentRuntime(IGuideHostEnvironment host)
 
     private static GuideProcessResult RunLocalStartInfo(ProcessStartInfo start, string executable)
         => RunLocalStartInfoAsync(start, executable, DefaultProcessTimeout, CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+
+    private static GuideProcessResult RunLocalStartInfo(ProcessStartInfo start, string executable, TimeSpan timeout)
+        => RunLocalStartInfoAsync(start, executable, timeout, CancellationToken.None)
             .GetAwaiter()
             .GetResult();
 

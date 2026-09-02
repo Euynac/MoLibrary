@@ -125,9 +125,23 @@ else
                 </div>
             </div>
             <div class="stat">
-                <div class="label"><Icon Name="host" Size="14"/> @Session.T("detected-agents")</div>
+                <div class="label">
+                    <Icon Name="host" Size="14"/> @Session.T("detected-agents")
+                    <button class="btn btn-ghost btn-tiny label-action" disabled="@(PresenceBusy || Model is null)"
+                            title="@Session.T("redetect-hosts-note")" @onclick="RedetectPresenceAsync">
+                        @if (PresenceBusy)
+                        {
+                            <span class="spinner"></span>
+                        }
+                        else
+                        {
+                            <Icon Name="update" Size="12"/>
+                        }
+                        @Session.T("redetect-hosts")
+                    </button>
+                </div>
                 <div class="value chips">
-                    @if (Model is null)
+                    @if (PresenceBusy || Model is null)
                     {
                         <span class="chip">@Session.T("detecting-hosts")</span>
                     }
@@ -135,13 +149,35 @@ else
                     {
                         <span class="chip">—</span>
                     }
-                    @foreach (var presence in Model?.Presence ?? [])
+                    else
                     {
-                        <span class="chip">@presence.Agent @@ @presence.EnvironmentSelector</span>
+                        @foreach (var presence in Model.Presence)
+                        {
+                            <span class="chip">@PresenceChip(presence)</span>
+                        }
+                        @if (Model.PresenceDetectedAt is { } detectedAt)
+                        {
+                            <span class="stat-time">@string.Format(Session.T("detected-at"), detectedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))</span>
+                        }
+                    }
+                    @if (Model?.PresenceWarnings is { Count: > 0 })
+                    {
+                        @foreach (var warning in Model.PresenceWarnings)
+                        {
+                            <span class="chip warn" title="@warning">@Session.T("detection-incomplete")</span>
+                        }
+                    }
+                    @if (PresenceError is not null)
+                    {
+                        <span class="chip warn" title="@PresenceError">@Session.T("detection-failed")</span>
                     }
                 </div>
             </div>
         </div>
+        @if (PresenceBusy && PresencePhases.Count > 0)
+        {
+            <PhaseProgress Phases="PresencePhases" Active="PresenceBusy"/>
+        }
     </div>
 
     @if (Integration is { Installed: true })
@@ -245,6 +281,12 @@ else
 
     private bool Busy { get; set; }
 
+    private bool PresenceBusy { get; set; }
+
+    private string? PresenceError { get; set; }
+
+    private List<GuidePhase> PresencePhases { get; set; } = [];
+
     private bool StartBusy { get; set; }
 
     private bool StopBusy { get; set; }
@@ -278,6 +320,16 @@ else
         // this page shows the steps even when it only joins the in-flight load.
         Facade.DashboardPhaseReported += OnDashboardPhase;
         Phases = [.. Facade.RecentDashboardPhases];
+        // The facade owns the presence detection lifecycle, so a detection the user started on
+        // a previous visit of this page (or on another page) keeps showing its progress here.
+        Facade.PresencePhaseReported += OnPresencePhase;
+        Facade.PresenceChanged += OnPresenceChanged;
+        PresencePhases = [.. Facade.RecentPresencePhases];
+        if (Facade.PresenceDetectionInProgress is { } inFlight)
+        {
+            PresenceBusy = true;
+            _ = JoinPresenceDetectionAsync(inFlight);
+        }
         // Prerendering paints the shell instantly; the interactive circuit starts the real
         // loads so no render thread is ever blocked by host-process inspection.
         if (RendererInfo.IsInteractive)
@@ -326,6 +378,80 @@ else
                 $"{workspaces.Count} · {workspaces.Count(static workspace => workspace.Healthy)} {Session.T("workspace-summary-healthy")}",
                 workspaces.All(static workspace => workspace.Healthy));
     }
+
+    /// <summary>
+    /// Runs one explicit agent-host detection and repaints the persisted snapshot; the wizard
+    /// never re-detects hosts on its own, so this button is the only detection trigger.
+    /// </summary>
+    private async Task RedetectPresenceAsync()
+    {
+        if (PresenceBusy)
+        {
+            return;
+        }
+
+        PresenceBusy = true;
+        PresenceError = null;
+        PresencePhases = [];
+        try
+        {
+            await Facade.DetectPresenceAsync();
+        }
+        catch (Exception exception)
+        {
+            PresenceError = exception.Message;
+        }
+        finally
+        {
+            PresenceBusy = false;
+        }
+    }
+
+    /// <summary>Adopts a detection that is still running from an earlier visit of this page.</summary>
+    private async Task JoinPresenceDetectionAsync(Task<GuideAgentPresenceSnapshot> detection)
+    {
+        try
+        {
+            await detection;
+        }
+        catch (Exception exception)
+        {
+            PresenceError = exception.Message;
+        }
+        finally
+        {
+            PresenceBusy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnPresencePhase(GuidePhase phase)
+        => _ = InvokeAsync(() =>
+        {
+            PresencePhases.Add(phase);
+            StateHasChanged();
+        });
+
+    private void OnPresenceChanged(GuideAgentPresenceSnapshot snapshot)
+        => _ = InvokeAsync(() =>
+        {
+            PresenceBusy = false;
+            if (Model is not null)
+            {
+                Model = Model with
+                {
+                    Presence = snapshot.Presence,
+                    PresenceDetectedAt = snapshot.DetectedAt,
+                    PresenceWarnings = snapshot.Warnings
+                };
+            }
+            StateHasChanged();
+        });
+
+    private static string PresenceChip(SetupAgentPresence presence)
+        => presence.Version is { } version
+            ? $"{presence.Agent} {version} @ {presence.EnvironmentSelector}"
+            : $"{presence.Agent} @ {presence.EnvironmentSelector}";
 
     private async Task StartCockpitAsync()
     {
@@ -386,5 +512,7 @@ else
     {
         Session.LanguageChanged -= OnLanguageChanged;
         Facade.DashboardPhaseReported -= OnDashboardPhase;
+        Facade.PresencePhaseReported -= OnPresencePhase;
+        Facade.PresenceChanged -= OnPresenceChanged;
     }
 }
