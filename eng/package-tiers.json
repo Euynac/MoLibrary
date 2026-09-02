@@ -57,6 +57,7 @@
         "Monica.Dapr",
         "Monica.EventBus.Kafka",
         "Monica.JobScheduler.EfCore",
+        "Monica.JobScheduler.ServiceDiscovery",
         "Monica.SignalR",
         "Monica.StateStore.StackExchange"
       ]
@@ -80,6 +81,16 @@
       "project": "Monica.Experimental",
       "tier": "labs",
       "reason": "Experimental source is intentionally not published as a package."
+    },
+    {
+      "project": "Monica.Guide.App",
+      "tier": "labs",
+      "reason": "The unified guide executable is published per platform as Monica.Guide, not as a NuGet package."
+    },
+    {
+      "project": "Monica.Guide.Engine",
+      "tier": "labs",
+      "reason": "The preview-first guide engine ships inside platform executables and consuming products, not as a NuGet package."
     },
     {
       "project": "Monica.ProjectUnits.CodeAnalysis",
