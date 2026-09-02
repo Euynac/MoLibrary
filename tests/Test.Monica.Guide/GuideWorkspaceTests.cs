@@ -28,7 +28,7 @@ public sealed class GuideWorkspaceTests
         Assert.Equal(GuideStatus.Warning, preview.Status);
         Assert.False(File.Exists(fixture.ConfigFile));
         Assert.Contains(preview.Plan!.Actions, action =>
-            action.Kind == GuidePlanActionKind.WriteFile && action.Target.EndsWith(".monica\\guide.json", StringComparison.OrdinalIgnoreCase));
+            action.Kind == GuidePlanActionKind.WriteFile && action.Target.EndsWith(Path.Join(".monica", "guide.json"), StringComparison.OrdinalIgnoreCase));
         Assert.Contains(preview.Plan.Actions, action =>
             action.Kind == GuidePlanActionKind.WriteFile && action.Target.EndsWith("AGENTS.md", StringComparison.OrdinalIgnoreCase));
 
