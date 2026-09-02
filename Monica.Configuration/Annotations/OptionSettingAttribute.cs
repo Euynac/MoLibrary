@@ -52,6 +52,14 @@ public sealed class OptionSettingAttribute : Attribute
     public ConfigurationTextSemantic TextSemantic { get; set; } = ConfigurationTextSemantic.PlainText;
 
     /// <summary>
+    /// Gets or sets an opaque editor hint for scalar string values.
+    /// The value space is defined by the application (for example a business entity reference such as
+    /// <c>FlightRoute</c>), and the framework only transports it so management UIs can pick a dedicated editor.
+    /// Management tools fall back to the default text editor when they do not recognize the hint.
+    /// </summary>
+    public string? EditorHint { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional reload behavior override for this node.
     /// </summary>
     public ConfigurationReloadBehavior ReloadBehavior { get; set; } = ConfigurationReloadBehavior.Inherit;

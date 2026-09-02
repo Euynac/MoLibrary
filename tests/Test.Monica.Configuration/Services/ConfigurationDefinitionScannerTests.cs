@@ -74,6 +74,30 @@ public class ConfigurationDefinitionScannerTests
     }
 
     [Fact]
+    public void Scan_WhenScalarStringPropertyHasEditorHint_ShouldTransportHintToNode()
+    {
+        var scanner = CreateScanner();
+
+        var definition = scanner.Scan(typeof(EditorHintOptions));
+
+        var route = definition.Root.Children.Single(x => x.Name == nameof(EditorHintOptions.Route));
+        route.EditorHint.Should().Be("FlightRoute");
+        definition.Root.Children.Single(x => x.Name == nameof(EditorHintOptions.Plain))
+            .EditorHint.Should().BeNull();
+    }
+
+    [Fact]
+    public void Scan_WhenNonScalarStringPropertyHasEditorHint_ShouldThrowInvalidOperationException()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(typeof(InvalidEditorHintOptions));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*EditorHint*can only be used on scalar string configuration nodes*");
+    }
+
+    [Fact]
     public void Scan_WhenRangeUsesDoubleMaxValue_ShouldClampToDecimalMaximum()
     {
         var scanner = CreateScanner();
@@ -267,6 +291,23 @@ public class ConfigurationDefinitionScannerTests
     {
         [Range(0d, double.MaxValue)]
         public double Value { get; set; }
+    }
+
+    [Configuration("Sample:EditorHint", DefinitionKey = "test.editorHint")]
+    private sealed class EditorHintOptions
+    {
+        [OptionSetting("Route", EditorHint = "FlightRoute")]
+        public string Route { get; set; } = "";
+
+        [OptionSetting("Plain")]
+        public string Plain { get; set; } = "";
+    }
+
+    [Configuration("Sample:InvalidEditorHint", DefinitionKey = "test.invalidEditorHint")]
+    private sealed class InvalidEditorHintOptions
+    {
+        [OptionSetting("Count", EditorHint = "FlightRoute")]
+        public int Count { get; set; }
     }
 
     [Configuration("Sample:List", DefinitionKey = "test.list")]

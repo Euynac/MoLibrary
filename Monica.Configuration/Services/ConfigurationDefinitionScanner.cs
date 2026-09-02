@@ -85,6 +85,7 @@ internal sealed class ConfigurationDefinitionScanner(
                 ? ScanObjectChildren(type, path, configurationPath, inheritedReloadBehavior, traversal)
                 : [];
             var textSemantic = ResolveTextSemantic(option, nodeKind, valueKind, type.FullName ?? type.Name);
+            var editorHint = ResolveEditorHint(option, nodeKind, valueKind, type.FullName ?? type.Name);
 
             return new ConfigurationNodeDefinition
             {
@@ -100,6 +101,7 @@ internal sealed class ConfigurationDefinitionScanner(
                 IsNullable = IsNullable(type),
                 IsSensitive = option?.IsSensitive is true,
                 TextSemantic = textSemantic,
+                EditorHint = editorHint,
                 ReloadBehavior = ResolveReloadBehavior(option),
                 DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
                     ? BuildDictionaryTemplate(type, path, configurationPath, inheritedReloadBehavior, traversal)
@@ -175,6 +177,11 @@ internal sealed class ConfigurationDefinitionScanner(
                 nodeKind,
                 valueKind,
                 $"{property.DeclaringType?.FullName ?? property.DeclaringType?.Name}.{property.Name}");
+            var editorHint = ResolveEditorHint(
+                option,
+                nodeKind,
+                valueKind,
+                $"{property.DeclaringType?.FullName ?? property.DeclaringType?.Name}.{property.Name}");
 
             return new ConfigurationNodeDefinition
             {
@@ -190,6 +197,7 @@ internal sealed class ConfigurationDefinitionScanner(
                 IsNullable = IsNullable(property),
                 IsSensitive = option?.IsSensitive is true,
                 TextSemantic = textSemantic,
+                EditorHint = editorHint,
                 ReloadBehavior = ResolveReloadBehavior(option),
                 DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
                     ? BuildDictionaryTemplate(propertyType, path, configurationPath, inheritedReloadBehavior, traversal)
@@ -543,6 +551,27 @@ internal sealed class ConfigurationDefinitionScanner(
 
         throw new InvalidOperationException(
             $"{nameof(OptionSettingAttribute.TextSemantic)}.{textSemantic} can only be used on scalar string configuration nodes. Node '{nodeLabel}' is {nodeKind}/{valueKind?.ToString() ?? "None"}.");
+    }
+
+    private static string? ResolveEditorHint(
+        OptionSettingAttribute? option,
+        ConfigurationNodeKind nodeKind,
+        ConfigurationValueKind? valueKind,
+        string nodeLabel)
+    {
+        var editorHint = option?.EditorHint;
+        if (string.IsNullOrWhiteSpace(editorHint))
+        {
+            return null;
+        }
+
+        if (nodeKind == ConfigurationNodeKind.Scalar && valueKind == ConfigurationValueKind.String)
+        {
+            return editorHint;
+        }
+
+        throw new InvalidOperationException(
+            $"{nameof(OptionSettingAttribute.EditorHint)} '{editorHint}' can only be used on scalar string configuration nodes. Node '{nodeLabel}' is {nodeKind}/{valueKind?.ToString() ?? "None"}.");
     }
 
     private sealed class SchemaTraversalContext
