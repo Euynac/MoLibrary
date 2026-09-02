@@ -26,6 +26,9 @@ public sealed class GuidePaths
     /// <summary>Machine-global issue-reporting preference shared by every installed product.</summary>
     public string IssuePreferencesFile => Path.Combine(StateDirectory, "issue-preferences.json");
 
+    /// <summary>Machine-global workspace instruction projection preference.</summary>
+    public string WorkspaceProjectionFile => Path.Combine(StateDirectory, "workspace-projection.json");
+
     public string LogsDirectory => Path.Combine(EngineDataRoot, "logs");
 
     public static GuidePaths ForCurrentUser(IGuideHostEnvironment? environment = null)

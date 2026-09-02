@@ -213,7 +213,7 @@ public sealed class WorkflowGuideMutationTests
 
         var healthy = await service.GetStatusAsync(cancellationToken: CancellationToken);
         Assert.Contains(healthy.Checks, check =>
-            check.Id == "skills.windows.shared.catalog"
+            check.Id == $"skills.{FakeRuntime.HostEnvironment.Kind}.shared.catalog"
             && check.Status == GuideCheckStatus.Ok);
         Assert.Contains(healthy.Checks, check =>
             check.Id.StartsWith("agent.", StringComparison.Ordinal)
@@ -225,7 +225,7 @@ public sealed class WorkflowGuideMutationTests
             cancellationToken: CancellationToken);
         var drifted = await service.GetStatusAsync(cancellationToken: CancellationToken);
         Assert.Contains(drifted.Checks, check =>
-            check.Id == "skills.windows.shared.catalog"
+            check.Id == $"skills.{FakeRuntime.HostEnvironment.Kind}.shared.catalog"
             && check.Status == GuideCheckStatus.Warning);
     }
 
@@ -237,7 +237,7 @@ public sealed class WorkflowGuideMutationTests
         var install = new GuideConfigureRequest(
             null,
             new Uri("http://localhost:62044"),
-            [new GuideTargetSelection(FakeRuntime.WindowsEnvironment, [GuideTarget.Shared, GuideTarget.Claude])]);
+            [new GuideTargetSelection(FakeRuntime.HostEnvironment, [GuideTarget.Shared, GuideTarget.Claude])]);
         var preview = await service.PreviewConfigureAsync(install, cancellationToken: CancellationToken);
         await service.ApplyConfigureAsync(install, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
         Assert.True(Directory.Exists(fixture.TargetSharedSkillDirectory));
@@ -245,7 +245,7 @@ public sealed class WorkflowGuideMutationTests
 
         var claudeRemoval = new GuideUnconfigureRequest(
             [GuideTarget.Claude],
-            [FakeRuntime.WindowsEnvironment]);
+            [FakeRuntime.HostEnvironment]);
         var claudePreview = await service.PreviewUnconfigureAsync(claudeRemoval, cancellationToken: CancellationToken);
         Assert.Contains(claudePreview.Plan!.Actions, action =>
             action.Kind == GuidePlanActionKind.DeleteSkillDirectory);
@@ -366,7 +366,7 @@ public sealed class WorkflowGuideMutationTests
                 null,
                 new Uri($"http://localhost:{port}"),
                 [new GuideTargetSelection(
-                    FakeRuntime.WindowsEnvironment,
+                    FakeRuntime.HostEnvironment,
                     targets.Length == 0 ? [GuideTarget.Shared] : targets)]);
 
         internal async Task<int> ReadServerConfigurationPortAsync()

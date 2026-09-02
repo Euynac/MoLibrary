@@ -15,24 +15,29 @@ public sealed class GuideDesktopIntegrationTests
             "serve",
             "serve --no-open-browser");
 
-        integration.AutoStartCommand(@"C:\Tools\bundle\app\Monica.Workflow.exe\")
-            .Should().Be("\"C:\\Tools\\bundle\\app\\Monica.Workflow.exe\" serve --no-open-browser");
+        // A trailing separator on the resolved executable is normalized away before quoting.
+        var executable = Path.Combine(Path.GetTempPath(), "Monica.Workflow.exe") + Path.DirectorySeparatorChar;
+
+        integration.AutoStartCommand(executable)
+            .Should().Be($"\"{Path.Combine(Path.GetTempPath(), "Monica.Workflow.exe")}\" serve --no-open-browser");
     }
 
     [Fact]
     public void ShortcutPath_UsesTheFixedFileNameUnderEachInjectedShellDirectory()
     {
+        var desktopDirectory = Path.Combine(Path.GetTempPath(), "guide-shortcuts", "Desktop");
+        var programsDirectory = Path.Combine(Path.GetTempPath(), "guide-shortcuts", "Programs");
         var integration = new GuideDesktopIntegration(
             "Monica Workflow",
             "Monica.Workflow",
             "serve",
             "serve --no-open-browser",
-            desktopDirectory: @"C:\Users\mo\Desktop",
-            programsDirectory: @"C:\Users\mo\AppData\Roaming\Microsoft\Windows\Start Menu\Programs");
+            desktopDirectory: desktopDirectory,
+            programsDirectory: programsDirectory);
 
         integration.ShortcutPath(GuideShortcutSite.Desktop)
-            .Should().Be(@"C:\Users\mo\Desktop\Monica Workflow.lnk");
+            .Should().Be(Path.Combine(desktopDirectory, "Monica Workflow.lnk"));
         integration.ShortcutPath(GuideShortcutSite.StartMenu)
-            .Should().Be(@"C:\Users\mo\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Monica Workflow.lnk");
+            .Should().Be(Path.Combine(programsDirectory, "Monica Workflow.lnk"));
     }
 }

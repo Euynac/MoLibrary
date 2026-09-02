@@ -694,6 +694,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         if (workspaceRoot is not null)
         {
             AdoptWorkspaceRegistration(workspaceRoot, checks, mutations);
+            ConvergeWorkspaceInstructions(workspaceRoot, catalog, checks, mutations);
         }
         if (_definition.ServesLoopback && desiredBaseAddress is not null)
         {
@@ -1479,6 +1480,27 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             mutations);
         checks.Add(Check("workspace.registry", GuideCheckStatus.Ok,
             $"The configured workspace was adopted into the engine registry: {workspaceRoot}"));
+    }
+
+    /// <summary>
+    /// Converges the managed instruction block while configuring a workspace, so the machine
+    /// projection switches (source hints, issue policy) apply with the same update that
+    /// refreshes skills. Products whose catalog declares no managed instructions have no
+    /// workspace instruction surface to converge.
+    /// </summary>
+    private void ConvergeWorkspaceInstructions(
+        string workspaceRoot,
+        SkillCatalog catalog,
+        ICollection<GuideCheck> checks,
+        List<GuidePlannedMutation> mutations)
+    {
+        if (catalog.ManagedInstructions is null)
+        {
+            return;
+        }
+
+        new GuideWorkspaceService(_definition, _enginePaths, catalog, _productPaths)
+            .ConvergeInstructions(workspaceRoot, checks, mutations);
     }
 
     /// <summary>The environment the guide process runs in; project installations are native-only.</summary>

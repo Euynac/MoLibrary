@@ -7,6 +7,9 @@
     <TargetFramework />
     <TargetFrameworks>net10.0-windows;net10.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <!-- Restore and compile the windows TFM on Linux/macOS CI too (reference packs come
+         from NuGet); only executing the windows build requires a Windows host. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">

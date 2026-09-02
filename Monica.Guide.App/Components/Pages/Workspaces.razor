@@ -44,7 +44,7 @@ else
                 <div class="card workspace-card @(workspace.Issues.Count > 0 || !workspace.DirectoryExists ? "workspace-attention" : null)">
                     <div class="workspace-head">
                         <span class="profile-badge profile-@ProfileClass(workspace.Profile)">@workspace.Profile</span>
-                        <span class="health-dot @(WorkspaceHealthy(workspace) ? "ok" : "warn")" title="@Session.T("status")"></span>
+                        <span class="health-dot @(workspace.Healthy ? "ok" : "warn")" title="@Session.T("status")"></span>
                     </div>
                     <div class="workspace-path" title="@workspace.Workspace">@workspace.Workspace</div>
                     <div class="workspace-meta">
@@ -78,6 +78,69 @@ else
             }
         </div>
     }
+
+    <div class="card">
+        <h2>@Session.T("ws-preview-title")</h2>
+        <p class="card-note">@Session.T("ws-preview-note")</p>
+        <div class="switch-row">
+            <span class="switch-text">
+                <span class="primary">@Session.T("src-proj-sources-title")</span>
+                <span class="secondary">@Session.T("src-proj-sources-note")</span>
+            </span>
+            <label class="switch">
+                <input type="checkbox" checked="@Projection.SourceHints" disabled="@PreferenceBusy"
+                       @onchange="e => SetProjectionAsync(sourceHints: (bool)e.Value!, issuePolicy: Projection.IssuePolicy)"/>
+                <span class="track"></span>
+            </label>
+        </div>
+        <div class="switch-row">
+            <span class="switch-text">
+                <span class="primary">@Session.T("src-proj-issue-title")</span>
+                <span class="secondary">@Session.T("src-proj-issue-note")</span>
+            </span>
+            <label class="switch">
+                <input type="checkbox" checked="@Projection.IssuePolicy" disabled="@PreferenceBusy"
+                       @onchange="e => SetProjectionAsync(sourceHints: Projection.SourceHints, issuePolicy: (bool)e.Value!)"/>
+                <span class="track"></span>
+            </label>
+        </div>
+        <div class="field">
+            <label>@Session.T("ws-preview-issue-mode")</label>
+            <div class="option-grid">
+                @foreach (var mode in IssueModes)
+                {
+                    var selected = IssueMode == mode;
+                    <label class="option-card @(selected ? "selected" : null)">
+                        <input type="radio" name="ws-preview-issue-mode" checked="@selected" disabled="@PreferenceBusy"
+                               @onchange="() => SetIssueModeAsync(mode)"/>
+                        <span class="option-main">
+                            <span class="option-title">@Session.T($"src-issue-mode-{ModeKey(mode)}")</span>
+                            <span class="option-desc">@Session.T($"src-issue-desc-{ModeKey(mode)}")</span>
+                        </span>
+                    </label>
+                }
+            </div>
+        </div>
+        @if (InstructionsPreview is { Body: { } sampleBody })
+        {
+            <div class="instruction-sample">
+                <div class="instruction-sample-head">
+                    <span class="chip">AGENTS.md</span>
+                    <span class="chip">@string.Format(Session.T("ws-preview-profile"), InstructionsPreview.Profile)</span>
+                </div>
+<pre class="code-block instruction-sample-body"><span class="instruction-marker">@InstructionsPreview.StartMarker</span>
+@sampleBody
+<span class="instruction-marker">@InstructionsPreview.EndMarker</span></pre>
+            </div>
+        }
+        else
+        {
+            <div class="banner banner-info">
+                <Icon Name="info" Size="18"/>
+                <span>@Session.T("ws-preview-unavailable")</span>
+            </div>
+        }
+    </div>
 
     <div class="card">
         <h2>@Session.T("ws-add-title")</h2>
@@ -243,6 +306,8 @@ else
 
     private static readonly string[] Profiles = ["application", "extension-author", "framework-contributor", "docs-contributor"];
     private static readonly string[] Architectures = ["microservice", "modular-monolith"];
+    private static readonly GuideIssueReportingMode[] IssueModes =
+        [GuideIssueReportingMode.Prepare, GuideIssueReportingMode.Ask, GuideIssueReportingMode.Never];
 
     private bool Loading { get; set; } = true;
 
@@ -255,6 +320,12 @@ else
     private bool GlobalGuideSkill { get; set; }
 
     private bool PreferenceBusy { get; set; }
+
+    private GuideIssueReportingMode IssueMode { get; set; }
+
+    private SetupWorkspaceProjectionView Projection { get; set; } = new(true, true);
+
+    private SetupInstructionsPreviewView? InstructionsPreview { get; set; }
 
     private async Task SetGlobalGuideSkillAsync(bool enabled)
     {
@@ -269,6 +340,44 @@ else
             PreferenceBusy = false;
         }
     }
+
+    /// <summary>
+    /// Sets one projection switch and re-renders the instruction example so the effect of the
+    /// machine-global switch is visible immediately, not only after the next update converges.
+    /// </summary>
+    private async Task SetProjectionAsync(bool sourceHints, bool issuePolicy)
+    {
+        PreferenceBusy = true;
+        try
+        {
+            Projection = new SetupWorkspaceProjectionView(sourceHints, issuePolicy);
+            await Task.Run(() => Facade.SetWorkspaceProjection(sourceHints, issuePolicy));
+            await LoadInstructionsPreviewAsync();
+        }
+        finally
+        {
+            PreferenceBusy = false;
+        }
+    }
+
+    private async Task SetIssueModeAsync(GuideIssueReportingMode mode)
+    {
+        PreferenceBusy = true;
+        try
+        {
+            IssueMode = mode;
+            await Task.Run(() => Facade.SetIssueReporting(mode));
+            await LoadInstructionsPreviewAsync();
+        }
+        finally
+        {
+            PreferenceBusy = false;
+        }
+    }
+
+    /// <summary>Previews with a registered workspace's profile when one exists, else the catalog default.</summary>
+    private async Task LoadInstructionsPreviewAsync()
+        => InstructionsPreview = await Facade.PreviewWorkspaceInstructionsAsync(Registered.FirstOrDefault()?.Profile);
 
     private List<SetupWorkspaceView> Registered { get; set; } = [];
 
@@ -312,12 +421,18 @@ else
     {
         Session.LanguageChanged += OnLanguageChanged;
         GlobalGuideSkill = await Task.Run(() => Facade.GetGlobalGuideSkill());
+        IssueMode = await Task.Run(() => Facade.GetIssueReporting());
+        Projection = await Task.Run(() => Facade.GetWorkspaceProjection());
         await ReloadAsync();
+        await LoadInstructionsPreviewAsync();
         Loading = false;
     }
 
     private async Task ReloadAsync()
-        => Registered = [.. await Facade.ListWorkspacesAsync()];
+    {
+        Registered = [.. await Facade.ListWorkspacesAsync()];
+        await LoadInstructionsPreviewAsync();
+    }
 
     private async Task InspectAsync()
     {
@@ -518,8 +633,8 @@ else
         });
     }
 
-    private bool WorkspaceHealthy(SetupWorkspaceView workspace)
-        => workspace.DirectoryExists && workspace.ConfigurationCurrent && workspace.Issues.Count == 0;
+    private static string ModeKey(GuideIssueReportingMode mode)
+        => mode.ToString().ToLowerInvariant();
 
     private static string ProfileClass(string profile)
         => profile switch

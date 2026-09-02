@@ -46,7 +46,7 @@ Monica skills install **into the project by default**, never globally unless the
    $monica-guide init --workspace <path> --profile <application|extension-author|framework-contributor|docs-contributor> --capability <microservice|modular-monolith|ui> --json
    ```
 
-   `init` writes `.monica/guide.json` (including the optional `skillTargets` list of workspace-relative install directories, default `.agents/skills`) plus one managed instruction block in the root `AGENTS.md` (and the minimal `@AGENTS.md` import in `CLAUDE.md` when a Claude target is installed), and registers the workspace in the engine registry. Inspect advisory detection with `status --workspace <path>` first; detection is a suggestion, confirmation is the user's.
+   `init` writes `.monica/guide.json` (including the optional `skillTargets` list of workspace-relative install directories, default `.agents/skills`) plus one managed instruction block in the root `AGENTS.md` (and the minimal `@AGENTS.md` import in `CLAUDE.md` when a Claude target is installed), and registers the workspace in the engine registry. The managed block also projects this machine's verified first-party source locators and the issue-reporting policy while the wizard's projection switches are on; a workspace update converges those sections with the same preview and apply. Inspect advisory detection with `status --workspace <path>` first; detection is a suggestion, confirmation is the user's.
 
 4. Install or refresh that workspace's skills — this is the default skill flow:
 

@@ -197,6 +197,17 @@ public sealed record GuideWorkspaceView(
     bool InstructionsCurrent,
     IReadOnlyList<string> Issues);
 
+/// <summary>
+/// The exact managed instruction span the next initialization or update writes for one
+/// profile: the marker lines plus the body projected from the catalog template and the
+/// current machine switches. Preview surfaces render this verbatim.
+/// </summary>
+public sealed record GuideInstructionPreview(
+    string Profile,
+    string StartMarker,
+    string EndMarker,
+    string Body);
+
 /// <summary>Selectors shared by status and doctor.</summary>
 public sealed record GuideInspectRequest(
     IReadOnlyList<GuideEnvironment>? Environments = null);

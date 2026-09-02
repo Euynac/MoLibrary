@@ -497,6 +497,12 @@
         }
         .workspace-meta { display: flex; flex-wrap: wrap; gap: 6px; }
         .workspace-issues { margin: 0; padding-left: 18px; color: var(--warn-text); font-size: 12.5px; line-height: 1.55; }
+
+        /* ---- instruction injection sample: verbatim managed block panel ---- */
+        .instruction-sample { border: 1px solid var(--rule); margin-top: 16px; }
+        .instruction-sample-head { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-bottom: 1px dashed var(--rule); }
+        .instruction-sample .code-block { border: none; white-space: pre-wrap; overflow-wrap: break-word; }
+        .instruction-sample .instruction-marker { color: var(--muted); }
         .workspace-card .actions { margin-top: auto; }
         details.global-targets {
             border: 1px dashed var(--rule); padding: 12px 16px;

@@ -5,14 +5,23 @@ namespace Test.Monica.Guide;
 
 internal sealed class FakeRuntime(string home) : IGuideEnvironmentRuntime
 {
-    internal static GuideEnvironment WindowsEnvironment { get; } = new("windows", "windows");
+    // The fake serves the real host file system, so it must report the host-native
+    // environment exactly like GuideEnvironmentRuntime's native branch; a windows-kind
+    // environment paired with a POSIX home would make the engine build backslash paths
+    // that the host cannot resolve.
+    internal static GuideEnvironment HostEnvironment { get; } = OperatingSystem.IsWindows()
+        ? new GuideEnvironment("windows", "windows")
+        : OperatingSystem.IsMacOS()
+            ? new GuideEnvironment("macos", "macos")
+            : new GuideEnvironment("linux", "linux");
+
     internal string Home { get; } = home;
     internal HashSet<string> FailNextDeletesOf { get; } = new(StringComparer.OrdinalIgnoreCase);
     internal bool NoCommands { get; set; }
     internal HashSet<string> UnavailableCommands { get; } = new(StringComparer.Ordinal);
     internal HashSet<string> RedirectedPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyList<GuideEnvironment> DetectEnvironments() => [WindowsEnvironment];
+    public IReadOnlyList<GuideEnvironment> DetectEnvironments() => [HostEnvironment];
 
     public bool CommandExists(GuideEnvironment environment, string command)
         => !NoCommands

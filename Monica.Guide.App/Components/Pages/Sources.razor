@@ -29,6 +29,32 @@ else
         <p class="card-note">@Session.T("src-issue-note")</p>
     </div>
 
+    <div class="card">
+        <h2>@Session.T("src-proj-title")</h2>
+        <div class="switch-row">
+            <span class="switch-text">
+                <span class="primary">@Session.T("src-proj-sources-title")</span>
+                <span class="secondary">@Session.T("src-proj-sources-note")</span>
+            </span>
+            <label class="switch">
+                <input type="checkbox" checked="@Projection.SourceHints" disabled="@ProjectionBusy"
+                       @onchange="e => SetProjectionAsync(sourceHints: (bool)e.Value!, issuePolicy: Projection.IssuePolicy)"/>
+                <span class="track"></span>
+            </label>
+        </div>
+        <div class="switch-row">
+            <span class="switch-text">
+                <span class="primary">@Session.T("src-proj-issue-title")</span>
+                <span class="secondary">@Session.T("src-proj-issue-note")</span>
+            </span>
+            <label class="switch">
+                <input type="checkbox" checked="@Projection.IssuePolicy" disabled="@ProjectionBusy"
+                       @onchange="e => SetProjectionAsync(sourceHints: Projection.SourceHints, issuePolicy: (bool)e.Value!)"/>
+                <span class="track"></span>
+            </label>
+        </div>
+    </div>
+
     @foreach (var ledgerIssue in Repositories.Where(static repository => repository.LedgerIssue is not null)
                  .Select(static repository => repository.LedgerIssue!)
                  .Distinct())
@@ -174,6 +200,10 @@ else
 
     private GuideIssueReportingMode IssueMode { get; set; }
 
+    private SetupWorkspaceProjectionView Projection { get; set; } = new(true, true);
+
+    private bool ProjectionBusy { get; set; }
+
     private List<SetupSourceRepositoryView> Repositories { get; set; } = [];
 
     /// <summary>Per-repository checkout path inputs, keyed by the full repository name.</summary>
@@ -193,6 +223,7 @@ else
     {
         Session.LanguageChanged += OnLanguageChanged;
         IssueMode = await Task.Run(() => Facade.GetIssueReporting());
+        Projection = await Task.Run(() => Facade.GetWorkspaceProjection());
         await ReloadAsync();
         Loading = false;
     }
@@ -217,6 +248,20 @@ else
         finally
         {
             PreferenceBusy = false;
+        }
+    }
+
+    private async Task SetProjectionAsync(bool sourceHints, bool issuePolicy)
+    {
+        ProjectionBusy = true;
+        try
+        {
+            Projection = new SetupWorkspaceProjectionView(sourceHints, issuePolicy);
+            await Task.Run(() => Facade.SetWorkspaceProjection(sourceHints, issuePolicy));
+        }
+        finally
+        {
+            ProjectionBusy = false;
         }
     }
 
