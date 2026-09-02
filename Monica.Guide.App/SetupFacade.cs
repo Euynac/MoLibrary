@@ -72,7 +72,11 @@ public sealed record SetupWorkspaceView(
     int InstalledSkillCount,
     int ProfileSkillCount,
     bool InstructionsCurrent,
-    IReadOnlyList<string> Issues);
+    IReadOnlyList<string> Issues)
+{
+    /// <summary>Whether every live health observation passes: directory, configuration, and no issues.</summary>
+    public bool Healthy => DirectoryExists && ConfigurationCurrent && Issues.Count == 0;
+}
 
 /// <summary>One declared first-party source repository with its live binding observation.</summary>
 public sealed record SetupSourceRepositoryView(
@@ -90,6 +94,17 @@ public sealed record SetupSourceRepositoryView(
 
 /// <summary>Machine-global switches projecting machine state into workspace instruction blocks.</summary>
 public sealed record SetupWorkspaceProjectionView(bool SourceHints, bool IssuePolicy);
+
+/// <summary>
+/// The managed instruction span the next workspace initialization or update writes. Null
+/// payload fields mean no installed catalog defines managed instructions yet, so no example
+/// can be rendered.
+/// </summary>
+public sealed record SetupInstructionsPreviewView(
+    string? Profile,
+    string? StartMarker,
+    string? EndMarker,
+    string? Body);
 
 /// <summary>Advisory detection of one workspace candidate for the add-workspace flow.</summary>
 public sealed record SetupWorkspaceDetectionView(
@@ -463,6 +478,30 @@ public sealed class SetupFacade(SetupSession session)
                 view.Issues))
             .ToArray();
     }
+
+    /// <summary>
+    /// Renders the managed instruction block the next initialization or update writes for one
+    /// profile, from live machine state. A null profile resolves to the catalog's first
+    /// template; the view's empty state means no installed catalog defines instructions.
+    /// </summary>
+    public async Task<SetupInstructionsPreviewView> PreviewWorkspaceInstructionsAsync(
+        string? profile = null,
+        CancellationToken cancellationToken = default)
+        => await Task.Run(() =>
+        {
+            try
+            {
+                var preview = new GuideWorkspaceService(Product, GuidePaths.ForCurrentUser(), LoadWorkspaceCatalog())
+                    .PreviewManagedInstructions(profile);
+                return new SetupInstructionsPreviewView(
+                    preview.Profile, preview.StartMarker, preview.EndMarker, preview.Body);
+            }
+            catch (InvalidOperationException)
+            {
+                // No installed catalog declares managed instructions yet; the UI explains this state.
+                return new SetupInstructionsPreviewView(null, null, null, null);
+            }
+        }, cancellationToken);
 
     /// <summary>Advisory detection for one workspace candidate the user typed or pasted.</summary>
     public async Task<SetupWorkspaceDetectionView> InspectWorkspaceAsync(

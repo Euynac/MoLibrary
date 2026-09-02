@@ -310,6 +310,25 @@ public sealed partial class GuideWorkspaceService
             .ToArray();
     }
 
+    /// <summary>
+    /// Renders the exact managed instruction span the next initialization or update writes
+    /// for one profile, from the catalog template plus the current machine projection state.
+    /// A null or unknown profile resolves to the catalog's first template so preview surfaces
+    /// can show an example before any workspace is registered.
+    /// </summary>
+    public GuideInstructionPreview PreviewManagedInstructions(string? profile = null)
+    {
+        var instructions = Instructions;
+        var resolved = profile is not null && instructions.Templates.ContainsKey(profile)
+            ? profile
+            : instructions.Templates.Keys.Order(StringComparer.Ordinal).First();
+        return new GuideInstructionPreview(
+            resolved,
+            instructions.Markers.Start,
+            instructions.Markers.End,
+            RenderInstructions(resolved));
+    }
+
     /// <summary>Compares this workspace's recorded installations against its profile closure.</summary>
     private (int Installed, int ProfileCount) CountWorkspaceSkills(string workspace, string profile)
     {

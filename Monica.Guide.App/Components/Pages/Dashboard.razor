@@ -120,7 +120,7 @@ else
                     }
                     else
                     {
-                        <a class="chip ok" href="workspaces">@WorkspaceSummary.Text</a>
+                        <a class="chip @(WorkspaceSummary.Healthy ? "ok" : "warn")" href="workspaces">@WorkspaceSummary.Text</a>
                     }
                 </div>
             </div>
@@ -237,7 +237,7 @@ else
 
     private SetupDesktopIntegrationView? Integration { get; set; }
 
-    private sealed record WorkspaceSummaryView(string Text);
+    private sealed record WorkspaceSummaryView(string Text, bool Healthy);
 
     private WorkspaceSummaryView? WorkspaceSummary { get; set; }
 
@@ -323,7 +323,8 @@ else
         WorkspaceSummary = workspaces.Count == 0
             ? null
             : new WorkspaceSummaryView(
-                $"{workspaces.Count} · {workspaces.Count(static workspace => workspace.Issues.Count == 0 && workspace.DirectoryExists)} {Session.T("workspace-summary-healthy")}");
+                $"{workspaces.Count} · {workspaces.Count(static workspace => workspace.Healthy)} {Session.T("workspace-summary-healthy")}",
+                workspaces.All(static workspace => workspace.Healthy));
     }
 
     private async Task StartCockpitAsync()
