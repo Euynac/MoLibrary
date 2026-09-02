@@ -119,7 +119,9 @@
 
     private static string FormatShare(int count, int total) => total == 0
         ? "—"
-        : (count / (double)total).ToString("P0", CultureInfo.CurrentCulture);
+        // The custom "0%" pattern keeps the percent sign glued to the digits in every
+        // culture; the standard "P0" pattern inserts a locale gap under invariant culture.
+        : (count / (double)total).ToString("0%", CultureInfo.InvariantCulture);
 
     private string GetSegmentTooltip(JobExecutionState state, int count, int total) => L[
         "Overview:Queue:SegmentTooltip",

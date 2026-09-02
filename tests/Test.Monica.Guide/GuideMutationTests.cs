@@ -213,7 +213,7 @@ public sealed class WorkflowGuideMutationTests
 
         var healthy = await service.GetStatusAsync(cancellationToken: CancellationToken);
         Assert.Contains(healthy.Checks, check =>
-            check.Id == "skills.windows.shared.catalog"
+            check.Id == $"skills.{FakeRuntime.HostEnvironment.Kind}.shared.catalog"
             && check.Status == GuideCheckStatus.Ok);
         Assert.Contains(healthy.Checks, check =>
             check.Id.StartsWith("agent.", StringComparison.Ordinal)
@@ -225,7 +225,7 @@ public sealed class WorkflowGuideMutationTests
             cancellationToken: CancellationToken);
         var drifted = await service.GetStatusAsync(cancellationToken: CancellationToken);
         Assert.Contains(drifted.Checks, check =>
-            check.Id == "skills.windows.shared.catalog"
+            check.Id == $"skills.{FakeRuntime.HostEnvironment.Kind}.shared.catalog"
             && check.Status == GuideCheckStatus.Warning);
     }
 
