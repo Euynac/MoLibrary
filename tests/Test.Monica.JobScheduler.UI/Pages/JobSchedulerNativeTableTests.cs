@@ -80,6 +80,35 @@ public sealed class JobSchedulerNativeTableTests
     }
 
     [Fact]
+    public async Task CatalogLastRun_WhenExecutionExists_ShouldOpenExecutionEvidenceInPlace()
+    {
+        await using var context = new JobSchedulerUiTestContext();
+        var execution = await context.Store.RunRecurringNowAsync(new JobRecurringRunNowCommand
+        {
+            SchedulerScopeKey = JobSchedulerUiTestContext.SCOPE,
+            OwnerKey = context.RecurringDefinition.OwnerKey,
+            JobKey = context.RecurringDefinition.Declaration.JobKey,
+            InstanceId = "catalog-dialog-0001"
+        }, Xunit.TestContext.Current.CancellationToken);
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var originalUri = navigation.Uri;
+        var cut = context.Render<JobCatalogPage>();
+
+        cut.WaitForAssertion(() => cut.Find("button.catalog-table__latest").Should().NotBeNull());
+        var openTask = cut.Find("button.catalog-table__latest").ClickAsync();
+
+        context.DialogProvider.WaitForAssertion(() =>
+        {
+            context.DialogProvider.Markup.Should().Contain(execution.InstanceId);
+            navigation.Uri.Should().Be(originalUri);
+        });
+        await context.DialogProvider.FindAll("button")
+            .Single(button => button.TextContent.Contains("Common:Close", StringComparison.Ordinal))
+            .ClickAsync();
+        await openTask;
+    }
+
+    [Fact]
     public async Task CatalogNextRun_ShouldUseSchedulerTimeAndKeepRelativeTimingInTheTooltip()
     {
         var timeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai");

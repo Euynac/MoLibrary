@@ -162,14 +162,19 @@
                 <MudTd DataLabel="@L["Catalog:Columns:LastRun"]">
                     @if (context.LatestExecution is { } latest)
                     {
-                        <div class="catalog-table__latest">
+                        <button type="button"
+                                class="catalog-table__latest"
+                                title="@latest.InstanceId"
+                                aria-label="@L["Executions:Actions:OpenDetailsFor", effective.JobName, latest.InstanceId]"
+                                @onclick="@(() => OpenLatestExecutionAsync(latest.InstanceId))"
+                                @onclick:stopPropagation="true">
                             <span class="catalog-table__latest-state" data-state="@latest.State.ToString().ToLowerInvariant()">
                                 <MudIcon Icon="@GetStateIcon(latest.State)" Size="Size.Small" />
                                 @L[$"ExecutionStates:{latest.State}"]
                             </span>
                             <strong>@TimePresentation.FormatTimestamp(latest.CreatedAtUtc)</strong>
                             <small>@TimePresentation.FormatExecutionDuration(latest, TimeProvider.GetUtcNow())</small>
-                        </div>
+                        </button>
                     }
                     else
                     {

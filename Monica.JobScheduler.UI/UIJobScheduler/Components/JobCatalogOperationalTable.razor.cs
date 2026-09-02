@@ -6,6 +6,7 @@ using Monica.JobScheduler.Models.Definitions;
 using Monica.JobScheduler.Models.Execution;
 using Monica.JobScheduler.Models.Operations;
 using Monica.JobScheduler.UI.Localization;
+using Monica.JobScheduler.UI.UIJobScheduler.Executions.Support;
 using Monica.JobScheduler.UI.UIJobScheduler.Shared;
 using Monica.JobScheduler.UI.UIJobScheduler.Support;
 using MudBlazor;
@@ -31,6 +32,9 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
 
     [Inject]
     private ISnackbar Snackbar { get; set; } = null!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
 
     /// <summary>
     /// Gets the server query used by the native table.
@@ -283,6 +287,13 @@ public partial class JobCatalogOperationalTable : IAsyncDisposable
         _cronDescriptions.TryGetValue(GetCronDescriptionKey(summary), out var description)
             ? description ?? L["Catalog:Cron:Unavailable"]
             : L["Catalog:Cron:Parsing"];
+
+    private async Task OpenLatestExecutionAsync(string instanceId)
+    {
+        await ExecutionDetailDialogLauncher.ShowAsync(DialogService, L, instanceId);
+        // The dialog can cancel a running execution; refresh so the last-run column stays truthful.
+        await ReloadAsync();
+    }
 
     private async Task CopyJobKeyAsync(string jobKey)
     {
