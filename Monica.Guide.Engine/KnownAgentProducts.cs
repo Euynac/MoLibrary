@@ -55,6 +55,9 @@ public static class KnownAgentProducts
         ArchiveAssetNameTemplate = "monica-guide-v{version}-{rid}.zip",
         BundleDirectoryPrefix = "monica-guide-",
         GlobalGuideSkill = "monica-guide",
+        // Monica is the machine's agent-policy owner: its guide alone manages first-party
+        // source bindings, the issue-reporting preference, and their instruction projection.
+        OwnsGlobalAgentPolicy = true,
         Tagline = "the Monica toolbox: agent skills, framework guidance, and this guide.",
         ProductDataRootName = "Monica",
     };

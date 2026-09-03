@@ -43,6 +43,15 @@ public static class GuideCommandRunner
             // by routing them to the error writer instead of stdout.
             IProgress<GuidePhase> progress = new PhaseReporter(command.Json ? error : output);
             var resolvedEnginePaths = enginePaths ?? GuidePaths.ForCurrentUser();
+            // Source bindings and the issue preference are the machine-global agent policy;
+            // only the owner product's guide exposes them, every other product stays on its
+            // own installation surface.
+            if (command.Name is "source" or "issue" && !definition.OwnsGlobalAgentPolicy)
+            {
+                throw new GuideUsageException(
+                    $"{definition.DisplayName} does not own the machine-global agent policy; manage source bindings and issue reporting with the Monica guide.");
+            }
+
             object report = command.Name switch
             {
                 "overview" => await service.GetOverviewAsync(cancellationToken),
@@ -73,7 +82,7 @@ public static class GuideCommandRunner
         catch (GuideUsageException exception)
         {
             await error.WriteLineAsync(exception.Message);
-            await error.WriteLineAsync(Usage);
+            await error.WriteLineAsync(Usage(definition));
             return 2;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -292,9 +301,10 @@ public static class GuideCommandRunner
     }
 
     /// <summary>
-    /// Appends engine-level checks to read-only reports: global source binding health, the
-    /// retired Node-era guide state, and — for status and doctor with --workspace — the
-    /// workspace instruction inspection. Products without a workspace catalog skip both.
+    /// Appends engine-level checks to read-only reports: the machine-global agent policy
+    /// (source binding health and the retired Node-era guide state) joins only the owning
+    /// product's reports, while the workspace instruction inspection follows --workspace for
+    /// any product with a workspace catalog.
     /// </summary>
     private static object AppendEngineExtensions(
         object report,
@@ -309,11 +319,10 @@ public static class GuideCommandRunner
 
         var catalog = GuideWorkspaceService.TryLoadProductCatalog(definition, enginePaths);
         var checks = new List<GuideCheck>();
-        if (catalog is not null)
+        if (catalog is not null && definition.OwnsGlobalAgentPolicy)
         {
-            // Bindings are machine-global and shared by every product, so each product's
-            // read-only surfaces observe recorded bindings; the service stays silent while
-            // nothing is bound.
+            // Bindings are machine-global; only the policy owner's read-only surfaces
+            // observe them, and the service stays silent while nothing is bound.
             checks.AddRange(new GuideSourceService(enginePaths, catalog).HealthChecks());
             var legacy = LegacyNodeStateCheck();
             if (legacy is not null)
@@ -467,20 +476,30 @@ public static class GuideCommandRunner
             _ => 2
         };
 
-    private const string Usage =
-        "Usage: guide <overview|status|doctor|configure|unconfigure> [--json] " +
-        "[--locale en-US|zh-CN] " +
-        "[--target shared|claude]... [--environment windows|wsl:<distro>[:<user>]]... " +
-        "[--skill <name>]... [--profile <name>] [--executable <path>] [--release-manifest <path>] " +
-        "[--port <1-65535>] [--apply --plan-digest <sha256>]\n" +
-        "       guide configure --workspace <path> [--profile <name>] [--apply --plan-digest <sha256>]\n" +
-        "       guide unconfigure --workspace <path> [--apply --plan-digest <sha256>]\n" +
-        "       guide init --workspace <path> --profile <name> [--capability <name>]... " +
-        "[--apply --plan-digest <sha256>]\n" +
-        "       guide forget --workspace <path> [--apply --plan-digest <sha256>]\n" +
-        "       guide workspaces [--json]\n" +
-        "       guide source <list|resolve|bind|unbind> [--repository monica|docs] " +
-        "[--source-path <path>] [--source-ref <ref>] [--source-resolver <path>] " +
-        "[--apply --plan-digest <sha256>]\n" +
-        "       guide issue <status|set> [--mode prepare|ask|never]";
+    /// <summary>
+    /// Usage lines for one product; the source and issue lines exist only for the owner of
+    /// the machine-global agent policy.
+    /// </summary>
+    private static string Usage(AgentProductDefinition definition)
+    {
+        var core =
+            "Usage: guide <overview|status|doctor|configure|unconfigure> [--json] " +
+            "[--locale en-US|zh-CN] " +
+            "[--target shared|claude]... [--environment windows|wsl:<distro>[:<user>]]... " +
+            "[--skill <name>]... [--profile <name>] [--executable <path>] [--release-manifest <path>] " +
+            "[--port <1-65535>] [--apply --plan-digest <sha256>]\n" +
+            "       guide configure --workspace <path> [--profile <name>] [--apply --plan-digest <sha256>]\n" +
+            "       guide unconfigure --workspace <path> [--apply --plan-digest <sha256>]\n" +
+            "       guide init --workspace <path> --profile <name> [--capability <name>]... " +
+            "[--apply --plan-digest <sha256>]\n" +
+            "       guide forget --workspace <path> [--apply --plan-digest <sha256>]\n" +
+            "       guide workspaces [--json]";
+        return definition.OwnsGlobalAgentPolicy
+            ? core
+              + "\n       guide source <list|resolve|bind|unbind> [--repository monica|docs] " +
+              "[--source-path <path>] [--source-ref <ref>] [--source-resolver <path>] " +
+              "[--apply --plan-digest <sha256>]\n" +
+              "       guide issue <status|set> [--mode prepare|ask|never]"
+            : core;
+    }
 }

@@ -1500,10 +1500,11 @@ public sealed partial class GuideWorkspaceService
     private string? _projectedTail;
 
     /// <summary>
-    /// Machine-state sections appended to every managed block: verified first-party source
-    /// locators and the issue-reporting policy, each gated by its machine-global switch.
-    /// Cached per service instance because binding observation probes Git once, not once
-    /// per rendered workspace.
+    /// Machine-state sections appended to the managed block of the global-agent-policy owner
+    /// only: verified first-party source locators and the issue-reporting policy, each gated
+    /// by its machine-global switch. Other products render catalog data alone so a workspace
+    /// guided by several products carries these sections at most once. Cached per service
+    /// instance because binding observation probes Git once, not once per rendered workspace.
     /// </summary>
     private string ProjectedTail()
     {
@@ -1512,6 +1513,12 @@ public sealed partial class GuideWorkspaceService
             return _projectedTail;
         }
 
+        _projectedTail = _definition.OwnsGlobalAgentPolicy ? BuildProjectedTail() : string.Empty;
+        return _projectedTail;
+    }
+
+    private string BuildProjectedTail()
+    {
         var sections = new List<string>();
         var projection = GuideWorkspaceProjectionStore.Load(_enginePaths);
         if (projection.SourceHints)
@@ -1544,8 +1551,7 @@ public sealed partial class GuideWorkspaceService
                 "- A persisted policy never authorizes a remote action; current-session approval names the exact action and target.");
         }
 
-        _projectedTail = sections.Count == 0 ? string.Empty : $"\n\n{string.Join("\n\n", sections)}";
-        return _projectedTail;
+        return sections.Count == 0 ? string.Empty : $"\n\n{string.Join("\n\n", sections)}";
     }
 
     /// <summary>Whether the managed body equals the currently rendered instructions, machine projection included.</summary>

@@ -143,6 +143,35 @@ public sealed class GuideCommandTests
     }
 
     [Fact]
+    public async Task Runner_RefusesMachinePolicyCommandsForProductsThatDoNotOwnThem()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+
+        string[][] machinePolicyCommands = [["source", "list"], ["issue", "status"]];
+        foreach (var arguments in machinePolicyCommands)
+        {
+            var exitCode = await GuideCommandRunner.RunAsync(
+                Product,
+                arguments,
+                output,
+                error,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(2, exitCode);
+            Assert.Contains(
+                "does not own the machine-global agent policy",
+                error.ToString(),
+                StringComparison.Ordinal);
+        }
+
+        // The refusal usage of a non-owner omits the policy commands it refuses to run.
+        Assert.DoesNotContain("guide source", error.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("guide issue", error.ToString(), StringComparison.Ordinal);
+        Assert.Equal(string.Empty, output.ToString());
+    }
+
+    [Fact]
     public void Paths_HonorNarrowOverridesAndWslConversionIsRoundTrip()
     {
         var environment = new FakeHostEnvironment(

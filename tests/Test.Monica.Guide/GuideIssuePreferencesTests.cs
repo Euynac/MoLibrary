@@ -80,7 +80,7 @@ public sealed class GuideIssuePreferencesTests
         var error = new StringWriter();
 
         var status = await GuideCommandRunner.RunAsync(
-            KnownAgentProducts.MonicaWorkflow,
+            KnownAgentProducts.Monica,
             ["issue", "status", "--json"],
             output,
             error,
@@ -96,7 +96,7 @@ public sealed class GuideIssuePreferencesTests
 
         output = new StringWriter();
         var set = await GuideCommandRunner.RunAsync(
-            KnownAgentProducts.MonicaWorkflow,
+            KnownAgentProducts.Monica,
             ["issue", "set", "--mode", "never"],
             output,
             error,

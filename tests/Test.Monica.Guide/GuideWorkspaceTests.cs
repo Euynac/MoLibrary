@@ -202,6 +202,28 @@ public sealed class GuideWorkspaceTests
     }
 
     [Fact]
+    public async Task PreviewManagedInstructions_SkipsMachineSectionsForProductsThatDoNotOwnThePolicy()
+    {
+        using var fixture = new WorkspaceFixture();
+        var root = Path.GetDirectoryName(fixture.Workspace)!;
+        var checkout = Path.Combine(root, "checkout");
+        Directory.CreateDirectory(checkout);
+        var bindRequest = new GuideSourceBindRequest("monica", checkout, null);
+        var source = new GuideSourceService(fixture.EnginePaths, null, new CanonicalCheckoutProbe(checkout));
+        var bind = await source.BindAsync(bindRequest, cancellationToken: CancellationToken);
+        await source.BindAsync(bindRequest, bind.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        GuideIssuePreferencesStore.Save(
+            fixture.EnginePaths,
+            new GuideIssuePreferences(GuideIssuePreferences.CurrentSchemaVersion, GuideIssueReportingMode.Never));
+
+        var preview = fixture.CreateService(product: KnownAgentProducts.MonicaWorkflow).PreviewManagedInstructions();
+
+        Assert.Contains("Profile skills: $monica-guide.", preview.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("First-party source on this machine", preview.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("Issue reporting policy", preview.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PreviewManagedInstructions_OmitsBothSectionsWhenTheSwitchesAreOff()
     {
         using var fixture = new WorkspaceFixture();
@@ -474,8 +496,8 @@ public sealed class GuideWorkspaceTests
         internal string SkillsRoot { get; }
         internal string ConfigFile => Path.Combine(Workspace, ".monica", "guide.json");
 
-        internal GuideWorkspaceService CreateService(IGuideGitProbe? git = null)
-            => new(Product, EnginePaths, LoadCatalog(), ProductPaths, git ?? new NoGitProbe());
+        internal GuideWorkspaceService CreateService(IGuideGitProbe? git = null, AgentProductDefinition? product = null)
+            => new(product ?? Product, EnginePaths, LoadCatalog(), ProductPaths, git ?? new NoGitProbe());
 
         internal GuideWorkspaceInitRequest InitRequest(string? profile = null, string? capability = null, string? second = null)
         {

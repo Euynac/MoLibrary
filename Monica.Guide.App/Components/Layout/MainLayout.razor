@@ -1,6 +1,10 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 
+@* Keeps the browser tab title aligned with the current product even after an in-session
+   bundle switch re-renders the layout; the static title in App.razor covers first paint. *@
+<PageTitle>@DocumentTitle</PageTitle>
+
 <div class="shell">
     <aside class="sidebar">
         <div class="brand">
@@ -24,9 +28,12 @@
             <NavLink class="nav-item" ActiveClass="active" href="workspaces">
                 <span>@Session.T("workspaces")</span>
             </NavLink>
-            <NavLink class="nav-item" ActiveClass="active" href="sources">
-                <span>@Session.T("sources")</span>
-            </NavLink>
+            @if (Session.CurrentProduct.OwnsGlobalAgentPolicy)
+            {
+                <NavLink class="nav-item" ActiveClass="active" href="sources">
+                    <span>@Session.T("sources")</span>
+                </NavLink>
+            }
             <NavLink class="nav-item" ActiveClass="active" href="install">
                 <span>@Session.T("install")</span>
             </NavLink>
@@ -69,6 +76,8 @@
     // The informational version carries the full commit hash; the sidebar shows the
     // short form and the tooltip keeps the complete identity.
     private string ProductVersion => ShortVersion(GuideAppInfo.CurrentVersion);
+
+    private string DocumentTitle => $"{Session.CurrentProduct.DisplayName} Guide";
 
     private static string ShortVersion(string version)
     {

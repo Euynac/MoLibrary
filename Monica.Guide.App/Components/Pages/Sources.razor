@@ -187,6 +187,9 @@ else
     [Inject]
     private IJSRuntime Js { get; set; } = default!;
 
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
     private static readonly GuideIssueReportingMode[] IssueModes =
         [GuideIssueReportingMode.Prepare, GuideIssueReportingMode.Ask, GuideIssueReportingMode.Never];
 
@@ -221,6 +224,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // Only the machine-global agent policy owner manages sources; the hidden nav item
+        // still leaves the URL reachable, so a non-owner lands on the dashboard instead.
+        if (!Session.CurrentProduct.OwnsGlobalAgentPolicy)
+        {
+            Navigation.NavigateTo("");
+            return;
+        }
+
         Session.LanguageChanged += OnLanguageChanged;
         IssueMode = await Task.Run(() => Facade.GetIssueReporting());
         Projection = await Task.Run(() => Facade.GetWorkspaceProjection());

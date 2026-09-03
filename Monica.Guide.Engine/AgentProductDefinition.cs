@@ -87,6 +87,16 @@ public sealed record AgentProductDefinition
     /// </summary>
     public string? GlobalGuideSkill { get; init; }
 
+    /// <summary>
+    /// Whether this product's guide owns the machine-global agent policy: first-party source
+    /// bindings, the issue-reporting preference, and their projection into managed workspace
+    /// instructions. Only the owner's wizard and CLI expose the Sources surface and its
+    /// switches; every other product renders its managed block from catalog data alone, so a
+    /// workspace guided by several products carries the machine-global sections at most once,
+    /// inside the owner's block.
+    /// </summary>
+    public bool OwnsGlobalAgentPolicy { get; init; }
+
     /// <summary>Named scenario routes a release must declare exactly; null skips the pin.</summary>
     public IReadOnlyList<string>? SupportedRoutes { get; init; }
 

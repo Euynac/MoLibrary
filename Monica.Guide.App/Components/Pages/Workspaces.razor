@@ -81,46 +81,49 @@ else
 
     <div class="card">
         <h2>@Session.T("ws-preview-title")</h2>
-        <p class="card-note">@Session.T("ws-preview-note")</p>
-        <div class="switch-row">
-            <span class="switch-text">
-                <span class="primary">@Session.T("src-proj-sources-title")</span>
-                <span class="secondary">@Session.T("src-proj-sources-note")</span>
-            </span>
-            <label class="switch">
-                <input type="checkbox" checked="@Projection.SourceHints" disabled="@PreferenceBusy"
-                       @onchange="e => SetProjectionAsync(sourceHints: (bool)e.Value!, issuePolicy: Projection.IssuePolicy)"/>
-                <span class="track"></span>
-            </label>
-        </div>
-        <div class="switch-row">
-            <span class="switch-text">
-                <span class="primary">@Session.T("src-proj-issue-title")</span>
-                <span class="secondary">@Session.T("src-proj-issue-note")</span>
-            </span>
-            <label class="switch">
-                <input type="checkbox" checked="@Projection.IssuePolicy" disabled="@PreferenceBusy"
-                       @onchange="e => SetProjectionAsync(sourceHints: Projection.SourceHints, issuePolicy: (bool)e.Value!)"/>
-                <span class="track"></span>
-            </label>
-        </div>
-        <div class="field">
-            <label>@Session.T("ws-preview-issue-mode")</label>
-            <div class="option-grid">
-                @foreach (var mode in IssueModes)
-                {
-                    var selected = IssueMode == mode;
-                    <label class="option-card @(selected ? "selected" : null)">
-                        <input type="radio" name="ws-preview-issue-mode" checked="@selected" disabled="@PreferenceBusy"
-                               @onchange="() => SetIssueModeAsync(mode)"/>
-                        <span class="option-main">
-                            <span class="option-title">@Session.T($"src-issue-mode-{ModeKey(mode)}")</span>
-                            <span class="option-desc">@Session.T($"src-issue-desc-{ModeKey(mode)}")</span>
-                        </span>
-                    </label>
-                }
+        <p class="card-note">@Session.T(Session.CurrentProduct.OwnsGlobalAgentPolicy ? "ws-preview-note" : "ws-preview-note-plain")</p>
+        @if (Session.CurrentProduct.OwnsGlobalAgentPolicy)
+        {
+            <div class="switch-row">
+                <span class="switch-text">
+                    <span class="primary">@Session.T("src-proj-sources-title")</span>
+                    <span class="secondary">@Session.T("src-proj-sources-note")</span>
+                </span>
+                <label class="switch">
+                    <input type="checkbox" checked="@Projection.SourceHints" disabled="@PreferenceBusy"
+                           @onchange="e => SetProjectionAsync(sourceHints: (bool)e.Value!, issuePolicy: Projection.IssuePolicy)"/>
+                    <span class="track"></span>
+                </label>
             </div>
-        </div>
+            <div class="switch-row">
+                <span class="switch-text">
+                    <span class="primary">@Session.T("src-proj-issue-title")</span>
+                    <span class="secondary">@Session.T("src-proj-issue-note")</span>
+                </span>
+                <label class="switch">
+                    <input type="checkbox" checked="@Projection.IssuePolicy" disabled="@PreferenceBusy"
+                           @onchange="e => SetProjectionAsync(sourceHints: Projection.SourceHints, issuePolicy: (bool)e.Value!)"/>
+                    <span class="track"></span>
+                </label>
+            </div>
+            <div class="field">
+                <label>@Session.T("ws-preview-issue-mode")</label>
+                <div class="option-grid">
+                    @foreach (var mode in IssueModes)
+                    {
+                        var selected = IssueMode == mode;
+                        <label class="option-card @(selected ? "selected" : null)">
+                            <input type="radio" name="ws-preview-issue-mode" checked="@selected" disabled="@PreferenceBusy"
+                                   @onchange="() => SetIssueModeAsync(mode)"/>
+                            <span class="option-main">
+                                <span class="option-title">@Session.T($"src-issue-mode-{ModeKey(mode)}")</span>
+                                <span class="option-desc">@Session.T($"src-issue-desc-{ModeKey(mode)}")</span>
+                            </span>
+                        </label>
+                    }
+                </div>
+            </div>
+        }
         @if (InstructionsPreview is { Body: { } sampleBody })
         {
             <div class="instruction-sample">
@@ -421,8 +424,12 @@ else
     {
         Session.LanguageChanged += OnLanguageChanged;
         GlobalGuideSkill = await Task.Run(() => Facade.GetGlobalGuideSkill());
-        IssueMode = await Task.Run(() => Facade.GetIssueReporting());
-        Projection = await Task.Run(() => Facade.GetWorkspaceProjection());
+        if (Session.CurrentProduct.OwnsGlobalAgentPolicy)
+        {
+            IssueMode = await Task.Run(() => Facade.GetIssueReporting());
+            Projection = await Task.Run(() => Facade.GetWorkspaceProjection());
+        }
+
         await ReloadAsync();
         await LoadInstructionsPreviewAsync();
         Loading = false;
