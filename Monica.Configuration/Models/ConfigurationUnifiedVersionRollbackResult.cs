@@ -25,4 +25,13 @@ public sealed record ConfigurationUnifiedVersionRollbackResult
     /// Gets the structured group outcome, including partial external-source outcomes and post-commit issues.
     /// </summary>
     public required ConfigurationMutationGroupApplyResult ApplyResult { get; init; }
+
+    /// <summary>
+    /// Gets the captured definition keys that were skipped because they are unknown to the current process.
+    /// </summary>
+    /// <remarks>
+    /// Historical snapshots legitimately outlive their definitions; skipped definitions were not restored and
+    /// operators must be able to see that the rollback does not cover them.
+    /// </remarks>
+    public IReadOnlyList<string> SkippedDefinitionKeys { get; init; } = [];
 }

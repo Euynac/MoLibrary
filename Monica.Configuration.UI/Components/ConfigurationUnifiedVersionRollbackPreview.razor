@@ -37,6 +37,12 @@
                         @L["Versions:Rollback:Summary:Blocked", Preview.BlockedCount]
                     </MudChip>
                 }
+                @if (Preview.SkippedCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                        @L["Versions:Rollback:Summary:Skipped", Preview.SkippedCount]
+                    </MudChip>
+                }
             </MudStack>
 
             @if (_rows.Count > 0)
@@ -63,6 +69,13 @@
                             </TitleContent>
                             <ChildContent>
                                 <MudStack Spacing="2">
+                                    @if (row.Target.IsSkipped)
+                                    {
+                                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                            @L["Versions:Rollback:Messages:MissingDefinitionSkipped"]
+                                        </MudAlert>
+                                    }
+
                                     @if (row.Target.Mutations.Count > 0)
                                     {
                                         <div class="configuration-unified-version-rollback-source">
@@ -133,7 +146,7 @@
                                         </MudAlert>
                                     }
 
-                                    @if (row.HasSchemaDrift)
+                                    @if (row.HasSchemaDrift && !row.Target.IsSkipped)
                                     {
                                         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
                                             @L["State:Value:SchemaDriftHiddenNotice"]
@@ -194,7 +207,12 @@
         _definitions.Clear();
         await LoadDefinitionsAsync();
 
-        _rows = Preview.ChangedTargets.Select(CreateRow).ToArray();
+        // Skipped definitions stay visible so operators see exactly which captured values the
+        // rollback will not restore; only unchanged targets are omitted.
+        _rows = Preview.Targets
+            .Where(static target => target.HasChanges || target.IsSkipped)
+            .Select(CreateRow)
+            .ToArray();
         _previewIdentity = previewIdentity;
         _loading = false;
     }
@@ -357,6 +375,7 @@
             ConfigurationUnifiedVersionApplyTargetStatus.Unchanged => Color.Default,
             ConfigurationUnifiedVersionApplyTargetStatus.Ready => Color.Success,
             ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift => Color.Warning,
+            ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition => Color.Warning,
             _ => Color.Error
         };
     }
