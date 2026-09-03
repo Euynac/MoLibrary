@@ -492,31 +492,23 @@ internal sealed class ConfigurationDefinitionScanner(
             return null;
         }
 
-        // RangeAttribute accepts floating-point bounds, while configuration
-        // validation stores numeric limits as decimals. Preserve unbounded
-        // finite double/float limits without failing schema discovery.
+        // RangeAttribute accepts floating-point bounds, while configuration validation stores
+        // numeric limits as decimals. Treat limits beyond decimal's representable range as
+        // unbounded instead of clamping to decimal boundary constants: boundary values are not
+        // JSON round-trip safe (JavaScript number re-serialization overflows decimal) and
+        // misrepresent developer intent as a concrete finite bound.
         if (value is double doubleValue)
         {
-            if (doubleValue >= (double)decimal.MaxValue)
+            if (doubleValue >= (double)decimal.MaxValue || doubleValue <= (double)decimal.MinValue)
             {
-                return decimal.MaxValue;
-            }
-
-            if (doubleValue <= (double)decimal.MinValue)
-            {
-                return decimal.MinValue;
+                return null;
             }
         }
         else if (value is float floatValue)
         {
-            if (floatValue >= (float)decimal.MaxValue)
+            if (floatValue >= (float)decimal.MaxValue || floatValue <= (float)decimal.MinValue)
             {
-                return decimal.MaxValue;
-            }
-
-            if (floatValue <= (float)decimal.MinValue)
-            {
-                return decimal.MinValue;
+                return null;
             }
         }
 
