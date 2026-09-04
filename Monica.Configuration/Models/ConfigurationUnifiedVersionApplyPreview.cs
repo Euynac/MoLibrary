@@ -20,12 +20,28 @@ public sealed record ConfigurationUnifiedVersionApplyPreview
     public required string PreviewFingerprint { get; init; }
 
     /// <summary>
-    /// Gets the per-definition apply targets, including definitions that require no change.
+    /// Gets the per-definition apply targets, including definitions that require no change and definitions
+    /// that will be skipped because they are unknown to the current process.
     /// </summary>
     public IReadOnlyList<ConfigurationUnifiedVersionApplyTarget> Targets { get; init; } = [];
 
     /// <summary>
+    /// Gets targets whose captured definitions are unknown to the current process and are skipped by the apply.
+    /// </summary>
+    public IReadOnlyList<ConfigurationUnifiedVersionApplyTarget> SkippedTargets =>
+        Targets.Where(static target => target.IsSkipped).ToArray();
+
+    /// <summary>
+    /// Gets the definition keys that are skipped because they are unknown to the current process.
+    /// </summary>
+    public IReadOnlyList<string> SkippedDefinitionKeys =>
+        Targets.Where(static target => target.IsSkipped)
+            .Select(static target => target.DefinitionKey)
+            .ToArray();
+
+    /// <summary>
     /// Gets the definitions that differ from a clean no-op rollback plan or require source reconciliation.
+    /// Skipped definitions are excluded because they require no rollback write.
     /// </summary>
     public IReadOnlyList<ConfigurationUnifiedVersionApplyTarget> ChangedTargets =>
         Targets.Where(static target => target.HasChanges).ToArray();
@@ -34,6 +50,11 @@ public sealed record ConfigurationUnifiedVersionApplyPreview
     /// Gets the number of definitions that require a rollback write, acknowledgement, or source reconciliation.
     /// </summary>
     public int ChangeCount => Targets.Count(static target => target.HasChanges);
+
+    /// <summary>
+    /// Gets the number of captured definitions that are unknown to the current process.
+    /// </summary>
+    public int SkippedCount => Targets.Count(static target => target.IsSkipped);
 
     /// <summary>
     /// Gets the number of path-level persistence mutations in the reviewed plan.
@@ -95,10 +116,15 @@ public sealed record ConfigurationUnifiedVersionApplyPreview
     /// True to allow values that validate against the current schema even though their captured schema hash differs.
     /// This never permits structurally invalid values.
     /// </param>
-    /// <returns>True when the plan contains changes and every changed target can be applied safely.</returns>
+    /// <returns>
+    /// True when the plan contains changes and every non-skipped changed target can be applied safely.
+    /// Definitions unknown to the current process are skipped and reported instead of blocking the apply.
+    /// </returns>
     public bool CanApplyWithAcknowledgement(bool acknowledgeCompatibleSchemaDrift)
     {
-        return HasChanges && Targets.All(target => target.CanApply(acknowledgeCompatibleSchemaDrift));
+        return HasChanges && Targets
+            .Where(static target => !target.IsSkipped)
+            .All(target => target.CanApply(acknowledgeCompatibleSchemaDrift));
     }
 }
 
@@ -167,12 +193,22 @@ public sealed record ConfigurationUnifiedVersionApplyTarget
     public IReadOnlyList<ConfigurationUnifiedVersionValidationIssue> ValidationIssues { get; init; } = [];
 
     /// <summary>
-    /// Gets whether this target requires a rollback write, acknowledgement, or source reconciliation.
+    /// Gets whether this target is skipped because its definition is unknown to the current process.
     /// </summary>
-    public bool HasChanges => Status != ConfigurationUnifiedVersionApplyTargetStatus.Unchanged;
+    /// <remarks>
+    /// Historical version snapshots legitimately outlive the definitions they captured. A skipped target is
+    /// excluded from command building and apply decisions, and is reported explicitly instead.
+    /// </remarks>
+    public bool IsSkipped => Status == ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition;
 
     /// <summary>
-    /// Gets whether applying this target requires explicit acknowledgement of compatible schema drift.
+    /// Gets whether this target requires a rollback write, acknowledgement, or source reconciliation.
+    /// </summary>
+    public bool HasChanges =>
+        Status != ConfigurationUnifiedVersionApplyTargetStatus.Unchanged && !IsSkipped;
+
+    /// <summary>
+    /// Gets whether this target requires explicit acknowledgement of compatible schema drift.
     /// </summary>
     public bool RequiresSchemaDriftAcknowledgement =>
         Status == ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift;
@@ -180,9 +216,9 @@ public sealed record ConfigurationUnifiedVersionApplyTarget
     /// <summary>
     /// Gets whether this target is unsafe or impossible to apply.
     /// </summary>
+    /// <remarks>Skipped targets are not blocked; they are neutral for the apply decision.</remarks>
     public bool IsBlocked => Status is
         ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue
-        or ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition
         or ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync
         or ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride
         or ConfigurationUnifiedVersionApplyTargetStatus.CompositeSourceConflict
@@ -376,7 +412,8 @@ public enum ConfigurationUnifiedVersionApplyTargetStatus
     InvalidValue,
 
     /// <summary>
-    /// The current process no longer knows this definition.
+    /// The current process no longer knows this definition. The target is skipped and reported;
+    /// it does not block the rollback of the remaining definitions.
     /// </summary>
     MissingDefinition,
 

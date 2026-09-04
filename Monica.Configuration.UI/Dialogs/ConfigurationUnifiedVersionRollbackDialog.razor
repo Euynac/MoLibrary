@@ -97,7 +97,9 @@
     private Severity PreviewMessageSeverity => _preview switch
     {
         { BlockedCount: > 0 } => Severity.Error,
+        { HasChanges: false, SkippedCount: > 0 } => Severity.Warning,
         { HasChanges: false } => Severity.Info,
+        { SkippedCount: > 0 } => Severity.Warning,
         { RequiresSchemaDriftAcknowledgement: true } => Severity.Warning,
         _ => Severity.Success
     };
@@ -105,7 +107,9 @@
     private string PreviewMessage => _preview switch
     {
         { BlockedCount: > 0 } => L["Versions:Rollback:Messages:Blocked"],
+        { HasChanges: false, SkippedCount: > 0 } => L["Versions:Rollback:Messages:NoChangesSkipped", _preview.SkippedCount],
         { HasChanges: false } => L["Versions:Rollback:Messages:NoChanges"],
+        { SkippedCount: > 0 } => L["Versions:Rollback:Messages:Skipped", _preview.SkippedCount],
         { RequiresSchemaDriftAcknowledgement: true } => L["Versions:Rollback:Messages:CompatibleSchemaDrift"],
         _ => L["Versions:Rollback:Messages:Ready"]
     };

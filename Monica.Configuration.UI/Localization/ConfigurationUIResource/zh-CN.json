@@ -537,6 +537,9 @@
         "Ready": "待修改值与当前配置定义兼容，可以恢复。",
         "Blocked": "一个或多个待修改值不兼容或没有安全的可写目标，无法恢复该版本。",
         "NoChanges": "该版本与当前生效配置一致，不会修改任何值。",
+        "Skipped": "回滚将跳过 {0} 个当前进程未知的配置定义，不会恢复其历史取值。",
+        "NoChangesSkipped": "没有可应用的回滚变更；{0} 个配置定义当前进程未知，已被跳过。",
+        "MissingDefinitionSkipped": "该配置定义已不被当前进程识别，回滚时将被跳过，不会恢复其历史取值。",
         "CompatibleSchemaDrift": "配置定义自该版本后发生变化。回滚值仍通过当前 Schema 验证，但应用前必须确认接受这一兼容差异。",
         "RuntimeOutOfSync": "当前运行时值与其物理来源不一致。请先重新加载或协调运行时状态，避免 Monica 基于过期状态制定回滚计划。",
         "PartiallyApplied": "回滚仅部分应用。重试前请检查修改组 {0}。",
@@ -548,7 +551,8 @@
         "Findings": "{0} 项阻断问题",
         "Unchanged": "{0} 项未变化",
         "CompatibleSchemaDrift": "{0} 项兼容 Schema 差异",
-        "Blocked": "{0} 项被阻止"
+        "Blocked": "{0} 项被阻止",
+        "Skipped": "{0} 项跳过（定义未知）"
       },
       "Fields": {
         "PlannedWrites": "实际持久化计划",
@@ -584,7 +588,7 @@
         "Ready": "可恢复",
         "CompatibleSchemaDrift": "兼容的 Schema 差异",
         "InvalidValue": "值无效",
-        "MissingDefinition": "缺少配置定义",
+        "MissingDefinition": "定义未知（将跳过）",
         "RuntimeOutOfSync": "运行时与来源不一致",
         "ReadOnlyOverride": "只读来源覆盖",
         "CompositeSourceConflict": "多来源容器",

@@ -46,6 +46,11 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
             ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition,
             ConfigurationUnifiedVersionApplyTargetStatus.Unchanged);
         preview.Targets[0].Mutations.Should().ContainSingle().Which.ExpectedValueVersion.Should().Be(21);
+        preview.SkippedDefinitionKeys.Should().Equal("Definition.Missing");
+        preview.SkippedCount.Should().Be(1);
+        preview.ChangeCount.Should().Be(1);
+        preview.BlockedCount.Should().Be(0);
+        preview.CanApply.Should().BeTrue();
         preview.PreviewFingerprint.Should().Be(
             ConfigurationUnifiedVersionRollbackPreviewFingerprint.Compute(snapshot.Summary.Version, preview.Targets));
         await fixture.EffectiveValueStore.Received(1).GetManyAsync(

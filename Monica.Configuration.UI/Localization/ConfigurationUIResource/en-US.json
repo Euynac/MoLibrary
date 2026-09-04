@@ -537,6 +537,9 @@
         "Ready": "The changed values are compatible with the current configuration definitions and can be restored.",
         "Blocked": "This version cannot be restored because one or more changed values are incompatible or have no safe writable target.",
         "NoChanges": "This version already matches the current effective configuration. No values will be changed.",
+        "Skipped": "The rollback will skip {0} definition(s) unknown to the current process; their captured values will not be restored.",
+        "NoChangesSkipped": "No rollback changes can be applied; {0} definition(s) unknown to the current process were skipped.",
+        "MissingDefinitionSkipped": "This definition is no longer known to the current process. The rollback skips it and will not restore its captured value.",
         "CompatibleSchemaDrift": "The configuration definition changed after this version. The rollback values still pass the current schema, but you must acknowledge the compatible schema drift before applying them.",
         "RuntimeOutOfSync": "The loaded runtime value and its physical source disagree. Reload or reconcile the runtime before rolling back so Monica does not plan against stale state.",
         "PartiallyApplied": "The rollback was only partially applied. Review mutation group {0} before retrying.",
@@ -548,7 +551,8 @@
         "Findings": "{0} blocking findings",
         "Unchanged": "{0} unchanged",
         "CompatibleSchemaDrift": "{0} compatible schema drift",
-        "Blocked": "{0} blocked"
+        "Blocked": "{0} blocked",
+        "Skipped": "{0} skipped (unknown definitions)"
       },
       "Fields": {
         "PlannedWrites": "Exact persistence plan",
@@ -584,7 +588,7 @@
         "Ready": "Ready",
         "CompatibleSchemaDrift": "Compatible schema drift",
         "InvalidValue": "Invalid value",
-        "MissingDefinition": "Missing definition",
+        "MissingDefinition": "Unknown definition (skipped)",
         "RuntimeOutOfSync": "Runtime/source mismatch",
         "ReadOnlyOverride": "Read-only override",
         "CompositeSourceConflict": "Multiple-source container",

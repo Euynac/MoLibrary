@@ -121,8 +121,11 @@ internal sealed class ConfigurationUnifiedVersionService(
             Reason = request.Reason,
             Context = new ConfigurationMutationContext { Reason = request.Reason },
             Commands = commands,
-            ExpectedEffectiveValues = preview.Targets.Select(static target =>
-                new ConfigurationExpectedEffectiveValue
+            // Definitions unknown to the current process are skipped and must not participate in
+            // post-commit verification, which requires a resolvable definition and effective value.
+            ExpectedEffectiveValues = preview.Targets
+                .Where(static target => !target.IsSkipped)
+                .Select(static target => new ConfigurationExpectedEffectiveValue
                 {
                     DefinitionKey = target.DefinitionKey,
                     Json = target.TargetJson
@@ -139,7 +142,8 @@ internal sealed class ConfigurationUnifiedVersionService(
             Version = request.Version,
             MutationGroup = applyResult.MutationGroup,
             Results = results,
-            ApplyResult = applyResult
+            ApplyResult = applyResult,
+            SkippedDefinitionKeys = preview.SkippedDefinitionKeys
         };
     }
 
@@ -212,7 +216,10 @@ internal sealed class ConfigurationUnifiedVersionService(
     {
         if (!preview.HasChanges)
         {
-            return $"Configuration version v{preview.Version} already matches the current effective values.";
+            return preview.SkippedCount > 0
+                ? $"Configuration version v{preview.Version} has no changes that can be applied. " +
+                  $"{preview.SkippedCount} captured definition(s) are not known by the current process and cannot be restored."
+                : $"Configuration version v{preview.Version} already matches the current effective values.";
         }
 
         var target = preview.ChangedTargets.First(candidate =>
@@ -229,8 +236,6 @@ internal sealed class ConfigurationUnifiedVersionService(
                 $"Definition '{target.DisplayName}' is incompatible with the current schema at '{issue.LogicalPath}': {issue.Message}",
             ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue =>
                 $"Definition '{target.DisplayName}' is incompatible with the current schema.",
-            ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition =>
-                $"Definition '{target.DefinitionKey}' is not known by the current process.",
             ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync =>
                 $"Definition '{target.DisplayName}' has physical source values that differ from the currently loaded runtime values. Reload or reconcile the runtime before rolling back.",
             ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride when

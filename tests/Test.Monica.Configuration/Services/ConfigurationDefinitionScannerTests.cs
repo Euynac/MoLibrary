@@ -98,7 +98,7 @@ public class ConfigurationDefinitionScannerTests
     }
 
     [Fact]
-    public void Scan_WhenRangeUsesDoubleMaxValue_ShouldClampToDecimalMaximum()
+    public void Scan_WhenRangeUsesDoubleMaxValue_ShouldTreatUpperBoundAsUnbounded()
     {
         var scanner = CreateScanner();
 
@@ -106,7 +106,19 @@ public class ConfigurationDefinitionScannerTests
         var value = definition.Root.Children.Single(x => x.Name == nameof(WideDoubleOptions.Value));
 
         value.ValidationRules.Should().ContainSingle()
-            .Which.Should().Be(new RangeRule(0, decimal.MaxValue));
+            .Which.Should().Be(new RangeRule(0, null));
+    }
+
+    [Fact]
+    public void Scan_WhenRangeUsesDoubleMinValue_ShouldTreatLowerBoundAsUnbounded()
+    {
+        var scanner = CreateScanner();
+
+        var definition = scanner.Scan(typeof(WideDoubleOptions));
+        var value = definition.Root.Children.Single(x => x.Name == nameof(WideDoubleOptions.Lower));
+
+        value.ValidationRules.Should().ContainSingle()
+            .Which.Should().Be(new RangeRule(null, 1));
     }
 
     [Fact]
@@ -291,6 +303,9 @@ public class ConfigurationDefinitionScannerTests
     {
         [Range(0d, double.MaxValue)]
         public double Value { get; set; }
+
+        [Range(double.MinValue, 1d)]
+        public double Lower { get; set; }
     }
 
     [Configuration("Sample:EditorHint", DefinitionKey = "test.editorHint")]
