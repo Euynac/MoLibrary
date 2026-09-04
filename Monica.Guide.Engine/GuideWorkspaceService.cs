@@ -248,14 +248,20 @@ public sealed partial class GuideWorkspaceService
         }
 
         var views = new List<GuideWorkspaceView>();
-        foreach (var entry in registry.Workspaces)
+        // Each product's surfaces list only their own registrations: the registry is
+        // engine-global, but a workspace guided by several products is judged by each
+        // product against its own catalog, never against a sibling product's version.
+        var instructionsVersion = _catalog?.ManagedInstructions?.Version;
+        foreach (var entry in registry.Workspaces.Where(entry =>
+                     string.Equals(entry.ProductId, _definition.ProductId, StringComparison.Ordinal)))
         {
             var issues = new List<string>();
             var exists = Directory.Exists(entry.Workspace);
             var config = exists ? GuideWorkspaceStore.LoadConfig(entry.Workspace, out _) : null;
             var configurationCurrent = config is not null
                                        && string.Equals(config.Profile, entry.Profile, StringComparison.Ordinal)
-                                       && config.InstructionBlockVersion == entry.InstructionBlockVersion;
+                                       && (instructionsVersion is null
+                                           || entry.InstructionBlockVersion == instructionsVersion);
             var (installed, profileCount) = CountWorkspaceSkills(entry.Workspace, entry.Profile);
             var instructionsCurrent = false;
             var instructionsComparable = false;
@@ -484,7 +490,11 @@ public sealed partial class GuideWorkspaceService
                 $"The managed instruction block in {AGENTS_FILE_NAME} converges with the current catalog and machine state."));
         }
 
-        if (config.InstructionBlockVersion == Instructions.Version && config.ManagedClaudeImport == wantsClaude)
+        // The registry entry carries this product's instruction version, so convergence is
+        // a no-op only when the entry already matches the current catalog version.
+        var registry = GuideWorkspaceRegistryFile.Load(_enginePaths);
+        if (RegisteredEntry(registry, root)?.InstructionBlockVersion == Instructions.Version
+            && config.ManagedClaudeImport == wantsClaude)
         {
             return;
         }
@@ -492,18 +502,14 @@ public sealed partial class GuideWorkspaceService
         GuideMutations.AddLocalWrite(
             "workspace.config.write",
             GuideWorkspaceStore.ConfigPath(root),
-            GuidePlanning.JsonBytes(config with
-            {
-                InstructionBlockVersion = Instructions.Version,
-                ManagedClaudeImport = wantsClaude
-            }),
-            "Record the converged instruction block version in the workspace configuration.",
+            GuidePlanning.JsonBytes(config with { ManagedClaudeImport = wantsClaude }),
+            "Record the converged Claude-import preference in the workspace configuration.",
             mutations);
         GuideMutations.AddLocalWrite(
             "workspace.registry.write",
             GuideWorkspaceRegistryFile.PathFor(_enginePaths),
             GuidePlanning.JsonBytes(GuideWorkspaceRegistryFile.Upsert(
-                GuideWorkspaceRegistryFile.Load(_enginePaths),
+                registry,
                 new GuideWorkspaceEntry(
                     root,
                     _definition.ProductId,
@@ -513,6 +519,12 @@ public sealed partial class GuideWorkspaceService
             "Record the converged instruction block version in the engine registry.",
             mutations);
     }
+
+    /// <summary>This product's registry entry for one workspace, if registered.</summary>
+    private GuideWorkspaceEntry? RegisteredEntry(GuideWorkspaceRegistry? registry, string root)
+        => (registry?.Workspaces ?? []).FirstOrDefault(entry =>
+            string.Equals(entry.Workspace, root, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(entry.ProductId, _definition.ProductId, StringComparison.Ordinal));
 
     /// <summary>Previews or applies removing every guide-owned workspace artifact.</summary>
     public async Task<GuideReport> ForgetAsync(
@@ -622,7 +634,6 @@ public sealed partial class GuideWorkspaceService
                 _definition.ProductId,
                 profile!,
                 capabilities,
-                Instructions.Version,
                 wantsClaude,
                 config?.SkillTargets);
 
@@ -1705,10 +1716,11 @@ public sealed partial class GuideWorkspaceService
                     : Check("workspace.instructions", GuideCheckStatus.Error,
                         $"Root {AGENTS_FILE_NAME} managed body does not match the configured profile template or machine state.",
                         "Run guide init again and approve the plan, or update the workspace to converge it."));
-                if (config.InstructionBlockVersion != Instructions.Version)
+                if (RegisteredEntry(GuideWorkspaceRegistryFile.Load(_enginePaths), root)?.InstructionBlockVersion
+                    is { } registeredVersion && registeredVersion != Instructions.Version)
                 {
                     checks.Add(Check("workspace.instructions", GuideCheckStatus.Warning,
-                        $"Repository instruction block version {config.InstructionBlockVersion} does not match catalog version {Instructions.Version}.",
+                        $"Registered instruction block version {registeredVersion} does not match catalog version {Instructions.Version}.",
                         "Run guide init again and approve the plan."));
                 }
 

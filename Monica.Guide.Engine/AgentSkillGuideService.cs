@@ -733,30 +733,34 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         Uri? desiredBaseAddress = null;
         if (_definition.ServesLoopback)
         {
-            if (request.BaseAddress is null)
+            // A silent request carries the recorded loopback address forward, so a
+            // workspace install never re-asks for a decision this machine already made;
+            // only the first configure must select the port explicitly.
+            var baseAddress = request.BaseAddress ?? previous?.BaseAddress;
+            if (baseAddress is null)
             {
                 checks.Add(Check("server.base-address", GuideCheckStatus.Error,
-                    "The product serves a loopback endpoint but no base address was selected.",
+                    "The product serves a loopback endpoint but no base address is selected or recorded.",
                     "Select the loopback port to persist for application startup."));
                 return Prepared("configure", mutations, checks, previous);
             }
-            desiredBaseAddress = NormalizeLoopback(request.BaseAddress);
+            desiredBaseAddress = NormalizeLoopback(baseAddress);
             var currentPort = previous?.BaseAddress?.Port
                               ?? GuideProductConfiguration.Load(_definition, _productPaths).Port;
-            if (request.BaseAddress.Port != currentPort
+            if (desiredBaseAddress.Port != currentPort
                 && await _portProbe(currentPort, cancellationToken))
             {
                 checks.Add(Check("server.port.offline", GuideCheckStatus.Error,
                     $"{Product} is still listening on its currently configured port.",
                     $"Stop {Product} before changing the persisted serve port."));
             }
-            if (request.BaseAddress.Port != currentPort
-                && await _portProbe(request.BaseAddress.Port, cancellationToken))
+            if (desiredBaseAddress.Port != currentPort
+                && await _portProbe(desiredBaseAddress.Port, cancellationToken))
             {
                 checks.Add(Check(
                     "server.port.available",
                     GuideCheckStatus.Error,
-                    $"The requested loopback port {request.BaseAddress.Port} is already in use.",
+                    $"The requested loopback port {desiredBaseAddress.Port} is already in use.",
                     "Stop the process occupying the requested port or choose another loopback port before applying."));
             }
         }
@@ -773,7 +777,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
                 StringComparer.OrdinalIgnoreCase).ToArray());
         if (workspaceRoot is not null)
         {
-            AdoptWorkspaceRegistration(workspaceRoot, checks, mutations);
+            AdoptWorkspaceRegistration(catalog, workspaceRoot, checks, mutations);
             ConvergeWorkspaceInstructions(workspaceRoot, catalog, checks, mutations);
         }
         if (_definition.ServesLoopback && desiredBaseAddress is not null)
@@ -1528,6 +1532,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
     /// registry yet, adopting workspaces initialized before the registry existed.
     /// </summary>
     private void AdoptWorkspaceRegistration(
+        SkillCatalog catalog,
         string workspaceRoot,
         ICollection<GuideCheck> checks,
         ICollection<GuidePlannedMutation> mutations)
@@ -1538,24 +1543,28 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             return;
         }
 
-        var registry = GuideWorkspaceRegistryFile.Load(_enginePaths);
-        if ((registry?.Workspaces ?? []).Any(entry =>
-                string.Equals(entry.Workspace, workspaceRoot, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(entry.ProductId, _definition.ProductId, StringComparison.Ordinal)))
-        {
-            return;
-        }
-
-        var next = GuideWorkspaceRegistryFile.Upsert(registry, new GuideWorkspaceEntry(
+        // The entry's instruction version comes from this product's catalog, never from the
+        // repository-shared configuration a sibling product may have written.
+        var entry = new GuideWorkspaceEntry(
             workspaceRoot,
             _definition.ProductId,
             config.Profile,
             config.Capabilities,
-            config.InstructionBlockVersion));
+            catalog.ManagedInstructions?.Version ?? 0);
+        var registry = GuideWorkspaceRegistryFile.Load(_enginePaths);
+        if ((registry?.Workspaces ?? []).Any(existing =>
+                string.Equals(existing.Workspace, workspaceRoot, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(existing.ProductId, _definition.ProductId, StringComparison.Ordinal)
+                && string.Equals(existing.Profile, config.Profile, StringComparison.Ordinal)
+                && existing.InstructionBlockVersion == entry.InstructionBlockVersion))
+        {
+            return;
+        }
+
         GuideMutations.AddLocalWrite(
             "workspace.registry.write",
             GuideWorkspaceRegistryFile.PathFor(_enginePaths),
-            GuidePlanning.JsonBytes(next),
+            GuidePlanning.JsonBytes(GuideWorkspaceRegistryFile.Upsert(registry, entry)),
             "Record the configured workspace in the engine registry.",
             mutations);
         checks.Add(Check("workspace.registry", GuideCheckStatus.Ok,
@@ -2326,14 +2335,25 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
             return Path.GetFullPath(requested);
         }
 
-        // Entry file names are platform-specific (".exe" on Windows, bare on Unix); probing
-        // every published name resolves the bundle's own entry regardless of the host.
-        foreach (var executableName in _definition.Platforms.Select(static platform => platform.ExecutableName))
+        // A bundle ships the product's program entry beside this executable (flat layouts)
+        // or in its own entry tree at the bundle root — app/ for serve products, setup/
+        // when the guide itself is the program. Probing both records the product's
+        // program, never the two-tree bundle's guide executable. AppContext.BaseDirectory
+        // carries a trailing separator, which Directory.GetParent would treat as a file, so
+        // the parent resolves from the trimmed directory only.
+        var bundleRoot = Directory.GetParent(Path.TrimEndingDirectorySeparator(_applicationDirectory))?.FullName;
+        foreach (var platform in _definition.Platforms)
         {
-            var packaged = Path.Combine(_applicationDirectory, executableName);
-            if (File.Exists(packaged))
+            var beside = Path.Combine(_applicationDirectory, platform.ExecutableName);
+            if (File.Exists(beside))
             {
-                return packaged;
+                return beside;
+            }
+
+            var entry = _definition.ProgramEntryPointFor(platform.RuntimeIdentifier);
+            if (bundleRoot is not null && entry is not null && File.Exists(Path.Combine(bundleRoot, entry)))
+            {
+                return Path.GetFullPath(Path.Combine(bundleRoot, entry));
             }
         }
 

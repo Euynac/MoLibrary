@@ -13,12 +13,17 @@ internal static class GuideWorkspaceStore
     private const string CONFIG_DIRECTORY_NAME = ".monica";
     private const string CONFIG_FILE_NAME = "guide.json";
 
+    /// <summary>
+    /// Repository-shared workspace configuration. Shared facts only: the initializing
+    /// product, profile, capabilities, Claude import, and skill targets. Per-product state
+    /// such as the managed instruction version lives in the engine registry, keyed by
+    /// workspace and product, so several products can guide one workspace.
+    /// </summary>
     internal sealed record GuideWorkspaceConfig(
         int SchemaVersion,
         string ProductId,
         string Profile,
         IReadOnlyList<string> Capabilities,
-        int InstructionBlockVersion,
         bool ManagedClaudeImport,
         IReadOnlyList<string>? SkillTargets = null)
     {

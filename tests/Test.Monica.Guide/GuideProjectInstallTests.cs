@@ -65,6 +65,68 @@ public sealed class GuideProjectInstallTests
     }
 
     [Fact]
+    public async Task Configure_FromAWorkflowBundleRecordsTheProductProgramEntry()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application", product: KnownAgentProducts.MonicaWorkflow);
+        using var service = fixture.CreateWorkflowBundleService();
+        var request = new GuideConfigureRequest(
+            null,
+            new Uri("http://localhost:61345/"),
+            [],
+            Workspace: workspace);
+
+        var preview = await service.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+        var applied = await service.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        Assert.True(applied.Plan!.Applied);
+        // The recorded program is the app/ entry, not the setup/ guide executable that ran
+        // the configure; Start Cockpit launches the recorded path with serve arguments.
+        var ledger = JsonSerializer.Deserialize<GuideLedger>(
+            await File.ReadAllTextAsync(fixture.EnginePaths.GuideLedgerFile, CancellationToken),
+            GuidePlanning.JsonOptions);
+        var state = ledger!.Products.Single(
+            product => product.ProductId == KnownAgentProducts.MonicaWorkflow.ProductId);
+        Assert.EndsWith(
+            Path.Combine("app", "Monica.Workflow.exe"),
+            state.ExecutablePath,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ConfigureWorkspace_CarriesTheRecordedLoopbackAddressWhenTheRequestStaysSilent()
+    {
+        using var fixture = new ProjectFixture();
+        var workspace = fixture.CreateWorkspace("monica-application", product: KnownAgentProducts.MonicaWorkflow);
+        var request = new GuideConfigureRequest(
+            null, new Uri("http://localhost:61345/"), [], Workspace: workspace);
+        using (var first = fixture.CreateWorkflowBundleService())
+        {
+            var preview = await first.PreviewConfigureAsync(request, cancellationToken: CancellationToken);
+            await first.ApplyConfigureAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        }
+
+        Assert.True(File.Exists(fixture.WorkflowProductPaths.ServerConfigurationFile));
+
+        // A silent workspace update carries the recorded loopback decision instead of
+        // re-asking for a port this machine already selected.
+        using var service = fixture.CreateWorkflowBundleService();
+        var silent = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+        var report = await service.PreviewConfigureAsync(silent, cancellationToken: CancellationToken);
+
+        Assert.DoesNotContain(report.Checks, check => check.Id == "server.base-address");
+        var applied = await service.ApplyConfigureAsync(silent, report.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        Assert.True(applied.Plan!.Applied);
+
+        var ledger = JsonSerializer.Deserialize<GuideLedger>(
+            await File.ReadAllTextAsync(fixture.EnginePaths.GuideLedgerFile, CancellationToken),
+            GuidePlanning.JsonOptions);
+        var state = ledger!.Products.Single(
+            product => product.ProductId == KnownAgentProducts.MonicaWorkflow.ProductId);
+        Assert.Equal(61345, state.BaseAddress?.Port);
+    }
+
+    [Fact]
     public async Task ConfigureWorkspace_HonorsCustomSkillTargetList()
     {
         using var fixture = new ProjectFixture();
@@ -454,6 +516,7 @@ public sealed class GuideProjectInstallTests
             File.WriteAllText(ExecutablePath, "test executable marker");
             WriteCatalog();
             Runtime = new FakeRuntime(Path.Combine(_root, "user-home"));
+            WorkflowProductPaths = new AgentProductPaths(Path.Combine(_root, "workflow-product-data"));
         }
 
         internal static AgentProductDefinition Product => KnownAgentProducts.Monica;
@@ -487,11 +550,40 @@ public sealed class GuideProjectInstallTests
                 setupDirectory,
                 static (_, _) => Task.FromResult(false));
 
+        internal AgentProductPaths WorkflowProductPaths { get; }
+
+        /// <summary>
+        /// Builds a two-tree workflow bundle — the guide executable in setup/ beside the
+        /// product program in app/, catalog at the bundle root — and returns a service for
+        /// the workflow product rooted in that setup tree, mirroring a shipped bundle.
+        /// </summary>
+        internal AgentGuideService CreateWorkflowBundleService()
+        {
+            var bundleRoot = Path.Combine(_root, "workflow-bundle");
+            var setupDirectory = Path.Combine(bundleRoot, "setup");
+            var appDirectory = Path.Combine(bundleRoot, "app");
+            Directory.CreateDirectory(setupDirectory);
+            Directory.CreateDirectory(appDirectory);
+            File.WriteAllText(Path.Combine(setupDirectory, "Monica.Guide.exe"), "guide executable marker");
+            File.WriteAllText(Path.Combine(appDirectory, "Monica.Workflow.exe"), "program executable marker");
+            CopyDirectory(SkillsRoot, Path.Combine(bundleRoot, "skills"));
+            return new AgentGuideService(
+                KnownAgentProducts.MonicaWorkflow,
+                EnginePaths,
+                WorkflowProductPaths,
+                Runtime,
+                null,
+                // AppContext.BaseDirectory carries a trailing separator; the CLI service
+                // inherits exactly this shape, so the fixture must not sanitize it.
+                setupDirectory + Path.DirectorySeparatorChar,
+                static (_, _) => Task.FromResult(false));
+        }
+
         internal SkillCatalog LoadCatalog()
             => GuideReleaseMetadata.LoadSkillCatalog(SkillsRoot);
 
         /// <summary>Creates a workspace directory with a guide configuration for one profile.</summary>
-        internal string CreateWorkspace(string profile, string[]? skillTargets = null)
+        internal string CreateWorkspace(string profile, string[]? skillTargets = null, AgentProductDefinition? product = null)
         {
             var workspace = Path.Combine(_root, "workspaces", $"repo-{Guid.NewGuid():N}");
             Directory.CreateDirectory(workspace);
@@ -499,10 +591,9 @@ public sealed class GuideProjectInstallTests
             {
                 var config = new GuideWorkspaceStore.GuideWorkspaceConfig(
                     GuideWorkspaceStore.GuideWorkspaceConfig.CurrentSchemaVersion,
-                    Product.ProductId,
+                    (product ?? Product).ProductId,
                     profile,
                     [],
-                    1,
                     false,
                     skillTargets);
                 Directory.CreateDirectory(Path.GetDirectoryName(GuideWorkspaceStore.ConfigPath(workspace))!);
@@ -527,6 +618,20 @@ public sealed class GuideProjectInstallTests
             var ledger = JsonSerializer.Deserialize<GuideLedger>(
                 File.ReadAllText(EnginePaths.GuideLedgerFile), GuidePlanning.JsonOptions);
             return ledger?.Products.FirstOrDefault(product => product.ProductId == Product.ProductId)?.Installations ?? [];
+        }
+
+        private static void CopyDirectory(string source, string target)
+        {
+            Directory.CreateDirectory(target);
+            foreach (var directory in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
+            {
+                Directory.CreateDirectory(Path.Combine(target, Path.GetRelativePath(source, directory)));
+            }
+
+            foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+            {
+                File.Copy(file, Path.Combine(target, Path.GetRelativePath(source, file)), overwrite: true);
+            }
         }
 
         private void WriteCatalog()
