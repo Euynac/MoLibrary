@@ -201,7 +201,15 @@ internal sealed class McpSkillPackExporter
             .Append("- `<json-arguments>` is the tool's input object, for example `{\"projectPath\":\"D:\\\\Code\\\\Demo\"}`; use `{}` for tools without parameters.\n")
             .Append("- The helper prints the raw JSON-RPC response. A top-level `error` object means the call failed; read `error.message` before retrying.\n")
             .Append("- The server speaks stateless Streamable HTTP; the helper sets the required headers and strips the SSE framing.\n")
-            .Append("- On Linux and macOS, make the bash helper executable once with `chmod +x ").Append(BASH_SCRIPT_FILE).Append("`.\n\n");
+            .Append("- On Linux and macOS, make the bash helper executable once with `chmod +x ").Append(BASH_SCRIPT_FILE).Append("`.\n")
+            .Append("- Large payloads or shell-hostile quoting: pass the input object from a UTF-8 file — `")
+            .Append(BASH_SCRIPT_FILE).Append(" <tool-name> --payload-file <path>` or `pwsh -File ")
+            .Append(POWERSHELL_SCRIPT_FILE).Append(" <tool-name> -PayloadFile <path>`.\n\n")
+            .Append("## Invocation discipline\n\n")
+            .Append("- Invoke a helper in a single hop with the JSON argument single-quoted; that is safe in Git Bash and PowerShell alike. Never pass the JSON payload through an extra process layer such as `python subprocess` argv or a nested `bash -c`; Windows command-line re-parsing corrupts quotes and backticks.\n")
+            .Append("- On Windows prefer the PowerShell helper; it rebuilds the payload through `ConvertFrom-Json` and sends explicit UTF-8 bytes.\n")
+            .Append("- The file modes above exist for payloads near the ~32KB Windows command-line limit and for programmatic batches; programmatic callers may also POST the JSON-RPC `tools/call` request to the endpoint directly.\n")
+            .Append("- Copy each tool's exact input object from `").Append(TOOL_REFERENCE_DIRECTORY).Append("/<tool-name>.md` instead of guessing parameter shapes.\n\n");
 
         if (!string.IsNullOrWhiteSpace(entry.Definition.Instructions))
         {
@@ -283,17 +291,27 @@ internal sealed class McpSkillPackExporter
         #!/usr/bin/env bash
         # Calls one tool on the __SERVER_NAME__ MCP machine API.
         # Usage: mcp-call.sh <tool-name> ['{"parameter":"value"}']
+        #        mcp-call.sh <tool-name> --payload-file <path-to-json>
         set -euo pipefail
 
         endpoint="${__ENVVAR__:-__ENDPOINT__}"
         tool="${1:-}"
-        arguments="${2:-}"
+        arguments=""
+        if [ "${2:-}" = "--payload-file" ]; then
+          if [ $# -lt 3 ]; then
+            echo "usage: mcp-call.sh <tool-name> [--payload-file <path> | json-arguments]" >&2
+            exit 2
+          fi
+          arguments="$(cat -- "$3")"
+        else
+          arguments="${2:-}"
+        fi
         if [ -z "$arguments" ]; then
           arguments='{}'
         fi
 
         if [ -z "$tool" ]; then
-          echo "usage: mcp-call.sh <tool-name> [json-arguments]" >&2
+          echo "usage: mcp-call.sh <tool-name> [--payload-file <path> | json-arguments]" >&2
           exit 2
         fi
 
@@ -328,14 +346,25 @@ internal sealed class McpSkillPackExporter
     private const string POWERSHELL_SCRIPT_TEMPLATE = """
         # Calls one tool on the __SERVER_NAME__ MCP machine API.
         # Usage: mcp-call.ps1 <tool-name> ['{"parameter":"value"}']
+        #        mcp-call.ps1 <tool-name> -PayloadFile <path-to-json>
         param(
-            [string]$Tool,
-            [string]$Arguments
+            [Parameter(Position = 0)][string]$Tool,
+            [Parameter(Position = 1)][string]$Arguments,
+            [string]$PayloadFile
         )
 
         if ([string]::IsNullOrWhiteSpace($Tool)) {
-            Write-Error 'usage: mcp-call.ps1 <tool-name> [json-arguments]'
+            Write-Error 'usage: mcp-call.ps1 <tool-name> [json-arguments] [-PayloadFile <path>]'
             exit 2
+        }
+        if (-not [string]::IsNullOrWhiteSpace($PayloadFile)) {
+            if (-not [System.IO.File]::Exists([System.IO.Path]::GetFullPath($PayloadFile))) {
+                Write-Error "Payload file not found: $PayloadFile"
+                exit 2
+            }
+            $Arguments = [System.IO.File]::ReadAllText(
+                [System.IO.Path]::GetFullPath($PayloadFile),
+                [System.Text.Encoding]::UTF8)
         }
         if ([string]::IsNullOrWhiteSpace($Arguments)) {
             $Arguments = '{}'

@@ -67,8 +67,11 @@ public sealed class McpSkillPackExporterTests : IDisposable
 
         var echoTool = Content(first, "references/tools/echo-message.md");
         echoTool.Should().Contain("# echo-message").And.Contain("```json").And.NotContain("\r");
-        Content(first, "scripts/mcp-call.sh").Should().Contain("MONICA_WORKFLOW_MCP_URL").And.NotContain("\r");
-        Content(first, "scripts/mcp-call.ps1").Should().Contain("$env:MONICA_WORKFLOW_MCP_URL").And.NotContain("\r");
+        Content(first, "scripts/mcp-call.sh").Should().Contain("MONICA_WORKFLOW_MCP_URL")
+            .And.Contain("--payload-file").And.NotContain("\r");
+        Content(first, "scripts/mcp-call.ps1").Should().Contain("$env:MONICA_WORKFLOW_MCP_URL")
+            .And.Contain("-PayloadFile").And.NotContain("\r");
+        skill.Should().Contain("## Invocation discipline").And.Contain("single hop");
     }
 
     [Fact]
