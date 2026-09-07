@@ -87,7 +87,8 @@ internal sealed class RepositoryDbContextDiagnosticsService(
                 ProviderName = providerName,
                 ProviderGuide = providerGuide,
                 Support = RepositoryActivitySupport.Supported,
-                Rows = rows
+                Rows = rows,
+                Summary = RepositoryActivitySummary.Create(rows, dbContext.Database.GetDbConnection().Database)
             };
         }
         catch (Exception ex)
@@ -303,6 +304,7 @@ internal sealed class RepositoryDbContextDiagnosticsService(
             {
                 DataSource = connection.DataSource,
                 Database = connection.Database,
+                Pool = RepositoryConnectionPoolInfoParser.Parse(connectionString),
                 MaskedConnectionString = MaskConnectionString(connectionString),
                 RevealedConnectionString = revealConnectionString ? connectionString : null
             };

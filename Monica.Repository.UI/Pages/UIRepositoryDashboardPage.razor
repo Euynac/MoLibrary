@@ -101,6 +101,7 @@
                     <MudTabPanel Text="@L["Dashboard:Tabs:Overview"]" Icon="@Icons.Material.Filled.Info">
                         <RepositoryContextOverview Snapshot="PageState.SelectedContext"
                                                    MigrationStatus="PageState.MigrationStatus"
+                                                   Activity="PageState.Activity"
                                                    RevealConnectionStrings="PageState.RevealConnectionStrings"
                                                    OnToggleReveal="ToggleConnectionRevealAsync" />
                     </MudTabPanel>

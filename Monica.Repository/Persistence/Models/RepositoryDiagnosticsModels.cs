@@ -126,6 +126,12 @@ public sealed record RepositoryConnectionInfo
     public string? Database { get; init; }
 
     /// <summary>
+    /// Connection pool settings parsed from the connection string.
+    /// <c>null</c> when the string cannot be parsed for pool keywords.
+    /// </summary>
+    public RepositoryConnectionPoolInfo? Pool { get; init; }
+
+    /// <summary>
     /// Masked connection string with sensitive values replaced.
     /// </summary>
     public string? MaskedConnectionString { get; init; }
@@ -139,6 +145,69 @@ public sealed record RepositoryConnectionInfo
     /// Whether the full connection string is present.
     /// </summary>
     public bool IsRevealed => !string.IsNullOrEmpty(RevealedConnectionString);
+}
+
+/// <summary>
+/// Connection pool settings parsed from a Repository DbContext connection string,
+/// with shared ADO.NET provider defaults applied where the string omits explicit values.
+/// Mainstream providers (Npgsql, Microsoft.Data.SqlClient, MySqlConnector) share the same defaults.
+/// </summary>
+public sealed record RepositoryConnectionPoolInfo
+{
+    /// <summary>
+    /// Maximum pool size applied when the connection string omits it.
+    /// </summary>
+    public const int DefaultMaxPoolSize = 100;
+
+    /// <summary>
+    /// Minimum pool size applied when the connection string omits it.
+    /// </summary>
+    public const int DefaultMinPoolSize = 0;
+
+    /// <summary>
+    /// Explicit pooling switch from the connection string.
+    /// <c>null</c> when not set; providers default to enabled pooling.
+    /// </summary>
+    public bool? Pooling { get; init; }
+
+    /// <summary>
+    /// Explicitly configured maximum pool size.
+    /// <c>null</c> when the connection string does not set it.
+    /// </summary>
+    public int? MaxPoolSize { get; init; }
+
+    /// <summary>
+    /// Explicitly configured minimum pool size.
+    /// <c>null</c> when the connection string does not set it.
+    /// </summary>
+    public int? MinPoolSize { get; init; }
+
+    /// <summary>
+    /// Whether pooling is effectively enabled for the connection.
+    /// </summary>
+    public bool PoolingEnabled => Pooling ?? true;
+
+    /// <summary>
+    /// Maximum pool size that applies after defaults.
+    /// Only meaningful while <see cref="PoolingEnabled"/> is <c>true</c>.
+    /// </summary>
+    public int EffectiveMaxPoolSize => MaxPoolSize ?? DefaultMaxPoolSize;
+
+    /// <summary>
+    /// Minimum pool size that applies after defaults.
+    /// Only meaningful while <see cref="PoolingEnabled"/> is <c>true</c>.
+    /// </summary>
+    public int EffectiveMinPoolSize => MinPoolSize ?? DefaultMinPoolSize;
+
+    /// <summary>
+    /// Whether the effective maximum pool size comes from the provider default instead of an explicit setting.
+    /// </summary>
+    public bool MaxPoolSizeIsDefault => MaxPoolSize is null;
+
+    /// <summary>
+    /// Whether the effective minimum pool size comes from the provider default instead of an explicit setting.
+    /// </summary>
+    public bool MinPoolSizeIsDefault => MinPoolSize is null;
 }
 
 /// <summary>
@@ -193,6 +262,12 @@ public sealed record RepositoryActivityResult
     public IReadOnlyList<RepositoryActivityRow> Rows { get; init; } = [];
 
     /// <summary>
+    /// Aggregated session counts scoped to the context's database.
+    /// Populated only when the provider activity query is supported and succeeds.
+    /// </summary>
+    public RepositoryActivitySummary? Summary { get; init; }
+
+    /// <summary>
     /// Error or unsupported-provider message for display.
     /// </summary>
     public string? Message { get; init; }
@@ -201,6 +276,85 @@ public sealed record RepositoryActivityResult
     /// Number of returned rows.
     /// </summary>
     public int SessionCount => Rows.Count;
+}
+
+/// <summary>
+/// Aggregated session counts derived from provider activity rows.
+/// Per-state counts are scoped to a single database so they can be compared
+/// against that connection's pool settings; totals keep every returned row.
+/// </summary>
+public sealed record RepositoryActivitySummary
+{
+    /// <summary>
+    /// Creates a summary from activity rows, scoping per-state counts to
+    /// <paramref name="databaseName"/> when it is known.
+    /// </summary>
+    /// <param name="rows">Normalized activity rows returned by the provider query.</param>
+    /// <param name="databaseName">
+    /// Database name of the context whose pool is inspected. When empty, all rows are scoped in.
+    /// </param>
+    public static RepositoryActivitySummary Create(IReadOnlyList<RepositoryActivityRow> rows, string? databaseName)
+    {
+        var databaseRows = string.IsNullOrWhiteSpace(databaseName)
+            ? rows
+            : rows.Where(row => string.Equals(row.DatabaseName, databaseName, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        return new RepositoryActivitySummary
+        {
+            TotalSessions = rows.Count,
+            DatabaseSessions = databaseRows.Count,
+            ActiveSessions = CountState(databaseRows, "active"),
+            IdleSessions = CountState(databaseRows, "idle"),
+            IdleInTransactionSessions = CountStatePrefix(databaseRows, "idle in transaction"),
+            WaitingSessions = databaseRows.Count(row => row.Waiting == true)
+        };
+    }
+
+    /// <summary>
+    /// Total sessions returned by the activity query, across all databases.
+    /// </summary>
+    public int TotalSessions { get; init; }
+
+    /// <summary>
+    /// Sessions bound to the inspected context's database, including other clients.
+    /// </summary>
+    public int DatabaseSessions { get; init; }
+
+    /// <summary>
+    /// Database sessions currently executing a statement (state <c>active</c>).
+    /// </summary>
+    public int ActiveSessions { get; init; }
+
+    /// <summary>
+    /// Database sessions waiting for the next client request (state <c>idle</c>).
+    /// </summary>
+    public int IdleSessions { get; init; }
+
+    /// <summary>
+    /// Database sessions idle inside an open transaction, including aborted ones.
+    /// </summary>
+    public int IdleInTransactionSessions { get; init; }
+
+    /// <summary>
+    /// Database sessions currently waiting on a resource or lock.
+    /// </summary>
+    public int WaitingSessions { get; init; }
+
+    private static int CountState(IReadOnlyList<RepositoryActivityRow> rows, string state)
+    {
+        return rows.Count(row => string.Equals(NormalizeState(row.State), state, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static int CountStatePrefix(IReadOnlyList<RepositoryActivityRow> rows, string statePrefix)
+    {
+        return rows.Count(row => NormalizeState(row.State)
+            .StartsWith(statePrefix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeState(string? state)
+    {
+        return state?.Trim() ?? string.Empty;
+    }
 }
 
 /// <summary>

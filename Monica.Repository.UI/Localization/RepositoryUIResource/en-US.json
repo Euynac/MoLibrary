@@ -57,6 +57,7 @@
     "Empty": "Select a DbContext to inspect its runtime details.",
     "Metrics": {
       "Connection": "Connection",
+      "Pool": "Connection Pool",
       "Pending": "Pending",
       "ProviderType": "Provider Type",
       "MigrationAssembly": "Migration Assembly"
@@ -73,6 +74,22 @@
       "DataSource": "Data Source",
       "Database": "Database",
       "ConnectionString": "Connection String"
+    },
+    "Pool": {
+      "Title": "Connection Pool",
+      "Pooling": "Pooling",
+      "Enabled": "Enabled",
+      "Disabled": "Disabled",
+      "MaxPoolSize": "Max Pool Size",
+      "MinPoolSize": "Min Pool Size",
+      "DefaultSuffix": "(default)",
+      "DatabaseSessions": "Database sessions",
+      "ActiveSessions": "Active",
+      "IdleSessions": "Idle",
+      "IdleInTransactionSessions": "Idle in transaction",
+      "WaitingSessions": "Waiting",
+      "SessionsNote": "Session counts come from the provider activity view (pg_stat_activity) and include every client connected to this database, not only this application's pool.",
+      "SessionsUnavailable": "Session statistics are unavailable because the provider activity query is unsupported or has not been loaded yet."
     },
     "Provider": {
       "Title": "Provider",

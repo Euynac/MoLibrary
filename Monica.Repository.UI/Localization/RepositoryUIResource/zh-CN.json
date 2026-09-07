@@ -57,6 +57,7 @@
     "Empty": "选择一个 DbContext 以查看运行时详情。",
     "Metrics": {
       "Connection": "连接",
+      "Pool": "连接池",
       "Pending": "待迁移",
       "ProviderType": "Provider 类型",
       "MigrationAssembly": "迁移程序集"
@@ -73,6 +74,22 @@
       "DataSource": "数据源",
       "Database": "数据库",
       "ConnectionString": "连接字符串"
+    },
+    "Pool": {
+      "Title": "连接池",
+      "Pooling": "池化",
+      "Enabled": "已启用",
+      "Disabled": "已禁用",
+      "MaxPoolSize": "最大池大小",
+      "MinPoolSize": "最小池大小",
+      "DefaultSuffix": "（默认）",
+      "DatabaseSessions": "数据库会话总数",
+      "ActiveSessions": "活跃",
+      "IdleSessions": "空闲",
+      "IdleInTransactionSessions": "事务中空闲",
+      "WaitingSessions": "等待中",
+      "SessionsNote": "会话统计来自数据库活动视图（pg_stat_activity），包含连接该数据库的所有客户端，而不仅是本应用的连接池。",
+      "SessionsUnavailable": "会话统计不可用：Provider 不支持活动查询，或尚未加载。"
     },
     "Provider": {
       "Title": "Provider",
