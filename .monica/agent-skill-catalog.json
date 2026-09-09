@@ -615,7 +615,7 @@
     }
   },
   "managedInstructions": {
-    "version": 2,
+    "version": 3,
     "markers": {
       "start": "<!-- monica-guide:managed:start -->",
       "end": "<!-- monica-guide:managed:end -->"
@@ -624,35 +624,35 @@
       "application": {
         "skills": ["monica-guide", "monica-application"],
         "rules": [
-          "Use $monica-guide for Monica toolbox help, setup, configuration, source lookup, updates, and diagnostics.",
-          "Before guessing, cloning, or using a moving branch when Monica or Monica.Docs source is needed, run $monica-guide source resolve for that repository; a returned binding is a lookup path, not write permission.",
-          "Use $monica-application to route ordinary Monica application development work."
+          { "id": "monica-guide-routing", "text": "Use $monica-guide for Monica toolbox help, setup, configuration, source lookup, updates, and diagnostics." },
+          { "id": "resolve-pinned-source", "text": "Before guessing, cloning, or using a moving branch when Monica or Monica.Docs source is needed, run $monica-guide source resolve for that repository; a returned binding is a lookup path, not write permission." },
+          { "id": "monica-application-routing", "text": "Use $monica-application to route ordinary Monica application development work." }
         ]
       },
       "extension-author": {
         "skills": ["monica-guide", "monica-framework", "monica-third-party-module-development"],
         "rules": [
-          "Use $monica-guide for Monica toolbox help, setup, configuration, source lookup, updates, and diagnostics.",
-          "Before guessing, cloning, or using a moving branch when Monica or Monica.Docs source is needed, run $monica-guide source resolve for that repository; a returned binding is a lookup path, not write permission.",
-          "Use $monica-framework and $monica-third-party-module-development for extension implementation.",
-          "Keep generated extension projects on immutable Monica NuGet packages; never replace them with local Monica project references."
+          { "id": "monica-guide-routing", "text": "Use $monica-guide for Monica toolbox help, setup, configuration, source lookup, updates, and diagnostics." },
+          { "id": "resolve-pinned-source", "text": "Before guessing, cloning, or using a moving branch when Monica or Monica.Docs source is needed, run $monica-guide source resolve for that repository; a returned binding is a lookup path, not write permission." },
+          { "id": "monica-framework-extension", "text": "Use $monica-framework and $monica-third-party-module-development for extension implementation." },
+          { "id": "immutable-nuget-packages", "text": "Keep generated extension projects on immutable Monica NuGet packages; never replace them with local Monica project references." }
         ]
       },
       "framework-contributor": {
         "skills": ["monica-guide", "monica-framework", "monica-unit-testing"],
         "rules": [
-          "Use $monica-guide for Monica toolbox help, setup, configuration, source lookup, updates, and diagnostics.",
-          "Before guessing, cloning, or using a moving branch when Monica or Monica.Docs source is needed, run $monica-guide source resolve for that repository; a returned binding is a lookup path, not write permission.",
-          "Use $monica-framework to route framework implementation and $monica-unit-testing for framework tests."
+          { "id": "monica-guide-routing", "text": "Use $monica-guide for Monica toolbox help, setup, configuration, source lookup, updates, and diagnostics." },
+          { "id": "resolve-pinned-source", "text": "Before guessing, cloning, or using a moving branch when Monica or Monica.Docs source is needed, run $monica-guide source resolve for that repository; a returned binding is a lookup path, not write permission." },
+          { "id": "monica-framework-routing", "text": "Use $monica-framework to route framework implementation and $monica-unit-testing for framework tests." }
         ]
       },
       "docs-contributor": {
         "skills": ["monica-guide", "monica-docs-authoring", "monica-application"],
         "rules": [
-          "Use $monica-guide for Monica toolbox help, setup, configuration, source lookup, updates, and diagnostics.",
-          "Before guessing, cloning, or using a moving branch when Monica or Monica.Docs source is needed, run $monica-guide source resolve for that repository; a returned binding is a lookup path, not write permission.",
-          "Use $monica-docs-authoring for bilingual documentation and $monica-application for Monica.Docs application code.",
-          "Treat every global source binding as lookup-only; write access requires separate current-session authorization for the active checkout."
+          { "id": "monica-guide-routing", "text": "Use $monica-guide for Monica toolbox help, setup, configuration, source lookup, updates, and diagnostics." },
+          { "id": "resolve-pinned-source", "text": "Before guessing, cloning, or using a moving branch when Monica or Monica.Docs source is needed, run $monica-guide source resolve for that repository; a returned binding is a lookup path, not write permission." },
+          { "id": "monica-docs-routing", "text": "Use $monica-docs-authoring for bilingual documentation and $monica-application for Monica.Docs application code." },
+          { "id": "source-bindings-lookup-only", "text": "Treat every global source binding as lookup-only; write access requires separate current-session authorization for the active checkout." }
         ]
       }
     }

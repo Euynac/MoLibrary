@@ -677,8 +677,16 @@ public sealed class GuideProjectInstallTests
                     markers = new { start = "<!-- monica-guide:managed:start -->", end = "<!-- monica-guide:managed:end -->" },
                     templates = new Dictionary<string, object>
                     {
-                        ["monica-application"] = new { skills = new[] { ApplicationSkill }, rules = new[] { "Use $monica-application." } },
-                        ["monica-extension"] = new { skills = new[] { ExtensionSkill }, rules = new[] { "Use $monica-extension." } }
+                        ["monica-application"] = new
+                        {
+                            skills = new[] { ApplicationSkill },
+                            rules = new object[] { new { id = "application-routing", text = "Use $monica-application." } }
+                        },
+                        ["monica-extension"] = new
+                        {
+                            skills = new[] { ExtensionSkill },
+                            rules = new object[] { new { id = "extension-routing", text = "Use $monica-extension." } }
+                        }
                     }
                 }
             };

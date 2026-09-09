@@ -653,6 +653,15 @@ def validate_catalog(validation: Validation, catalog: dict[str, Any]) -> None:
         validation.check(template_name in catalog.get("profiles", {}), f"unknown instruction template {template_name}")
         for skill_name in template.get("skills", []):
             validation.check(skill_name in skills, f"instruction template {template_name}: unknown skill {skill_name}")
+        rule_ids = [rule.get("id", "") for rule in template.get("rules", [])]
+        validation.check(
+            all(rule_ids) and len(rule_ids) == len(set(rule_ids)),
+            f"instruction template {template_name}: rule ids must be non-empty and unique",
+        )
+        validation.check(
+            all(rule.get("text") for rule in template.get("rules", [])),
+            f"instruction template {template_name}: rule texts must be non-empty",
+        )
 
     bootstrap_path = catalog.get("prompts", {}).get("bootstrapAsset")
     bootstrap_schema_path = catalog.get("prompts", {}).get("bootstrapSchema")

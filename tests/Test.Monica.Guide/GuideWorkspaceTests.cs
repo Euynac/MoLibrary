@@ -51,6 +51,119 @@ public sealed class GuideWorkspaceTests
     }
 
     [Fact]
+    public async Task Init_WithARuleSwitchedOff_OmitsTheRuleAndRecordsTheDisabledId()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService();
+        fixture.WriteProject("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="Monica.Core" Version="1.2.3" />
+              </ItemGroup>
+            </Project>
+            """);
+
+        var request = fixture.InitRequest(profile: "application", capability: "microservice")
+            with { RuleSwitches = [new GuideRuleSwitch("pinned-source", Enabled: false)] };
+        var preview = await service.InitAsync(request, cancellationToken: CancellationToken);
+        await service.InitAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        var config = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(fixture.ConfigFile, CancellationToken));
+        Assert.Equal("pinned-source", config.GetProperty("disabledRules")[0].GetString());
+
+        var agents = await File.ReadAllTextAsync(fixture.WorkspaceFile("AGENTS.md"), CancellationToken);
+        Assert.Contains("- Use $monica-guide for toolbox help.", agents, StringComparison.Ordinal);
+        Assert.DoesNotContain("Resolve pinned Monica source", agents, StringComparison.Ordinal);
+
+        // Re-initialization without switches preserves the recorded opt-out.
+        var repeat = await service.InitAsync(
+            fixture.InitRequest(profile: "application", capability: "microservice"),
+            null,
+            cancellationToken: CancellationToken);
+        Assert.True(repeat.Plan!.IsNoOp);
+
+        // Switching the rule back on converges the block and clears the opt-out.
+        var reEnabled = fixture.InitRequest(profile: "application", capability: "microservice")
+            with { RuleSwitches = [new GuideRuleSwitch("pinned-source", Enabled: true)] };
+        var previewOn = await service.InitAsync(reEnabled, cancellationToken: CancellationToken);
+        await service.InitAsync(reEnabled, previewOn.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        var agentsAfter = await File.ReadAllTextAsync(fixture.WorkspaceFile("AGENTS.md"), CancellationToken);
+        Assert.Contains("Resolve pinned Monica source", agentsAfter, StringComparison.Ordinal);
+        var configAfter = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(fixture.ConfigFile, CancellationToken));
+        Assert.True(
+            !configAfter.TryGetProperty("disabledRules", out var disabledAfter)
+            || disabledAfter.ValueKind == JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Init_WithAnUnknownRuleSwitch_BlocksBeforeAnyWrite()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService();
+        fixture.WriteProject("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="Monica.Core" Version="1.2.3" />
+              </ItemGroup>
+            </Project>
+            """);
+
+        var request = fixture.InitRequest(profile: "application", capability: "microservice")
+            with { RuleSwitches = [new GuideRuleSwitch("not-a-rule", Enabled: false)] };
+        var preview = await service.InitAsync(request, cancellationToken: CancellationToken);
+        Assert.Equal(GuideStatus.Error, preview.Status);
+        Assert.Contains(preview.Checks, check =>
+            check.Id == "workspace.rule-switch" && check.Status == GuideCheckStatus.Error);
+
+        var applied = await service.InitAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+        Assert.False(applied.Plan!.Applied);
+        Assert.False(File.Exists(fixture.ConfigFile));
+    }
+
+    [Fact]
+    public async Task ConvergeInstructions_WithRuleSwitches_PlansTheConfigAndBlockWrites()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService();
+        fixture.WriteProject("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="Monica.Core" Version="1.2.3" />
+              </ItemGroup>
+            </Project>
+            """);
+        var request = fixture.InitRequest(profile: "application", capability: "microservice");
+        var preview = await service.InitAsync(request, cancellationToken: CancellationToken);
+        await service.InitAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        // Without switches a converged workspace stays untouched.
+        var idleChecks = new List<GuideCheck>();
+        var idleMutations = new List<GuidePlannedMutation>();
+        service.ConvergeInstructions(fixture.Workspace, idleChecks, idleMutations);
+        Assert.Empty(idleMutations);
+
+        var checks = new List<GuideCheck>();
+        var mutations = new List<GuidePlannedMutation>();
+        service.ConvergeInstructions(
+            fixture.Workspace, checks, mutations, [new GuideRuleSwitch("pinned-source", Enabled: false)]);
+        Assert.DoesNotContain(checks, check => check.Status == GuideCheckStatus.Error);
+        Assert.Contains(mutations, mutation =>
+            mutation.PublicAction.Kind == GuidePlanActionKind.WriteFile
+            && mutation.PublicAction.Target.EndsWith(Path.Join(".monica", "guide.json"), StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(mutations, mutation =>
+            mutation.PublicAction.Kind == GuidePlanActionKind.WriteFile
+            && mutation.PublicAction.Target.EndsWith("AGENTS.md", StringComparison.OrdinalIgnoreCase));
+
+        var unknownChecks = new List<GuideCheck>();
+        var unknownMutations = new List<GuidePlannedMutation>();
+        service.ConvergeInstructions(
+            fixture.Workspace, unknownChecks, unknownMutations, [new GuideRuleSwitch("not-a-rule", Enabled: false)]);
+        Assert.Contains(unknownChecks, check =>
+            check.Id == "workspace.rule-switch" && check.Status == GuideCheckStatus.Error);
+        Assert.Empty(unknownMutations);
+    }
+
+    [Fact]
     public async Task Init_RequiresExplicitProfileAndCapabilities()
     {
         using var fixture = new WorkspaceFixture();
@@ -547,6 +660,14 @@ public sealed class GuideWorkspaceTests
         private SkillCatalog LoadCatalog()
             => GuideReleaseMetadata.LoadSkillCatalog(SkillsRoot);
 
+        /// <summary>Two switchable rules so per-workspace disable tests have a real choice.</summary>
+        private static object[] Rules()
+            =>
+            [
+                new { id = "guide-routing", text = "Use $monica-guide for toolbox help." },
+                new { id = "pinned-source", text = "Resolve pinned Monica source before guessing." }
+            ];
+
         private void WriteCatalog()
         {
             var skillRoot = Path.Combine(SkillsRoot, SkillName);
@@ -577,21 +698,9 @@ public sealed class GuideWorkspaceTests
                     markers = new { start = MarkerStart, end = MarkerEnd },
                     templates = new Dictionary<string, object>
                     {
-                        ["application"] = new
-                        {
-                            skills = new[] { SkillName },
-                            rules = new[] { "Use $monica-guide for toolbox help." }
-                        },
-                        ["extension-author"] = new
-                        {
-                            skills = new[] { SkillName },
-                            rules = new[] { "Use $monica-guide for toolbox help." }
-                        },
-                        ["framework-contributor"] = new
-                        {
-                            skills = new[] { SkillName },
-                            rules = new[] { "Use $monica-guide for toolbox help." }
-                        }
+                        ["application"] = new { skills = new[] { SkillName }, rules = Rules() },
+                        ["extension-author"] = new { skills = new[] { SkillName }, rules = Rules() },
+                        ["framework-contributor"] = new { skills = new[] { SkillName }, rules = Rules() }
                     }
                 },
                 sourceRepositories = new Dictionary<string, object>

@@ -7,7 +7,8 @@ namespace Monica.Guide;
 public sealed record GuideWorkspaceInitRequest(
     string Workspace,
     string? Profile,
-    IReadOnlyList<string>? Capabilities = null);
+    IReadOnlyList<string>? Capabilities = null,
+    IReadOnlyList<GuideRuleSwitch>? RuleSwitches = null);
 
 /// <summary>
 /// Stable machine outcome of workspace detection. Interactive surfaces localize this
@@ -148,9 +149,10 @@ public sealed partial class GuideWorkspaceService
                     return catalog;
                 }
             }
-            catch (Exception exception) when (exception is IOException or InvalidDataException)
+            catch (Exception exception) when (exception is IOException or JsonException or InvalidDataException)
             {
-                // Try the next candidate bundle.
+                // Try the next candidate bundle; a legacy or corrupt catalog (for example one
+                // predating the current managed-instruction contract) is not machine-fatal.
             }
         }
 
@@ -273,7 +275,7 @@ public sealed partial class GuideWorkspaceService
                 instructionsComparable = managed is not null && managed.Templates.ContainsKey(config.Profile);
                 instructionsCurrent = instructionsComparable
                                       && GuideInstructionBlock.State(agentsText, managed!.Markers) == GuideInstructionBlockStatus.Valid
-                                      && InstructionsMatch(agentsText, config.Profile, managed.Markers);
+                                      && InstructionsMatch(agentsText, config.Profile, managed.Markers, config.DisabledRules);
             }
 
             if (!exists)
@@ -418,14 +420,16 @@ public sealed partial class GuideWorkspaceService
 
     /// <summary>
     /// Converges the managed instruction surface during a workspace configure, so machine
-    /// projection switches (source hints, issue policy) and catalog template changes apply
-    /// with the same update that refreshes skills. The repository-shared configuration and
-    /// the registry entry record the block version actually written.
+    /// projection switches (source hints, issue policy), per-workspace rule switches, and
+    /// catalog template changes apply with the same update that refreshes skills. The
+    /// repository-shared configuration and the registry entry record the block version
+    /// actually written.
     /// </summary>
     internal void ConvergeInstructions(
         string workspaceRoot,
         ICollection<GuideCheck> checks,
-        List<GuidePlannedMutation> mutations)
+        List<GuidePlannedMutation> mutations,
+        IReadOnlyList<GuideRuleSwitch>? ruleSwitches = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
         var root = Path.GetFullPath(workspaceRoot);
@@ -434,6 +438,10 @@ public sealed partial class GuideWorkspaceService
         {
             return;
         }
+
+        config = ApplyRuleSwitches(config.DisabledRules, ruleSwitches, checks, out var switchesChanged) is { } disabled
+            ? config with { DisabledRules = disabled }
+            : config with { DisabledRules = null };
 
         var markers = Instructions.Markers;
         var agentsPath = Path.Combine(root, AGENTS_FILE_NAME);
@@ -446,7 +454,10 @@ public sealed partial class GuideWorkspaceService
         }
 
         var changed = false;
-        var agentsAfter = GuideInstructionBlock.Upsert(agentsText, RenderInstructions(config.Profile), markers);
+        var agentsAfter = GuideInstructionBlock.Upsert(
+            agentsText,
+            RenderInstructions(config.Profile, config.DisabledRules),
+            markers);
         if (!string.Equals(agentsText, agentsAfter, StringComparison.Ordinal))
         {
             GuideMutations.AddLocalWrite(
@@ -490,21 +501,26 @@ public sealed partial class GuideWorkspaceService
                 $"The managed instruction block in {AGENTS_FILE_NAME} converges with the current catalog and machine state."));
         }
 
-        // The registry entry carries this product's instruction version, so convergence is
-        // a no-op only when the entry already matches the current catalog version.
+        // The registry entry carries this product's instruction version, and the config write
+        // lands only when a workspace-shared fact actually changed: rule switches, the Claude
+        // import preference, or the recorded block version.
         var registry = GuideWorkspaceRegistryFile.Load(_enginePaths);
-        if (RegisteredEntry(registry, root)?.InstructionBlockVersion == Instructions.Version
-            && config.ManagedClaudeImport == wantsClaude)
+        if (switchesChanged || config.ManagedClaudeImport != wantsClaude)
+        {
+            GuideMutations.AddLocalWrite(
+                "workspace.config.write",
+                GuideWorkspaceStore.ConfigPath(root),
+                GuidePlanning.JsonBytes(config with { ManagedClaudeImport = wantsClaude }),
+                switchesChanged
+                    ? "Record the converged managed-rule switches and Claude-import preference in the workspace configuration."
+                    : "Record the converged Claude-import preference in the workspace configuration.",
+                mutations);
+        }
+
+        if (RegisteredEntry(registry, root)?.InstructionBlockVersion == Instructions.Version)
         {
             return;
         }
-
-        GuideMutations.AddLocalWrite(
-            "workspace.config.write",
-            GuideWorkspaceStore.ConfigPath(root),
-            GuidePlanning.JsonBytes(config with { ManagedClaudeImport = wantsClaude }),
-            "Record the converged Claude-import preference in the workspace configuration.",
-            mutations);
         GuideMutations.AddLocalWrite(
             "workspace.registry.write",
             GuideWorkspaceRegistryFile.PathFor(_enginePaths),
@@ -519,6 +535,59 @@ public sealed partial class GuideWorkspaceService
             "Record the converged instruction block version in the engine registry.",
             mutations);
     }
+
+    /// <summary>
+    /// Applies requested rule switches onto one disabled-rule list. Rules default on, so
+    /// <c>off</c> adds the id and <c>on</c> removes it; an empty result returns null so the
+    /// repository-shared configuration stays clean. Unknown ids are reported as error checks
+    /// and skipped, so a typo can never silently reshape the managed block; init passes its
+    /// blocker list so the same failure aborts the plan before any write.
+    /// </summary>
+    private IReadOnlyList<string>? ApplyRuleSwitches(
+        IReadOnlyList<string>? currentDisabled,
+        IReadOnlyList<GuideRuleSwitch>? ruleSwitches,
+        ICollection<GuideCheck> checks,
+        out bool changed)
+    {
+        changed = false;
+        if (ruleSwitches is null || ruleSwitches.Count == 0)
+        {
+            return currentDisabled;
+        }
+
+        var known = KnownRuleIds();
+        var disabled = currentDisabled is { Count: > 0 } existing
+            ? new HashSet<string>(existing, StringComparer.Ordinal)
+            : [];
+        foreach (var ruleSwitch in ruleSwitches)
+        {
+            var id = ruleSwitch.RuleId.Trim();
+            if (!known.Contains(id))
+            {
+                checks.Add(Check("workspace.rule-switch", GuideCheckStatus.Error,
+                    $"Unknown managed rule '{id}'.",
+                    $"Known rule ids: {string.Join(", ", known.Order(StringComparer.Ordinal))}."));
+                continue;
+            }
+
+            changed |= ruleSwitch.Enabled ? disabled.Remove(id) : disabled.Add(id);
+        }
+
+        if (!changed)
+        {
+            return currentDisabled;
+        }
+
+        var ordered = disabled.Order(StringComparer.Ordinal).ToArray();
+        return ordered.Length > 0 ? ordered : null;
+    }
+
+    /// <summary>Every rule id the current catalog can render, across all profile templates.</summary>
+    private IReadOnlySet<string> KnownRuleIds()
+        => Instructions.Templates.Values
+            .SelectMany(static template => template.Rules)
+            .Select(static rule => rule.Id)
+            .ToHashSet(StringComparer.Ordinal);
 
     /// <summary>This product's registry entry for one workspace, if registered.</summary>
     private GuideWorkspaceEntry? RegisteredEntry(GuideWorkspaceRegistry? registry, string root)
@@ -625,6 +694,11 @@ public sealed partial class GuideWorkspaceService
                 $"Refusing to modify {CLAUDE_FILE_NAME} because it contains duplicate {CLAUDE_IMPORT_LINE} imports."));
         }
 
+        // Rule switches validate before the write plan, so an unknown id blocks initialization
+        // exactly like an unknown profile or capability; re-init preserves previously
+        // disabled rules that the request does not switch back on.
+        var disabledRules = ApplyRuleSwitches(config?.DisabledRules, request.RuleSwitches, blockers, out _);
+
         if (blockers.Count == 0)
         {
             var instructionsChanged = false;
@@ -635,7 +709,8 @@ public sealed partial class GuideWorkspaceService
                 profile!,
                 capabilities,
                 wantsClaude,
-                config?.SkillTargets);
+                config?.SkillTargets,
+                disabledRules);
 
             GuideMutations.AddLocalWrite(
                 "workspace.config.write",
@@ -657,7 +732,7 @@ public sealed partial class GuideWorkspaceService
                 "Record the initialized workspace in the engine registry.",
                 mutations);
 
-            var managedBody = RenderInstructions(profile!);
+            var managedBody = RenderInstructions(profile!, disabledRules);
             var agentsAfter = GuideInstructionBlock.Upsert(agentsText, managedBody, markers);
             if (!string.Equals(agentsText, agentsAfter, StringComparison.Ordinal))
             {
@@ -1499,13 +1574,17 @@ public sealed partial class GuideWorkspaceService
         return config;
     }
 
-    private string RenderInstructions(string profile)
+    private string RenderInstructions(string profile, IReadOnlyCollection<string>? disabledRules = null)
     {
         var template = Instructions.Templates.GetValueOrDefault(profile)
                        ?? throw new InvalidDataException($"Catalog does not define instructions for profile '{profile}'.");
         var skills = string.Join(", ", template.Skills.Select(static name => $"${name}"));
-        var rules = string.Join("\n", template.Rules.Select(static rule => $"- {rule}"));
-        return $"## Monica agent workflow\n\nProfile skills: {skills}.\n\n{rules}{ProjectedTail()}";
+        var rules = template.Rules
+            .Where(rule => disabledRules?.Contains(rule.Id) != true)
+            .Select(static rule => $"- {rule.Text}")
+            .ToArray();
+        var ruleList = rules.Length == 0 ? string.Empty : $"\n\n{string.Join("\n", rules)}";
+        return $"## Monica agent workflow\n\nProfile skills: {skills}.{ruleList}{ProjectedTail()}";
     }
 
     private string? _projectedTail;
@@ -1566,9 +1645,13 @@ public sealed partial class GuideWorkspaceService
     }
 
     /// <summary>Whether the managed body equals the currently rendered instructions, machine projection included.</summary>
-    private bool InstructionsMatch(string agentsText, string profile, GuideInstructionMarkers markers)
+    private bool InstructionsMatch(
+        string agentsText,
+        string profile,
+        GuideInstructionMarkers markers,
+        IReadOnlyCollection<string>? disabledRules = null)
     {
-        var expected = $"\n{RenderInstructions(profile).Trim()}\n";
+        var expected = $"\n{RenderInstructions(profile, disabledRules).Trim()}\n";
         var actual = GuideInstructionBlock.NormalizeNewlines(
             GuideInstructionBlock.Body(agentsText, markers) ?? string.Empty);
         return string.Equals(actual, expected, StringComparison.Ordinal);
@@ -1710,7 +1793,7 @@ public sealed partial class GuideWorkspaceService
                     "Run guide init again and approve the plan."));
                 break;
             case GuideInstructionBlockStatus.Valid when config is not null:
-                checks.Add(InstructionsMatch(agentsText, config.Profile, markers)
+                checks.Add(InstructionsMatch(agentsText, config.Profile, markers, config.DisabledRules)
                     ? Check("workspace.instructions", GuideCheckStatus.Ok,
                         $"Root {AGENTS_FILE_NAME} has one current managed instruction block.")
                     : Check("workspace.instructions", GuideCheckStatus.Error,

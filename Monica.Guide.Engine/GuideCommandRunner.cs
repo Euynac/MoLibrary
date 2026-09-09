@@ -127,7 +127,8 @@ public static class GuideCommandRunner
             null,
             command.Profile,
             command.Skills.Count > 0 ? command.Skills : null,
-            command.WorkspacePath);
+            command.WorkspacePath,
+            command.RuleSwitches);
         return command.Apply
             ? service.ApplyConfigureAsync(request, command.PlanDigest!, progress, cancellationToken)
             : service.PreviewConfigureAsync(request, progress, cancellationToken);
@@ -208,7 +209,8 @@ public static class GuideCommandRunner
         var request = new GuideWorkspaceInitRequest(
             command.WorkspacePath!,
             command.Profile,
-            command.Capabilities);
+            command.Capabilities,
+            command.RuleSwitches);
         return command.Apply
             ? service.InitAsync(request, command.PlanDigest!, progress, cancellationToken)
             : service.InitAsync(request, null, progress, cancellationToken);

@@ -159,6 +159,14 @@ public sealed record GuideInstallationView(
     string? Workspace = null);
 
 /// <summary>
+/// One requested managed-instruction rule switch, addressed by the rule's stable catalog id.
+/// Switches are workspace-scoped: they update <c>.monica/guide.json</c> and converge the
+/// managed AGENTS.md block in the same run. Rules default on, so <c>Enabled = false</c> is
+/// the explicit opt-out.
+/// </summary>
+public sealed record GuideRuleSwitch(string RuleId, bool Enabled);
+
+/// <summary>
 /// Desired guide-managed host configuration. Empty selections refresh every installation
 /// recorded in the guide state from the selected release bundle. A workspace installs the
 /// configured profile's skill closure into the workspace-local target directories instead.
@@ -172,7 +180,8 @@ public sealed record GuideConfigureRequest(
     string? SkillCatalogPath = null,
     string? Profile = null,
     IReadOnlyList<string>? Skills = null,
-    string? Workspace = null);
+    string? Workspace = null,
+    IReadOnlyList<GuideRuleSwitch>? RuleSwitches = null);
 
 /// <summary>
 /// Selection for removal of guide-managed skill projections. Null targets removes every

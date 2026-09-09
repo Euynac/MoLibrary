@@ -15,9 +15,10 @@ internal static class GuideWorkspaceStore
 
     /// <summary>
     /// Repository-shared workspace configuration. Shared facts only: the initializing
-    /// product, profile, capabilities, Claude import, and skill targets. Per-product state
-    /// such as the managed instruction version lives in the engine registry, keyed by
-    /// workspace and product, so several products can guide one workspace.
+    /// product, profile, capabilities, Claude import, skill targets, and the managed-rule
+    /// switch list. Per-product state such as the managed instruction version lives in the
+    /// engine registry, keyed by workspace and product, so several products can guide one
+    /// workspace.
     /// </summary>
     internal sealed record GuideWorkspaceConfig(
         int SchemaVersion,
@@ -25,13 +26,21 @@ internal static class GuideWorkspaceStore
         string Profile,
         IReadOnlyList<string> Capabilities,
         bool ManagedClaudeImport,
-        IReadOnlyList<string>? SkillTargets = null)
+        IReadOnlyList<string>? SkillTargets = null,
+        IReadOnlyList<string>? DisabledRules = null)
     {
         public const int CurrentSchemaVersion = 1;
 
         /// <summary>Workspace-relative skill directories; the default mirrors the shared agent catalog convention.</summary>
         public IReadOnlyList<string> EffectiveSkillTargets()
             => SkillTargets is { Count: > 0 } targets ? targets : [".agents/skills"];
+
+        /// <summary>
+        /// Ids of managed instruction rules this workspace disables. Absent or empty means
+        /// every catalog rule renders: rules default on, and disabling is the explicit opt-out.
+        /// </summary>
+        public IReadOnlyList<string> EffectiveDisabledRules()
+            => DisabledRules is { Count: > 0 } disabled ? disabled : [];
     }
 
     internal static string ConfigPath(string workspaceRoot)

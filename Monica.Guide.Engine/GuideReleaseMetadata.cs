@@ -468,10 +468,23 @@ public static class GuideReleaseMetadata
                 || template.Skills.Count == 0
                 || template.Skills.Any(string.IsNullOrWhiteSpace)
                 || template.Rules.Count == 0
-                || template.Rules.Any(static rule => string.IsNullOrWhiteSpace(rule)))
+                || template.Rules.Any(static rule =>
+                    string.IsNullOrWhiteSpace(rule.Id)
+                    || string.IsNullOrWhiteSpace(rule.Text)))
             {
                 throw new InvalidDataException(
                     $"Managed instruction template '{profile}' must list skills and rules.");
+            }
+
+            var duplicateRuleIds = template.Rules
+                .GroupBy(static rule => rule.Id, StringComparer.Ordinal)
+                .Where(static group => group.Count() > 1)
+                .Select(static group => group.Key)
+                .ToArray();
+            if (duplicateRuleIds.Length > 0)
+            {
+                throw new InvalidDataException(
+                    $"Managed instruction template '{profile}' repeats rule ids: {string.Join(", ", duplicateRuleIds)}.");
             }
 
             var missing = template.Skills.Where(skill => !packaged.Contains(skill)).ToArray();

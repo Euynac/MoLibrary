@@ -267,13 +267,17 @@ class AgentSkillInfrastructureTests(unittest.TestCase):
             for requirement in profile["sourceRequirements"]:
                 self.assertNotIn("access", requirement)
 
-    def test_managed_instruction_v2_routes_source_lookup_through_guide(self) -> None:
+    def test_managed_instruction_rules_are_switchable_and_route_source_lookup_through_guide(self) -> None:
         instructions = self.catalog["managedInstructions"]
-        self.assertEqual(2, instructions["version"])
+        self.assertEqual(3, instructions["version"])
         for profile_name, template in instructions["templates"].items():
-            rules = "\n".join(template["rules"])
-            self.assertIn("$monica-guide source resolve", rules, profile_name)
-            self.assertIn("not write permission", rules, profile_name)
+            rules = [rule["text"] for rule in template["rules"]]
+            rule_ids = [rule["id"] for rule in template["rules"]]
+            self.assertTrue(all(rule_ids), profile_name)
+            self.assertEqual(len(rule_ids), len(set(rule_ids)), profile_name)
+            joined = "\n".join(rules)
+            self.assertIn("$monica-guide source resolve", joined, profile_name)
+            self.assertIn("not write permission", joined, profile_name)
 
     def test_source_resolver_distribution_is_exact_and_capability_scoped(self) -> None:
         distribution = self.catalog["externalSkills"]["inspect-dependency-source"][

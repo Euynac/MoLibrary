@@ -778,7 +778,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         if (workspaceRoot is not null)
         {
             AdoptWorkspaceRegistration(catalog, workspaceRoot, checks, mutations);
-            ConvergeWorkspaceInstructions(workspaceRoot, catalog, checks, mutations);
+            ConvergeWorkspaceInstructions(workspaceRoot, catalog, checks, mutations, request.RuleSwitches);
         }
         if (_definition.ServesLoopback && desiredBaseAddress is not null)
         {
@@ -1573,15 +1573,16 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
 
     /// <summary>
     /// Converges the managed instruction block while configuring a workspace, so the machine
-    /// projection switches (source hints, issue policy) apply with the same update that
-    /// refreshes skills. Products whose catalog declares no managed instructions have no
-    /// workspace instruction surface to converge.
+    /// projection switches (source hints, issue policy) and any per-workspace rule switches
+    /// apply with the same update that refreshes skills. Products whose catalog declares no
+    /// managed instructions have no workspace instruction surface to converge.
     /// </summary>
     private void ConvergeWorkspaceInstructions(
         string workspaceRoot,
         SkillCatalog catalog,
         ICollection<GuideCheck> checks,
-        List<GuidePlannedMutation> mutations)
+        List<GuidePlannedMutation> mutations,
+        IReadOnlyList<GuideRuleSwitch>? ruleSwitches = null)
     {
         if (catalog.ManagedInstructions is null)
         {
@@ -1589,7 +1590,7 @@ public sealed class AgentGuideService : IAgentGuideService, IDisposable
         }
 
         new GuideWorkspaceService(_definition, _enginePaths, catalog, _productPaths)
-            .ConvergeInstructions(workspaceRoot, checks, mutations);
+            .ConvergeInstructions(workspaceRoot, checks, mutations, ruleSwitches);
     }
 
     /// <summary>The environment the guide process runs in; project installations are native-only.</summary>

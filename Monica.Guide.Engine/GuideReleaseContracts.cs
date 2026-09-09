@@ -111,7 +111,16 @@ public sealed record GuideInstructionMarkers(
 /// <summary>Per-profile instruction template: routed skills plus routing rules.</summary>
 public sealed record GuideInstructionTemplate(
     IReadOnlyList<string> Skills,
-    IReadOnlyList<string> Rules);
+    IReadOnlyList<GuideInstructionRule> Rules);
+
+/// <summary>
+/// One managed instruction rule. The stable <paramref name="Id"/> addresses the rule in the
+/// per-workspace switch list (<c>.monica/guide.json</c> <c>disabledRules</c>); workspaces
+/// render every rule unless its id is explicitly disabled there, so rules default on.
+/// </summary>
+public sealed record GuideInstructionRule(
+    string Id,
+    string Text);
 
 /// <summary>One first-party source repository a workspace or skill set can bind globally.</summary>
 public sealed record GuideSourceRepositoryDefinition(

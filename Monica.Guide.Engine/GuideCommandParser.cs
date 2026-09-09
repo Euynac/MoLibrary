@@ -31,6 +31,7 @@ public static class GuideCommandParser
         var environments = new List<GuideEnvironment>();
         var skills = new List<string>();
         var capabilities = new List<string>();
+        var ruleSwitches = new List<GuideRuleSwitch>();
         string? profile = null;
         string? executable = null;
         string? releaseManifest = null;
@@ -78,6 +79,9 @@ public static class GuideCommandParser
                     break;
                 case "--capability":
                     capabilities.Add(Next(arguments, ref index, option).Trim().ToLowerInvariant());
+                    break;
+                case "--rule":
+                    ruleSwitches.Add(ParseRuleSwitch(Next(arguments, ref index, option)));
                     break;
                 case "--executable":
                     executable = Path.GetFullPath(Next(arguments, ref index, option));
@@ -136,7 +140,7 @@ public static class GuideCommandParser
 
         ValidateOptions(
             command, sourceAction, issueAction, issueMode, targets, environments, skills, capabilities, profile, workspace,
-            repository, sourcePath, sourceRef, sourceResolver, port, apply, digest, locale);
+            repository, sourcePath, sourceRef, sourceResolver, port, apply, digest, locale, ruleSwitches);
         if (targets.Distinct().Count() != targets.Count)
         {
             throw new GuideUsageException("Each --target selector may appear only once.");
@@ -145,10 +149,14 @@ public static class GuideCommandParser
         {
             throw new GuideUsageException("Each --environment selector may appear only once.");
         }
+        if (ruleSwitches.Select(static item => item.RuleId).Distinct(StringComparer.Ordinal).Count() != ruleSwitches.Count)
+        {
+            throw new GuideUsageException("Each --rule id may appear only once.");
+        }
         return new GuideCommand(
             command, targets, environments, skills, profile, executable, releaseManifest, port, digest, apply, locale, json,
             sourceAction, workspace, capabilities, repository, sourcePath, sourceRef, sourceResolver,
-            issueAction, issueMode);
+            issueAction, issueMode, ruleSwitches);
     }
 
     public static GuideEnvironment ParseEnvironment(string selector)
@@ -190,6 +198,21 @@ public static class GuideCommandParser
             _ => throw new GuideUsageException("--target must be shared or claude.")
         };
 
+    private static GuideRuleSwitch ParseRuleSwitch(string value)
+    {
+        var separator = value.IndexOf('=');
+        var id = separator > 0 ? value[..separator].Trim() : string.Empty;
+        var state = separator >= 0 && separator < value.Length - 1
+            ? value[(separator + 1)..].Trim().ToLowerInvariant()
+            : string.Empty;
+        if (id.Length == 0 || state is not ("on" or "off"))
+        {
+            throw new GuideUsageException("--rule must be <rule-id>=on or <rule-id>=off.");
+        }
+
+        return new GuideRuleSwitch(id, state == "on");
+    }
+
     private static string Next(IReadOnlyList<string> arguments, ref int index, string option)
     {
         if (++index >= arguments.Count || string.IsNullOrWhiteSpace(arguments[index]))
@@ -218,7 +241,8 @@ public static class GuideCommandParser
         int? port,
         bool apply,
         string? digest,
-        string? locale)
+        string? locale,
+        IReadOnlyList<GuideRuleSwitch> ruleSwitches)
     {
         if (command == "source")
         {
@@ -345,6 +369,11 @@ public static class GuideCommandParser
             throw new GuideUsageException("--profile is valid only for configure and init.");
         }
 
+        if (ruleSwitches.Count > 0 && command is not ("configure" or "init"))
+        {
+            throw new GuideUsageException("--rule is valid only for configure and init.");
+        }
+
         if (skills.Count > 0 && profile is not null)
         {
             throw new GuideUsageException("--skill and --profile cannot be combined.");
@@ -423,7 +452,8 @@ public sealed record GuideCommand(
     string? SourceRef = null,
     string? ResolverPath = null,
     string? IssueAction = null,
-    string? IssueMode = null);
+    string? IssueMode = null,
+    IReadOnlyList<GuideRuleSwitch>? RuleSwitches = null);
 
 /// <summary>Invalid command-line invocation; maps to exit code 2.</summary>
 public sealed class GuideUsageException(string message) : Exception(message);
