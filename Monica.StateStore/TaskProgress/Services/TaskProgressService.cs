@@ -89,6 +89,42 @@ public class TaskProgressService(
         }
     }
 
+    /// <summary>
+    /// Creates a progress-tracked task using the default <see cref="TaskProgress" /> model,
+    /// resuming an already-running distributed progress with the same id instead of resetting it.
+    /// </summary>
+    public async Task<TaskProgressModels.TaskProgress> CreateOrResumeTaskProgressAsync(string? id = null, Action<TaskProgressSetting>? settingAction = null)
+    {
+        var taskId = id ?? $"TaskProgress_{Guid.NewGuid()}";
+
+        // Resume an existing in-flight distributed progress so re-creation never resets the bar back to zero.
+        var existing = await FetchDistributedTaskProgress(taskId);
+        if (existing is { Status.IsEnd: false } && existing.Status.CurrentStep > 0)
+        {
+            if (existing.Setting.AutoUpdateDuration.HasValue)
+            {
+                SetupAutoUpdate(existing, existing.Setting.AutoUpdateDuration.Value);
+            }
+
+            // Persist the current position immediately and hand write ownership (DistributedStamp) to this instance.
+            await SaveTaskProgressStateAsync(existing, saveInstantly: true);
+            logger.LogInformation("Resumed task progress: {TaskId} at {CurrentStep}%", taskId, existing.Status.Percentage);
+            return existing;
+        }
+
+        // Fresh task: reset any stale cancellation from a previous run so reusing the id is not blocked.
+        try
+        {
+            await cancellationManager.ResetTokenAsync(taskId);
+        }
+        catch (Exception e)
+        {
+            e.CreateException(logger, "Failed to reset task progress cancellation token: {0}", taskId);
+        }
+
+        return await CreateTaskProgressAsync(taskId, settingAction);
+    }
+
     public virtual string GenerateDistributedStamp()
     {
         return $"{Assembly.GetEntryAssembly()?.GetName()}-{Guid.NewGuid().ToString()}";

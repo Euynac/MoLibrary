@@ -17,6 +17,16 @@ public interface ITaskProgressService
     Task<TaskProgressModels.TaskProgress> CreateTaskProgressAsync(string? id = null, Action<TaskProgressSetting>? settingAction = null);
 
     /// <summary>
+    /// Creates a progress-tracked task using the default <see cref="TaskProgress" /> model,
+    /// resuming an already-running distributed progress with the same id instead of resetting it.
+    /// A previously-cancelled token is reset so reusing the id starts a fresh run.
+    /// </summary>
+    /// <param name="id">Optional explicit task identifier. When omitted, a GUID-based identifier is generated.</param>
+    /// <param name="settingAction">Optional callback used to customize the task progress settings for a fresh task.</param>
+    /// <returns>The initialized (or resumed) task progress instance.</returns>
+    Task<TaskProgressModels.TaskProgress> CreateOrResumeTaskProgressAsync(string? id = null, Action<TaskProgressSetting>? settingAction = null);
+
+    /// <summary>
     /// Restores a distributed progress-tracked task using the default <see cref="TaskProgress" /> model.
     /// </summary>
     /// <param name="id">The identifier of the distributed task.</param>
