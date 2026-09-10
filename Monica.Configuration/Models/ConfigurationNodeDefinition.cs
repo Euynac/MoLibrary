@@ -68,9 +68,9 @@ public sealed record ConfigurationNodeDefinition
     public ConfigurationTextSemantic TextSemantic { get; init; } = ConfigurationTextSemantic.PlainText;
 
     /// <summary>
-    /// Gets an application-defined editor hint for scalar string values.
+    /// Gets an application-defined editor hint carried on any node kind.
     /// The framework transports the value without interpreting it; management UIs fall back to the
-    /// default text editor when the hint is <see langword="null"/> or unrecognized.
+    /// default editor when the hint is <see langword="null"/> or unrecognized.
     /// </summary>
     public string? EditorHint { get; init; }
 

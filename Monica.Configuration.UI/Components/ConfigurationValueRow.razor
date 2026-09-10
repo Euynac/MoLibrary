@@ -37,6 +37,12 @@
                         {
                             <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">@L["State:Value:RestartNeeded"]</MudChip>
                         }
+                        @if (NonScalarEditorHint is { } editorHint)
+                        {
+                            <MudTooltip Text="@L["State:Editor:EditorHintTooltip", editorHint]">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@editorHint</MudChip>
+                            </MudTooltip>
+                        }
                         @if (IsExternalEffectiveSource)
                         {
                             <MudTooltip Text="@EffectiveSourceTooltip">
@@ -205,6 +211,13 @@
             : L["Sources:EffectiveSource:ExternalReadOnly", source.DisplayName, source.ReadOnlyReason ?? L["Sources:ReadOnly"]];
 
     private ConfigurationReloadBehavior EffectiveReloadBehavior => Node.ResolveEffectiveReloadBehavior(Definition);
+
+    // Scalar string rows show the hint badge inside their editor; every other node kind surfaces the hint here.
+    private string? NonScalarEditorHint => Node.EditorHint is null
+                                          || (Node.NodeKind == ConfigurationNodeKind.Scalar
+                                              && Node.ValueKind == ConfigurationValueKind.String)
+        ? null
+        : Node.EditorHint;
 
     private static bool IsPathPrefix(LogicalPath ancestor, LogicalPath path)
     {

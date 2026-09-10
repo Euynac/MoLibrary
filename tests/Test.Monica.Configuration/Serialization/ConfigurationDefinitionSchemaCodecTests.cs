@@ -149,7 +149,18 @@ public class ConfigurationDefinitionSchemaCodecTests
     }
 
     [Fact]
-    public void DeserializeDefinition_WhenObjectNodeHasEditorHint_ShouldRejectSchema()
+    public void SerializeSchema_WhenObjectNodeHasEditorHint_ShouldPersistHint()
+    {
+        var definition = CreateEditorHintDefinition(null);
+        definition = definition with { Root = definition.Root with { EditorHint = "Airway" } };
+
+        var schemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition);
+
+        schemaJson.Should().Contain("\"EditorHint\":\"Airway\"");
+    }
+
+    [Fact]
+    public void DeserializeDefinition_WhenObjectNodeHasEditorHint_ShouldRestoreHint()
     {
         var schemaJson = $$"""
                            {
@@ -167,14 +178,13 @@ public class ConfigurationDefinitionSchemaCodecTests
                            }
                            """;
 
-        var act = () => Deserialize(schemaJson);
+        var definition = Deserialize(schemaJson);
 
-        act.Should().Throw<ConfigurationPersistedSchemaException>()
-            .WithMessage("*editor-hint*");
+        definition.Root.EditorHint.Should().Be("Airway");
     }
 
     [Fact]
-    public void DeserializeDefinition_WhenNonStringScalarNodeHasEditorHint_ShouldRejectSchema()
+    public void DeserializeDefinition_WhenNonStringScalarNodeHasEditorHint_ShouldRestoreHint()
     {
         var schemaJson = $$"""
                            {
@@ -192,10 +202,9 @@ public class ConfigurationDefinitionSchemaCodecTests
                            }
                            """;
 
-        var act = () => Deserialize(schemaJson);
+        var definition = Deserialize(schemaJson);
 
-        act.Should().Throw<ConfigurationPersistedSchemaException>()
-            .WithMessage("*editor-hint*");
+        definition.Root.Children[0].EditorHint.Should().Be("Airway");
     }
 
     private static ConfigurationDefinition CreateEditorHintDefinition(string? editorHint)

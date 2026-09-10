@@ -85,7 +85,7 @@ internal sealed class ConfigurationDefinitionScanner(
                 ? ScanObjectChildren(type, path, configurationPath, inheritedReloadBehavior, traversal)
                 : [];
             var textSemantic = ResolveTextSemantic(option, nodeKind, valueKind, type.FullName ?? type.Name);
-            var editorHint = ResolveEditorHint(option, nodeKind, valueKind, type.FullName ?? type.Name);
+            var editorHint = ResolveEditorHint(option);
 
             return new ConfigurationNodeDefinition
             {
@@ -177,11 +177,7 @@ internal sealed class ConfigurationDefinitionScanner(
                 nodeKind,
                 valueKind,
                 $"{property.DeclaringType?.FullName ?? property.DeclaringType?.Name}.{property.Name}");
-            var editorHint = ResolveEditorHint(
-                option,
-                nodeKind,
-                valueKind,
-                $"{property.DeclaringType?.FullName ?? property.DeclaringType?.Name}.{property.Name}");
+            var editorHint = ResolveEditorHint(option);
 
             return new ConfigurationNodeDefinition
             {
@@ -545,25 +541,12 @@ internal sealed class ConfigurationDefinitionScanner(
             $"{nameof(OptionSettingAttribute.TextSemantic)}.{textSemantic} can only be used on scalar string configuration nodes. Node '{nodeLabel}' is {nodeKind}/{valueKind?.ToString() ?? "None"}.");
     }
 
-    private static string? ResolveEditorHint(
-        OptionSettingAttribute? option,
-        ConfigurationNodeKind nodeKind,
-        ConfigurationValueKind? valueKind,
-        string nodeLabel)
+    private static string? ResolveEditorHint(OptionSettingAttribute? option)
     {
+        // Any node kind may carry a hint; the framework never interprets it and business UIs
+        // decide how (or whether) to render a dedicated editor for each combination.
         var editorHint = option?.EditorHint;
-        if (string.IsNullOrWhiteSpace(editorHint))
-        {
-            return null;
-        }
-
-        if (nodeKind == ConfigurationNodeKind.Scalar && valueKind == ConfigurationValueKind.String)
-        {
-            return editorHint;
-        }
-
-        throw new InvalidOperationException(
-            $"{nameof(OptionSettingAttribute.EditorHint)} '{editorHint}' can only be used on scalar string configuration nodes. Node '{nodeLabel}' is {nodeKind}/{valueKind?.ToString() ?? "None"}.");
+        return string.IsNullOrWhiteSpace(editorHint) ? null : editorHint;
     }
 
     private sealed class SchemaTraversalContext

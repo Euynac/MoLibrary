@@ -52,10 +52,10 @@ public sealed class OptionSettingAttribute : Attribute
     public ConfigurationTextSemantic TextSemantic { get; set; } = ConfigurationTextSemantic.PlainText;
 
     /// <summary>
-    /// Gets or sets an opaque editor hint for scalar string values.
+    /// Gets or sets an opaque editor hint carried on any node kind, including collections and objects.
     /// The value space is defined by the application (for example a business entity reference such as
-    /// <c>FlightRoute</c>), and the framework only transports it so management UIs can pick a dedicated editor.
-    /// Management tools fall back to the default text editor when they do not recognize the hint.
+    /// <c>Airway</c>), and the framework only transports it so management UIs can pick a dedicated editor.
+    /// Management tools fall back to the default editor when they do not recognize the hint.
     /// </summary>
     public string? EditorHint { get; set; }
 

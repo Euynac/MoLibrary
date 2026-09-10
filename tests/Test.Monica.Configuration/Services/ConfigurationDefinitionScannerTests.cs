@@ -87,14 +87,14 @@ public class ConfigurationDefinitionScannerTests
     }
 
     [Fact]
-    public void Scan_WhenNonScalarStringPropertyHasEditorHint_ShouldThrowInvalidOperationException()
+    public void Scan_WhenNonScalarPropertyHasEditorHint_ShouldTransportHintToNode()
     {
         var scanner = CreateScanner();
 
-        var act = () => scanner.Scan(typeof(InvalidEditorHintOptions));
+        var definition = scanner.Scan(typeof(NonScalarEditorHintOptions));
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*EditorHint*can only be used on scalar string configuration nodes*");
+        definition.Root.Children.Single(x => x.Name == nameof(NonScalarEditorHintOptions.Routes))
+            .EditorHint.Should().Be("Airway");
     }
 
     [Fact]
@@ -318,11 +318,11 @@ public class ConfigurationDefinitionScannerTests
         public string Plain { get; set; } = "";
     }
 
-    [Configuration("Sample:InvalidEditorHint", DefinitionKey = "test.invalidEditorHint")]
-    private sealed class InvalidEditorHintOptions
+    [Configuration("Sample:NonScalarEditorHint", DefinitionKey = "test.nonScalarEditorHint")]
+    private sealed class NonScalarEditorHintOptions
     {
-        [OptionSetting("Count", EditorHint = "FlightRoute")]
-        public int Count { get; set; }
+        [OptionSetting("Routes", EditorHint = "Airway")]
+        public List<string> Routes { get; set; } = [];
     }
 
     [Configuration("Sample:List", DefinitionKey = "test.list")]
