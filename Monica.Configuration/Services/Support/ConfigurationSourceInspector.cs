@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -664,17 +665,53 @@ internal sealed class ConfigurationSourceInspector(
             && string.Equals(Path.GetFullPath(registration.Path), physicalPath, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool CanWriteJsonFile(string physicalPath)
+    // Writability of one physical path rarely changes within a process lifetime, and descriptors are
+    // rebuilt on every GetSources call, so probe results are cached per path.
+    private static readonly ConcurrentDictionary<string, bool> WritableProbeCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Probes whether a JSON file path is actually writable, beyond its directory existing.
+    /// Read-only bind mounts (for example ConfigMap subPath volumes) must not register as writable
+    /// mutation destinations that would always fail at write time. Results are cached per path.
+    /// </summary>
+    internal static bool CanWriteJsonFile(string physicalPath)
     {
-        try
+        return WritableProbeCache.GetOrAdd(physicalPath, static path =>
         {
-            var directory = Path.GetDirectoryName(physicalPath);
-            return !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory);
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-        {
-            return false;
-        }
+            try
+            {
+                var directory = Path.GetDirectoryName(path);
+                if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+                {
+                    return false;
+                }
+
+                // A directory check alone misclassifies read-only bind mounts (for example ConfigMap
+                // subPath volumes) as writable, which would let mutation planning offer destinations
+                // that always fail at write time. Probe the actual file system instead.
+                if (File.Exists(path))
+                {
+                    using var _ = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.Read);
+                    return true;
+                }
+
+                var probePath = Path.Combine(directory, $".monica-write-probe-{Guid.NewGuid():N}.tmp");
+                try
+                {
+                    using var _ = new FileStream(probePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    return true;
+                }
+                finally
+                {
+                    File.Delete(probePath);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
+                                           or NotSupportedException or PathTooLongException)
+            {
+                return false;
+            }
+        });
     }
 
     private static string ResolveJsonReadOnlyReason(string? physicalPath, ManagedJsonConfigurationSourceRegistration? managed)

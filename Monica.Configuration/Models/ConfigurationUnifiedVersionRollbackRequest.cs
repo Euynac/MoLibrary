@@ -32,13 +32,4 @@ public sealed record ConfigurationUnifiedVersionRollbackRequest
     /// Gets the optional operator reason recorded with the rollback mutation group.
     /// </summary>
     public string? Reason { get; init; }
-
-    /// <summary>
-    /// Gets whether the operator explicitly acknowledged changed values whose historical schema hash differs but
-    /// whose JSON remains valid under the current schema.
-    /// </summary>
-    /// <remarks>
-    /// This flag never bypasses current-schema validation and cannot force incompatible values into a store.
-    /// </remarks>
-    public bool AcknowledgeCompatibleSchemaDrift { get; init; }
 }

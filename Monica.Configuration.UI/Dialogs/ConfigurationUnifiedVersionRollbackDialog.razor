@@ -24,15 +24,6 @@
 
                         <ConfigurationUnifiedVersionRollbackPreview Preview="_preview" />
 
-                        @if (_preview.RequiresSchemaDriftAcknowledgement)
-                        {
-                            <MudCheckBox T="bool"
-                                         @bind-Value="_acknowledgeSchemaDrift"
-                                         Color="Color.Warning"
-                                         Disabled="_saving"
-                                         Label="@L["Versions:Rollback:Acknowledgement:CompatibleSchemaDrift"]" />
-                        }
-
                         <MudTextField T="string"
                                       @bind-Value="_reason"
                                       Label="@L["Group:Reason"]"
@@ -82,17 +73,14 @@
     private bool _loading = true;
     private bool _saving;
     private bool _reloading;
-    private bool _acknowledgeSchemaDrift;
 
     private bool CanApply =>
-        !_saving && !_reloading && _preview?.CanApplyWithAcknowledgement(_acknowledgeSchemaDrift) == true;
+        !_saving && !_reloading && _preview?.CanApply == true;
 
     private bool HasRuntimeOutOfSync => _preview?.Targets.Any(static target =>
         target.Status == ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync) == true;
 
-    private string ApplyActionText => _preview?.RequiresSchemaDriftAcknowledgement == true
-        ? L["Versions:Rollback:Actions:AcknowledgeAndApply"]
-        : L["Versions:Rollback:Actions:Apply"];
+    private string ApplyActionText => L["Versions:Rollback:Actions:Apply"];
 
     private Severity PreviewMessageSeverity => _preview switch
     {
@@ -100,7 +88,7 @@
         { HasChanges: false, SkippedCount: > 0 } => Severity.Warning,
         { HasChanges: false } => Severity.Info,
         { SkippedCount: > 0 } => Severity.Warning,
-        { RequiresSchemaDriftAcknowledgement: true } => Severity.Warning,
+        { CompatibleSchemaDriftCount: > 0 } => Severity.Info,
         _ => Severity.Success
     };
 
@@ -110,7 +98,7 @@
         { HasChanges: false, SkippedCount: > 0 } => L["Versions:Rollback:Messages:NoChangesSkipped", _preview.SkippedCount],
         { HasChanges: false } => L["Versions:Rollback:Messages:NoChanges"],
         { SkippedCount: > 0 } => L["Versions:Rollback:Messages:Skipped", _preview.SkippedCount],
-        { RequiresSchemaDriftAcknowledgement: true } => L["Versions:Rollback:Messages:CompatibleSchemaDrift"],
+        { CompatibleSchemaDriftCount: > 0 } => L["Versions:Rollback:Messages:CompatibleSchemaDrift"],
         _ => L["Versions:Rollback:Messages:Ready"]
     };
 
@@ -124,7 +112,6 @@
         _loading = true;
         _error = null;
         _preview = null;
-        _acknowledgeSchemaDrift = false;
         try
         {
             var result = await Facade.PreviewUnifiedVersionRollbackAsync(Version);
@@ -144,7 +131,7 @@
 
     private async Task ApplyAsync()
     {
-        if (_preview is null || !_preview.CanApplyWithAcknowledgement(_acknowledgeSchemaDrift))
+        if (_preview is null || !_preview.CanApply)
         {
             return;
         }
@@ -155,8 +142,7 @@
         {
             Version = Version,
             PreviewFingerprint = _preview.PreviewFingerprint,
-            Reason = _reason,
-            AcknowledgeCompatibleSchemaDrift = _acknowledgeSchemaDrift
+            Reason = _reason
         });
         _saving = false;
         if (result.IsFailed(out var error, out var rollback))

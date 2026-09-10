@@ -69,7 +69,9 @@ internal static class ConfigurationRollbackChangePlanner
             && current.ValueKind == JsonValueKind.Object
             && target.ValueKind == JsonValueKind.Object)
         {
-            var countBefore = changes.Count;
+            // Only schema-declared children can be written back. When the walk finds no child change,
+            // any remaining difference lives in properties the current schema no longer declares and
+            // must not become a whole-object replacement that persists unknown data.
             foreach (var child in schema.Children)
             {
                 var hasCurrent = TryGetProperty(current, child.Name, out var currentChild);
@@ -87,11 +89,6 @@ internal static class ConfigurationRollbackChangePlanner
                     targetChild,
                     hasTarget,
                     changes);
-            }
-
-            if (changes.Count == countBefore)
-            {
-                AddChange(schema, path, current, currentExists, target, targetExists, changes);
             }
 
             return;

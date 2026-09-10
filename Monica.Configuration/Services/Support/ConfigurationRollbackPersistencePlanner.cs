@@ -514,16 +514,114 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
             return true;
         }
 
+        // Format-only differences (for example TimeSpan or numeric textual variants) fall through to a
+        // schema-aware typed comparison so collection nodes do not report false persistence drift.
         using var storedDocument = JsonDocument.Parse(storedValue.Json);
         using var targetDocument = JsonDocument.Parse(targetJson);
-        var storedText = ReadConfigurationScalar(storedDocument.RootElement);
-        var targetText = ReadConfigurationScalar(targetDocument.RootElement);
-        return targetSchema.ValueKind switch
+        return SchemaAwareEquals(targetSchema, storedDocument.RootElement, targetDocument.RootElement);
+    }
+
+    private static bool SchemaAwareEquals(
+        ConfigurationNodeDefinition schema,
+        JsonElement stored,
+        JsonElement target)
+    {
+        return schema.NodeKind switch
+        {
+            ConfigurationNodeKind.Scalar => ScalarEquals(schema, stored, target),
+            ConfigurationNodeKind.Object => ObjectEquals(schema, stored, target),
+            ConfigurationNodeKind.List => ListEquals(schema, stored, target),
+            ConfigurationNodeKind.Dictionary => DictionaryEquals(schema, stored, target),
+            _ => false
+        };
+    }
+
+    private static bool ObjectEquals(
+        ConfigurationNodeDefinition schema,
+        JsonElement stored,
+        JsonElement target)
+    {
+        if (stored.ValueKind != JsonValueKind.Object || target.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        // Compare only schema-declared children; stored documents may retain properties that the current
+        // schema no longer declares, which are irrelevant to runtime projection.
+        foreach (var child in schema.Children)
+        {
+            if (!TryGetProperty(stored, child.Name, out var storedValue)
+                || !TryGetProperty(target, child.Name, out var targetValue))
+            {
+                return false;
+            }
+
+            if (!SchemaAwareEquals(child, storedValue, targetValue))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool ListEquals(
+        ConfigurationNodeDefinition schema,
+        JsonElement stored,
+        JsonElement target)
+    {
+        if (stored.ValueKind != JsonValueKind.Array
+            || target.ValueKind != JsonValueKind.Array
+            || schema.ListTemplate is null)
+        {
+            return false;
+        }
+
+        var storedItems = stored.EnumerateArray().ToArray();
+        var targetItems = target.EnumerateArray().ToArray();
+        return storedItems.Length == targetItems.Length
+               && storedItems.Zip(targetItems)
+                   .All(pair => SchemaAwareEquals(schema.ListTemplate.ItemTemplate, pair.First, pair.Second));
+    }
+
+    private static bool DictionaryEquals(
+        ConfigurationNodeDefinition schema,
+        JsonElement stored,
+        JsonElement target)
+    {
+        if (stored.ValueKind != JsonValueKind.Object
+            || target.ValueKind != JsonValueKind.Object
+            || schema.DictionaryTemplate is null)
+        {
+            return false;
+        }
+
+        var storedProperties = stored.EnumerateObject().ToArray();
+        var targetProperties = target.EnumerateObject().ToArray();
+        if (storedProperties.Length != targetProperties.Length)
+        {
+            return false;
+        }
+
+        var targetByKey = targetProperties.ToDictionary(
+            static property => property.Name,
+            static property => property.Value,
+            StringComparer.OrdinalIgnoreCase);
+        return storedProperties.All(property =>
+            targetByKey.TryGetValue(property.Name, out var targetValue)
+            && SchemaAwareEquals(schema.DictionaryTemplate.ValueTemplate, property.Value, targetValue));
+    }
+
+    private static bool ScalarEquals(ConfigurationNodeDefinition schema, JsonElement stored, JsonElement target)
+    {
+        var storedText = ReadConfigurationScalar(stored);
+        var targetText = ReadConfigurationScalar(target);
+        return schema.ValueKind switch
         {
             ConfigurationValueKind.String =>
                 string.Equals(
-                    ConfigurationRegexTextCodec.NormalizeDisplayValue(targetSchema, storedText),
-                    ConfigurationRegexTextCodec.NormalizeDisplayValue(targetSchema, targetText),
+                    ConfigurationRegexTextCodec.NormalizeDisplayValue(schema, storedText),
+                    ConfigurationRegexTextCodec.NormalizeDisplayValue(schema, targetText),
                     StringComparison.Ordinal),
             ConfigurationValueKind.Boolean =>
                 bool.TryParse(storedText, out var storedBoolean)
@@ -534,8 +632,8 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
                 && decimal.TryParse(targetText, NumberStyles.Float, CultureInfo.InvariantCulture, out var targetNumber)
                 && storedNumber == targetNumber,
             ConfigurationValueKind.Enum =>
-                targetSchema.TryNormalizeEnumDisplayValue(storedText, out var storedEnum)
-                && targetSchema.TryNormalizeEnumDisplayValue(targetText, out var targetEnum)
+                schema.TryNormalizeEnumDisplayValue(storedText, out var storedEnum)
+                && schema.TryNormalizeEnumDisplayValue(targetText, out var targetEnum)
                 && string.Equals(storedEnum, targetEnum, StringComparison.OrdinalIgnoreCase),
             ConfigurationValueKind.DateTime =>
                 DateTime.TryParse(
@@ -559,6 +657,21 @@ internal sealed class ConfigurationRollbackPersistencePlanner(
                 && storedUri.Equals(targetUri),
             _ => false
         };
+    }
+
+    private static bool TryGetProperty(JsonElement obj, string name, out JsonElement value)
+    {
+        foreach (var property in obj.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
     }
 
     private static string? ReadConfigurationScalar(JsonElement value)

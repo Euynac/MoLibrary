@@ -66,6 +66,146 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
     }
 
     [Fact]
+    public async Task CreateAsync_WhenCapturedValueContainsUnknownProperties_ShouldTolerateAndPlanOnlySchemaPaths()
+    {
+        var definition = CreateDefinition("Definition.Evolved", "Evolved");
+        var document = CreateEffectiveDocument(definition, workerId: 2, version: 51);
+        var fixture = CreateFixture(
+            [definition],
+            [document],
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                [definition.DefinitionKey] = 2
+            });
+        var snapshot = CreateSnapshot((definition, "{\"WorkerId\":2,\"RemovedLegacy\":\"stale\"}"));
+
+        var preview = await fixture.Factory.CreateAsync(snapshot, TestContext.Current.CancellationToken);
+
+        var target = preview.Targets.Should().ContainSingle().Which;
+        target.Status.Should().Be(ConfigurationUnifiedVersionApplyTargetStatus.Unchanged);
+        target.IsSkipped.Should().BeFalse();
+        preview.BlockedCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenCapturedValueLacksRequiredScalar_ShouldSkipAndReportIncompatibleValue()
+    {
+        var definition = CreateDefinition("Definition.Evolved", "Evolved");
+        var document = CreateEffectiveDocument(definition, workerId: 2, version: 51);
+        var fixture = CreateFixture(
+            [definition],
+            [document],
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                [definition.DefinitionKey] = 2
+            });
+        var snapshot = CreateSnapshot((definition, "{\"LegacyOnly\":true}"));
+
+        var preview = await fixture.Factory.CreateAsync(snapshot, TestContext.Current.CancellationToken);
+
+        var target = preview.Targets.Should().ContainSingle().Which;
+        target.Status.Should().Be(ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue);
+        target.IsSkipped.Should().BeTrue();
+        target.ValidationIssues.Should().NotBeEmpty();
+        preview.SkippedDefinitionKeys.Should().Equal(definition.DefinitionKey);
+        preview.BlockedCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenCapturedValueViolatesScalarKind_ShouldSkipAndReportIncompatibleValue()
+    {
+        var definition = CreateDefinition("Definition.Evolved", "Evolved");
+        var document = CreateEffectiveDocument(definition, workerId: 2, version: 51);
+        var fixture = CreateFixture(
+            [definition],
+            [document],
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                [definition.DefinitionKey] = 2
+            });
+        var snapshot = CreateSnapshot((definition, "{\"WorkerId\":\"not-a-number\"}"));
+
+        var preview = await fixture.Factory.CreateAsync(snapshot, TestContext.Current.CancellationToken);
+
+        preview.Targets.Should().ContainSingle().Which.Status
+            .Should().Be(ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenStoredListKeepsExplicitNullsButRuntimeOmitsThem_ShouldNotReportDrift()
+    {
+        // Reproduces the production incident: a stored document keeps "Tag": null inside list items
+        // while runtime JSON reconstruction omits null members. The semantic comparer must treat the
+        // explicit null and the absent property as equal instead of flagging RuntimeOutOfSync.
+        var definition = CreateDefinition(
+            "Definition.ListWithNulls",
+            "ListWithNulls",
+            TestConfigurationFactory.RootNode());
+        var document = new ConfigurationEffectiveValueDocument
+        {
+            DefinitionKey = definition.DefinitionKey,
+            Json = "{\"WorkerId\":1,\"Services\":[{\"Name\":\"alpha\",\"Tag\":null}]}",
+            Version = 61,
+            SchemaVersion = definition.SchemaVersion
+        };
+        var fixture = CreateFixture(
+            [definition],
+            [document],
+            new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ListWithNulls:WorkerId"] = "1",
+                ["ListWithNulls:Services:0:Name"] = "alpha"
+            });
+        var snapshot = CreateSnapshot(
+            (definition, "{\"WorkerId\":1,\"Services\":[{\"Name\":\"alpha\",\"Tag\":null}]}"));
+
+        var preview = await fixture.Factory.CreateAsync(snapshot, TestContext.Current.CancellationToken);
+
+        var target = preview.Targets.Should().ContainSingle().Which;
+        target.Status.Should().Be(ConfigurationUnifiedVersionApplyTargetStatus.Unchanged);
+        target.Mutations.Should().BeEmpty();
+        preview.BlockedCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenOnlySchemaMetadataChanged_ShouldStayApplicableWithoutAcknowledgement()
+    {
+        var definition = CreateDefinition("Definition.MetadataDrift", "MetadataDrift");
+        var document = CreateEffectiveDocument(definition, workerId: 2, version: 71);
+        var fixture = CreateFixture(
+            [definition],
+            [document],
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                [definition.DefinitionKey] = 2
+            });
+        var snapshotDefinition = new ConfigurationUnifiedVersionDefinitionSnapshot
+        {
+            DefinitionKey = definition.DefinitionKey,
+            DisplayName = definition.DisplayName,
+            FromProject = definition.FromProject,
+            SchemaVersion = definition.SchemaVersion,
+            SchemaHash = "sha256:older-metadata",
+            Json = "{\"WorkerId\":3}"
+        };
+        var snapshot = new ConfigurationUnifiedVersionSnapshot
+        {
+            Summary = new ConfigurationUnifiedVersionSummary { Version = 17 },
+            Definitions = [snapshotDefinition]
+        };
+
+        var preview = await fixture.Factory.CreateAsync(snapshot, TestContext.Current.CancellationToken);
+
+        var target = preview.Targets.Should().ContainSingle().Which;
+        target.Status.Should().Be(ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift);
+        target.Mutations.Should().ContainSingle().Which.Status
+            .Should().Be(ConfigurationUnifiedVersionApplyMutationStatus.Ready);
+        preview.BlockedCount.Should().Be(0);
+        preview.CompatibleSchemaDriftCount.Should().Be(1);
+        preview.CanApply.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task CreateAsync_WhenPersistedValueDiffersFromRuntime_ShouldReportSourceDriftWithoutPerDefinitionRead()
     {
         var definition = CreateDefinition("Definition.Drift", "Drift");
@@ -135,6 +275,23 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
         IReadOnlyDictionary<string, int> runtimeWorkerIds,
         IConfigurationMetadataStore? metadataStore = null)
     {
+        return CreateFixture(
+            definitions,
+            documents,
+            definitions.ToDictionary(
+                definition => $"{definition.SectionPath}:WorkerId",
+                definition => (string?)runtimeWorkerIds[definition.DefinitionKey]
+                    .ToString(CultureInfo.InvariantCulture),
+                StringComparer.OrdinalIgnoreCase),
+            metadataStore);
+    }
+
+    private static PreviewFactoryFixture CreateFixture(
+        IReadOnlyList<ConfigurationDefinition> definitions,
+        IReadOnlyList<ConfigurationEffectiveValueDocument> documents,
+        IReadOnlyDictionary<string, string?> runtimeValues,
+        IConfigurationMetadataStore? metadataStore = null)
+    {
         var registry = new ConfigurationDefinitionRegistry();
         registry.RegisterRange(definitions);
         var definitionResolver = new ConfigurationDefinitionResolver(registry, metadataStore);
@@ -150,13 +307,9 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
                 .Select(key => documentsByKey.GetValueOrDefault(key))
                 .ToArray());
 
-        var configurationValues = definitions.ToDictionary(
-            definition => $"{definition.SectionPath}:WorkerId",
-            definition => (string?)runtimeWorkerIds[definition.DefinitionKey].ToString(CultureInfo.InvariantCulture),
-            StringComparer.OrdinalIgnoreCase);
         var runtimeContext = new ConfigurationRuntimeContext();
         runtimeContext.Capture(new ConfigurationBuilder()
-            .AddInMemoryCollection(configurationValues)
+            .AddInMemoryCollection(runtimeValues)
             .Build());
         var reloadCoordinator = new TestReloadCoordinator(documentsByKey);
         var effectiveSnapshotReader = new ConfigurationEffectiveSnapshotReader(
@@ -217,13 +370,22 @@ public sealed class ConfigurationUnifiedVersionRollbackPreviewFactoryTests
 
     private static ConfigurationDefinition CreateDefinition(string definitionKey, string sectionPath)
     {
+        return CreateDefinition(definitionKey, sectionPath, TestConfigurationFactory.RootNode());
+    }
+
+    private static ConfigurationDefinition CreateDefinition(
+        string definitionKey,
+        string sectionPath,
+        ConfigurationNodeDefinition root)
+    {
         var definition = TestConfigurationFactory.Definition() with
         {
             DefinitionKey = definitionKey,
             SectionPath = sectionPath,
             DisplayName = definitionKey,
             SchemaVersion = 1,
-            DefinitionRevision = 1
+            DefinitionRevision = 1,
+            Root = root
         };
         return definition with
         {

@@ -21,18 +21,21 @@ public sealed record ConfigurationUnifiedVersionApplyPreview
 
     /// <summary>
     /// Gets the per-definition apply targets, including definitions that require no change and definitions
-    /// that will be skipped because they are unknown to the current process.
+    /// that will be skipped because they are unknown to the current process or incompatible with the
+    /// current schema.
     /// </summary>
     public IReadOnlyList<ConfigurationUnifiedVersionApplyTarget> Targets { get; init; } = [];
 
     /// <summary>
-    /// Gets targets whose captured definitions are unknown to the current process and are skipped by the apply.
+    /// Gets targets that the apply skips: captured definitions unknown to the current process, and
+    /// captured values that are hard-incompatible with the current schema.
     /// </summary>
     public IReadOnlyList<ConfigurationUnifiedVersionApplyTarget> SkippedTargets =>
         Targets.Where(static target => target.IsSkipped).ToArray();
 
     /// <summary>
-    /// Gets the definition keys that are skipped because they are unknown to the current process.
+    /// Gets the definition keys that are skipped because they are unknown to the current process or their
+    /// captured values are incompatible with the current schema.
     /// </summary>
     public IReadOnlyList<string> SkippedDefinitionKeys =>
         Targets.Where(static target => target.IsSkipped)
@@ -47,12 +50,13 @@ public sealed record ConfigurationUnifiedVersionApplyPreview
         Targets.Where(static target => target.HasChanges).ToArray();
 
     /// <summary>
-    /// Gets the number of definitions that require a rollback write, acknowledgement, or source reconciliation.
+    /// Gets the number of definitions that require a rollback write or source reconciliation.
     /// </summary>
     public int ChangeCount => Targets.Count(static target => target.HasChanges);
 
     /// <summary>
-    /// Gets the number of captured definitions that are unknown to the current process.
+    /// Gets the number of captured definitions that are skipped: unknown definitions and values
+    /// incompatible with the current schema.
     /// </summary>
     public int SkippedCount => Targets.Count(static target => target.IsSkipped);
 
@@ -78,10 +82,11 @@ public sealed record ConfigurationUnifiedVersionApplyPreview
     public int UnchangedCount => Targets.Count(static target => !target.HasChanges);
 
     /// <summary>
-    /// Gets the number of changed definitions that require explicit acknowledgement of compatible schema drift.
+    /// Gets the number of changed definitions whose schema metadata drifted since capture while their
+    /// values still validate against the current schema. Informational only; no acknowledgement is required.
     /// </summary>
     public int CompatibleSchemaDriftCount =>
-        Targets.Count(static target => target.RequiresSchemaDriftAcknowledgement);
+        Targets.Count(static target => target.Status == ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift);
 
     /// <summary>
     /// Gets the number of changed definitions that cannot be applied safely.
@@ -89,43 +94,18 @@ public sealed record ConfigurationUnifiedVersionApplyPreview
     public int BlockedCount => Targets.Count(static target => target.IsBlocked);
 
     /// <summary>
-    /// Gets whether the selected version requires at least one rollback write, acknowledgement, or reconciliation.
+    /// Gets whether the selected version requires at least one rollback write or reconciliation.
     /// </summary>
     public bool HasChanges => ChangeCount > 0;
 
     /// <summary>
-    /// Gets whether one or more otherwise-compatible changes require schema-drift acknowledgement.
+    /// Gets whether the plan can be applied. Skipped definitions never block the apply; every
+    /// non-skipped changed target must be safely applicable.
     /// </summary>
-    public bool RequiresSchemaDriftAcknowledgement => CompatibleSchemaDriftCount > 0;
-
-    /// <summary>
-    /// Gets whether the plan can be applied without schema-drift acknowledgement.
-    /// </summary>
-    public bool CanApply => CanApplyWithAcknowledgement(acknowledgeCompatibleSchemaDrift: false);
-
-    /// <summary>
-    /// Gets whether the plan can be applied after acknowledging compatible schema drift.
-    /// </summary>
-    public bool CanApplyWithSchemaDriftAcknowledgement =>
-        CanApplyWithAcknowledgement(acknowledgeCompatibleSchemaDrift: true);
-
-    /// <summary>
-    /// Determines whether the reviewed plan can be applied with the requested schema-drift acknowledgement.
-    /// </summary>
-    /// <param name="acknowledgeCompatibleSchemaDrift">
-    /// True to allow values that validate against the current schema even though their captured schema hash differs.
-    /// This never permits structurally invalid values.
-    /// </param>
-    /// <returns>
-    /// True when the plan contains changes and every non-skipped changed target can be applied safely.
-    /// Definitions unknown to the current process are skipped and reported instead of blocking the apply.
-    /// </returns>
-    public bool CanApplyWithAcknowledgement(bool acknowledgeCompatibleSchemaDrift)
-    {
-        return HasChanges && Targets
+    public bool CanApply =>
+        HasChanges && Targets
             .Where(static target => !target.IsSkipped)
-            .All(target => target.CanApply(acknowledgeCompatibleSchemaDrift));
-    }
+            .All(static target => target.CanApply());
 }
 
 /// <summary>
@@ -193,33 +173,30 @@ public sealed record ConfigurationUnifiedVersionApplyTarget
     public IReadOnlyList<ConfigurationUnifiedVersionValidationIssue> ValidationIssues { get; init; } = [];
 
     /// <summary>
-    /// Gets whether this target is skipped because its definition is unknown to the current process.
+    /// Gets whether this target is skipped by the apply: its definition is unknown to the current
+    /// process, or its captured value is hard-incompatible with the current schema.
     /// </summary>
     /// <remarks>
-    /// Historical version snapshots legitimately outlive the definitions they captured. A skipped target is
-    /// excluded from command building and apply decisions, and is reported explicitly instead.
+    /// Historical version snapshots legitimately outlive the definitions and schemas they captured.
+    /// A skipped target is excluded from command building and apply decisions, and is reported explicitly
+    /// instead of blocking the rollback of the remaining definitions.
     /// </remarks>
-    public bool IsSkipped => Status == ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition;
+    public bool IsSkipped => Status is
+        ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition
+        or ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue;
 
     /// <summary>
-    /// Gets whether this target requires a rollback write, acknowledgement, or source reconciliation.
+    /// Gets whether this target requires a rollback write or source reconciliation.
     /// </summary>
     public bool HasChanges =>
         Status != ConfigurationUnifiedVersionApplyTargetStatus.Unchanged && !IsSkipped;
 
     /// <summary>
-    /// Gets whether this target requires explicit acknowledgement of compatible schema drift.
+    /// Gets whether this target is unsafe or impossible to apply. Skipped targets are not blocked;
+    /// they are neutral for the apply decision.
     /// </summary>
-    public bool RequiresSchemaDriftAcknowledgement =>
-        Status == ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift;
-
-    /// <summary>
-    /// Gets whether this target is unsafe or impossible to apply.
-    /// </summary>
-    /// <remarks>Skipped targets are not blocked; they are neutral for the apply decision.</remarks>
     public bool IsBlocked => Status is
-        ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue
-        or ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync
+        ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync
         or ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride
         or ConfigurationUnifiedVersionApplyTargetStatus.CompositeSourceConflict
         or ConfigurationUnifiedVersionApplyTargetStatus.LowerPriorityFallback
@@ -228,18 +205,13 @@ public sealed record ConfigurationUnifiedVersionApplyTarget
     /// <summary>
     /// Determines whether this target can participate in an apply operation.
     /// </summary>
-    /// <param name="acknowledgeCompatibleSchemaDrift">Whether compatible schema drift was explicitly acknowledged.</param>
-    /// <returns>True for no-op targets and for changed targets that satisfy the requested safety policy.</returns>
-    public bool CanApply(bool acknowledgeCompatibleSchemaDrift)
+    /// <returns>True for no-op targets and for changed targets that satisfy the safety policy.</returns>
+    public bool CanApply()
     {
-        return Status switch
-        {
-            ConfigurationUnifiedVersionApplyTargetStatus.Unchanged or
-                ConfigurationUnifiedVersionApplyTargetStatus.Ready => true,
-            ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift =>
-                acknowledgeCompatibleSchemaDrift,
-            _ => false
-        };
+        return Status is
+            ConfigurationUnifiedVersionApplyTargetStatus.Unchanged
+            or ConfigurationUnifiedVersionApplyTargetStatus.Ready
+            or ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift;
     }
 }
 
@@ -402,14 +374,16 @@ public enum ConfigurationUnifiedVersionApplyTargetStatus
 
     /// <summary>
     /// The schema hash changed, but the captured value remains valid under the current schema.
-    /// Explicit acknowledgement is required because the exact historical schema is no longer active.
+    /// Informational only: the value is written under the current schema without further acknowledgement.
     /// </summary>
     CompatibleSchemaDrift,
 
     /// <summary>
-    /// The captured value is structurally or semantically invalid under the current schema.
+    /// The captured value is hard-incompatible with the current schema (for example a missing required
+    /// property, a type change, or a rule violation). The target is skipped and reported; it does not
+    /// block the rollback of the remaining definitions.
     /// </summary>
-    InvalidValue,
+    IncompatibleValue,
 
     /// <summary>
     /// The current process no longer knows this definition. The target is skipped and reported;
