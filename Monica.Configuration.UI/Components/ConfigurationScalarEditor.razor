@@ -148,6 +148,17 @@
                 }
             </div>
         }
+        @if (!string.IsNullOrWhiteSpace(Node.EditorHint))
+        {
+            <div class="configuration-editor-hint">
+                <MudTooltip Text="@L["State:Editor:EditorHintTooltip", Node.EditorHint]">
+                    <span class="configuration-editor-hint-badge">
+                        <MudIcon Icon="@Icons.Material.Filled.EditAttributes" Size="Size.Small" />
+                        <span>@Node.EditorHint</span>
+                    </span>
+                </MudTooltip>
+            </div>
+        }
     }
 </div>
 

@@ -61,6 +61,25 @@
     display: block;
 }
 
+.configuration-editor-hint {
+    margin-top: 0.25rem;
+}
+
+.configuration-editor-hint-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.5rem;
+    color: var(--mud-palette-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.configuration-editor-hint-badge ::deep .mud-icon-root {
+    display: block;
+}
+
 .configuration-regex-preview {
     flex: 1 1 auto;
     min-width: 0;

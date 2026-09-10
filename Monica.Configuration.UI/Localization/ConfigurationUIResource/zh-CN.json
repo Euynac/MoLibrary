@@ -212,6 +212,7 @@
       "RegexPreviewEscaped": "转义",
       "RegexPreviewShowDecoded": "点击显示中文等 Unicode 字符",
       "RegexPreviewShowEscaped": "点击显示 \\uXXXX 转义",
+      "EditorHintTooltip": "应用声明该参数使用专用编辑器（{0}）。Monica 通用界面仍按普通文本编辑；业务前端会按此提示渲染专用选择控件。",
       "TooLong": "值过长。",
       "TooShort": "值过短。"
     },

@@ -212,6 +212,7 @@
       "RegexPreviewEscaped": "Escaped",
       "RegexPreviewShowDecoded": "Show decoded Unicode characters",
       "RegexPreviewShowEscaped": "Show \\uXXXX escapes",
+      "EditorHintTooltip": "The application declares a dedicated editor for this parameter ({0}). The generic Monica UI still edits it as plain text; business frontends render a dedicated picker based on this hint.",
       "TooLong": "Value is too long.",
       "TooShort": "Value is too short."
     },
