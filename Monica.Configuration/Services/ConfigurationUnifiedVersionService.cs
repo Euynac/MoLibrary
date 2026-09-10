@@ -107,9 +107,9 @@ internal sealed class ConfigurationUnifiedVersionService(
                 "The unified-version rollback preview is stale because current configuration values, schemas, persistence destinations, or concurrency revisions changed. Request and review a new preview before applying the rollback.");
         }
 
-        if (!preview.CanApplyWithAcknowledgement(request.AcknowledgeCompatibleSchemaDrift))
+        if (!preview.CanApply)
         {
-            throw new InvalidOperationException(BuildApplyBlockMessage(preview, request.AcknowledgeCompatibleSchemaDrift));
+            throw new InvalidOperationException(BuildApplyBlockMessage(preview));
         }
 
         var commands = BuildCommands(request.Version, preview);
@@ -121,8 +121,8 @@ internal sealed class ConfigurationUnifiedVersionService(
             Reason = request.Reason,
             Context = new ConfigurationMutationContext { Reason = request.Reason },
             Commands = commands,
-            // Definitions unknown to the current process are skipped and must not participate in
-            // post-commit verification, which requires a resolvable definition and effective value.
+            // Skipped definitions (unknown or schema-incompatible) must not participate in post-commit
+            // verification, which requires a resolvable definition and effective value.
             ExpectedEffectiveValues = preview.Targets
                 .Where(static target => !target.IsSkipped)
                 .Select(static target => new ConfigurationExpectedEffectiveValue
@@ -210,34 +210,28 @@ internal sealed class ConfigurationUnifiedVersionService(
         };
     }
 
-    private static string BuildApplyBlockMessage(
-        ConfigurationUnifiedVersionApplyPreview preview,
-        bool acknowledgedCompatibleSchemaDrift)
+    private static string BuildApplyBlockMessage(ConfigurationUnifiedVersionApplyPreview preview)
     {
         if (!preview.HasChanges)
         {
             return preview.SkippedCount > 0
                 ? $"Configuration version v{preview.Version} has no changes that can be applied. " +
-                  $"{preview.SkippedCount} captured definition(s) are not known by the current process and cannot be restored."
+                  $"{preview.SkippedCount} captured definition(s) are skipped because they are unknown to the " +
+                  "current process or incompatible with the current schema."
                 : $"Configuration version v{preview.Version} already matches the current effective values.";
         }
 
-        var target = preview.ChangedTargets.First(candidate =>
-            !candidate.CanApply(acknowledgedCompatibleSchemaDrift));
+        var target = preview.ChangedTargets.First(static candidate => !candidate.CanApply());
         return target.Status switch
         {
-            ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift =>
-                $"Definition '{target.DisplayName}' requires explicit acknowledgement of compatible schema drift.",
-            ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue when
-                target.ValidationIssues.FirstOrDefault(static issue => issue.DetailsHidden) is not null =>
-                $"Definition '{target.DisplayName}' is incompatible with the current schema. Sensitive validation details were withheld.",
-            ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue when
-                target.ValidationIssues.FirstOrDefault() is { } issue =>
-                $"Definition '{target.DisplayName}' is incompatible with the current schema at '{issue.LogicalPath}': {issue.Message}",
-            ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue =>
-                $"Definition '{target.DisplayName}' is incompatible with the current schema.",
+            ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync
+                when target.Mutations.FirstOrDefault() is { } drift =>
+                $"Definition '{target.DisplayName}' has {DescribeDriftSource(drift)} values that differ " +
+                $"from the currently loaded runtime values (path '{DisplayBlockPath(target, drift.LogicalPath)}'). " +
+                "Reload or reconcile the runtime before rolling back.",
             ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync =>
-                $"Definition '{target.DisplayName}' has physical source values that differ from the currently loaded runtime values. Reload or reconcile the runtime before rolling back.",
+                $"Definition '{target.DisplayName}' has physical source values that differ from the currently " +
+                "loaded runtime values. Reload or reconcile the runtime before rolling back.",
             ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride when
                 target.Mutations.FirstOrDefault(static mutation =>
                     mutation.Status == ConfigurationUnifiedVersionApplyMutationStatus.ReadOnlyOverride) is { } blocked =>
@@ -252,6 +246,13 @@ internal sealed class ConfigurationUnifiedVersionService(
                 $"Removing path '{DisplayBlockPath(target, fallback.LogicalPath)}' in '{target.DisplayName}' would reveal a value from lower-priority source '{fallback.BlockingSourceDisplayName}'.",
             _ => $"Definition '{target.DisplayName}' does not have a supported writable rollback destination."
         };
+    }
+
+    private static string DescribeDriftSource(ConfigurationUnifiedVersionApplyMutation drift)
+    {
+        return string.IsNullOrWhiteSpace(drift.SourceDisplayName)
+            ? "physical source"
+            : $"'{drift.SourceDisplayName}'";
     }
 
     private static string DisplayBlockPath(ConfigurationUnifiedVersionApplyTarget target, string logicalPath)

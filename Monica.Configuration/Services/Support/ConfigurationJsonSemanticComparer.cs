@@ -34,34 +34,48 @@ internal static class ConfigurationJsonSemanticComparer
 
     private static bool ObjectsEqual(JsonElement left, JsonElement right)
     {
-        var leftProperties = left.EnumerateObject().ToArray();
-        var rightProperties = right.EnumerateObject().ToArray();
-        if (leftProperties.Length != rightProperties.Length)
+        // Explicit null properties are equivalent to absent properties: Microsoft configuration binding
+        // treats them identically, and runtime JSON reconstruction omits nulls while stored documents
+        // keep them. Dropping null-valued properties on both sides before comparing keeps those
+        // representations semantically equal.
+        var leftByName = ToNonNullPropertyMap(left, out var leftValid);
+        var rightByName = ToNonNullPropertyMap(right, out var rightValid);
+        if (!leftValid || !rightValid || leftByName.Count != rightByName.Count)
         {
             return false;
         }
 
-        var rightByName = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
-        foreach (var property in rightProperties)
+        foreach (var (name, value) in leftByName)
         {
-            if (!rightByName.TryAdd(property.Name, property.Value))
-            {
-                return false;
-            }
-        }
-
-        var leftNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var property in leftProperties)
-        {
-            if (!leftNames.Add(property.Name)
-                || !rightByName.TryGetValue(property.Name, out var rightValue)
-                || !Equals(property.Value, rightValue))
+            if (!rightByName.TryGetValue(name, out var rightValue) || !Equals(value, rightValue))
             {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private static Dictionary<string, JsonElement> ToNonNullPropertyMap(JsonElement obj, out bool hasNoDuplicates)
+    {
+        hasNoDuplicates = true;
+        var map = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in obj.EnumerateObject())
+        {
+            if (property.Value.ValueKind == JsonValueKind.Null)
+            {
+                continue;
+            }
+
+            // Duplicate property names are case-insensitively ambiguous and never compare equal.
+            if (!map.TryAdd(property.Name, property.Value))
+            {
+                hasNoDuplicates = false;
+                return map;
+            }
+        }
+
+        return map;
     }
 
     private static bool ArraysEqual(JsonElement left, JsonElement right)

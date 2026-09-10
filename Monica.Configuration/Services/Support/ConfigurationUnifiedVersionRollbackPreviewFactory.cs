@@ -117,14 +117,16 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
         var schemaDrift = !string.Equals(definition.SchemaHash, document.SchemaHash, StringComparison.Ordinal);
         var issues = valuesEqual
             ? []
-            : validationCoordinator.ValidateValue(definition, document.Json)
+            : validationCoordinator.ValidateCapturedValue(definition, document.Json)
                 .Select(issue => CreateValidationIssue(definition, issue, schemaDrift))
                 .ToArray();
         if (issues.Length > 0)
         {
+            // Hard-incompatible historical values are skipped and reported; they never block the
+            // rollback of the remaining definitions.
             return target with
             {
-                Status = ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue,
+                Status = ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue,
                 ValidationIssues = issues
             };
         }
@@ -160,6 +162,12 @@ internal sealed class ConfigurationUnifiedVersionRollbackPreviewFactory(
                 currentSnapshot,
                 document.Json,
                 cancellationToken);
+        if (mutations.Count == 0)
+        {
+            // The semantic difference cannot be written back (for example properties the current schema
+            // no longer declares), so the effective configuration does not change.
+            return target with { Status = ConfigurationUnifiedVersionApplyTargetStatus.Unchanged };
+        }
         var blockedMutation = mutations.FirstOrDefault(static mutation =>
             mutation.Status != ConfigurationUnifiedVersionApplyMutationStatus.Ready);
         if (blockedMutation is not null)

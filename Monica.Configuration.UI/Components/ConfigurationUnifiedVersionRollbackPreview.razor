@@ -69,10 +69,16 @@
                             </TitleContent>
                             <ChildContent>
                                 <MudStack Spacing="2">
-                                    @if (row.Target.IsSkipped)
+                                    @if (row.Target.Status == ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition)
                                     {
                                         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
                                             @L["Versions:Rollback:Messages:MissingDefinitionSkipped"]
+                                        </MudAlert>
+                                    }
+                                    else if (row.Target.Status == ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue)
+                                    {
+                                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                            @L["Versions:Rollback:Messages:IncompatibleValueSkipped"]
                                         </MudAlert>
                                     }
 
@@ -119,7 +125,9 @@
 
                                     @if (row.Target.ValidationIssues.Count > 0)
                                     {
-                                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                                        <MudAlert Severity="@(row.Target.IsSkipped ? Severity.Warning : Severity.Error)"
+                                                  Variant="Variant.Outlined"
+                                                  Dense="true">
                                             <MudText Typo="Typo.subtitle2">
                                                 @L["Versions:Rollback:Validation:IssueCount", row.Target.ValidationIssues.Count]
                                             </MudText>
@@ -358,7 +366,7 @@
             ConfigurationUnifiedVersionApplyTargetStatus.Unchanged => L["Versions:Rollback:Statuses:Unchanged"],
             ConfigurationUnifiedVersionApplyTargetStatus.Ready => L["Versions:Rollback:Statuses:Ready"],
             ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift => L["Versions:Rollback:Statuses:CompatibleSchemaDrift"],
-            ConfigurationUnifiedVersionApplyTargetStatus.InvalidValue => L["Versions:Rollback:Statuses:InvalidValue"],
+            ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue => L["Versions:Rollback:Statuses:IncompatibleValue"],
             ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition => L["Versions:Rollback:Statuses:MissingDefinition"],
             ConfigurationUnifiedVersionApplyTargetStatus.RuntimeOutOfSync => L["Versions:Rollback:Statuses:RuntimeOutOfSync"],
             ConfigurationUnifiedVersionApplyTargetStatus.ReadOnlyOverride => L["Versions:Rollback:Statuses:ReadOnlyOverride"],
@@ -374,8 +382,9 @@
         {
             ConfigurationUnifiedVersionApplyTargetStatus.Unchanged => Color.Default,
             ConfigurationUnifiedVersionApplyTargetStatus.Ready => Color.Success,
-            ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift => Color.Warning,
+            ConfigurationUnifiedVersionApplyTargetStatus.CompatibleSchemaDrift => Color.Info,
             ConfigurationUnifiedVersionApplyTargetStatus.MissingDefinition => Color.Warning,
+            ConfigurationUnifiedVersionApplyTargetStatus.IncompatibleValue => Color.Warning,
             _ => Color.Error
         };
     }

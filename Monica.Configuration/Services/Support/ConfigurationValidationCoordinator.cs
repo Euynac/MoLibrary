@@ -15,6 +15,17 @@ internal sealed class ConfigurationValidationCoordinator(ConfigurationValueValid
         RejectUnknownObjectProperties = true
     };
 
+    // Captured historical values legitimately predate the current schema: properties may have been
+    // removed from the definition since capture. Unknown properties never reach persistence planning
+    // (the planner only walks schema-declared nodes), so they are tolerated here instead of rejecting
+    // the rollback. Missing non-nullable scalars stay fatal because restoring would silently fall back
+    // to a default the operator never reviewed.
+    private static readonly ConfigurationValueValidationOptions CAPTURED_VALUE_OPTIONS = new()
+    {
+        TreatNonNullableScalarsAsRequired = true,
+        RejectUnknownObjectProperties = false
+    };
+
     /// <summary>
     /// Validates a mutation against the current schema constraints.
     /// </summary>
@@ -57,6 +68,24 @@ internal sealed class ConfigurationValidationCoordinator(ConfigurationValueValid
         string json)
     {
         return ValidateValue(definition, LogicalPath.Root, json);
+    }
+
+    /// <summary>
+    /// Validates a captured historical value against the definition's current schema using rollback tolerance.
+    /// </summary>
+    /// <param name="definition">The current configuration definition.</param>
+    /// <param name="json">The captured complete root JSON value.</param>
+    /// <returns>
+    /// The remaining hard incompatibilities. Unknown object properties are ignored because persistence
+    /// planning only writes schema-declared paths.
+    /// </returns>
+    public IReadOnlyList<ConfigurationValueValidationIssue> ValidateCapturedValue(
+        ConfigurationDefinition definition,
+        string json)
+    {
+        var target = ResolveTargetNode(definition, LogicalPath.Root);
+        using var document = JsonDocument.Parse(json);
+        return validationEngine.Validate(target, LogicalPath.Root, document.RootElement, CAPTURED_VALUE_OPTIONS);
     }
 
     /// <summary>
