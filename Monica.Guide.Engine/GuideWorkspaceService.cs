@@ -337,6 +337,34 @@ public sealed partial class GuideWorkspaceService
             RenderInstructions(resolved));
     }
 
+    /// <summary>
+    /// Describes the managed instruction rules of one initialized workspace's profile with
+    /// their current switch states. Setup surfaces render these as per-workspace toggles;
+    /// the switches themselves apply through the digest-locked init/configure flow. Throws
+    /// <see cref="InvalidOperationException"/> when the workspace is uninitialized, the
+    /// catalog has no instructions, or the configured profile has no template.
+    /// </summary>
+    public GuideWorkspaceRuleStates DescribeManagedRules(string workspace)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspace);
+        var config = GuideWorkspaceStore.LoadConfig(Path.GetFullPath(workspace), out _);
+        var profile = config?.Profile;
+        if (config is null || profile is null || !Instructions.Templates.ContainsKey(profile))
+        {
+            throw new InvalidOperationException(
+                $"The workspace defines no managed instruction rules for profile '{profile}'.");
+        }
+
+        var disabled = config.EffectiveDisabledRules() is { Count: > 0 } disabledIds
+            ? new HashSet<string>(disabledIds, StringComparer.Ordinal)
+            : [];
+        return new GuideWorkspaceRuleStates(
+            profile,
+            Instructions.Templates[profile].Rules
+                .Select(rule => new GuideManagedRuleState(rule.Id, rule.Text, !disabled.Contains(rule.Id)))
+                .ToArray());
+    }
+
     /// <summary>Compares this workspace's recorded installations against its profile closure.</summary>
     private (int Installed, int ProfileCount) CountWorkspaceSkills(string workspace, string profile)
     {

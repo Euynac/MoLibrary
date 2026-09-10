@@ -206,6 +206,17 @@ public sealed record GuideWorkspaceView(
     bool InstructionsCurrent,
     IReadOnlyList<string> Issues);
 
+/// <summary>One managed instruction rule with a workspace's current switch state.</summary>
+public sealed record GuideManagedRuleState(string Id, string Text, bool Enabled);
+
+/// <summary>
+/// The managed instruction rules of one initialized workspace's profile with their current
+/// switch states; setup surfaces render these as the workspace's per-rule toggles.
+/// </summary>
+public sealed record GuideWorkspaceRuleStates(
+    string Profile,
+    IReadOnlyList<GuideManagedRuleState> Rules);
+
 /// <summary>
 /// The exact managed instruction span the next initialization or update writes for one
 /// profile: the marker lines plus the body projected from the catalog template and the

@@ -108,6 +108,17 @@ public sealed record SetupInstructionsPreviewView(
     string? EndMarker,
     string? Body);
 
+/// <summary>One managed instruction rule with the workspace's current switch state.</summary>
+public sealed record SetupWorkspaceRuleView(string Id, string Text, bool Enabled);
+
+/// <summary>
+/// The switchable managed rules of one initialized workspace; a null profile means the
+/// workspace or catalog exposes no rules, so the UI hides the toggle surface.
+/// </summary>
+public sealed record SetupWorkspaceRulesView(
+    string? Profile,
+    IReadOnlyList<SetupWorkspaceRuleView> Rules);
+
 /// <summary>Advisory detection of one workspace candidate for the add-workspace flow.</summary>
 public sealed record SetupWorkspaceDetectionView(
     GuideWorkspaceDetectionOutcome Outcome,
@@ -672,20 +683,49 @@ public sealed class SetupFacade(SetupSession session)
         }, cancellationToken);
     }
 
+    /// <summary>
+    /// Describes the switchable managed rules of one initialized workspace with their current
+    /// states; the UI stages toggles on top of this view and applies them through the
+    /// digest-locked workspace update.
+    /// </summary>
+    public async Task<SetupWorkspaceRulesView> DescribeWorkspaceRulesAsync(
+        string workspace,
+        CancellationToken cancellationToken = default)
+        => await Task.Run(() =>
+        {
+            try
+            {
+                var states = new GuideWorkspaceService(Product, GuidePaths.ForCurrentUser(), LoadWorkspaceCatalog())
+                    .DescribeManagedRules(workspace);
+                return new SetupWorkspaceRulesView(
+                    states.Profile,
+                    states.Rules
+                        .Select(static rule => new SetupWorkspaceRuleView(rule.Id, rule.Text, rule.Enabled))
+                        .ToArray());
+            }
+            catch (InvalidOperationException)
+            {
+                // Uninitialized workspace or a catalog without instructions; the UI hides the surface.
+                return new SetupWorkspaceRulesView(null, []);
+            }
+        }, cancellationToken);
+
     /// <summary>Previews installing the workspace's configured profile closure into its project directories.</summary>
     public async Task<SetupOperationView> PreviewWorkspaceInstallAsync(
         string workspace,
+        IReadOnlyList<GuideRuleSwitch>? ruleSwitches = null,
         IProgress<GuidePhase>? progress = null,
         CancellationToken cancellationToken = default)
-        => await WorkspaceConfigureAsync(workspace, null, progress, cancellationToken);
+        => await WorkspaceConfigureAsync(workspace, null, ruleSwitches, progress, cancellationToken);
 
     /// <summary>Applies the digest-locked workspace skill installation plan.</summary>
     public async Task<SetupOperationView> ApplyWorkspaceInstallAsync(
         string workspace,
         string planDigest,
+        IReadOnlyList<GuideRuleSwitch>? ruleSwitches = null,
         IProgress<GuidePhase>? progress = null,
         CancellationToken cancellationToken = default)
-        => await WorkspaceConfigureAsync(workspace, planDigest, progress, cancellationToken);
+        => await WorkspaceConfigureAsync(workspace, planDigest, ruleSwitches, progress, cancellationToken);
 
     /// <summary>Previews initializing a workspace (configuration, instruction block, registry entry).</summary>
     public async Task<SetupOperationView> PreviewWorkspaceInitAsync(
@@ -724,6 +764,7 @@ public sealed class SetupFacade(SetupSession session)
     private async Task<SetupOperationView> WorkspaceConfigureAsync(
         string workspace,
         string? planDigest,
+        IReadOnlyList<GuideRuleSwitch>? ruleSwitches,
         IProgress<GuidePhase>? progress,
         CancellationToken cancellationToken)
     {
@@ -738,7 +779,7 @@ public sealed class SetupFacade(SetupSession session)
             // The program tree follows the product contract: app/ for serve products (the
             // recorded executable is the product application) and setup/ for guide-catalog
             // products where the guide itself is the program.
-            var request = new GuideConfigureRequest(null, null, [], Workspace: workspace);
+            var request = new GuideConfigureRequest(null, null, [], Workspace: workspace, RuleSwitches: ruleSwitches);
             using var service = CreateService(Path.Combine(bundle, Product.ProgramEntryTree));
             var report = await Task.Run(
                 () => planDigest is null

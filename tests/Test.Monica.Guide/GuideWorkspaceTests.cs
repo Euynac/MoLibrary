@@ -164,6 +164,26 @@ public sealed class GuideWorkspaceTests
     }
 
     [Fact]
+    public async Task DescribeManagedRules_ReportsPerRuleSwitchState()
+    {
+        using var fixture = new WorkspaceFixture();
+        var service = fixture.CreateService();
+        fixture.WriteProject("");
+        var request = fixture.InitRequest(profile: "application", capability: "microservice")
+            with { RuleSwitches = [new GuideRuleSwitch("pinned-source", Enabled: false)] };
+        var preview = await service.InitAsync(request, cancellationToken: CancellationToken);
+        await service.InitAsync(request, preview.Plan!.PlanDigest, cancellationToken: CancellationToken);
+
+        var rules = service.DescribeManagedRules(fixture.Workspace);
+        Assert.Equal("application", rules.Profile);
+        Assert.Contains(rules.Rules, rule => rule.Id == "guide-routing" && rule.Enabled);
+        Assert.Contains(rules.Rules, rule => rule.Id == "pinned-source" && !rule.Enabled);
+
+        Assert.Throws<InvalidOperationException>(
+            () => service.DescribeManagedRules(Path.Combine(Path.GetTempPath(), $"guide-missing-{Guid.NewGuid():N}")));
+    }
+
+    [Fact]
     public async Task Init_RequiresExplicitProfileAndCapabilities()
     {
         using var fixture = new WorkspaceFixture();

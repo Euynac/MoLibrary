@@ -64,6 +64,34 @@ else
                             }
                         </ul>
                     }
+                    @if (RuleStates.TryGetValue(workspace.Workspace, out var rules) && rules.Count > 0)
+                    {
+                        <details class="workspace-rules">
+                            <summary>
+                                <span>@Session.T("ws-rules-title")</span>
+                                @if (rules.Any(RuleIsDirty))
+                                {
+                                    <span class="chip warn">@Session.T("ws-rules-pending")</span>
+                                }
+                            </summary>
+                            <p class="hint">@Session.T("ws-rules-hint")</p>
+                            @foreach (var rule in rules)
+                            {
+                                <div class="switch-row rule-row">
+                                    <span class="switch-text">
+                                        <span class="primary mono">@rule.Id</span>
+                                        <span class="secondary">@rule.Text</span>
+                                    </span>
+                                    <label class="switch">
+                                        <input type="checkbox" checked="@rule.StagedEnabled"
+                                               disabled="@Busy"
+                                               @onchange="e => ToggleRule(workspace.Workspace, rule.Id, (bool)e.Value!)"/>
+                                        <span class="track"></span>
+                                    </label>
+                                </div>
+                            }
+                        </details>
+                    }
                     <div class="actions">
                         <button class="btn btn-primary" disabled="@Busy" @onclick="() => InstallAsync(workspace)">
                             <Icon Name="install" Size="16"/>
@@ -384,6 +412,39 @@ else
 
     private List<SetupWorkspaceView> Registered { get; set; } = [];
 
+    /// <summary>One managed rule with its on-disk switch state and the toggle state staged in this page.</summary>
+    private sealed record WorkspaceRuleState(string Id, string Text, bool EnabledOnDisk, bool StagedEnabled);
+
+    private Dictionary<string, List<WorkspaceRuleState>> RuleStates { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private IReadOnlyList<GuideRuleSwitch>? PendingRuleSwitches { get; set; }
+
+    private static bool RuleIsDirty(WorkspaceRuleState rule)
+        => rule.StagedEnabled != rule.EnabledOnDisk;
+
+    private void ToggleRule(string workspace, string id, bool enabled)
+    {
+        if (!RuleStates.TryGetValue(workspace, out var rules))
+        {
+            return;
+        }
+
+        var index = rules.FindIndex(rule => string.Equals(rule.Id, id, StringComparison.Ordinal));
+        if (index >= 0)
+        {
+            rules[index] = rules[index] with { StagedEnabled = enabled };
+        }
+    }
+
+    /// <summary>
+    /// The staged switch state for one workspace, or null when it exposes no rules; applying
+    /// every staged state (not only the deltas) keeps the digest-locked replay idempotent.
+    /// </summary>
+    private IReadOnlyList<GuideRuleSwitch>? SwitchesFor(string workspace)
+        => RuleStates.TryGetValue(workspace, out var rules) && rules.Count > 0
+            ? rules.Select(static rule => new GuideRuleSwitch(rule.Id, rule.StagedEnabled)).ToArray()
+            : null;
+
     private string CandidatePath { get; set; } = string.Empty;
 
     /// <summary>Example project root in this host's path shape.</summary>
@@ -438,7 +499,27 @@ else
     private async Task ReloadAsync()
     {
         Registered = [.. await Facade.ListWorkspacesAsync()];
+        await LoadRuleStatesAsync();
         await LoadInstructionsPreviewAsync();
+    }
+
+    private async Task LoadRuleStatesAsync()
+    {
+        var states = new Dictionary<string, List<WorkspaceRuleState>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var workspace in Registered)
+        {
+            var view = await Facade.DescribeWorkspaceRulesAsync(workspace.Workspace);
+            if (view.Profile is null)
+            {
+                continue;
+            }
+
+            states[workspace.Workspace] = view.Rules
+                .Select(static rule => new WorkspaceRuleState(rule.Id, rule.Text, rule.Enabled, rule.Enabled))
+                .ToList();
+        }
+
+        RuleStates = states;
     }
 
     private async Task InspectAsync()
@@ -521,6 +602,7 @@ else
         Busy = true;
         ApplyAction = "init";
         PendingWorkspace = CandidatePath;
+        PendingRuleSwitches = null;
         try
         {
             var capabilities = SelectedProfile == "application" && SelectedArchitecture is not null
@@ -545,9 +627,10 @@ else
         Busy = true;
         ApplyAction = "install";
         PendingWorkspace = workspace;
+        PendingRuleSwitches = SwitchesFor(workspace);
         try
         {
-            Operation = await Facade.PreviewWorkspaceInstallAsync(workspace, CreatePhaseProgress());
+            Operation = await Facade.PreviewWorkspaceInstallAsync(workspace, PendingRuleSwitches, CreatePhaseProgress());
         }
         finally
         {
@@ -562,6 +645,7 @@ else
         Busy = true;
         ApplyAction = "forget";
         PendingWorkspace = workspace.Workspace;
+        PendingRuleSwitches = null;
         try
         {
             Operation = await Facade.PreviewWorkspaceForgetAsync(workspace.Workspace);
@@ -612,7 +696,8 @@ else
                 "init" => await Facade.ApplyWorkspaceInitAsync(
                     PendingWorkspace, SelectedProfile!, CapabilitiesForInit(), Operation.PlanDigest),
                 "forget" => await Facade.ApplyWorkspaceForgetAsync(PendingWorkspace, Operation.PlanDigest),
-                _ => await Facade.ApplyWorkspaceInstallAsync(PendingWorkspace, Operation.PlanDigest, CreatePhaseProgress())
+                _ => await Facade.ApplyWorkspaceInstallAsync(
+                    PendingWorkspace, Operation.PlanDigest, PendingRuleSwitches, CreatePhaseProgress())
             };
             if (Operation.Applied)
             {

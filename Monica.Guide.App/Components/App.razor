@@ -427,6 +427,23 @@
         .switch-row .switch-text { flex: 1; min-width: 0; }
         .switch-row .switch-text .primary { font-size: 13.5px; font-weight: 600; }
         .switch-row .switch-text .secondary { font-size: 12px; color: var(--muted); }
+
+        /* ---- per-workspace managed-rule toggles inside a workspace card ---- */
+        .workspace-rules { margin-top: 10px; border-top: 1px dashed var(--rule); padding-top: 8px; }
+        .workspace-rules summary {
+            cursor: pointer; user-select: none; font-size: 12.5px; font-weight: 600;
+            color: var(--muted); display: flex; align-items: center; gap: 8px; min-width: 0;
+        }
+        .workspace-rules summary .chip { flex: 0 0 auto; }
+        .workspace-rules .hint { margin: 8px 0 0; }
+        .workspace-rules .rule-row { padding: 8px 2px; gap: 10px; }
+        .workspace-rules .rule-row .primary { font-size: 12.5px; }
+        .workspace-rules .rule-row .secondary {
+            font-size: 12px; color: var(--muted);
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
         .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: 0 0 auto; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .switch .track {

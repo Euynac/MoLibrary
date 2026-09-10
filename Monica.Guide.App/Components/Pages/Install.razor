@@ -391,7 +391,7 @@ else
         try
         {
             Operation = SelectedWorkspace is not null
-                ? await Facade.PreviewWorkspaceInstallAsync(SelectedWorkspace, progress)
+                ? await Facade.PreviewWorkspaceInstallAsync(SelectedWorkspace, progress: progress)
                 : await Facade.PreviewInstallAsync(Bundle.ApplicationDirectory, SelectedTargets(), SelectedPort, progress);
         }
         finally
@@ -412,7 +412,7 @@ else
         try
         {
             Operation = SelectedWorkspace is not null
-                ? await Facade.ApplyWorkspaceInstallAsync(SelectedWorkspace, Operation.PlanDigest, progress)
+                ? await Facade.ApplyWorkspaceInstallAsync(SelectedWorkspace, Operation.PlanDigest, progress: progress)
                 : await Facade.ApplyInstallAsync(Bundle.ApplicationDirectory, SelectedTargets(), SelectedPort, Operation.PlanDigest, progress);
             if (Operation.Applied)
             {
