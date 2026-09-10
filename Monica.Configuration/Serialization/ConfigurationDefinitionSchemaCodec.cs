@@ -151,6 +151,7 @@ public static class ConfigurationDefinitionSchemaCodec
             IsNullable = node.IsNullable,
             IsSensitive = node.IsSensitive,
             TextSemantic = node.IsRegexPatternText ? node.TextSemantic : null,
+            EditorHint = node.NodeKind == ConfigurationNodeKind.Scalar ? NullIfWhiteSpace(node.EditorHint) : null,
             ReloadBehavior = node.ReloadBehavior,
             DictionaryTemplate = node.DictionaryTemplate is null ? null : ToDictionaryDto(node.DictionaryTemplate, depth),
             ListTemplate = node.ListTemplate is null ? null : ToListDto(node.ListTemplate, depth),
@@ -282,6 +283,7 @@ public static class ConfigurationDefinitionSchemaCodec
             TextSemantic = nodeKind == ConfigurationNodeKind.Scalar
                 ? dto.TextSemantic ?? ConfigurationTextSemantic.PlainText
                 : ConfigurationTextSemantic.PlainText,
+            EditorHint = nodeKind == ConfigurationNodeKind.Scalar ? dto.EditorHint : null,
             ReloadBehavior = dto.ReloadBehavior,
             DictionaryTemplate = dto.DictionaryTemplate is null
                 ? null
@@ -379,6 +381,14 @@ public static class ConfigurationDefinitionSchemaCodec
         if (dto.NodeKind != ConfigurationNodeKind.Scalar && dto.TextSemantic is not null)
         {
             ThrowInvalidSchema("Persisted non-scalar schema node contains text-semantic metadata.", path);
+        }
+
+        if (dto.EditorHint is not null
+            && (dto.NodeKind != ConfigurationNodeKind.Scalar || dto.ValueKind != ConfigurationValueKind.String))
+        {
+            ThrowInvalidSchema(
+                "Persisted editor-hint metadata can only appear on scalar string schema nodes.",
+                path);
         }
 
         if (dto.EnumValues is { Count: > 0 } enumValues)
@@ -656,6 +666,8 @@ public static class ConfigurationDefinitionSchemaCodec
         public bool IsSensitive { get; init; }
 
         public ConfigurationTextSemantic? TextSemantic { get; init; }
+
+        public string? EditorHint { get; init; }
 
         public ConfigurationReloadBehavior? ReloadBehavior { get; init; }
 

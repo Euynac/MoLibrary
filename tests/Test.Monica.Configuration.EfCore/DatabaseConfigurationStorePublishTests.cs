@@ -202,6 +202,42 @@ public sealed partial class DatabaseConfigurationStorePublishTests
     }
 
     [Fact]
+    public async Task PublishAsync_WhenOnlyEditorHintChanges_ShouldIncrementSchemaVersionAndRecordSchemaHistory()
+    {
+        var databasePath = await CreateMigratedDatabaseAsync();
+        await using var stores = CreateStores(databasePath, 1);
+        var original = CreateStringChildDefinition("Test.Concurrent.EditorHint");
+        var changedRoot = original.Root with
+        {
+            Children =
+            [
+                original.Root.Children[0] with { EditorHint = "Airway" }
+            ]
+        };
+        var changed = WithComputedSchemaHash(original with { Root = changedRoot });
+
+        await stores.Items[0].PublishAsync(CreatePublication([original]), TestContext.Current.CancellationToken);
+        await stores.Items[0].PublishAsync(CreatePublication([changed]), TestContext.Current.CancellationToken);
+
+        var publishedEntry = await stores.Items[0].GetPublishedDefinitionEntryAsync(
+            original.DefinitionKey,
+            TestContext.Current.CancellationToken);
+        var published = publishedEntry?.RequireDefinition();
+        published.Should().NotBeNull();
+        published!.SchemaVersion.Should().Be(2);
+        published.DefinitionRevision.Should().Be(2);
+        published.Root.Children[0].EditorHint.Should().Be("Airway");
+
+        var overview = await GetOverviewAsync(stores, original.DefinitionKey);
+        overview.DefinitionRevision.Should().Be(2);
+        overview.SchemaVersion.Should().Be(2);
+        overview.RevisionHistories.Select(static history => history.DefinitionRevision)
+            .Should().Equal(2, 1);
+        overview.RevisionHistories.Select(static history => history.ChangeKind)
+            .Should().Contain([ConfigurationDefinitionPublishChangeKind.Created, ConfigurationDefinitionPublishChangeKind.SchemaChanged]);
+    }
+
+    [Fact]
     public async Task ListPublishedDefinitionEntriesAsync_WhenDatabaseIsUnmigrated_ShouldFailWithoutCreatingSchema()
     {
         var databasePath = CreateDatabasePath();
@@ -357,6 +393,23 @@ public sealed partial class DatabaseConfigurationStorePublishTests
             }
         };
         return WithComputedSchemaHash(definition);
+    }
+
+    private static ConfigurationDefinition CreateStringChildDefinition(string definitionKey)
+    {
+        var definition = CreateDefinition(definitionKey);
+        var root = definition.Root with
+        {
+            Children =
+            [
+                definition.Root.Children[0] with
+                {
+                    ClrTypeName = typeof(string).AssemblyQualifiedName!,
+                    ValueKind = ConfigurationValueKind.String
+                }
+            ]
+        };
+        return WithComputedSchemaHash(definition with { Root = root });
     }
 
     private static ConfigurationDefinition WithComputedSchemaHash(ConfigurationDefinition definition)

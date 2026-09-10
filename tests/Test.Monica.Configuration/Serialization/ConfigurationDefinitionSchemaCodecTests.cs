@@ -89,6 +89,160 @@ public class ConfigurationDefinitionSchemaCodecTests
         ConfigurationPersistedJsonOptions.CompactSchema.MaxDepth.Should().Be(256);
     }
 
+    [Fact]
+    public void SerializeSchema_WhenScalarStringNodeHasEditorHint_ShouldPersistHint()
+    {
+        var schemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(CreateEditorHintDefinition("Airway"));
+
+        schemaJson.Should().Contain("\"EditorHint\":\"Airway\"");
+    }
+
+    [Fact]
+    public void SerializeSchema_WhenNodeHasNoEditorHint_ShouldOmitEditorHintMember()
+    {
+        var schemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(CreateEditorHintDefinition(null));
+
+        schemaJson.Should().NotContain("EditorHint");
+    }
+
+    [Fact]
+    public void ComputeSchemaHash_WhenEditorHintIsAddedOrChanged_ShouldChangeHash()
+    {
+        var withoutHint = ComputeEditorHintDefinitionHash(null);
+        var withHint = ComputeEditorHintDefinitionHash("Airway");
+        var withOtherHint = ComputeEditorHintDefinitionHash("Airport");
+
+        withHint.Should().NotBe(withoutHint);
+        withOtherHint.Should().NotBe(withHint);
+    }
+
+    [Fact]
+    public void DeserializeDefinition_WhenScalarStringNodeHasEditorHint_ShouldRestoreHintAndKeepHashStable()
+    {
+        var definition = CreateEditorHintDefinition("Airway");
+        var schemaJson = ConfigurationDefinitionSchemaCodec.SerializeSchema(definition);
+        var schemaHash = ConfigurationDefinitionSchemaCodec.ComputeSchemaHash(
+            definition.DefinitionKey,
+            definition.SectionPath,
+            definition.Root);
+
+        var restored = ConfigurationDefinitionSchemaCodec.DeserializeDefinition(
+            definition.DefinitionKey,
+            definition.SectionPath,
+            definition.DisplayName,
+            null,
+            typeof(object).FullName!,
+            "Test.Monica.Configuration",
+            null,
+            1,
+            schemaHash,
+            ConfigurationReloadBehavior.Unknown,
+            schemaJson,
+            ConfigurationDefinitionOrigin.PublishedMetadata);
+
+        restored.Root.Children[0].EditorHint.Should().Be("Airway");
+        var restoredHash = ConfigurationDefinitionSchemaCodec.ComputeSchemaHash(
+            restored.DefinitionKey,
+            restored.SectionPath,
+            restored.Root);
+        restoredHash.Should().Be(schemaHash);
+    }
+
+    [Fact]
+    public void DeserializeDefinition_WhenObjectNodeHasEditorHint_ShouldRejectSchema()
+    {
+        var schemaJson = $$"""
+                           {
+                             "Name": "Root",
+                             "NodeKind": {{(int)ConfigurationNodeKind.Object}},
+                             "EditorHint": "Airway",
+                             "Children": [
+                               {
+                                 "Name": "Route",
+                                 "NodeKind": {{(int)ConfigurationNodeKind.Scalar}},
+                                 "ValueKind": {{(int)ConfigurationValueKind.String}},
+                                 "ClrTypeName": "{{typeof(string).AssemblyQualifiedName}}"
+                               }
+                             ]
+                           }
+                           """;
+
+        var act = () => Deserialize(schemaJson);
+
+        act.Should().Throw<ConfigurationPersistedSchemaException>()
+            .WithMessage("*editor-hint*");
+    }
+
+    [Fact]
+    public void DeserializeDefinition_WhenNonStringScalarNodeHasEditorHint_ShouldRejectSchema()
+    {
+        var schemaJson = $$"""
+                           {
+                             "Name": "Root",
+                             "NodeKind": {{(int)ConfigurationNodeKind.Object}},
+                             "Children": [
+                               {
+                                 "Name": "Count",
+                                 "NodeKind": {{(int)ConfigurationNodeKind.Scalar}},
+                                 "ValueKind": {{(int)ConfigurationValueKind.Integer}},
+                                 "ClrTypeName": "{{typeof(int).AssemblyQualifiedName}}",
+                                 "EditorHint": "Airway"
+                               }
+                             ]
+                           }
+                           """;
+
+        var act = () => Deserialize(schemaJson);
+
+        act.Should().Throw<ConfigurationPersistedSchemaException>()
+            .WithMessage("*editor-hint*");
+    }
+
+    private static ConfigurationDefinition CreateEditorHintDefinition(string? editorHint)
+    {
+        return new ConfigurationDefinition
+        {
+            DefinitionKey = "test.hint",
+            SectionPath = "Hint",
+            DisplayName = "Hint",
+            ClrTypeName = typeof(object).AssemblyQualifiedName!,
+            FromProject = "Test.Monica.Configuration",
+            SchemaHash = "sha256:test",
+            Root = new ConfigurationNodeDefinition
+            {
+                NodeKey = string.Empty,
+                Name = "Root",
+                RelativePath = LogicalPath.Root,
+                ConfigurationPath = "Hint",
+                ClrTypeName = typeof(object).AssemblyQualifiedName!,
+                NodeKind = ConfigurationNodeKind.Object,
+                Children =
+                [
+                    new ConfigurationNodeDefinition
+                    {
+                        NodeKey = "Route",
+                        Name = "Route",
+                        RelativePath = LogicalPath.FromProperties("Route"),
+                        ConfigurationPath = "Hint:Route",
+                        ClrTypeName = typeof(string).AssemblyQualifiedName!,
+                        NodeKind = ConfigurationNodeKind.Scalar,
+                        ValueKind = ConfigurationValueKind.String,
+                        EditorHint = editorHint
+                    }
+                ]
+            }
+        };
+    }
+
+    private static string ComputeEditorHintDefinitionHash(string? editorHint)
+    {
+        var definition = CreateEditorHintDefinition(editorHint);
+        return ConfigurationDefinitionSchemaCodec.ComputeSchemaHash(
+            definition.DefinitionKey,
+            definition.SectionPath,
+            definition.Root);
+    }
+
     private static ConfigurationDefinition CreateDefinition(int deepestLogicalDepth)
     {
         return new ConfigurationDefinition
